@@ -1045,3 +1045,46 @@ def generate_audit_export(self, export_id: str) -> dict:
         # Let Celery retry on transient errors; status 'failed' is
         # also set so the UI shows a clear failure even mid-retry.
         raise self.retry(exc=exc, countdown=10, max_retries=2) from exc
+
+
+# ---------------------------------------------------------------------------
+# Module 8 — scheduled report email delivery.
+#
+# The beat schedule fires this task hourly (15 min after the hour to
+# avoid the busy top-of-hour window on the broker). Each invocation
+# pulls up to 100 due rows from ``report_subscriptions`` and delivers
+# them one at a time. The per-row failure handling is in the service
+# layer; this task is the thin Celery wrapper.
+# ---------------------------------------------------------------------------
+
+@app.task
+def deliver_due_report_subscriptions() -> dict:
+    """Send any report subscriptions whose ``next_due_at`` has passed.
+
+    Returns a summary dict with counts so beat-job logs surface at a
+    glance whether the schedule is healthy.
+    """
+    from clearledgr.core.database import get_db
+    from clearledgr.services.report_delivery import deliver_due_subscriptions
+
+    db = get_db()
+    try:
+        results = deliver_due_subscriptions(db, limit=100)
+    except Exception as exc:
+        logger.exception("[deliver_due_report_subscriptions] batch failed: %s", exc)
+        return {"status": "error", "error": str(exc), "delivered": 0}
+
+    delivered = sum(1 for r in results if r.ok)
+    failed = sum(1 for r in results if not r.ok and not r.skipped)
+    skipped = sum(1 for r in results if r.skipped)
+    logger.info(
+        "[deliver_due_report_subscriptions] processed=%d delivered=%d failed=%d skipped=%d",
+        len(results), delivered, failed, skipped,
+    )
+    return {
+        "status": "ok",
+        "processed": len(results),
+        "delivered": delivered,
+        "failed": failed,
+        "skipped": skipped,
+    }

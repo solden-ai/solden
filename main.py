@@ -142,6 +142,9 @@ from clearledgr.api.ap_item_detail import router as ap_item_detail_router
 from clearledgr.api.three_way_match import (
     router as three_way_match_router,
 )
+from clearledgr.api.report_subscriptions import (
+    router as report_subscriptions_router,
+)
 from clearledgr.api.workspace_reports import (
     router as workspace_reports_router,
 )
@@ -1427,6 +1430,11 @@ app.include_router(ap_item_detail_router)
 # agent_performance, cycle_time, exception_breakdown, vendor_quality.
 # Each endpoint is org-scoped and never raises.
 app.include_router(workspace_reports_router)
+
+# Module 8 — scheduled email subscriptions for the five reports.
+# CRUD over report_subscriptions; the Celery beat task in
+# celery_tasks.deliver_due_report_subscriptions consumes the same rows.
+app.include_router(report_subscriptions_router)
 
 # Wave 5 / G2: multi-attribute vendor match
 app.include_router(vendor_match_router)

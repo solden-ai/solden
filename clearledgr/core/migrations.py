@@ -3566,3 +3566,79 @@ def _v61_remittance_columns(cur, db):
         "ALTER TABLE vendor_profiles "
         "ADD COLUMN IF NOT EXISTS remittance_opt_out INTEGER NOT NULL DEFAULT 0"
     )
+
+
+@migration(
+    68,
+    "report_subscriptions: scheduled email delivery for the five workspace reports (Module 8)",
+)
+def _v68_report_subscriptions(cur, db):
+    """Per-recipient subscription to one of the five workspace reports.
+
+    Operators configure "email me the Volume report every Monday" once;
+    a Celery beat task runs hourly, picks up rows where
+    ``paused_at IS NULL AND next_due_at <= now()``, regenerates the
+    report against the same params (period / from-window / entity_id /
+    vendor_name) saved at subscription time, and sends an email with a
+    CSV attachment.
+
+    Failure handling: ``failure_count`` increments on a delivery
+    miss; ``last_failure_at`` carries the timestamp + ``last_error``
+    the message. After 5 consecutive failures the row is auto-paused
+    so a misconfigured SMTP doesn't keep spamming retries indefinitely.
+
+    Cadence math: at create time the API computes the next-due
+    timestamp from now (next 09:00 UTC for daily, next Monday 09:00
+    UTC for weekly, 1st of next month 09:00 UTC for monthly). After
+    each successful delivery the worker advances next_due_at the
+    same way.
+
+    The ``params_json`` column stores the report query the operator
+    set when subscribing — period / from-window-days / entity_id /
+    vendor_name / min_invoices / limit. The ``from`` window is
+    rolling: the worker recomputes it relative to now at delivery
+    time, so a "weekly volume report" always covers the most recent
+    window the operator chose.
+    """
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS report_subscriptions (
+            id              TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            user_id         TEXT NOT NULL,
+            recipient_email TEXT NOT NULL,
+            report_type     TEXT NOT NULL,
+            cadence         TEXT NOT NULL,
+            params_json     TEXT,
+            next_due_at     TIMESTAMPTZ NOT NULL,
+            last_delivered_at TIMESTAMPTZ,
+            paused_at       TIMESTAMPTZ,
+            failure_count   INTEGER NOT NULL DEFAULT 0,
+            last_failure_at TIMESTAMPTZ,
+            last_error      TEXT,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            CHECK (cadence IN ('daily', 'weekly', 'monthly')),
+            CHECK (report_type IN (
+                'volume', 'agent_performance', 'cycle_time',
+                'exception_breakdown', 'vendor_quality'
+            ))
+        )
+        """
+    )
+    # Worker-pickup query: WHERE paused_at IS NULL AND next_due_at <= now().
+    # Partial index keeps the index small (only active rows).
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_report_subs_due "
+        "ON report_subscriptions (next_due_at) "
+        "WHERE paused_at IS NULL"
+    )
+    # API list-by-org and list-by-user are the operator-facing reads.
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_report_subs_org "
+        "ON report_subscriptions (organization_id, created_at DESC)"
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_report_subs_user "
+        "ON report_subscriptions (organization_id, user_id, created_at DESC)"
+    )

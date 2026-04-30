@@ -137,6 +137,16 @@ app.config_from_object(
                 "task": "clearledgr.services.celery_tasks.post_pending_accrual_reversals",
                 "schedule": _crontab(minute=0, hour=3),
             },
+            # Module 8: hourly sweep of due report subscriptions.
+            # 15 minutes after the hour avoids the top-of-hour broker
+            # contention. Each task picks up to 100 due rows, runs
+            # the report, and emails the CSV. Worker-side failure
+            # handling auto-pauses subscriptions after 5 consecutive
+            # misses so a misconfigured SMTP doesn't keep retrying.
+            "deliver-due-report-subscriptions": {
+                "task": "clearledgr.services.celery_tasks.deliver_due_report_subscriptions",
+                "schedule": _crontab(minute=15),
+            },
         },
     }
 )
