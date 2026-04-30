@@ -146,6 +146,9 @@ from clearledgr.api.escalation_policies import (
 from clearledgr.api.notification_preferences import (
     router as notification_preferences_router,
 )
+from clearledgr.api.workspace_rules import (
+    router as workspace_rules_router,
+)
 from clearledgr.api.three_way_match import (
     router as three_way_match_router,
 )
@@ -1458,6 +1461,13 @@ app.include_router(escalation_policies_router)
 # Stored inside users.preferences_json under "notifications";
 # dispatch sites call services.notification_preferences.should_notify().
 app.include_router(notification_preferences_router)
+
+# Module 3 — workspace approval rules engine.
+# JSON-driven rules with version history + revert + conflict
+# detection + test mode + 4 starter templates. Evaluated FIRST in
+# APDecisionService; falls through to the deterministic 10-step
+# cascade when no rule matches.
+app.include_router(workspace_rules_router)
 
 # Wave 5 / G2: multi-attribute vendor match
 app.include_router(vendor_match_router)

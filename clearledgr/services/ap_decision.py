@@ -304,6 +304,157 @@ def _apply_single_pass_hints(
     )
 
 
+def _evaluate_rules_for_invoice(
+    invoice: Any,
+    vendor_context: Dict[str, Any],
+    *,
+    organization_id: str,
+) -> Optional[APDecision]:
+    """Run the workspace rule engine. Returns an APDecision if a rule
+    matches; None if no rule matches OR the engine is unavailable
+    (so the caller falls through to the legacy 10-step cascade).
+
+    Action → recommendation mapping:
+      auto_approve              → approve
+      route_to_role / _user     → needs_approval (with target captured
+                                  in info_needed)
+      require_n_approvals       → needs_approval (n captured in flags)
+      require_dual_approval     → needs_approval (dual_approval flag)
+      escalate_after            → escalate (delayed-firing escalation
+                                  is a future-work hook; the rule
+                                  match itself routes to escalate)
+      hold_for_finance_review   → escalate
+    """
+    if not organization_id:
+        return None
+    try:
+        from clearledgr.core.database import get_db
+        from clearledgr.services.rule_engine import (
+            build_invoice_context, evaluate_rules,
+        )
+        db = get_db()
+        rules = db.list_rules(organization_id, workflow="ap")
+    except Exception as exc:
+        logger.debug(
+            "[ap_decision] rule engine unavailable, falling back: %s", exc,
+        )
+        return None
+    if not rules:
+        return None
+
+    try:
+        ctx = build_invoice_context(invoice)
+        # Stamp the entity into the context so entity-scoped rules
+        # match correctly.
+        if getattr(invoice, "entity_id", None):
+            ctx["entity_id"] = invoice.entity_id
+        result = evaluate_rules(ctx, rules)
+    except Exception as exc:
+        logger.debug(
+            "[ap_decision] rule evaluation failed, falling back: %s", exc,
+        )
+        return None
+
+    if result.matched_rule is None:
+        return None
+
+    return _rule_match_to_decision(
+        invoice, result.matched_rule, result.matched_actions,
+        vendor_context_used=vendor_context,
+    )
+
+
+def _rule_match_to_decision(
+    invoice: Any,
+    rule: Dict[str, Any],
+    actions: List[Dict[str, Any]],
+    *,
+    vendor_context_used: Dict[str, Any],
+) -> APDecision:
+    """Translate matched rule actions into an APDecision."""
+    rule_name = rule.get("name") or "rule"
+    vendor_name = getattr(invoice, "vendor_name", "this vendor")
+
+    has_auto_approve = any(a.get("type") == "auto_approve" for a in actions)
+    has_dual = any(a.get("type") == "require_dual_approval" for a in actions)
+    has_n = any(a.get("type") == "require_n_approvals" for a in actions)
+    has_route = any(a.get("type") in ("route_to_role", "route_to_user") for a in actions)
+    has_escalate = any(
+        a.get("type") in ("escalate_after", "hold_for_finance_review")
+        for a in actions
+    )
+
+    risk_flags: List[str] = [f"rule_matched:{rule.get('id', '')}"[:80]]
+    info_needed: Optional[str] = None
+
+    if has_auto_approve and not (has_route or has_dual or has_n or has_escalate):
+        return APDecision(
+            recommendation="approve",
+            reasoning=(
+                f"Rule '{rule_name}' matched and routes {vendor_name} "
+                "to auto-approval."
+            ),
+            confidence=0.95,
+            info_needed=None,
+            risk_flags=risk_flags,
+            vendor_context_used=vendor_context_used or {},
+            model="rules:workspace",
+        )
+
+    if has_escalate:
+        risk_flags.append("rule_action:escalate")
+        return APDecision(
+            recommendation="escalate",
+            reasoning=(
+                f"Rule '{rule_name}' matched and routes {vendor_name} "
+                "to human review."
+            ),
+            confidence=0.9,
+            info_needed=None,
+            risk_flags=risk_flags,
+            vendor_context_used=vendor_context_used or {},
+            model="rules:workspace",
+        )
+
+    if has_dual:
+        risk_flags.append("rule_action:dual_approval")
+    if has_n:
+        for a in actions:
+            if a.get("type") == "require_n_approvals":
+                n = int(a.get("n") or 2)
+                risk_flags.append(f"rule_action:require_{n}_approvals")
+                break
+    if has_route:
+        for a in actions:
+            if a.get("type") == "route_to_role":
+                risk_flags.append(f"rule_action:role:{a.get('role')}")
+                info_needed = (
+                    f"Rule '{rule_name}' routes this invoice to role "
+                    f"{a.get('role')}."
+                )
+                break
+            if a.get("type") == "route_to_user":
+                risk_flags.append(f"rule_action:user:{a.get('user_email')}")
+                info_needed = (
+                    f"Rule '{rule_name}' routes this invoice to "
+                    f"{a.get('user_email')}."
+                )
+                break
+
+    return APDecision(
+        recommendation="needs_info" if info_needed and not (has_dual or has_n) else "needs_info",
+        reasoning=(
+            f"Rule '{rule_name}' matched. Routing for human review "
+            "per the configured action set."
+        ),
+        confidence=0.9,
+        info_needed=info_needed,
+        risk_flags=risk_flags,
+        vendor_context_used=vendor_context_used or {},
+        model="rules:workspace",
+    )
+
+
 class APDecisionService:
     """Deterministic AP invoice routing.
 
@@ -371,16 +522,34 @@ class APDecisionService:
             "vendor_risk_level": (vendor_risk_score or {}).get("level", "unknown"),
         }
 
-        decision = self._compute_routing_decision(
-            invoice,
-            validation_gate,
-            vendor_context_used,
-            decision_feedback=decision_feedback,
-            vendor_risk_score=vendor_risk_score,
-            vendor_profile=vendor_profile,
-            cross_invoice_analysis=cross_invoice_analysis,
-            org_config=org_config,
-        )
+        # Module 3 — workspace rule engine evaluation runs FIRST.
+        # If a rule matches, its actions translate into the routing
+        # recommendation directly. If no rule matches (or rules are
+        # disabled / unavailable), fall through to the deterministic
+        # 10-step cascade so legacy orgs without rules behave exactly
+        # as before. The validation gate is still enforced — a failed
+        # gate skips rules entirely so a rule can't auto-approve a
+        # bill that the gate has flagged.
+        rule_decision: Optional[APDecision] = None
+        if validation_gate.get("passed", True):
+            rule_decision = _evaluate_rules_for_invoice(
+                invoice, vendor_context_used,
+                organization_id=org_config.get("organization_id") or "",
+            )
+
+        if rule_decision is not None:
+            decision = rule_decision
+        else:
+            decision = self._compute_routing_decision(
+                invoice,
+                validation_gate,
+                vendor_context_used,
+                decision_feedback=decision_feedback,
+                vendor_risk_score=vendor_risk_score,
+                vendor_profile=vendor_profile,
+                cross_invoice_analysis=cross_invoice_analysis,
+                org_config=org_config,
+            )
         if single_pass_hints:
             decision = _apply_single_pass_hints(decision, single_pass_hints, invoice)
         return enforce_gate_constraint(decision, validation_gate)

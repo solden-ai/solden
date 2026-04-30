@@ -3713,3 +3713,99 @@ def _v69_escalation_policies(cur, db):
         "CREATE INDEX IF NOT EXISTS idx_escalation_events_org_fired "
         "ON escalation_events (organization_id, fired_at DESC)"
     )
+
+
+@migration(
+    70,
+    "rules + rule_versions: workspace approval-rule engine (Module 3)",
+)
+def _v70_rules(cur, db):
+    """The Module 3 rules engine — JSON-driven approval routing.
+
+    ``rules`` holds one row per active rule. ``rule_versions`` is the
+    append-only history that backs the version-history + one-click-
+    revert UI; the spec calls for this on top of the existing
+    ``policy_versions`` (v45) table, but per-rule history is
+    finer-grained than the policy-kind snapshots that table is
+    designed for, so a dedicated table is the right fit.
+
+    Schema choices:
+      - ``priority`` is monotonic but not unique — two rules can share
+        a priority. The engine evaluates lower numbers first; ties
+        break on created_at (older first).
+      - ``conditions_json`` is the structured rule body
+        ({"all_of": [...], "any_of": [...]}). Validation happens at
+        the API layer; the DB only enforces non-null + presence.
+      - ``actions_json`` is a list. Multiple actions can apply to one
+        match (e.g., route_to_role + escalate_after).
+      - ``status`` enum: 'active' | 'paused' | 'archived'. Archived
+        rules are kept for audit; the engine ignores them.
+      - ``version`` increments on every change to this row's body. The
+        rule_versions table carries the snapshot pre-change so
+        revert works against the latest pre-revert state.
+    """
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS rules (
+            id              TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            name            TEXT NOT NULL,
+            description     TEXT,
+            entity_id       TEXT,
+            workflow        TEXT NOT NULL DEFAULT 'ap',
+            priority        INTEGER NOT NULL DEFAULT 100,
+            conditions_json TEXT NOT NULL,
+            actions_json    TEXT NOT NULL,
+            status          TEXT NOT NULL DEFAULT 'active',
+            version         INTEGER NOT NULL DEFAULT 1,
+            created_by      TEXT,
+            updated_by      TEXT,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            CHECK (status IN ('active', 'paused', 'archived')),
+            CHECK (workflow IN ('ap')),
+            CHECK (priority >= 0 AND priority <= 9999)
+        )
+        """
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_rules_org_workflow_priority "
+        "ON rules (organization_id, workflow, priority) "
+        "WHERE status = 'active'"
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_rules_org_entity "
+        "ON rules (organization_id, entity_id) "
+        "WHERE status = 'active'"
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS rule_versions (
+            id              TEXT PRIMARY KEY,
+            rule_id         TEXT NOT NULL,
+            organization_id TEXT NOT NULL,
+            version_number  INTEGER NOT NULL,
+            name            TEXT NOT NULL,
+            description     TEXT,
+            entity_id       TEXT,
+            workflow        TEXT NOT NULL,
+            priority        INTEGER NOT NULL,
+            conditions_json TEXT NOT NULL,
+            actions_json    TEXT NOT NULL,
+            status          TEXT NOT NULL,
+            changed_by      TEXT,
+            change_note     TEXT,
+            changed_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE (rule_id, version_number)
+        )
+        """
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_rule_versions_rule "
+        "ON rule_versions (rule_id, version_number DESC)"
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_rule_versions_org "
+        "ON rule_versions (organization_id, changed_at DESC)"
+    )

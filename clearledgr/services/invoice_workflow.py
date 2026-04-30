@@ -521,6 +521,11 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
                         org_config = _cfg
             except Exception as exc:
                 logger.debug("Org config load failed: %s", exc)
+            # Module 3: ensure organization_id reaches the rule
+            # engine inside APDecisionService.decide. The rules table
+            # is org-scoped; without this the engine has nothing to
+            # query and silently falls back to the legacy cascade.
+            org_config.setdefault("organization_id", self.organization_id)
 
             # ---- Cross-invoice duplicate/anomaly analysis ----
             cross_analysis_dict: Optional[Dict[str, Any]] = None
