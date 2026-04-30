@@ -184,6 +184,13 @@ export default function ReportsPage({ api, orgId, toast }) {
           data=${data}
         />
       ` : null}
+
+      <${SubscriptionsPanel}
+        api=${api}
+        toast=${toast}
+        report=${activeReport}
+        params=${{ period, from, to, entityId }}
+      />
     </div>
   `;
 }
@@ -587,3 +594,197 @@ function rateColor(rate, higherIsBetter) {
   if (n <= 0.3) return 'warning';
   return 'error';
 }
+
+
+// ─── Subscriptions panel ───────────────────────────────────────────
+//
+// Per-report scheduled email subscriptions. The leader picks
+// recipient + cadence; the backend handles the rest. Each
+// subscription row supports pause / resume / delete inline so the
+// leader doesn't have to leave the report to manage delivery.
+
+function SubscriptionsPanel({ api, toast, report, params }) {
+  const [subs, setSubs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [recipient, setRecipient] = useState('');
+  const [cadence, setCadence] = useState('weekly');
+
+  const loadSubs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const resp = await api('/api/workspace/reports/subscriptions');
+      const all = (resp && resp.subscriptions) || [];
+      setSubs(all.filter((s) => s.report_type === report.id));
+    } catch (exc) {
+      // Non-fatal; just leave list empty.
+      setSubs([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [api, report.id]);
+
+  useEffect(() => { loadSubs(); }, [loadSubs]);
+
+  const onCreate = useCallback(async (e) => {
+    e?.preventDefault?.();
+    if (!recipient || !recipient.includes('@')) {
+      toast('Enter a valid recipient email', 'error');
+      return;
+    }
+    setCreating(true);
+    try {
+      // Build the same params the report page uses, so the email
+      // delivers exactly what the operator currently sees.
+      const subParams = {};
+      if (report.supportsPeriod && params.period) subParams.period = params.period;
+      if (params.entityId) subParams.entity_id = params.entityId;
+
+      await api('/api/workspace/reports/subscriptions', {
+        method: 'POST',
+        body: JSON.stringify({
+          report_type: report.id,
+          cadence,
+          recipient_email: recipient,
+          params: subParams,
+        }),
+      });
+      toast(`Subscribed ${recipient} to ${report.label} (${cadence}).`, 'success');
+      setRecipient('');
+      await loadSubs();
+    } catch (exc) {
+      toast(`Subscribe failed: ${String(exc?.message || exc)}`, 'error');
+    } finally {
+      setCreating(false);
+    }
+  }, [api, recipient, cadence, report, params, toast, loadSubs]);
+
+  const onTogglePause = useCallback(async (sub) => {
+    try {
+      await api(`/api/workspace/reports/subscriptions/${sub.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ paused: !sub.paused_at }),
+      });
+      await loadSubs();
+    } catch (exc) {
+      toast(`Update failed: ${String(exc?.message || exc)}`, 'error');
+    }
+  }, [api, toast, loadSubs]);
+
+  const onDelete = useCallback(async (sub) => {
+    if (!window.confirm(`Stop sending the ${report.label} report to ${sub.recipient_email}?`)) {
+      return;
+    }
+    try {
+      await api(`/api/workspace/reports/subscriptions/${sub.id}`, {
+        method: 'DELETE',
+      });
+      toast('Subscription removed.', 'success');
+      await loadSubs();
+    } catch (exc) {
+      toast(`Delete failed: ${String(exc?.message || exc)}`, 'error');
+    }
+  }, [api, toast, loadSubs, report.label]);
+
+  return html`
+    <section class="cl-reports-subs-card">
+      <header class="cl-reports-chart-head">
+        <h3>Email me this report</h3>
+        <span class="cl-reports-chart-meta">${subs.length} active</span>
+      </header>
+
+      <form class="cl-reports-subs-form" onSubmit=${onCreate}>
+        <label class="cl-reports-filter">
+          <span class="cl-reports-filter-label">Recipient</span>
+          <input
+            type="email"
+            placeholder="finance-leader@your-co.com"
+            value=${recipient}
+            onInput=${(e) => setRecipient(e.target.value)}
+            disabled=${creating}
+            required
+          />
+        </label>
+        <label class="cl-reports-filter">
+          <span class="cl-reports-filter-label">Cadence</span>
+          <select value=${cadence} onChange=${(e) => setCadence(e.target.value)} disabled=${creating}>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly (Mondays)</option>
+            <option value="monthly">Monthly (1st)</option>
+          </select>
+        </label>
+        <button type="submit" class="btn btn-primary cl-reports-subs-submit" disabled=${creating}>
+          ${creating ? 'Subscribing…' : 'Subscribe'}
+        </button>
+      </form>
+
+      ${loading ? html`
+        <p class="cl-reports-subs-empty">Loading subscriptions…</p>
+      ` : null}
+
+      ${!loading && subs.length === 0 ? html`
+        <p class="cl-reports-subs-empty">
+          No one is subscribed to this report yet. Add a recipient above.
+        </p>
+      ` : null}
+
+      ${!loading && subs.length > 0 ? html`
+        <ul class="cl-reports-subs-list">
+          ${subs.map((sub) => html`
+            <li key=${sub.id} class=${`cl-reports-subs-row ${sub.paused_at ? 'is-paused' : ''}`}>
+              <div class="cl-reports-subs-row-main">
+                <span class="cl-reports-subs-recipient">${sub.recipient_email}</span>
+                <span class="cl-reports-subs-cadence">${cadenceLabel(sub.cadence)}</span>
+                ${sub.paused_at ? html`<span class="cl-reports-chip cl-reports-chip-warning">paused</span>` : null}
+                ${sub.failure_count > 0 ? html`
+                  <span class="cl-reports-chip cl-reports-chip-error">
+                    ${sub.failure_count} failure${sub.failure_count === 1 ? '' : 's'}
+                  </span>` : null}
+              </div>
+              <div class="cl-reports-subs-row-meta">
+                Next: ${formatNextDue(sub.next_due_at)}
+                ${sub.last_delivered_at ? html` · last sent ${formatNextDue(sub.last_delivered_at)}` : null}
+              </div>
+              <div class="cl-reports-subs-row-actions">
+                <button class="btn btn-tertiary btn-sm" onClick=${() => onTogglePause(sub)}>
+                  ${sub.paused_at ? 'Resume' : 'Pause'}
+                </button>
+                <button class="btn btn-tertiary btn-sm" onClick=${() => onDelete(sub)}>
+                  Remove
+                </button>
+              </div>
+            </li>
+          `)}
+        </ul>
+      ` : null}
+    </section>
+  `;
+}
+
+function cadenceLabel(cadence) {
+  switch (cadence) {
+    case 'daily': return 'Daily at 09:00 UTC';
+    case 'weekly': return 'Weekly on Mondays';
+    case 'monthly': return 'Monthly on the 1st';
+    default: return cadence || '';
+  }
+}
+
+function formatNextDue(iso) {
+  if (!iso) return '—';
+  try {
+    const dt = new Date(iso);
+    if (Number.isNaN(dt.getTime())) return iso;
+    return dt.toLocaleString(undefined, {
+      month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+      hour12: false, timeZone: 'UTC',
+    }) + ' UTC';
+  } catch {
+    return iso;
+  }
+}
+
+// Reference SubscriptionsPanel so the bundler doesn't tree-shake it.
+// (Component is referenced from the JSX above; this is just a JS hint.)
+void SubscriptionsPanel;
