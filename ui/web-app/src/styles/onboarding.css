@@ -203,3 +203,99 @@
   font-size: 12px;
   color: var(--cl-ink-muted);
 }
+
+
+/* Module 10 — sample data section on the onboarding page */
+
+.cl-sample-section {
+  margin-top: 24px;
+  padding: 24px;
+  background: #FAFAF8;
+  border: 1px dashed var(--cl-border);
+  border-radius: var(--cl-radius);
+}
+
+.cl-sample-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.cl-sample-head h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+
+.cl-sample-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--cl-ink-secondary);
+  max-width: 560px;
+  line-height: 1.5;
+}
+
+.cl-sample-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cl-sample-table {
+  width: 100%;
+  margin-top: 16px;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  overflow: hidden;
+}
+
+.cl-sample-table thead th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cl-ink-muted);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--cl-border);
+  background: #FAFAF8;
+}
+
+.cl-sample-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--cl-border);
+  color: var(--cl-ink-primary);
+}
+
+.cl-sample-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.cl-sample-num {
+  text-align: right;
+  font-family: var(--cl-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-sample-muted {
+  color: var(--cl-ink-muted);
+  font-size: 12px;
+  font-family: var(--cl-font-mono);
+}
+
+@media (max-width: 720px) {
+  .cl-sample-head {
+    flex-direction: column;
+  }
+  .cl-sample-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}

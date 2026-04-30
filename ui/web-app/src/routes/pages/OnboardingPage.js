@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'preact/hooks';
+import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import { useLocation } from 'wouter-preact';
 import { html } from '../../utils/htm.js';
 import { api } from '../../api/client.js';
@@ -196,6 +196,8 @@ export function OnboardingPage() {
         })}
       </ol>
 
+      <${SampleDataSection} />
+
       <footer class="cl-onb-footer">
         ${completed
           ? html`
@@ -213,5 +215,161 @@ export function OnboardingPage() {
             `}
       </footer>
     </div>
+  `;
+}
+
+
+// ─── Module 10 — Sample Data section ──────────────────────────────
+//
+// Lets the leader load a curated set of sample invoices and practice
+// the workflow before going live with real data. Sample rows are
+// tagged is_sample=true on the backend; production reads filter them
+// out so they never contaminate live aggregates (spec §329).
+
+function SampleDataSection() {
+  const [count, setCount] = useState(0);
+  const [items, setItems] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [showItems, setShowItems] = useState(false);
+  const toast = useToast();
+
+  const load = useCallback(async () => {
+    try {
+      const status = await api(
+        '/api/workspace/onboarding/sample-data/status',
+      );
+      setCount((status && status.sample_count) || 0);
+    } catch {
+      // Non-fatal — leave count at the previous value.
+    }
+  }, []);
+
+  const loadPreview = useCallback(async () => {
+    try {
+      const resp = await api(
+        '/api/workspace/onboarding/sample-data/preview',
+      );
+      setItems((resp && resp.items) || []);
+    } catch {
+      setItems([]);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const onLoad = useCallback(async () => {
+    setBusy(true);
+    try {
+      const resp = await api(
+        '/api/workspace/onboarding/sample-data/load',
+        { method: 'POST' },
+      );
+      const loaded = (resp && resp.loaded) || 0;
+      const already = (resp && resp.already_present) || 0;
+      if (loaded > 0) {
+        toast(`Loaded ${loaded} sample invoices.`, 'success');
+      } else if (already > 0) {
+        toast(`${already} sample invoices already loaded.`, 'info');
+      }
+      await load();
+      if (showItems) await loadPreview();
+    } catch (exc) {
+      toast(`Load failed: ${String(exc?.message || exc)}`, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }, [load, loadPreview, showItems, toast]);
+
+  const onClear = useCallback(async () => {
+    if (!window.confirm(
+      'Clear all sample invoices? Production data is unaffected. ' +
+      'You can reload the sample set any time.',
+    )) return;
+    setBusy(true);
+    try {
+      const resp = await api(
+        '/api/workspace/onboarding/sample-data/clear',
+        { method: 'POST' },
+      );
+      const deleted = (resp && resp.deleted) || 0;
+      toast(`Cleared ${deleted} sample invoices.`, 'success');
+      await load();
+      setItems([]);
+    } catch (exc) {
+      toast(`Clear failed: ${String(exc?.message || exc)}`, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }, [load, toast]);
+
+  const togglePreview = useCallback(async () => {
+    if (!showItems) {
+      await loadPreview();
+    }
+    setShowItems((v) => !v);
+  }, [loadPreview, showItems]);
+
+  return html`
+    <section class="cl-sample-section">
+      <header class="cl-sample-head">
+        <div>
+          <h2>Practice with sample invoices</h2>
+          <p class="cl-sample-sub">
+            Run a set of realistic invoices through the system so you can
+            see exceptions, approvals, and reports light up before going
+            live with real data. Sample data is kept separate from production
+            and never appears in your live reports.
+          </p>
+        </div>
+        <div class="cl-sample-actions">
+          ${count > 0
+            ? html`
+                <button class="cl-onb-btn cl-onb-btn-ghost"
+                  onClick=${togglePreview} disabled=${busy}>
+                  ${showItems ? 'Hide' : 'View'} (${count})
+                </button>
+                <button class="cl-onb-btn cl-onb-btn-ghost"
+                  onClick=${onClear} disabled=${busy}>
+                  Clear
+                </button>
+              `
+            : html`
+                <button class="cl-onb-btn cl-onb-btn-primary"
+                  onClick=${onLoad} disabled=${busy}>
+                  ${busy ? 'Loading…' : 'Load sample invoices'}
+                </button>
+              `}
+        </div>
+      </header>
+
+      ${showItems && items.length > 0 ? html`
+        <table class="cl-sample-table">
+          <thead>
+            <tr>
+              <th>Vendor</th>
+              <th>Invoice no.</th>
+              <th class="cl-sample-num">Amount</th>
+              <th>State</th>
+              <th>Exception</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map((it) => html`
+              <tr key=${it.id}>
+                <td><strong>${it.vendor_name}</strong></td>
+                <td><code>${it.invoice_number}</code></td>
+                <td class="cl-sample-num">
+                  ${it.currency} ${Number(it.amount).toLocaleString(undefined, {
+                    minimumFractionDigits: 2, maximumFractionDigits: 2,
+                  })}
+                </td>
+                <td>${(it.state || '').replace(/_/g, ' ')}</td>
+                <td class="cl-sample-muted">${it.exception_code || '—'}</td>
+              </tr>
+            `)}
+          </tbody>
+        </table>
+      ` : null}
+    </section>
   `;
 }
