@@ -436,6 +436,101 @@ class TestEndpointWiring:
 # ─── Tests: Registry stability ──────────────────────────────────────
 
 
+class TestCSVExport:
+    """Each report has a .csv export endpoint that serialises the
+    primary view (series for trend reports, breakdown for ranking
+    reports) with a UTF-8 BOM and a Content-Disposition filename hint.
+    """
+
+    def test_volume_csv_returns_bom_and_filename(self, db, client_orgA):
+        _make_item(db, item_id="csv-vol-1", created_at=_ago(7))
+        resp = client_orgA.get("/api/workspace/reports/volume.csv")
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/csv")
+        # UTF-8 BOM (﻿ = ef bb bf)
+        assert resp.text.startswith("﻿") or resp.content.startswith(b"\xef\xbb\xbf")
+        # Filename hint
+        assert "attachment" in resp.headers["content-disposition"]
+        assert "clearledgr-volume" in resp.headers["content-disposition"]
+        # Header row matches the volume series shape
+        body = resp.text.lstrip("﻿")
+        assert body.startswith("bucket,invoice_count,total_amount")
+
+    def test_agent_performance_csv_emits_series(self, db, client_orgA):
+        _make_item(db, item_id="csv-ap-1", state="posted_to_erp", confidence=0.95, created_at=_ago(7))
+        resp = client_orgA.get("/api/workspace/reports/agent-performance.csv")
+        assert resp.status_code == 200
+        body = resp.text.lstrip("﻿")
+        assert body.startswith(
+            "bucket,total_items,auto_resolution_rate,exception_rate,avg_confidence"
+        )
+
+    def test_cycle_time_csv_emits_series(self, db, client_orgA):
+        _make_item(
+            db, item_id="csv-ct-1",
+            state="posted_to_erp",
+            created_at=_ago(10), erp_posted_at=_ago(7),
+        )
+        resp = client_orgA.get("/api/workspace/reports/cycle-time.csv")
+        assert resp.status_code == 200
+        body = resp.text.lstrip("﻿")
+        assert body.startswith(
+            "bucket,avg_cycle_days,p50_cycle_days,p90_cycle_days,posted_count"
+        )
+
+    def test_exception_breakdown_csv_emits_breakdown(self, db, client_orgA):
+        _make_item(
+            db, item_id="csv-eb-1",
+            exception_code="po_required_missing",
+            created_at=_ago(5),
+        )
+        resp = client_orgA.get("/api/workspace/reports/exception-breakdown.csv")
+        assert resp.status_code == 200
+        body = resp.text.lstrip("﻿")
+        assert body.startswith("exception_code,count,share")
+        assert "po_required_missing" in body
+
+    def test_vendor_quality_csv_emits_breakdown(self, db, client_orgA):
+        for idx in range(5):
+            _make_item(
+                db, item_id=f"csv-vq-{idx}",
+                vendor="Acme",
+                exception_code="x" if idx < 3 else "",
+                created_at=_ago(5),
+            )
+        resp = client_orgA.get(
+            "/api/workspace/reports/vendor-quality.csv?min_invoices=3"
+        )
+        assert resp.status_code == 200
+        body = resp.text.lstrip("﻿")
+        assert body.startswith(
+            "vendor_name,total_invoices,exception_count,exception_rate"
+        )
+        assert "Acme" in body
+
+    def test_csv_filename_contains_date_range(self, db, client_orgA):
+        from_ts = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+        to_ts = datetime.now(timezone.utc).isoformat()
+        # Use params= to URL-encode the +00:00 timezone offset properly.
+        resp = client_orgA.get(
+            "/api/workspace/reports/volume.csv",
+            params={"from": from_ts, "to": to_ts},
+        )
+        assert resp.status_code == 200
+        cd = resp.headers["content-disposition"]
+        assert from_ts[:10] in cd
+        assert to_ts[:10] in cd
+
+    def test_csv_cross_tenant_isolation(self, db, client_orgB):
+        _make_item(db, item_id="csv-iso", org="orgA", created_at=_ago(5))
+        resp = client_orgB.get("/api/workspace/reports/volume.csv")
+        assert resp.status_code == 200
+        body = resp.text.lstrip("﻿")
+        # Header only — no data rows from orgA
+        lines = [ln for ln in body.strip().split("\n") if ln.strip()]
+        assert len(lines) == 1  # header only
+
+
 class TestRegistry:
     def test_only_five_report_types_exist(self):
         # GA scope §3 design principle: "Five reports, well-built. No

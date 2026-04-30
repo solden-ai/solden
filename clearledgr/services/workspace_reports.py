@@ -791,3 +791,82 @@ REPORT_GENERATORS = {
 }
 
 VALID_REPORT_TYPES = frozenset(REPORT_GENERATORS.keys())
+
+
+# ---------------------------------------------------------------------------
+# CSV serialisation
+# ---------------------------------------------------------------------------
+
+# Each report's "primary" view + the column order operators see when
+# they download a spreadsheet. The trend reports surface the time
+# series (bucket-level rows); the ranking reports surface the
+# breakdown (one row per ranked entity). The non-primary view is
+# still available via the JSON endpoint when a user wants both.
+_CSV_SHAPE = {
+    "volume": (
+        "series",
+        ["bucket", "invoice_count", "total_amount"],
+    ),
+    "agent_performance": (
+        "series",
+        ["bucket", "total_items", "auto_resolution_rate", "exception_rate", "avg_confidence"],
+    ),
+    "cycle_time": (
+        "series",
+        ["bucket", "avg_cycle_days", "p50_cycle_days", "p90_cycle_days", "posted_count"],
+    ),
+    "exception_breakdown": (
+        "breakdown",
+        ["exception_code", "count", "share"],
+    ),
+    "vendor_quality": (
+        "breakdown",
+        ["vendor_name", "total_invoices", "exception_count", "exception_rate"],
+    ),
+}
+
+
+def report_to_csv(report_payload: Dict[str, Any]) -> str:
+    """Serialise a report payload to a CSV string.
+
+    Same UTF-8 BOM convention as ``report_export.rows_to_csv`` —
+    Excel on Windows otherwise mangles non-ASCII vendor names. The
+    BOM is invisible to UTF-8-aware tools (Sheets, Numbers, modern
+    Excel).
+    """
+    import csv as _csv
+    import io as _io
+
+    report_type = report_payload.get("report_type", "")
+    shape = _CSV_SHAPE.get(report_type)
+    if shape is None:
+        return "﻿" + ""
+    section_key, columns = shape
+    rows = report_payload.get(section_key) or []
+
+    output = _io.StringIO()
+    writer = _csv.DictWriter(output, fieldnames=columns, extrasaction="ignore")
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({col: _csv_cell(row.get(col)) for col in columns})
+    return "﻿" + output.getvalue()
+
+
+def _csv_cell(value: Any) -> str:
+    """Render a value for a CSV cell. None becomes empty; floats keep
+    their precision but lose trailing-zero noise."""
+    if value is None:
+        return ""
+    if isinstance(value, float):
+        # Floor to a sensible precision so 0.34999999999999998 doesn't
+        # land in the spreadsheet.
+        return f"{value:g}"
+    return str(value)
+
+
+def csv_filename(report_type: str, params: Dict[str, Any]) -> str:
+    """Stable filename hint for the Content-Disposition header."""
+    safe = report_type.replace("_", "-")
+    from_ts = (params.get("from") or "")[:10] or "all"
+    to_ts = (params.get("to") or "")[:10] or "all"
+    return f"clearledgr-{safe}-{from_ts}-to-{to_ts}.csv"

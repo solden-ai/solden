@@ -30,6 +30,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import Response
 
 from clearledgr.core.auth import TokenData, get_current_user
 from clearledgr.services import workspace_reports
@@ -117,3 +118,110 @@ def get_vendor_quality_report(
         min_invoices=min_invoices,
         limit=limit,
     )
+
+
+# ---------------------------------------------------------------------------
+# CSV export endpoints — one per report.
+#
+# Each ``.csv`` route runs the same generator, then serialises the
+# primary view (series for trend reports, breakdown for ranking
+# reports) to CSV with a UTF-8 BOM. The Content-Disposition header
+# carries a stable filename hint so right-click "save link as" lands
+# the operator on a sensible default.
+# ---------------------------------------------------------------------------
+
+def _csv_response(payload: Dict[str, Any]) -> Response:
+    csv_text = workspace_reports.report_to_csv(payload)
+    filename = workspace_reports.csv_filename(
+        payload.get("report_type", "report"),
+        payload.get("params", {}),
+    )
+    return Response(
+        content=csv_text,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/volume.csv")
+def export_volume_csv(
+    period: str = Query("weekly"),
+    from_ts: Optional[str] = Query(None, alias="from"),
+    to_ts: Optional[str] = Query(None, alias="to"),
+    entity_id: Optional[str] = Query(None),
+    vendor_name: Optional[str] = Query(None),
+    user: TokenData = Depends(get_current_user),
+) -> Response:
+    payload = workspace_reports.generate_volume_report(
+        organization_id=user.organization_id,
+        period=period, from_ts=from_ts, to_ts=to_ts,
+        entity_id=entity_id, vendor_name=vendor_name,
+    )
+    return _csv_response(payload)
+
+
+@router.get("/agent-performance.csv")
+def export_agent_performance_csv(
+    period: str = Query("weekly"),
+    from_ts: Optional[str] = Query(None, alias="from"),
+    to_ts: Optional[str] = Query(None, alias="to"),
+    entity_id: Optional[str] = Query(None),
+    user: TokenData = Depends(get_current_user),
+) -> Response:
+    payload = workspace_reports.generate_agent_performance_report(
+        organization_id=user.organization_id,
+        period=period, from_ts=from_ts, to_ts=to_ts,
+        entity_id=entity_id,
+    )
+    return _csv_response(payload)
+
+
+@router.get("/cycle-time.csv")
+def export_cycle_time_csv(
+    period: str = Query("weekly"),
+    from_ts: Optional[str] = Query(None, alias="from"),
+    to_ts: Optional[str] = Query(None, alias="to"),
+    entity_id: Optional[str] = Query(None),
+    user: TokenData = Depends(get_current_user),
+) -> Response:
+    payload = workspace_reports.generate_cycle_time_report(
+        organization_id=user.organization_id,
+        period=period, from_ts=from_ts, to_ts=to_ts,
+        entity_id=entity_id,
+    )
+    return _csv_response(payload)
+
+
+@router.get("/exception-breakdown.csv")
+def export_exception_breakdown_csv(
+    period: str = Query("weekly"),
+    from_ts: Optional[str] = Query(None, alias="from"),
+    to_ts: Optional[str] = Query(None, alias="to"),
+    entity_id: Optional[str] = Query(None),
+    user: TokenData = Depends(get_current_user),
+) -> Response:
+    payload = workspace_reports.generate_exception_breakdown_report(
+        organization_id=user.organization_id,
+        period=period, from_ts=from_ts, to_ts=to_ts,
+        entity_id=entity_id,
+    )
+    return _csv_response(payload)
+
+
+@router.get("/vendor-quality.csv")
+def export_vendor_quality_csv(
+    from_ts: Optional[str] = Query(None, alias="from"),
+    to_ts: Optional[str] = Query(None, alias="to"),
+    entity_id: Optional[str] = Query(None),
+    min_invoices: int = Query(3, ge=1, le=100),
+    limit: int = Query(25, ge=1, le=100),
+    user: TokenData = Depends(get_current_user),
+) -> Response:
+    payload = workspace_reports.generate_vendor_quality_report(
+        organization_id=user.organization_id,
+        from_ts=from_ts, to_ts=to_ts,
+        entity_id=entity_id,
+        min_invoices=min_invoices,
+        limit=limit,
+    )
+    return _csv_response(payload)
