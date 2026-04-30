@@ -143,6 +143,9 @@ from clearledgr.api.ap_item_detail import router as ap_item_detail_router
 from clearledgr.api.escalation_policies import (
     router as escalation_policies_router,
 )
+from clearledgr.api.notification_preferences import (
+    router as notification_preferences_router,
+)
 from clearledgr.api.three_way_match import (
     router as three_way_match_router,
 )
@@ -1450,6 +1453,11 @@ app.include_router(api_keys_router)
 # fire_due_escalation_policies fires actions when
 # box_exceptions cross the configured threshold.
 app.include_router(escalation_policies_router)
+
+# Module 11 — per-user notification preferences (email / Slack / in-app).
+# Stored inside users.preferences_json under "notifications";
+# dispatch sites call services.notification_preferences.should_notify().
+app.include_router(notification_preferences_router)
 
 # Wave 5 / G2: multi-attribute vendor match
 app.include_router(vendor_match_router)
