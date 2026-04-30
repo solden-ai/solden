@@ -1777,14 +1777,33 @@ class APStore:
                 except (TypeError, ValueError):
                     continue
 
+        # Module 9 §300: entity_id on audit_events for per-entity
+        # auditor scoping. Resolution order:
+        #   1. Caller passed it explicitly (best — they know their context).
+        #   2. For ap_item-keyed rows, look up the AP item's entity_id.
+        #   3. NULL — universally visible inside the tenant. Org-level
+        #      admin actions (org renamed, integration changed) live
+        #      here so they're not hidden from entity auditors.
+        entity_id = payload.get("entity_id")
+        if entity_id is None and box_type == "ap_item" and box_id:
+            try:
+                ap_row = self.get_ap_item(box_id)
+                if ap_row:
+                    entity_id = ap_row.get("entity_id")
+            except Exception as exc:
+                logger.debug(
+                    "[append_audit_event] entity_id lookup failed for %s: %s",
+                    box_id, exc,
+                )
+
         sql = """
             INSERT INTO audit_events
             (id, box_id, box_type, event_type, prev_state, new_state,
              actor_type, actor_id, payload_json, external_refs,
              idempotency_key, source, correlation_id, workflow_id, run_id,
              decision_reason, governance_verdict, agent_confidence,
-             organization_id, ts)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             organization_id, entity_id, ts)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         try:
             with self.connect() as conn:
@@ -1809,6 +1828,7 @@ class APStore:
                     governance_verdict,
                     agent_confidence,
                     payload.get("organization_id"),
+                    entity_id,
                     now,
                 ))
                 conn.commit()
@@ -2008,6 +2028,7 @@ class APStore:
         box_id: Optional[str] = None,
         limit: int = 100,
         cursor: Optional[Tuple[str, str]] = None,
+        entity_scope: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Org-scoped audit-event search with composite-cursor pagination.
 
@@ -2053,6 +2074,25 @@ class APStore:
         if box_id:
             clauses.append("ae.box_id = %s")
             params.append(box_id)
+
+        # Module 9 §300: per-entity audit scoping. ``entity_scope`` is
+        # the list of entity_ids the calling user is allowed to see;
+        # ``None`` = org-wide access (admin, unrestricted user) and
+        # the filter is skipped entirely. An empty list narrows to
+        # org-level rows (entity_id IS NULL) only — defensive default
+        # for misconfigured callers. ``IS NULL OR IN (...)`` keeps
+        # org-level admin events (org renamed, integration changed,
+        # rule created without entity scope) visible to entity-scoped
+        # auditors so the trail isn't artificially incomplete.
+        if entity_scope is not None:
+            if entity_scope:
+                placeholders = ",".join(["%s"] * len(entity_scope))
+                clauses.append(
+                    f"(ae.entity_id IS NULL OR ae.entity_id IN ({placeholders}))"
+                )
+                params.extend(entity_scope)
+            else:
+                clauses.append("ae.entity_id IS NULL")
 
         # Cursor-based pagination: rows STRICTLY older than (cursor_ts,
         # cursor_id) come next when sorting newest-first. The composite

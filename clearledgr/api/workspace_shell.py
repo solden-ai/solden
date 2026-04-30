@@ -2291,6 +2291,17 @@ def search_audit(
     if event_type:
         event_types = [t.strip() for t in event_type.split(",") if t.strip()] or None
 
+    # Module 9 §300: per-entity audit log scoping. The resolver returns
+    # None for org-wide admins (owner / cfo / financial_controller
+    # without an entity restriction); search_audit_events skips the
+    # entity filter in that case. Restricted users (admin role +
+    # entity_restrictions, or per-(user, entity) role overrides) see
+    # only their entities' events plus org-level rows (entity_id IS NULL).
+    from clearledgr.services.audit_entity_scope import (
+        resolve_audit_entity_scope,
+    )
+    entity_scope = resolve_audit_entity_scope(db, user)
+
     decoded_cursor = _decode_audit_cursor(cursor)
     result = db.search_audit_events(
         organization_id=org_id,
@@ -2302,6 +2313,7 @@ def search_audit(
         box_id=box_id,
         limit=limit,
         cursor=decoded_cursor,
+        entity_scope=entity_scope,
     )
     events = result.get("events") or []
     next_cursor = _encode_audit_cursor(result.get("next_cursor"))
@@ -2418,6 +2430,16 @@ def start_audit_export(
         or getattr(user, "user_id", None)
         or "system"
     )
+    # Module 9 §300: bake the requesting user's entity scope into the
+    # export filter payload so the worker (which doesn't carry the
+    # original auth context) applies the same scope. ``None`` = no
+    # restriction; non-None list narrows the export to the user's
+    # entities + org-level (entity_id IS NULL) rows.
+    from clearledgr.services.audit_entity_scope import (
+        resolve_audit_entity_scope,
+    )
+    entity_scope = resolve_audit_entity_scope(db, user)
+
     import json as _json
     filters_payload = {
         "from_ts": request.from_ts,
@@ -2426,6 +2448,7 @@ def start_audit_export(
         "actor_id": request.actor_id,
         "box_type": request.box_type,
         "box_id": request.box_id,
+        "entity_scope": entity_scope,
     }
     export_row = db.create_audit_export(
         organization_id=org_id,
@@ -2546,6 +2569,22 @@ def get_audit_event_detail(
     event_org = str(event.get("organization_id") or "")
     if event_org and event_org != org_id:
         raise HTTPException(status_code=404, detail="audit_event_not_found")
+
+    # Module 9 §300: per-entity scope. Same 404 token for events
+    # outside the user's entity scope so we don't leak which
+    # entities exist in the org.
+    from clearledgr.services.audit_entity_scope import (
+        resolve_audit_entity_scope,
+    )
+    entity_scope = resolve_audit_entity_scope(db, user)
+    if entity_scope is not None:
+        event_entity = event.get("entity_id")
+        # Org-level events (entity_id IS NULL) stay visible to
+        # entity-scoped auditors so the trail isn't artificially
+        # incomplete; non-null events must be in the user's scope.
+        if event_entity and str(event_entity) not in entity_scope:
+            raise HTTPException(status_code=404, detail="audit_event_not_found")
+
     return {"event": event}
 
 

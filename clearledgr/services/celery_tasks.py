@@ -985,6 +985,12 @@ def generate_audit_export(self, export_id: str) -> dict:
                 box_id=filters.get("box_id") or None,
                 limit=page_size,
                 cursor=cursor,
+                # Module 9 §300: the requesting user's entity scope
+                # was baked into filters_json at submit time; the
+                # worker has no direct auth context so we restore it
+                # from the persisted filter. None = org-wide; list =
+                # restricted; honor exactly what the submitter saw.
+                entity_scope=filters.get("entity_scope"),
             )
             events = page.get("events") or []
             for evt in events:

@@ -3875,3 +3875,68 @@ def _v71_fx_rates(cur, db):
         "CREATE INDEX IF NOT EXISTS idx_fx_rates_org_recent "
         "ON fx_rates (organization_id, as_of_date DESC)"
     )
+
+
+@migration(
+    72,
+    "audit_events.entity_id: per-entity audit log scoping (Module 9 §300)",
+)
+def _v72_audit_events_entity_id(cur, db):
+    """Add entity_id to audit_events for per-entity audit log scoping.
+
+    Spec §300 ("Per-entity audit log scoping: an entity's auditors
+    see only that entity's events. Net-new access pattern.")
+    Acceptance §307 ("enforced at query time, not application time").
+
+    Schema choice (a) from the spec: add an entity_id column to the
+    org-scoped audit_events table. Backfill via the AP item's
+    entity_id for box_type='ap_item' rows; rows for other Box types
+    or rows with no resolvable entity stay NULL = "org-wide event"
+    that everyone with access to the org can see. The query layer
+    interprets NULL as universally visible inside the tenant —
+    org-level admin actions (org renamed, integration changed,
+    rule created without entity scope) live there.
+
+    Existing append-only triggers
+    (clearledgr_prevent_append_only_mutation) reject UPDATE on
+    audit_events. The backfill below issues a single UPDATE that
+    has to bypass that trigger; we use a session-local trigger
+    disable so production tenants don't see a permanent loosening
+    of the immutability guarantee.
+    """
+    cur.execute("ALTER TABLE audit_events ADD COLUMN IF NOT EXISTS entity_id TEXT")
+
+    # Backfill — pull entity_id from ap_items for ap_item-keyed rows.
+    # The append-only trigger blocks UPDATE in production; disable it
+    # for the duration of this single statement, then re-enable.
+    try:
+        cur.execute("ALTER TABLE audit_events DISABLE TRIGGER trg_audit_events_no_update")
+    except Exception as exc:
+        logger.debug("[Migration v72] trigger disable skipped: %s", exc)
+    try:
+        cur.execute(
+            """
+            UPDATE audit_events ae
+               SET entity_id = ai.entity_id
+              FROM ap_items ai
+             WHERE ae.box_type = 'ap_item'
+               AND ae.box_id = ai.id
+               AND ae.entity_id IS NULL
+               AND ai.entity_id IS NOT NULL
+            """
+        )
+    except Exception as exc:
+        logger.warning("[Migration v72] backfill failed: %s", exc)
+    try:
+        cur.execute("ALTER TABLE audit_events ENABLE TRIGGER trg_audit_events_no_update")
+    except Exception as exc:
+        logger.warning("[Migration v72] trigger re-enable failed: %s", exc)
+
+    # Index for the per-entity-filtered audit search query. Three-way
+    # filter (organization_id, entity_id, ts DESC) — leftmost-prefix
+    # matches the existing org-only and org+ts queries; the entity
+    # filter narrows when the caller is entity-restricted.
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_audit_events_org_entity_ts "
+        "ON audit_events (organization_id, entity_id, ts DESC)"
+    )
