@@ -138,6 +138,7 @@ from clearledgr.api.slack_invoices import (
     router as slack_invoices_router,
 )
 from clearledgr.api.teams_invoices import router as teams_invoices_router
+from clearledgr.api.ap_item_detail import router as ap_item_detail_router
 from clearledgr.api.three_way_match import (
     router as three_way_match_router,
 )
@@ -1413,6 +1414,11 @@ app.include_router(africa_einvoice_router)
 
 # Wave 5 / G1: 3-way match runner
 app.include_router(three_way_match_router)
+
+# Module 2 (workspace): consolidated detail payload for the
+# exception-detail page — header + bill detail + reasoning panel +
+# 3-way match + timeline + available actions in one call.
+app.include_router(ap_item_detail_router)
 
 # Wave 5 / G2: multi-attribute vendor match
 app.include_router(vendor_match_router)
