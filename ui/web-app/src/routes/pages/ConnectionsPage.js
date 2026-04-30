@@ -89,6 +89,7 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
   const erp = integrationByName(bootstrap, 'erp');
   const slack = integrationByName(bootstrap, 'slack');
   const teams = integrationByName(bootstrap, 'teams');
+  const gmailReconnectRequired = Boolean(gmail.requires_reconnect);
   // Capability comes directly from the authenticated bootstrap response
   // (workspace_shell._workspace_capabilities).  The previous code probed
   // /api/workspace/team/invites with silent:true to infer admin status
