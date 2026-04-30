@@ -99,6 +99,10 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
   const teamRef = useRef(null);
   const rolesRef = useRef(null);
   const billingRef = useRef(null);
+  // Module 11 — three new sections.
+  const apiKeysRef = useRef(null);
+  const escalationRef = useRef(null);
+  const notificationsRef = useRef(null);
 
   // ERP + integration state from bootstrap
   const integrations = bootstrap?.integrations || [];
@@ -415,6 +419,9 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         <button class=${`segmented-button btn-sm${activeSection === 'team' ? ' is-active' : ''}`} onClick=${() => scrollToSection(teamRef, 'team')}>Team</button>
         <button class=${`segmented-button btn-sm${activeSection === 'roles' ? ' is-active' : ''}`} onClick=${() => scrollToSection(rolesRef, 'roles')}>Roles</button>
         <button class=${`segmented-button btn-sm${activeSection === 'billing' ? ' is-active' : ''}`} onClick=${() => scrollToSection(billingRef, 'billing')}>Billing</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'api-keys' ? ' is-active' : ''}`} onClick=${() => scrollToSection(apiKeysRef, 'api-keys')}>API keys</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'escalation' ? ' is-active' : ''}`} onClick=${() => scrollToSection(escalationRef, 'escalation')}>Escalation</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'notifications' ? ' is-active' : ''}`} onClick=${() => scrollToSection(notificationsRef, 'notifications')}>Notifications</button>
       </div>
     </div>
 
@@ -867,6 +874,21 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         orgId=${orgId}
         toast=${toast}
         canManage=${canManageTeam} />
+
+      <${ApiKeysPanel}
+        api=${api}
+        toast=${toast}
+        panelRef=${apiKeysRef} />
+
+      <${EscalationPoliciesPanel}
+        api=${api}
+        toast=${toast}
+        panelRef=${escalationRef} />
+
+      <${NotificationPreferencesPanel}
+        api=${api}
+        toast=${toast}
+        panelRef=${notificationsRef} />
 
       ${implStatus?.steps ? html`
         <div class="panel">
@@ -1558,3 +1580,470 @@ function EntityRolesEditor({ api, orgId, toast, user, entities, customRoles, can
 
 
 
+
+
+// ─── Module 11 — API keys panel ─────────────────────────────────────
+//
+// Show-once-on-create raw key (Stripe/GitHub-style). Subsequent views
+// only ever see the prefix. Revocation is a soft delete; rotation
+// revokes + issues atomically.
+
+function ApiKeysPanel({ api, toast, panelRef }) {
+  const [keys, setKeys] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [label, setLabel] = useState('');
+  const [revealedKey, setRevealedKey] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const resp = await api('/api/workspace/api-keys');
+      setKeys(resp?.api_keys || []);
+    } catch (exc) {
+      toast?.(`Failed to load keys: ${String(exc?.message || exc)}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [api, toast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const onCreate = useCallback(async (e) => {
+    e?.preventDefault?.();
+    setCreating(true);
+    try {
+      const resp = await api('/api/workspace/api-keys', {
+        method: 'POST',
+        body: JSON.stringify({ label: label.trim() }),
+      });
+      setRevealedKey(resp);
+      setLabel('');
+      toast?.('API key created. Copy it now — it won’t be shown again.', 'success');
+      await load();
+    } catch (exc) {
+      toast?.(`Create failed: ${String(exc?.message || exc)}`, 'error');
+    } finally {
+      setCreating(false);
+    }
+  }, [api, label, toast, load]);
+
+  const onRotate = useCallback(async (key) => {
+    if (!window.confirm(
+      `Rotate key '${key.label || key.id}'? The old key stops working immediately.`,
+    )) return;
+    try {
+      const resp = await api(`/api/workspace/api-keys/${key.id}/rotate`, {
+        method: 'POST',
+      });
+      setRevealedKey(resp);
+      toast?.('Key rotated. Copy the new key now.', 'success');
+      await load();
+    } catch (exc) {
+      toast?.(`Rotate failed: ${String(exc?.message || exc)}`, 'error');
+    }
+  }, [api, toast, load]);
+
+  const onRevoke = useCallback(async (key) => {
+    if (!window.confirm(`Revoke key '${key.label || key.id}'? This cannot be undone.`)) return;
+    try {
+      await api(`/api/workspace/api-keys/${key.id}`, { method: 'DELETE' });
+      toast?.('Key revoked.', 'success');
+      await load();
+    } catch (exc) {
+      toast?.(`Revoke failed: ${String(exc?.message || exc)}`, 'error');
+    }
+  }, [api, toast, load]);
+
+  const copyToClipboard = useCallback(async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast?.('Copied to clipboard.', 'success');
+    } catch {
+      toast?.('Copy failed — select the value manually.', 'error');
+    }
+  }, [toast]);
+
+  return html`
+    <div class="panel" ref=${panelRef}>
+      <div class="panel-head">
+        <strong>API keys</strong>
+        <span class="muted">For your own integrations.</span>
+      </div>
+
+      <form class="cl-settings-row" onSubmit=${onCreate}>
+        <label style="flex:1">
+          <span class="muted" style="display:block;font-size:11px;text-transform:uppercase">Label</span>
+          <input
+            type="text"
+            placeholder="e.g. ci-deploy or finance-team-script"
+            value=${label}
+            onInput=${(e) => setLabel(e.target.value)}
+            disabled=${creating}
+            style="width:100%"
+          />
+        </label>
+        <button type="submit" class="btn btn-primary" disabled=${creating}>
+          ${creating ? 'Creating…' : 'Create key'}
+        </button>
+      </form>
+
+      ${revealedKey ? html`
+        <div class="cl-settings-reveal" role="alert">
+          <strong>Copy this key now</strong>
+          <p class="muted" style="margin:4px 0 8px">
+            Clearledgr stores only a hash. After you close this banner the key cannot be retrieved.
+          </p>
+          <div class="cl-settings-reveal-row">
+            <code style="font-family:monospace;flex:1;word-break:break-all">${revealedKey.raw_key}</code>
+            <button class="btn btn-secondary" onClick=${() => copyToClipboard(revealedKey.raw_key)}>Copy</button>
+            <button class="btn btn-tertiary" onClick=${() => setRevealedKey(null)}>Close</button>
+          </div>
+        </div>
+      ` : null}
+
+      ${loading ? html`<p class="muted">Loading…</p>` : null}
+      ${!loading && keys.length === 0 ? html`
+        <p class="muted" style="padding:16px 0">No API keys yet. Create one above.</p>
+      ` : null}
+
+      ${keys.length > 0 ? html`
+        <table class="cl-settings-table">
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Prefix</th>
+              <th>Created</th>
+              <th>Last used</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${keys.map((k) => html`
+              <tr key=${k.id}>
+                <td>${k.label || html`<span class="muted">(none)</span>`}</td>
+                <td><code>${k.key_prefix}</code></td>
+                <td class="muted">${k.created_at ? formatDisplayDate(k.created_at) : '—'}</td>
+                <td class="muted">${k.last_used_at ? formatDisplayDate(k.last_used_at) : 'never'}</td>
+                <td style="text-align:right">
+                  <button class="btn btn-tertiary btn-sm" onClick=${() => onRotate(k)}>Rotate</button>
+                  <button class="btn btn-tertiary btn-sm" onClick=${() => onRevoke(k)}>Revoke</button>
+                </td>
+              </tr>
+            `)}
+          </tbody>
+        </table>
+      ` : null}
+    </div>
+  `;
+}
+
+
+// ─── Module 11 — Escalation policies panel ──────────────────────────
+//
+// Org-level "if exception X sits longer than N hours, email recipients."
+// Per spec line 354 the worker fires within 1 minute of breach.
+
+function EscalationPoliciesPanel({ api, toast, panelRef }) {
+  const [policies, setPolicies] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [name, setName] = useState('');
+  const [thresholdHours, setThresholdHours] = useState(24);
+  const [recipients, setRecipients] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const resp = await api(
+        '/api/workspace/escalation-policies?include_inactive=true',
+      );
+      setPolicies(resp?.policies || []);
+    } catch (exc) {
+      toast?.(`Failed to load policies: ${String(exc?.message || exc)}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [api, toast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const onCreate = useCallback(async (e) => {
+    e?.preventDefault?.();
+    const trimmed = recipients.split(',').map((r) => r.trim()).filter(Boolean);
+    if (!name.trim()) {
+      toast?.('Name is required.', 'error');
+      return;
+    }
+    if (trimmed.length === 0) {
+      toast?.('Add at least one recipient email.', 'error');
+      return;
+    }
+    setCreating(true);
+    try {
+      await api('/api/workspace/escalation-policies', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: name.trim(),
+          threshold_hours: Number(thresholdHours) || 24,
+          recipients: trimmed,
+          action: 'notify_email',
+        }),
+      });
+      toast?.('Escalation policy created.', 'success');
+      setName('');
+      setRecipients('');
+      setThresholdHours(24);
+      await load();
+    } catch (exc) {
+      toast?.(`Create failed: ${String(exc?.message || exc)}`, 'error');
+    } finally {
+      setCreating(false);
+    }
+  }, [api, name, thresholdHours, recipients, toast, load]);
+
+  const onTogglePause = useCallback(async (policy) => {
+    try {
+      await api(`/api/workspace/escalation-policies/${policy.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_active: !policy.is_active }),
+      });
+      await load();
+    } catch (exc) {
+      toast?.(`Update failed: ${String(exc?.message || exc)}`, 'error');
+    }
+  }, [api, toast, load]);
+
+  const onDelete = useCallback(async (policy) => {
+    if (!window.confirm(`Delete policy '${policy.name}'?`)) return;
+    try {
+      await api(`/api/workspace/escalation-policies/${policy.id}`, {
+        method: 'DELETE',
+      });
+      toast?.('Policy deleted.', 'success');
+      await load();
+    } catch (exc) {
+      toast?.(`Delete failed: ${String(exc?.message || exc)}`, 'error');
+    }
+  }, [api, toast, load]);
+
+  return html`
+    <div class="panel" ref=${panelRef}>
+      <div class="panel-head">
+        <strong>Escalation policies</strong>
+        <span class="muted">If an exception sits too long, email a human.</span>
+      </div>
+
+      <form class="cl-settings-row" onSubmit=${onCreate}>
+        <label style="flex:2">
+          <span class="muted" style="display:block;font-size:11px;text-transform:uppercase">Name</span>
+          <input
+            type="text"
+            placeholder="e.g. needs_info > 24h"
+            value=${name}
+            onInput=${(e) => setName(e.target.value)}
+            disabled=${creating}
+            style="width:100%"
+          />
+        </label>
+        <label style="width:120px">
+          <span class="muted" style="display:block;font-size:11px;text-transform:uppercase">Hours</span>
+          <input
+            type="number"
+            min="1"
+            max="720"
+            value=${thresholdHours}
+            onInput=${(e) => setThresholdHours(e.target.value)}
+            disabled=${creating}
+            style="width:100%"
+          />
+        </label>
+        <label style="flex:3">
+          <span class="muted" style="display:block;font-size:11px;text-transform:uppercase">Recipients (comma-separated)</span>
+          <input
+            type="text"
+            placeholder="oncall@your-co.com, ops-lead@your-co.com"
+            value=${recipients}
+            onInput=${(e) => setRecipients(e.target.value)}
+            disabled=${creating}
+            style="width:100%"
+          />
+        </label>
+        <button type="submit" class="btn btn-primary" disabled=${creating}>
+          ${creating ? 'Creating…' : 'Create policy'}
+        </button>
+      </form>
+
+      ${loading ? html`<p class="muted">Loading…</p>` : null}
+      ${!loading && policies.length === 0 ? html`
+        <p class="muted" style="padding:16px 0">
+          No escalation policies yet. Add one above so stuck exceptions don’t go unnoticed.
+        </p>
+      ` : null}
+
+      ${policies.length > 0 ? html`
+        <table class="cl-settings-table">
+          <thead>
+            <tr>
+              <th>Policy</th>
+              <th>Threshold</th>
+              <th>Recipients</th>
+              <th>State</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${policies.map((p) => html`
+              <tr key=${p.id} class=${p.is_active ? '' : 'cl-settings-row-inactive'}>
+                <td><strong>${p.name}</strong></td>
+                <td>${p.threshold_hours}h</td>
+                <td class="muted">${(p.recipients || []).join(', ') || '—'}</td>
+                <td>
+                  <span class=${`cl-record-chip cl-record-chip-${p.is_active ? 'success' : 'warning'}`}>
+                    ${p.is_active ? 'active' : 'paused'}
+                  </span>
+                </td>
+                <td style="text-align:right">
+                  <button class="btn btn-tertiary btn-sm" onClick=${() => onTogglePause(p)}>
+                    ${p.is_active ? 'Pause' : 'Resume'}
+                  </button>
+                  <button class="btn btn-tertiary btn-sm" onClick=${() => onDelete(p)}>Delete</button>
+                </td>
+              </tr>
+            `)}
+          </tbody>
+        </table>
+      ` : null}
+    </div>
+  `;
+}
+
+
+// ─── Module 11 — Notification preferences panel ─────────────────────
+//
+// Per-user toggles for the three notification channels. Each toggle
+// has a typed slot in the schema; the GET /schema endpoint returns the
+// canonical list so this UI renders every available one without
+// hard-coding a copy.
+
+function NotificationPreferencesPanel({ api, toast, panelRef }) {
+  const [prefs, setPrefs] = useState(null);
+  const [defaults, setDefaults] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const [prefsResp, schemaResp] = await Promise.all([
+        api('/api/workspace/notification-preferences'),
+        api('/api/workspace/notification-preferences/schema'),
+      ]);
+      setPrefs(prefsResp?.preferences || null);
+      setDefaults(schemaResp?.defaults || null);
+    } catch (exc) {
+      toast?.(`Failed to load preferences: ${String(exc?.message || exc)}`, 'error');
+    }
+  }, [api, toast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const onToggle = useCallback(async (channel, event, next) => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const patch = { [channel]: { [event]: next } };
+      const resp = await api('/api/workspace/notification-preferences', {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+      });
+      setPrefs(resp?.preferences || prefs);
+    } catch (exc) {
+      toast?.(`Save failed: ${String(exc?.message || exc)}`, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }, [api, prefs, saving, toast]);
+
+  if (!prefs || !defaults) {
+    return html`
+      <div class="panel" ref=${panelRef}>
+        <div class="panel-head">
+          <strong>Notifications</strong>
+        </div>
+        <p class="muted">Loading…</p>
+      </div>
+    `;
+  }
+
+  // Collect every (channel, event) pair from the canonical schema so
+  // we render every available toggle, not just the ones the user has
+  // saved. Order channels stably for layout.
+  const channelOrder = ['email', 'slack', 'in_app'];
+  const channelLabels = { email: 'Email', slack: 'Slack', in_app: 'In-app' };
+
+  return html`
+    <div class="panel" ref=${panelRef}>
+      <div class="panel-head">
+        <strong>Notifications</strong>
+        <span class="muted">
+          Per-user. Affects what reaches you on email, Slack, and the in-app inbox.
+        </span>
+      </div>
+
+      <table class="cl-settings-table cl-notif-table">
+        <thead>
+          <tr>
+            <th>Event</th>
+            ${channelOrder.map((c) => html`<th key=${c} style="text-align:center">${channelLabels[c]}</th>`)}
+          </tr>
+        </thead>
+        <tbody>
+          ${eventList(defaults).map((event) => html`
+            <tr key=${event}>
+              <td><strong>${humanizeEvent(event)}</strong></td>
+              ${channelOrder.map((channel) => html`
+                <td key=${channel} style="text-align:center">
+                  ${event in (defaults[channel] || {}) ? html`
+                    <input
+                      type="checkbox"
+                      checked=${prefs[channel]?.[event] ?? defaults[channel][event]}
+                      disabled=${saving}
+                      onChange=${(e) => onToggle(channel, event, e.target.checked)}
+                      aria-label=${`${channelLabels[channel]} — ${humanizeEvent(event)}`}
+                    />
+                  ` : html`<span class="muted">—</span>`}
+                </td>
+              `)}
+            </tr>
+          `)}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function eventList(defaults) {
+  const seen = new Set();
+  const order = [];
+  for (const channel of ['email', 'slack', 'in_app']) {
+    for (const event of Object.keys(defaults[channel] || {})) {
+      if (!seen.has(event)) {
+        seen.add(event);
+        order.push(event);
+      }
+    }
+  }
+  return order;
+}
+
+function humanizeEvent(event) {
+  const labels = {
+    exception_raised: 'Exception raised',
+    approval_requested: 'Approval requested',
+    approval_decided: 'Approval decided',
+    vendor_response: 'Vendor responded',
+    weekly_digest: 'Weekly digest',
+    report_subscriptions: 'Scheduled reports',
+    comment_mentions: 'Comment mentions',
+  };
+  return labels[event] || event.replace(/_/g, ' ');
+}

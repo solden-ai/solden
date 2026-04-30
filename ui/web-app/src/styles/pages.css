@@ -2859,3 +2859,84 @@
     margin-left: 0;
   }
 }
+
+/* Module 11 settings panels — API keys / escalation / notifications */
+
+.cl-settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  padding: 16px;
+  background: #FAFAF8;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  margin-bottom: 16px;
+}
+
+.cl-settings-row input[type="text"],
+.cl-settings-row input[type="email"],
+.cl-settings-row input[type="number"],
+.cl-settings-row select {
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  background: var(--cl-surface);
+  color: var(--cl-ink-primary);
+  font-family: inherit;
+}
+
+.cl-settings-reveal {
+  background: var(--cl-mint-soft);
+  border: 1px solid var(--cl-mint);
+  border-radius: var(--cl-radius-sm);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+.cl-settings-reveal-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.cl-settings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 8px;
+}
+.cl-settings-table thead th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cl-ink-muted);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--cl-border);
+}
+.cl-settings-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--cl-border);
+  color: var(--cl-ink-primary);
+}
+.cl-settings-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.cl-settings-table code {
+  font-family: var(--cl-font-mono);
+  font-size: 12px;
+  color: var(--cl-ink-secondary);
+}
+
+.cl-settings-row-inactive {
+  opacity: 0.6;
+}
+
+.cl-notif-table input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--cl-mint);
+  cursor: pointer;
+}
