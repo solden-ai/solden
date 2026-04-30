@@ -335,6 +335,21 @@ async def run_inline_gmail_triage(
     insights_service = get_proactive_insights(org_id)
     insights = insights_service.analyze_after_invoice(invoice_for_priority)
     if insights:
+        # Rule-detected insights get a contextual rewrite from Haiku so
+        # the operator sees "Cisco's annual licence renewal landed
+        # alongside monthly support" instead of the generic dashboard
+        # phrasing. Narration never changes which insights surface; if
+        # it fails, the rule copy ships untouched.
+        try:
+            from clearledgr.services.proactive_insights import narrate_insights
+
+            insights = await narrate_insights(
+                insights,
+                organization_id=org_id,
+                period="current invoice",
+            )
+        except Exception as exc:
+            logger.debug("[Triage] insight narration skipped (non-fatal): %s", exc)
         extraction["insights"] = [
             {"title": insight.title, "description": insight.description, "severity": insight.severity}
             for insight in insights

@@ -64,6 +64,7 @@ class LLMAction(str, Enum):
     SLACK_QUERY = "slack_query"
     SINGLE_PASS_EXTRACT = "single_pass_extract"
     EXPLAIN_ANOMALY = "explain_anomaly"
+    NARRATE_INSIGHT = "narrate_insight"
 
 
 @dataclass(frozen=True)
@@ -108,6 +109,12 @@ ACTION_REGISTRY: Dict[LLMAction, ActionConfig] = {
     # the rules already decided there's an anomaly; the LLM only writes
     # the description and never gates the routing call.
     LLMAction.EXPLAIN_ANOMALY:        ActionConfig(max_output_tokens=400,  model_tier="haiku", timeout_seconds=10),
+    # Rewrites rule-detected ProactiveInsights titles/descriptions
+    # with business context (this vendor, this pattern, what to do).
+    # Cheap tier — the rules already decided what's notable; the LLM
+    # only writes the operator-facing copy and never changes which
+    # insights are surfaced.
+    LLMAction.NARRATE_INSIGHT:        ActionConfig(max_output_tokens=600,  model_tier="haiku", timeout_seconds=10),
 }
 
 

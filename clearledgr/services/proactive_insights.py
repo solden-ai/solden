@@ -14,6 +14,7 @@ Changelog:
 - 2026-01-23: Initial implementation
 """
 
+import json
 import logging
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
@@ -520,3 +521,135 @@ class ProactiveInsightsService:
 def get_proactive_insights(organization_id: str = "default") -> ProactiveInsightsService:
     """Get a proactive insights service instance."""
     return ProactiveInsightsService(organization_id=organization_id)
+
+
+# ---------------------------------------------------------------------------
+# LLM narration — augments rule-detected insights with business-context copy.
+# Same split as agent_anomaly_detection: rules decide what's notable, LLM
+# rewrites the operator-facing description. Never changes which insights are
+# surfaced; never gates a routing decision; falls back to rule copy on any
+# failure (no API key, gateway timeout, JSON parse error).
+# ---------------------------------------------------------------------------
+
+
+_INSIGHT_NARRATION_PROMPT = """You are rewriting a list of rule-detected AP insights for a finance manager. \
+The rules decided WHAT is notable; your job is to rewrite the description so it reads like advice from \
+a colleague who knows this vendor's pattern, not a dashboard ticker.
+
+Context:
+- Organization: {org}
+- Reference period: {period}
+
+Rule-detected insights:
+{insights_json}
+
+Return JSON only, in the same order as the input:
+{{
+  "insights": [
+    {{
+      "id": "<echo back the insight_id verbatim>",
+      "title": "<rewritten short title — keep under 80 chars>",
+      "description": "<one or two sentences explaining what's likely going on AND what to look at, tied to the specific numbers>",
+      "recommendations": ["<2-3 short concrete actions, sharper than the input>"]
+    }}
+  ]
+}}
+
+Constraints:
+- Echo every insight_id verbatim. If you can't improve an insight, echo the input title/description.
+- No prose outside the JSON.
+- Do not invent data. Use only the numbers in the input.
+- Prefer concrete checks ("Compare line items to the prior monthly invoice") over generic phrases ("Verify proper approval workflow")."""
+
+
+async def narrate_insights(
+    insights: List[Insight],
+    *,
+    organization_id: str = "default",
+    period: str = "current",
+) -> List[Insight]:
+    """Augment a list of rule-detected insights with LLM-rendered copy.
+
+    Returns a new list with the same length and IDs as the input. Any
+    insight the LLM fails to improve falls back to the rule copy
+    verbatim. The rules layer always decides which insights surface;
+    this function never adds or removes insights.
+    """
+    if not insights:
+        return insights
+
+    # Project to the minimum the LLM needs — keep the prompt cheap and
+    # guard against accidentally leaking data the operator hasn't seen.
+    projection = [
+        {
+            "id": i.insight_id,
+            "category": i.category,
+            "severity": i.severity,
+            "title": i.title,
+            "description": i.description,
+            "recommendations": list(i.recommendations or []),
+            "data": i.data or {},
+        }
+        for i in insights
+    ]
+
+    try:
+        from clearledgr.core.llm_gateway import LLMAction, get_llm_gateway
+
+        gateway = get_llm_gateway()
+        prompt = _INSIGHT_NARRATION_PROMPT.format(
+            org=organization_id,
+            period=period,
+            insights_json=json.dumps(projection, indent=2, default=str),
+        )
+        resp = await gateway.call(
+            LLMAction.NARRATE_INSIGHT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = resp.content if isinstance(resp.content, str) else ""
+        if not raw:
+            return insights
+        text = raw.strip()
+        if text.startswith("```"):
+            text = text.strip("`").lstrip("json").strip()
+        parsed = json.loads(text)
+    except Exception as exc:
+        logger.debug(
+            "[proactive_insights] narration skipped (rule copy preserved): %s", exc,
+        )
+        return insights
+
+    rewrites = {}
+    for raw_item in (parsed.get("insights") or []):
+        if not isinstance(raw_item, dict):
+            continue
+        rid = str(raw_item.get("id") or "")
+        if rid:
+            rewrites[rid] = raw_item
+
+    enriched: List[Insight] = []
+    for original in insights:
+        rewrite = rewrites.get(original.insight_id)
+        if not isinstance(rewrite, dict):
+            enriched.append(original)
+            continue
+        new_title = str(rewrite.get("title") or "").strip() or original.title
+        new_desc = str(rewrite.get("description") or "").strip() or original.description
+        recs = rewrite.get("recommendations")
+        new_recs = (
+            [str(r).strip() for r in recs if r]
+            if isinstance(recs, list) and recs
+            else original.recommendations
+        )
+        enriched.append(Insight(
+            insight_id=original.insight_id,
+            category=original.category,
+            severity=original.severity,
+            title=new_title[:120],  # hard cap defensively
+            description=new_desc,
+            data=original.data,
+            recommendations=new_recs,
+            actionable=original.actionable,
+        ))
+
+    return enriched
