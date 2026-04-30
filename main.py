@@ -192,6 +192,14 @@ from clearledgr.services.logging import log_request, log_error, logger
 from clearledgr.services.metrics import record_request, record_error, get_metrics
 from clearledgr.services.rate_limit import RateLimitMiddleware
 
+# psycopg_pool logs WARNING "rolling back returned connection" on every
+# in-tx connection returned to the pool. With ~30 such warnings per
+# request the api hits Railway's 500-logs/sec limit and drops real
+# diagnostic lines. The rollback is harmless (psycopg auto-recovers)
+# but the noise is fatal for observability — silence it here.
+import logging as _logging
+_logging.getLogger("psycopg.pool").setLevel(_logging.ERROR)
+
 # Surface the persistent-metrics mode on /health without calling
 # get_metrics() (which would run 9 SELECTs per call, see L1247).
 _PERSISTENT_METRICS = str(os.getenv("ENV", "dev")).strip().lower() in {
