@@ -103,6 +103,8 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
   const apiKeysRef = useRef(null);
   const escalationRef = useRef(null);
   const notificationsRef = useRef(null);
+  // Module 9 — FX rates section.
+  const fxRatesRef = useRef(null);
 
   // ERP + integration state from bootstrap
   const integrations = bootstrap?.integrations || [];
@@ -422,6 +424,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         <button class=${`segmented-button btn-sm${activeSection === 'api-keys' ? ' is-active' : ''}`} onClick=${() => scrollToSection(apiKeysRef, 'api-keys')}>API keys</button>
         <button class=${`segmented-button btn-sm${activeSection === 'escalation' ? ' is-active' : ''}`} onClick=${() => scrollToSection(escalationRef, 'escalation')}>Escalation</button>
         <button class=${`segmented-button btn-sm${activeSection === 'notifications' ? ' is-active' : ''}`} onClick=${() => scrollToSection(notificationsRef, 'notifications')}>Notifications</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'fx' ? ' is-active' : ''}`} onClick=${() => scrollToSection(fxRatesRef, 'fx')}>FX rates</button>
       </div>
     </div>
 
@@ -896,6 +899,11 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         api=${api}
         toast=${toast}
         panelRef=${notificationsRef} />
+
+      <${FxRatesPanel}
+        api=${api}
+        toast=${toast}
+        panelRef=${fxRatesRef} />
 
       ${implStatus?.steps ? html`
         <div class="panel">
@@ -2203,6 +2211,209 @@ function TeamMembersPanel({ api, toast, orgId, actorEmail, canManage }) {
           })}
         </tbody>
       </table>
+    </div>
+  `;
+}
+
+
+// ─── Module 9 — FX rates panel ──────────────────────────────────────
+//
+// Operator-managed currency conversion rates. The Volume report uses
+// these to roll up cross-currency invoices into the org's functional
+// currency. Per spec §304, rates come from the customer's ERP (or
+// manual operator entry), never a third-party API.
+
+function FxRatesPanel({ api, toast, panelRef }) {
+  const [rates, setRates] = useState([]);
+  const [functionalCcy, setFunctionalCcy] = useState('USD');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [rateValue, setRateValue] = useState('');
+  const [asOfDate, setAsOfDate] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [list, fcResp] = await Promise.all([
+        api('/api/workspace/fx-rates?limit=200'),
+        api('/api/workspace/fx-rates/functional-currency'),
+      ]);
+      setRates(list?.rates || []);
+      if (fcResp?.functional_currency) {
+        setFunctionalCcy(fcResp.functional_currency);
+      }
+    } catch (exc) {
+      toast?.(`Failed to load FX rates: ${String(exc?.message || exc)}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [api, toast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const onSave = useCallback(async (e) => {
+    e?.preventDefault?.();
+    const fromCcy = from.trim().toUpperCase();
+    const toCcy = to.trim().toUpperCase();
+    const rate = Number(rateValue);
+    if (fromCcy.length !== 3 || toCcy.length !== 3) {
+      toast?.('Currency codes must be 3 letters (e.g. USD, EUR, GBP).', 'error');
+      return;
+    }
+    if (fromCcy === toCcy) {
+      toast?.('From and To currencies cannot be the same.', 'error');
+      return;
+    }
+    if (!Number.isFinite(rate) || rate <= 0) {
+      toast?.('Rate must be a positive number.', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api('/api/workspace/fx-rates', {
+        method: 'POST',
+        body: JSON.stringify({
+          from_currency: fromCcy,
+          to_currency: toCcy,
+          rate,
+          as_of_date: asOfDate || null,
+          source: 'manual',
+        }),
+      });
+      toast?.(`Saved ${fromCcy}→${toCcy} @ ${rate}`, 'success');
+      setFrom('');
+      setTo('');
+      setRateValue('');
+      setAsOfDate('');
+      await load();
+    } catch (exc) {
+      toast?.(`Save failed: ${String(exc?.message || exc)}`, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }, [api, from, to, rateValue, asOfDate, toast, load]);
+
+  const onDelete = useCallback(async (rate) => {
+    if (!window.confirm(
+      `Delete the ${rate.from_currency}→${rate.to_currency} rate ` +
+      `(${rate.rate}) effective ${rate.as_of_date}?`,
+    )) return;
+    try {
+      await api(`/api/workspace/fx-rates/${rate.id}`, { method: 'DELETE' });
+      toast?.('Rate deleted.', 'success');
+      await load();
+    } catch (exc) {
+      toast?.(`Delete failed: ${String(exc?.message || exc)}`, 'error');
+    }
+  }, [api, toast, load]);
+
+  return html`
+    <div class="panel" ref=${panelRef}>
+      <div class="panel-head">
+        <strong>FX rates</strong>
+        <span class="muted">
+          Functional currency: <code>${functionalCcy}</code>. Reports convert every
+          invoice to this currency before aggregating across entities.
+        </span>
+      </div>
+
+      <form class="cl-settings-row" onSubmit=${onSave}>
+        <label style="width:100px">
+          <span class="muted" style="display:block;font-size:11px;text-transform:uppercase">From</span>
+          <input
+            type="text"
+            placeholder="EUR"
+            value=${from}
+            onInput=${(e) => setFrom(e.target.value)}
+            disabled=${saving}
+            maxlength="3"
+            style="width:100%;text-transform:uppercase"
+          />
+        </label>
+        <label style="width:100px">
+          <span class="muted" style="display:block;font-size:11px;text-transform:uppercase">To</span>
+          <input
+            type="text"
+            placeholder="USD"
+            value=${to}
+            onInput=${(e) => setTo(e.target.value)}
+            disabled=${saving}
+            maxlength="3"
+            style="width:100%;text-transform:uppercase"
+          />
+        </label>
+        <label style="width:140px">
+          <span class="muted" style="display:block;font-size:11px;text-transform:uppercase">Rate</span>
+          <input
+            type="number"
+            step="0.0001"
+            min="0"
+            placeholder="1.10"
+            value=${rateValue}
+            onInput=${(e) => setRateValue(e.target.value)}
+            disabled=${saving}
+            style="width:100%"
+          />
+        </label>
+        <label style="width:160px">
+          <span class="muted" style="display:block;font-size:11px;text-transform:uppercase">Effective from</span>
+          <input
+            type="date"
+            value=${asOfDate}
+            onInput=${(e) => setAsOfDate(e.target.value)}
+            disabled=${saving}
+            style="width:100%"
+          />
+        </label>
+        <button type="submit" class="btn btn-primary" disabled=${saving}>
+          ${saving ? 'Saving…' : 'Save rate'}
+        </button>
+      </form>
+
+      ${loading ? html`<p class="muted">Loading…</p>` : null}
+      ${!loading && rates.length === 0 ? html`
+        <p class="muted" style="padding:16px 0">
+          No FX rates yet. Add one above for every currency pair you need.
+          ${functionalCcy} → ${functionalCcy} doesn't need a rate.
+        </p>
+      ` : null}
+
+      ${rates.length > 0 ? html`
+        <table class="cl-settings-table">
+          <thead>
+            <tr>
+              <th>From</th>
+              <th>To</th>
+              <th class="cl-record-num">Rate</th>
+              <th>Effective from</th>
+              <th>Source</th>
+              <th>Note</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rates.map((r) => html`
+              <tr key=${r.id}>
+                <td><code>${r.from_currency}</code></td>
+                <td><code>${r.to_currency}</code></td>
+                <td class="cl-record-num">${r.rate?.toFixed?.(4) ?? r.rate}</td>
+                <td class="muted">${r.as_of_date}</td>
+                <td>
+                  <span class=${`cl-record-chip cl-record-chip-${r.source === 'manual' ? 'info' : 'success'}`}>
+                    ${r.source}
+                  </span>
+                </td>
+                <td class="muted">${r.note || '—'}</td>
+                <td style="text-align:right">
+                  <button class="btn btn-tertiary btn-sm" onClick=${() => onDelete(r)}>Delete</button>
+                </td>
+              </tr>
+            `)}
+          </tbody>
+        </table>
+      ` : null}
     </div>
   `;
 }
