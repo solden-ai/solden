@@ -142,6 +142,7 @@ def _load_store_symbols() -> None:
     global BankStatementStore
     global SanctionsStore
     global ReportSubscriptionStore
+    global EscalationPolicyStore
 
     if "APStore" in globals():
         return
@@ -194,6 +195,9 @@ def _load_store_symbols() -> None:
     from clearledgr.core.stores.report_subscription_store import (
         ReportSubscriptionStoreMixin as _ReportSubscriptionStore,
     )
+    from clearledgr.core.stores.escalation_policy_store import (
+        EscalationPolicyStoreMixin as _EscalationPolicyStore,
+    )
 
     APStore = _APStore
     APRuntimeStore = _APRuntimeStore
@@ -221,6 +225,7 @@ def _load_store_symbols() -> None:
     BankStatementStore = _BankStatementStore
     SanctionsStore = _SanctionsStore
     ReportSubscriptionStore = _ReportSubscriptionStore
+    EscalationPolicyStore = _EscalationPolicyStore
 
 
 class _ClearledgrDBBase:
@@ -1531,6 +1536,7 @@ def _get_db_impl_class():
             BankStatementStore,
             SanctionsStore,
             ReportSubscriptionStore,
+            EscalationPolicyStore,
             _ClearledgrDBBase,
         ):
             pass

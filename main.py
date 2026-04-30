@@ -140,6 +140,9 @@ from clearledgr.api.slack_invoices import (
 from clearledgr.api.teams_invoices import router as teams_invoices_router
 from clearledgr.api.api_keys import router as api_keys_router
 from clearledgr.api.ap_item_detail import router as ap_item_detail_router
+from clearledgr.api.escalation_policies import (
+    router as escalation_policies_router,
+)
 from clearledgr.api.three_way_match import (
     router as three_way_match_router,
 )
@@ -1441,6 +1444,12 @@ app.include_router(report_subscriptions_router)
 # Show-once semantics on create/rotate; soft-delete revocation
 # preserves the audit trail; org-scoped at every endpoint.
 app.include_router(api_keys_router)
+
+# Module 11 — org-level escalation policies.
+# CRUD over escalation_policies; the Celery beat task in
+# fire_due_escalation_policies fires actions when
+# box_exceptions cross the configured threshold.
+app.include_router(escalation_policies_router)
 
 # Wave 5 / G2: multi-attribute vendor match
 app.include_router(vendor_match_router)

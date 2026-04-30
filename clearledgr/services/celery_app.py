@@ -137,6 +137,16 @@ app.config_from_object(
                 "task": "clearledgr.services.celery_tasks.post_pending_accrual_reversals",
                 "schedule": _crontab(minute=0, hour=3),
             },
+            # Module 11: every-minute sweep of escalation policies.
+            # Per spec §354 "fires within 1 minute of threshold breach"
+            # — the schedule + per-tick processing keep us inside the
+            # bound. Idempotency lives in the escalation_events table
+            # (UNIQUE constraint on policy_id+exception_id) so two
+            # workers racing on the same minute can't double-fire.
+            "fire-due-escalation-policies": {
+                "task": "clearledgr.services.celery_tasks.fire_due_escalation_policies",
+                "schedule": 60.0,
+            },
             # Module 8: hourly sweep of due report subscriptions.
             # 15 minutes after the hour avoids the top-of-hour broker
             # contention. Each task picks up to 100 due rows, runs

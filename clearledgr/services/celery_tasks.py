@@ -1088,3 +1088,35 @@ def deliver_due_report_subscriptions() -> dict:
         "failed": failed,
         "skipped": skipped,
     }
+
+
+# ---------------------------------------------------------------------------
+# Module 11 — escalation policy worker.
+#
+# Runs every minute. Finds box_exceptions that have crossed any
+# active policy's threshold, sends the configured action (email),
+# records an escalation_events row for idempotency.
+# Acceptance criterion §354: "fires within 1 minute of threshold
+# breach" — schedule + per-tick processing latency keep us comfortably
+# inside that bound.
+# ---------------------------------------------------------------------------
+
+@app.task
+def fire_due_escalation_policies() -> dict:
+    """Run one pass of the escalation worker."""
+    from clearledgr.core.database import get_db
+    from clearledgr.services.escalation_runner import run_escalation_tick
+
+    db = get_db()
+    try:
+        summary = run_escalation_tick(db)
+    except Exception as exc:
+        logger.exception("[fire_due_escalation_policies] tick failed: %s", exc)
+        return {"status": "error", "error": str(exc)}
+    return {
+        "status": "ok",
+        "processed": summary.processed,
+        "fired": summary.fired,
+        "failed": summary.failed,
+        "skipped": summary.skipped,
+    }

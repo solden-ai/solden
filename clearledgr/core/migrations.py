@@ -3642,3 +3642,74 @@ def _v68_report_subscriptions(cur, db):
         "CREATE INDEX IF NOT EXISTS idx_report_subs_user "
         "ON report_subscriptions (organization_id, user_id, created_at DESC)"
     )
+
+
+@migration(
+    69,
+    "escalation_policies + escalation_events: org-level escalation when exceptions sit too long (Module 11)",
+)
+def _v69_escalation_policies(cur, db):
+    """Per-org policy that escalates stuck box_exceptions.
+
+    The leader configures "if a needs_info exception sits longer than
+    24h, email the on-call AP manager." The Celery task in
+    ``celery_tasks.fire_due_escalation_policies`` runs every minute,
+    finds box_exceptions where ``raised_at < now() - threshold_hours``
+    and no escalation_event has fired for that (policy, exception) pair
+    yet, then sends the configured action.
+
+    ``escalation_events`` is the idempotency ledger — a UNIQUE
+    constraint on (policy_id, exception_id) blocks the same exception
+    from being escalated twice for the same policy. Resolved
+    exceptions stop matching the worker query, so a resolved-then-
+    re-raised exception would get a fresh row (because exception_id
+    changes) — that is the right behaviour for "same problem came
+    back" semantics.
+
+    v1 ships ``notify_email`` only. Slack / admin-page actions are
+    deferred to v1.5 — the action enum is already in place so adding
+    them is additive.
+    """
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS escalation_policies (
+            id              TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            name            TEXT NOT NULL,
+            threshold_hours INTEGER NOT NULL,
+            exception_types TEXT,
+            severity_filter TEXT,
+            action          TEXT NOT NULL DEFAULT 'notify_email',
+            recipients_json TEXT NOT NULL DEFAULT '[]',
+            is_active       INTEGER NOT NULL DEFAULT 1,
+            created_by      TEXT,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            CHECK (threshold_hours > 0 AND threshold_hours <= 720),
+            CHECK (action IN ('notify_email'))
+        )
+        """
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_escalation_policies_org_active "
+        "ON escalation_policies (organization_id, is_active)"
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS escalation_events (
+            id              TEXT PRIMARY KEY,
+            policy_id       TEXT NOT NULL,
+            exception_id    TEXT NOT NULL,
+            organization_id TEXT NOT NULL,
+            fired_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            delivered       INTEGER NOT NULL DEFAULT 0,
+            delivery_error  TEXT,
+            UNIQUE (policy_id, exception_id)
+        )
+        """
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_escalation_events_org_fired "
+        "ON escalation_events (organization_id, fired_at DESC)"
+    )
