@@ -64,6 +64,11 @@ _INTENT_TARGET_STATES: Dict[str, frozenset] = {
     "reject_invoice": frozenset({APState.REJECTED}),
     "request_info": frozenset({APState.NEEDS_INFO}),
     "escalate_approval": frozenset({APState.NEEDS_APPROVAL}),
+    # Module 2 spec line 99 — "send to specific person".
+    # `reassign_approval` is the existing intent that hands off the
+    # current approval step to a named approver; surfacing it in the
+    # detail page satisfies the spec's named action.
+    "reassign_approval": frozenset({APState.NEEDS_APPROVAL, APState.PENDING_APPROVAL}),
     "snooze_invoice": frozenset({APState.SNOOZED}),
     "unsnooze_invoice": frozenset({
         APState.VALIDATED, APState.NEEDS_INFO, APState.NEEDS_APPROVAL,
@@ -334,10 +339,67 @@ def _safe_three_way_match(
         )
         if summary is None:
             return None
-        return summary.to_dict()
+        match = summary.to_dict()
+        # Module 2 spec line 96: "deep links into ERP source records"
+        # for PO/GR. Synthesize URLs once on the server based on the
+        # primary ERP connection so the frontend just renders an <a>.
+        po_number = match.get("po_number")
+        gr_number = match.get("gr_number") or match.get("grn_number")
+        if po_number or gr_number:
+            from clearledgr.api.workspace_shell import _resolve_erp_deep_link_id
+            try:
+                conns = db.get_erp_connections(organization_id) if hasattr(db, "get_erp_connections") else []
+            except Exception:
+                conns = []
+            primary = next((c for c in (conns or []) if c.get("is_active", 1)), None) or (conns[0] if conns else None)
+            if primary:
+                erp_type = str(primary.get("erp_type") or "").strip().lower()
+                deep_id = _resolve_erp_deep_link_id(primary) or ""
+                base_url = str(primary.get("base_url") or "").strip().rstrip("/")
+                match["erp_type"] = erp_type
+                if po_number:
+                    match["po_url"] = _build_erp_po_url(erp_type, deep_id, base_url, str(po_number))
+                if gr_number:
+                    match["gr_url"] = _build_erp_gr_url(erp_type, deep_id, base_url, str(gr_number))
+        return match
     except Exception as exc:
         logger.debug("[ap_item_detail] three-way match skipped: %s", exc)
         return None
+
+
+def _build_erp_po_url(erp_type: str, deep_id: str, base_url: str, po_number: str) -> Optional[str]:
+    """Synthesize a deep-link URL into the ERP's purchase-order screen.
+
+    Falls back to None when we don't have enough information to
+    build a known-correct URL — frontend renders plain code in that
+    case rather than a dead link.
+    """
+    from urllib.parse import quote
+    po = quote(po_number, safe="")
+    if erp_type == "quickbooks" and deep_id:
+        return f"https://app.qbo.intuit.com/app/purchaseorder?txnId={po}"
+    if erp_type == "xero":
+        return f"https://go.xero.com/Accounts/Payable/PurchaseOrders/Edit/?id={po}"
+    if erp_type == "netsuite" and deep_id:
+        return f"https://{deep_id}.app.netsuite.com/app/accounting/transactions/purchord.nl?id={po}"
+    if erp_type == "sap" and base_url:
+        return f"{base_url}/sap/bc/ui2/flp#PurchaseOrder-display?PurchaseOrder={po}"
+    return None
+
+
+def _build_erp_gr_url(erp_type: str, deep_id: str, base_url: str, gr_number: str) -> Optional[str]:
+    """Same as _build_erp_po_url but for goods-receipt records."""
+    from urllib.parse import quote
+    gr = quote(gr_number, safe="")
+    if erp_type == "netsuite" and deep_id:
+        return f"https://{deep_id}.app.netsuite.com/app/accounting/transactions/itemrcpt.nl?id={gr}"
+    if erp_type == "sap" and base_url:
+        return f"{base_url}/sap/bc/ui2/flp#GoodsMovement-display?MaterialDocument={gr}"
+    if erp_type == "xero":
+        return None  # Xero doesn't model GR as a separate record
+    if erp_type == "quickbooks":
+        return None  # QB folds GR into the PO close flow
+    return None
 
 
 # ---------------------------------------------------------------------------

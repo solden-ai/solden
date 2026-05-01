@@ -36,6 +36,10 @@ const INTENT_LABELS = {
   reject_invoice: 'Reject',
   request_info: 'Send back for info',
   escalate_approval: 'Escalate to controller',
+  // Module 2 spec line 99 — "send to specific person". Maps to the
+  // existing reassign_approval intent (handler at
+  // ap_intent_handlers.py:1056); the dialog collects a target email.
+  reassign_approval: 'Send to person',
   request_approval: 'Send for approval',
   snooze_invoice: 'Snooze',
   unsnooze_invoice: 'Unsnooze',
@@ -43,6 +47,25 @@ const INTENT_LABELS = {
   reverse_invoice_post: 'Reverse posting',
   manually_classify_invoice: 'Reclassify',
   resubmit_invoice: 'Resubmit',
+};
+
+// Module 2 spec line 99 — additional named actions that invoke
+// existing intents with structured extra payload:
+//   - mark_duplicate → reject_invoice + duplicate-of metadata
+//   - override_post → post_to_erp + override_validation flag
+// These aren't separate intents on the backend; they're UI
+// affordances that route the same handlers with the right inputs.
+const SPECIAL_ACTIONS = {
+  mark_duplicate: {
+    label: 'Mark as duplicate',
+    intent: 'reject_invoice',
+    requiresState: new Set(['received', 'validated', 'needs_info', 'needs_approval', 'pending_approval']),
+  },
+  override_post: {
+    label: 'Override and post',
+    intent: 'post_to_erp',
+    requiresState: new Set(['received', 'validated', 'needs_info', 'needs_approval', 'pending_approval', 'approved', 'ready_to_post', 'failed_post']),
+  },
 };
 
 const VERDICT_TONE = {
@@ -60,6 +83,18 @@ const RECOMMENDATION_TONE = {
   escalate: 'warning',
   reject: 'error',
 };
+
+const ERP_NAMES = {
+  quickbooks: 'QuickBooks',
+  xero: 'Xero',
+  netsuite: 'NetSuite',
+  sap: 'SAP',
+};
+
+function formatErpName(erpType) {
+  if (!erpType) return 'ERP';
+  return ERP_NAMES[String(erpType).toLowerCase()] || 'ERP';
+}
 
 
 // ─── Top-level page ─────────────────────────────────────────────────
@@ -150,6 +185,7 @@ export default function RecordDetailPage({
       <${ActionBar}
         actions=${actions}
         onIntent=${onIntent}
+        item=${item}
         busy=${actionBusy}
       />
 
@@ -255,9 +291,11 @@ function RecordHeader({ item }) {
 
 // ─── Action bar ─────────────────────────────────────────────────────
 
-function ActionBar({ actions, onIntent, busy }) {
+function ActionBar({ actions, onIntent, item, busy }) {
   const available = (actions && actions.available) || [];
   const primary = (actions && actions.primary) || null;
+  const [dialog, setDialog] = useState(null); // {kind, intent, defaultValues}
+  const state = String(item?.state || '').toLowerCase();
 
   if (available.length === 0) {
     return html`
@@ -271,12 +309,30 @@ function ActionBar({ actions, onIntent, busy }) {
 
   const orderedSecondary = available.filter((intent) => intent !== primary);
 
+  const openDialog = (kind, intent) => setDialog({ kind, intent });
+  const closeDialog = () => setDialog(null);
+  const submitDialog = async (values) => {
+    if (!dialog) return;
+    await onIntent(dialog.intent, values);
+    setDialog(null);
+  };
+
+  // Special actions visible when state allows them.
+  const showMarkDuplicate = SPECIAL_ACTIONS.mark_duplicate.requiresState.has(state);
+  const showOverridePost = SPECIAL_ACTIONS.override_post.requiresState.has(state);
+  const showSendToPerson = available.includes('reassign_approval');
+
+  const intentClick = (intent) => {
+    if (intent === 'reassign_approval') return openDialog('send_to_person', intent);
+    return onIntent(intent);
+  };
+
   return html`
     <section class="cl-record-action-bar" role="toolbar" aria-label="Record actions">
       ${primary ? html`
         <button
           class="btn btn-primary cl-record-action-primary"
-          onClick=${() => onIntent(primary)}
+          onClick=${() => intentClick(primary)}
           disabled=${busy}
         >${INTENT_LABELS[primary] || primary}</button>
       ` : null}
@@ -284,11 +340,142 @@ function ActionBar({ actions, onIntent, busy }) {
         <button
           key=${intent}
           class="btn btn-secondary"
-          onClick=${() => onIntent(intent)}
+          onClick=${() => intentClick(intent)}
           disabled=${busy}
         >${INTENT_LABELS[intent] || intent}</button>
       `)}
+      ${showSendToPerson && primary !== 'reassign_approval' && !orderedSecondary.includes('reassign_approval') ? html`
+        <button class="btn btn-secondary" onClick=${() => openDialog('send_to_person', 'reassign_approval')} disabled=${busy}>
+          Send to person
+        </button>
+      ` : null}
+      ${showMarkDuplicate ? html`
+        <button class="btn btn-secondary" onClick=${() => openDialog('mark_duplicate', 'reject_invoice')} disabled=${busy}>
+          Mark as duplicate
+        </button>
+      ` : null}
+      ${showOverridePost ? html`
+        <button class="btn btn-secondary cl-record-action-override" onClick=${() => openDialog('override_post', 'post_to_erp')} disabled=${busy}>
+          Override and post
+        </button>
+      ` : null}
+      ${dialog ? html`<${ActionDialog} kind=${dialog.kind} onCancel=${closeDialog} onSubmit=${submitDialog} busy=${busy} />` : null}
     </section>
+  `;
+}
+
+
+function ActionDialog({ kind, onCancel, onSubmit, busy }) {
+  const [email, setEmail] = useState('');
+  const [note, setNote] = useState('');
+  const [duplicateOf, setDuplicateOf] = useState('');
+  const [overrideReason, setOverrideReason] = useState('');
+
+  const onConfirm = (e) => {
+    e?.preventDefault?.();
+    if (kind === 'send_to_person') {
+      const trimmed = email.trim();
+      if (!trimmed) return;
+      onSubmit({ assignee: trimmed, note: note.trim() || undefined });
+    } else if (kind === 'mark_duplicate') {
+      const dup = duplicateOf.trim();
+      const reason = dup
+        ? `Marked as duplicate of ${dup}${note.trim() ? `: ${note.trim()}` : ''}`
+        : `Marked as duplicate${note.trim() ? `: ${note.trim()}` : ''}`;
+      if (!dup && !note.trim()) return; // require at least one piece of info
+      onSubmit({
+        reason,
+        metadata: dup ? { duplicate_of_ap_item_id: dup, duplicate_note: note.trim() || undefined } : { duplicate_note: note.trim() },
+      });
+    } else if (kind === 'override_post') {
+      const reason = overrideReason.trim();
+      if (!reason) return;
+      onSubmit({ override_validation: true, override_reason: reason });
+    }
+  };
+
+  const titles = {
+    send_to_person: 'Send for approval to a specific person',
+    mark_duplicate: 'Mark as duplicate',
+    override_post: 'Override validation and post anyway',
+  };
+  const subs = {
+    send_to_person: 'Hands off the current approval step to the named approver. Recorded in the audit trail.',
+    mark_duplicate: 'Closes this invoice with a duplicate marker. Optionally link the original.',
+    override_post: 'Skips the eligibility gate and posts to the ERP. The override + reason are recorded; CFO and audit trail will see this.',
+  };
+
+  return html`
+    <div class="cl-record-dialog-backdrop" onClick=${onCancel}>
+      <form class="cl-record-dialog" onClick=${(e) => e.stopPropagation()} onSubmit=${onConfirm}>
+        <header class="cl-record-dialog-head">
+          <h3>${titles[kind]}</h3>
+          <p class="cl-record-dialog-sub">${subs[kind]}</p>
+        </header>
+        <div class="cl-record-dialog-body">
+          ${kind === 'send_to_person' ? html`
+            <label class="cl-record-dialog-field">
+              <span>Approver email</span>
+              <input
+                type="email"
+                placeholder="approver@company.com"
+                value=${email}
+                onInput=${(e) => setEmail(e.target.value)}
+                required
+                autoFocus />
+            </label>
+            <label class="cl-record-dialog-field">
+              <span>Note (optional)</span>
+              <textarea
+                placeholder="Why this person? Any context they need."
+                rows="3"
+                value=${note}
+                onInput=${(e) => setNote(e.target.value)}></textarea>
+            </label>
+          ` : null}
+          ${kind === 'mark_duplicate' ? html`
+            <label class="cl-record-dialog-field">
+              <span>Original invoice ID (if known)</span>
+              <input
+                type="text"
+                placeholder="AP-..."
+                value=${duplicateOf}
+                onInput=${(e) => setDuplicateOf(e.target.value)}
+                autoFocus />
+            </label>
+            <label class="cl-record-dialog-field">
+              <span>Note</span>
+              <textarea
+                placeholder="Why is this a duplicate? (Required if no original ID.)"
+                rows="3"
+                value=${note}
+                onInput=${(e) => setNote(e.target.value)}></textarea>
+            </label>
+          ` : null}
+          ${kind === 'override_post' ? html`
+            <div class="cl-record-dialog-warning">
+              <strong>This skips validation.</strong> The CFO and external auditor will see the override + your stated reason. Use only when you have a real reason.
+            </div>
+            <label class="cl-record-dialog-field">
+              <span>Reason for override</span>
+              <textarea
+                placeholder="e.g. Contract signed off-system; finance approved verbally on 2026-04-30."
+                rows="4"
+                value=${overrideReason}
+                onInput=${(e) => setOverrideReason(e.target.value)}
+                required
+                autoFocus></textarea>
+            </label>
+          ` : null}
+        </div>
+        <footer class="cl-record-dialog-foot">
+          <button type="button" class="btn btn-tertiary" onClick=${onCancel} disabled=${busy}>Cancel</button>
+          <button type="submit" class="btn btn-primary" disabled=${busy}>
+            ${busy ? 'Working…' : 'Confirm'}
+          </button>
+        </footer>
+      </form>
+    </div>
   `;
 }
 
@@ -585,10 +772,18 @@ function ThreeWayMatchPanel({ match }) {
         </span>
       </header>
       <dl class="cl-record-three-way-grid">
-        <div><dt>PO</dt><dd>${match.po_number ? html`<code>${match.po_number}</code>` : '—'}</dd></div>
+        <div><dt>PO</dt><dd>
+          ${match.po_number
+            ? (match.po_url
+                ? html`<a class="cl-record-erp-link" href=${match.po_url} target="_blank" rel="noreferrer noopener" title="Open in ${formatErpName(match.erp_type)}"><code>${match.po_number}</code> ↗</a>`
+                : html`<code>${match.po_number}</code>`)
+            : '—'}
+        </dd></div>
         <div><dt>Invoice</dt><dd>${formatAmount(match.invoice_amount, match.currency)}</dd></div>
         <div><dt>PO amount</dt><dd>${match.po_amount !== null && match.po_amount !== undefined ? formatAmount(match.po_amount, match.currency) : '—'}</dd></div>
-        <div><dt>GR amount</dt><dd>${match.gr_amount !== null && match.gr_amount !== undefined ? formatAmount(match.gr_amount, match.currency) : '—'}</dd></div>
+        <div><dt>GR ${match.gr_number && match.gr_url
+          ? html`<a class="cl-record-erp-link" href=${match.gr_url} target="_blank" rel="noreferrer noopener" title="Open in ${formatErpName(match.erp_type)}"><code>${match.gr_number}</code> ↗</a>`
+          : (match.gr_number ? html` <code>${match.gr_number}</code>` : '')} amount</dt><dd>${match.gr_amount !== null && match.gr_amount !== undefined ? formatAmount(match.gr_amount, match.currency) : '—'}</dd></div>
         ${match.price_variance_pct !== null && match.price_variance_pct !== undefined ? html`
           <div><dt>Price variance</dt><dd>${(match.price_variance_pct * 100).toFixed(1)}%</dd></div>` : null}
         ${match.quantity_variance !== null && match.quantity_variance !== undefined ? html`

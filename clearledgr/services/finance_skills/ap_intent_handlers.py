@@ -1306,18 +1306,37 @@ class PostToERPHandler(APIntentHandler):
         context = _base_context(self.intent, runtime, payload)
         ap_item = context["ap_item"]
         workflow = skill.get_workflow(runtime)
+        # Module 2 spec line 99: "override and post anyway" action.
+        # When `override_validation` is set, expand allowed states to
+        # the full pre-terminal range. The override flag itself is
+        # recorded in the audit row so the bypass is traceable.
+        payload_dict = context["payload"] if isinstance(context.get("payload"), dict) else {}
+        override_validation = bool(
+            runtime.coerce_bool(payload_dict.get("override_validation"))
+            or runtime.coerce_bool(payload_dict.get("override"))
+        )
+        if override_validation:
+            allowed_states = [
+                "received", "validated", "needs_info", "needs_approval",
+                "pending_approval", "approved", "ready_to_post", "failed_post",
+            ]
+        else:
+            allowed_states = ["approved", "ready_to_post"]
         precheck = workflow.evaluate_financial_action_precheck(
             ap_item,
-            allowed_states=["approved", "ready_to_post"],
+            allowed_states=allowed_states,
             state_reason_code="state_not_ready_to_post",
         )
         precheck = skill.with_autonomy_policy(
             runtime,
             ap_item=ap_item,
-            payload=context["payload"],
+            payload=payload_dict,
             precheck=precheck,
             action=self.intent,
         )
+        if override_validation:
+            precheck["override_validation"] = True
+            precheck["override_reason"] = str(payload_dict.get("override_reason") or "").strip()
         return {
             **context,
             "policy_precheck": precheck,

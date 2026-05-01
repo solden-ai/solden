@@ -3440,3 +3440,113 @@
   justify-content: center;
   margin-top: 16px;
 }
+
+
+/* ─── Module 2 — Dialog + ERP deep links ──────────────────────── */
+
+.cl-record-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 22, 40, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+.cl-record-dialog {
+  background: #FFFFFF;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(10, 22, 40, 0.3);
+  display: flex;
+  flex-direction: column;
+}
+.cl-record-dialog-head {
+  padding: 20px 24px 8px;
+  border-bottom: 1px solid var(--cl-line);
+}
+.cl-record-dialog-head h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--cl-ink);
+}
+.cl-record-dialog-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--cl-ink-muted);
+  line-height: 1.5;
+}
+.cl-record-dialog-body {
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cl-record-dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cl-record-dialog-field span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cl-ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.cl-record-dialog-field input,
+.cl-record-dialog-field textarea {
+  border: 1px solid var(--cl-line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+.cl-record-dialog-field input:focus,
+.cl-record-dialog-field textarea:focus {
+  outline: none;
+  border-color: #00D67E;
+  box-shadow: 0 0 0 3px rgba(0, 214, 126, 0.15);
+}
+.cl-record-dialog-warning {
+  background: #FEF3C7;
+  border: 1px solid #F59E0B;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #78350F;
+  line-height: 1.5;
+}
+.cl-record-dialog-warning strong {
+  color: #92400E;
+}
+.cl-record-dialog-foot {
+  padding: 12px 24px 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid var(--cl-line);
+}
+
+.cl-record-erp-link {
+  color: #0A1628;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(10, 22, 40, 0.4);
+}
+.cl-record-erp-link:hover {
+  border-bottom-color: #00D67E;
+  color: #047857;
+}
+.cl-record-action-override {
+  border-color: #F59E0B;
+  color: #92400E;
+}
+.cl-record-action-override:hover {
+  background: #FEF3C7;
+}
