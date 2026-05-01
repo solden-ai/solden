@@ -47,9 +47,15 @@ export async function api(path, options = {}) {
   const finalHeaders = { Accept: 'application/json', ...headers };
   let payloadBody = body;
 
-  if (body !== undefined && !(body instanceof FormData) && typeof body !== 'string') {
-    finalHeaders['Content-Type'] = 'application/json';
-    payloadBody = JSON.stringify(body);
+  if (body !== undefined && !(body instanceof FormData)) {
+    // Set Content-Type to application/json by default for any body
+    // (object → JSON.stringify here, string → caller already
+    // stringified). Without this, FastAPI's default body parser
+    // refused pre-stringified bodies with 422 Unprocessable Content.
+    // Callers that need a different content-type can still override
+    // via the headers option above.
+    if (!finalHeaders['Content-Type']) finalHeaders['Content-Type'] = 'application/json';
+    if (typeof body !== 'string') payloadBody = JSON.stringify(body);
   }
 
   if (isStateChanging(method)) {
