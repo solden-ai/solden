@@ -5,10 +5,14 @@
 #   2. runtime — Express + http-proxy-middleware serves /app/dist and
 #      reverse-proxies /api, /auth, etc. to the api service.
 #
-# Build context: this directory (ui/web-app/). The Railway service
-# is deployed via `railway up ui/web-app --path-as-root --service web-app`,
-# which makes the tarball root equal to ui/web-app/. All COPY paths
-# below are therefore relative to that.
+# Build context: REPO ROOT. The Railway web-app service has
+# RAILWAY_DOCKERFILE_PATH=ui/web-app/Dockerfile so auto-deploys
+# from a git push pick this file (not the root FastAPI Dockerfile).
+# Build context defaults to repo root in that mode, so COPY paths
+# below MUST be repo-root-relative. To deploy manually, run from
+# the repo root: `railway up --service web-app`. Do NOT pass
+# `--path-as-root` — that mode rewrote the tarball root to
+# ui/web-app/ which is incompatible with these repo-root paths.
 
 # ── Stage 1: build the SPA ──
 FROM node:22-alpine AS builder
@@ -16,7 +20,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Copy only what we need for the install step so the layer cache works.
-COPY package.json package-lock.json ./
+COPY ui/web-app/package.json ui/web-app/package-lock.json ./
 RUN npm ci --include=dev
 
 # Copy sources + config. The `public/` directory holds static assets
@@ -24,11 +28,11 @@ RUN npm ci --include=dev
 # apple-touch-icon.png, robots.txt, etc). Without this COPY the build
 # silently produces a dist/ with no favicon and the deployed site
 # 404s on /favicon.png + /favicon.ico.
-COPY index.html ./
-COPY vite.config.js ./
-COPY server.js ./
-COPY src ./src
-COPY public ./public
+COPY ui/web-app/index.html ./
+COPY ui/web-app/vite.config.js ./
+COPY ui/web-app/server.js ./
+COPY ui/web-app/src ./src
+COPY ui/web-app/public ./public
 
 # Produce dist/.
 RUN npm run build
