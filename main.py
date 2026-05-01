@@ -514,6 +514,8 @@ STRICT_PROFILE_ALLOWED_PREFIXES = (
     "/api/workspace/api-keys",          # Module 11 — customer-side API keys
     "/api/workspace/escalation-policies",     # Module 11 — escalation policies
     "/api/workspace/notification-preferences",  # Module 11 — per-user prefs
+    "/api/workspace/account",                   # Module 11 — full-account data export
+    "/api/workspace/saml",                      # Module 6 — SAML config (admin)
 )
 
 STRICT_PROFILE_ALLOWED_OPS_PATHS = {

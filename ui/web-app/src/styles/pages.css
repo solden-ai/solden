@@ -3550,3 +3550,194 @@
 .cl-record-action-override:hover {
   background: #FEF3C7;
 }
+
+
+/* ─── Module 6 — SAML config panel ─────────────────────────────── */
+
+.cl-saml-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cl-saml-status-on {
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #10B981;
+}
+.cl-saml-status-off {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+}
+
+.cl-saml-section {
+  padding: 14px 0;
+  border-top: 1px solid var(--cl-line);
+}
+.cl-saml-section h4 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cl-ink-muted);
+}
+
+.cl-saml-metadata-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #F8FAFC;
+  border: 1px solid var(--cl-line);
+  border-radius: 6px;
+  margin-top: 8px;
+}
+.cl-saml-metadata-row code {
+  flex: 1;
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--cl-ink);
+}
+
+.cl-saml-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+.cl-saml-form h4 {
+  margin: 12px 0 4px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cl-ink-muted);
+}
+.cl-saml-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cl-saml-field span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cl-ink);
+}
+.cl-saml-field input,
+.cl-saml-field textarea,
+.cl-saml-field select {
+  border: 1px solid var(--cl-line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.cl-saml-field textarea {
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  resize: vertical;
+}
+.cl-saml-field-toggle {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.cl-saml-field-toggle input {
+  width: auto;
+  margin: 0;
+}
+.cl-saml-advanced {
+  border-top: 1px dashed var(--cl-line);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+.cl-saml-advanced summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cl-ink-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.cl-saml-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--cl-line);
+}
+
+
+/* ─── Module 11 — API key scopes ────────────────────────────────── */
+
+.cl-api-key-scopes {
+  margin: 12px 0 16px;
+  padding: 12px 14px;
+  background: #F8FAFC;
+  border: 1px solid var(--cl-line);
+  border-radius: 8px;
+}
+.cl-api-key-scopes-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+  margin-bottom: 8px;
+}
+.cl-api-key-scopes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+.cl-api-key-scope-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #FFFFFF;
+  border: 1px solid var(--cl-line);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.cl-api-key-scope-cell:hover {
+  border-color: #00D67E;
+}
+.cl-api-key-scope-cell input {
+  margin: 0;
+}
+.cl-api-key-scope-cell code {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  color: var(--cl-ink);
+}
+.cl-api-key-scopes-empty {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #B45309;
+}
+
+.cl-api-key-scope-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.cl-api-key-scope-chip {
+  display: inline-block;
+  padding: 2px 6px;
+  background: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  border-radius: 4px;
+  font-size: 11px;
+}
+.cl-api-key-scope-chip code {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  color: #047857;
+}

@@ -646,21 +646,24 @@ class AuthStore:
         user_id: str,
         raw_key: str,
         label: str = "",
+        scopes: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
-        """Store a hashed API key."""
+        """Store a hashed API key with optional scopes (Module 11 spec)."""
         self.initialize()
         key_id = str(uuid.uuid4())
         key_hash = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
         key_prefix = raw_key[:12] + "..."
         now = datetime.now(timezone.utc).isoformat()
+        scopes_payload = json.dumps(scopes or []) if scopes is not None else None
         sql = (
             """INSERT INTO api_keys
-            (id, organization_id, key_hash, key_prefix, user_id, label, is_active, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, 1, %s, %s)"""
+            (id, organization_id, key_hash, key_prefix, user_id, label, is_active, scopes, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, 1, %s::jsonb, %s, %s)"""
         )
         with self.connect() as conn:
             conn.cursor().execute(
-                sql, (key_id, organization_id, key_hash, key_prefix, user_id, label, now, now)
+                sql,
+                (key_id, organization_id, key_hash, key_prefix, user_id, label, scopes_payload, now, now),
             )
             conn.commit()
         return {
@@ -669,6 +672,7 @@ class AuthStore:
             "key_prefix": key_prefix,
             "user_id": user_id,
             "label": label,
+            "scopes": list(scopes or []),
         }
 
     def list_api_keys(
@@ -685,14 +689,14 @@ class AuthStore:
         if include_revoked:
             sql = (
                 "SELECT id, organization_id, key_prefix, user_id, label, "
-                "is_active, last_used_at, created_at, updated_at "
+                "is_active, scopes, last_used_at, created_at, updated_at "
                 "FROM api_keys WHERE organization_id = %s "
                 "ORDER BY created_at DESC"
             )
         else:
             sql = (
                 "SELECT id, organization_id, key_prefix, user_id, label, "
-                "is_active, last_used_at, created_at, updated_at "
+                "is_active, scopes, last_used_at, created_at, updated_at "
                 "FROM api_keys WHERE organization_id = %s AND is_active = 1 "
                 "ORDER BY created_at DESC"
             )
@@ -740,7 +744,7 @@ class AuthStore:
         if only_active:
             sql = (
                 "SELECT id, organization_id, key_prefix, user_id, label, "
-                "is_active, last_used_at, created_at, updated_at "
+                "is_active, scopes, last_used_at, created_at, updated_at "
                 "FROM api_keys "
                 "WHERE user_id = %s AND organization_id = %s AND is_active = 1 "
                 "ORDER BY created_at DESC"
@@ -748,7 +752,7 @@ class AuthStore:
         else:
             sql = (
                 "SELECT id, organization_id, key_prefix, user_id, label, "
-                "is_active, last_used_at, created_at, updated_at "
+                "is_active, scopes, last_used_at, created_at, updated_at "
                 "FROM api_keys "
                 "WHERE user_id = %s AND organization_id = %s "
                 "ORDER BY created_at DESC"

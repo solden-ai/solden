@@ -3348,6 +3348,11 @@ def list_team_users(
             "name": (row.get("name") or "").strip() or (row.get("email") or ""),
             "role": (row.get("role") or "ap_clerk").strip().lower(),
             "is_active": bool(row.get("is_active")),
+            # Module 6 spec line 214 — "last active". `last_seen_at`
+            # is stamped on each authenticated request via the auth
+            # middleware (migration v18). Falls back to updated_at
+            # which is set at user-row creation/edit time.
+            "last_active_at": row.get("last_seen_at") or row.get("updated_at"),
         }
         for row in rows
     ]
@@ -4780,5 +4785,152 @@ def download_ap_item_original(
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
             "X-Content-Hash": content_hash,
+        },
+    )
+
+
+# ─── Module 11 — full-account data export ─────────────────────────
+#
+# Spec line 348 + 352: "Data export: full account data export
+# (CSV/JSON) for portability. Data export of full account completes
+# for accounts up to 1M invoices."
+#
+# Implementation: synchronous JSON dump streamed to the client. Caps
+# at MAX_EXPORT_ROWS_AP per section to keep the worker memory bounded
+# and prevent a misconfigured export from OOMing the api. Customers
+# beyond the cap receive a partial dump with a warning header in the
+# JSON envelope; deeper pagination is the next iteration.
+
+@router.get("/account/export")
+def export_full_account(
+    organization_id: Optional[str] = Query(default=None),
+    user: TokenData = Depends(get_current_user),
+):
+    """Stream a JSON dump of the org's portable data.
+
+    Sections (in order): organization metadata + settings, AP items,
+    vendors, approval rules, custom roles, team members, integrations
+    summary (no secrets), API key metadata (no raw keys, no hashes).
+
+    Capped at 50K rows per AP/vendor section. Audit + logs are
+    excluded — they live behind /audit/export with their own retention
+    + format options.
+    """
+    _require_admin(user)
+    org_id = _resolve_org_id(user, organization_id)
+    db = get_db()
+
+    AP_CAP = 50_000
+    VENDOR_CAP = 50_000
+
+    org_row = db.get_organization(org_id) or {}
+    settings = _load_org_settings(org_row)
+
+    ap_items = []
+    if hasattr(db, "list_ap_items"):
+        try:
+            ap_items = db.list_ap_items(org_id, limit=AP_CAP) or []
+        except Exception as exc:
+            logger.warning("[account/export] ap_items read failed for %s: %s", org_id, exc)
+            ap_items = []
+
+    vendors = []
+    if hasattr(db, "list_vendor_summary_rows"):
+        try:
+            vendors = db.list_vendor_summary_rows(org_id, limit=VENDOR_CAP) or []
+        except Exception:
+            vendors = []
+    elif hasattr(db, "get_vendor_summary"):
+        try:
+            vendors = db.get_vendor_summary(org_id) or []
+        except Exception:
+            vendors = []
+
+    rules = []
+    if hasattr(db, "list_workspace_rules"):
+        try:
+            rules = db.list_workspace_rules(org_id, include_inactive=True) or []
+        except Exception:
+            rules = []
+
+    custom_roles = []
+    if hasattr(db, "list_custom_roles"):
+        try:
+            custom_roles = db.list_custom_roles(org_id) or []
+        except Exception:
+            custom_roles = []
+
+    users_dump = []
+    if hasattr(db, "get_users"):
+        try:
+            for row in (db.get_users(org_id, include_inactive=True) or []):
+                users_dump.append({
+                    "id": row.get("id"),
+                    "email": row.get("email"),
+                    "name": row.get("name"),
+                    "role": row.get("role"),
+                    "is_active": bool(row.get("is_active")),
+                    "created_at": row.get("created_at"),
+                    "last_seen_at": row.get("last_seen_at"),
+                })
+        except Exception:
+            pass
+
+    api_keys_dump = []
+    if hasattr(db, "list_api_keys"):
+        try:
+            for row in (db.list_api_keys(org_id, include_revoked=True) or []):
+                # NEVER include key_hash or raw key. Prefix + scopes
+                # is enough for the operator to reconstruct what
+                # existed without leaking auth material.
+                api_keys_dump.append({
+                    "id": row.get("id"),
+                    "label": row.get("label"),
+                    "key_prefix": row.get("key_prefix"),
+                    "scopes": row.get("scopes"),
+                    "is_active": bool(row.get("is_active")),
+                    "created_at": row.get("created_at"),
+                    "last_used_at": row.get("last_used_at"),
+                })
+        except Exception:
+            pass
+
+    integrations_summary = {
+        "gmail": _gmail_status_for_org(org_id, user),
+        "slack": _slack_status_for_org(org_id),
+        "teams": _teams_status_for_org(org_id),
+        "erp": _erp_status_for_org(org_id),
+    }
+
+    payload = {
+        "organization": {
+            "id": org_id,
+            "name": org_row.get("organization_name") or org_row.get("name"),
+            "settings": settings,
+            "created_at": org_row.get("created_at"),
+        },
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "exported_by": getattr(user, "email", None) or getattr(user, "user_id", None),
+        "caps": {"ap_items": AP_CAP, "vendors": VENDOR_CAP},
+        "ap_items": ap_items,
+        "ap_items_truncated": len(ap_items) >= AP_CAP,
+        "vendors": vendors,
+        "vendors_truncated": len(vendors) >= VENDOR_CAP,
+        "approval_rules": rules,
+        "custom_roles": custom_roles,
+        "users": users_dump,
+        "api_keys": api_keys_dump,
+        "integrations": integrations_summary,
+    }
+
+    import json as _json
+    body = _json.dumps(payload, default=str, separators=(",", ":"))
+    filename = f"clearledgr-account-{org_id}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"
+    return Response(
+        content=body,
+        media_type="application/json; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "private, no-store",
         },
     )

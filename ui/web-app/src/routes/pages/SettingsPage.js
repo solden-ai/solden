@@ -12,6 +12,22 @@ function formatDisplayDate(value) {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+// Module 6 spec line 214 — "last active". Render as relative time
+// when recent, fall back to date when older. NULL/empty → "—".
+function formatLastActive(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  const now = Date.now();
+  const diffMs = now - date.getTime();
+  const sec = Math.round(diffMs / 1000);
+  if (sec < 60) return 'just now';
+  if (sec < 3600) return `${Math.round(sec / 60)}m ago`;
+  if (sec < 86400) return `${Math.round(sec / 3600)}h ago`;
+  if (sec < 604800) return `${Math.round(sec / 86400)}d ago`;
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 // Per-tenant GL account categories the AP pipeline reads from
 // ``settings_json["gl_account_map"]``. ``expenses`` is the only one
 // strictly required for AP bill posting; the rest configure optional
@@ -901,6 +917,12 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         toast=${toast}
         canManage=${canManageTeam} />
 
+      <${SAMLPanel}
+        api=${api}
+        orgId=${orgId}
+        toast=${toast}
+        canManage=${canManageCompany} />
+
       <${ApiKeysPanel}
         api=${api}
         toast=${toast}
@@ -915,6 +937,11 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         api=${api}
         toast=${toast}
         panelRef=${notificationsRef} />
+
+      <${DataExportPanel}
+        orgId=${orgId}
+        toast=${toast}
+        canManage=${canManageCompany} />
 
       <${FxRatesPanel}
         api=${api}
@@ -1619,12 +1646,263 @@ function EntityRolesEditor({ api, orgId, toast, user, entities, customRoles, can
 // only ever see the prefix. Revocation is a soft delete; rotation
 // revokes + issues atomically.
 
+// ─── Module 6 — SAML SSO config panel ───────────────────────────
+//
+// Spec line 220: Azure AD + Okta + Google Workspace SAML + OneLogin +
+// generic SAML 2.0. Backend at clearledgr/api/saml.py is complete
+// (CRUD + SP metadata + ACS POST + JIT provisioning + audit). This
+// panel wires the admin UI: load current config, show SP metadata
+// URL for IdP-side setup, edit IdP fields (entity ID, SSO URL,
+// X.509 cert), pick attribute mappings, JIT provisioning toggle,
+// enable/disable. Tier-gated: only customers on Growth+ see SSO,
+// but the panel renders for everyone with manage_company so we
+// don't have to thread the entitlement check here — backend
+// rejects with 403 if the org's plan doesn't include it.
+
+function SAMLPanel({ api, orgId, toast, canManage }) {
+  const [config, setConfig] = useState(null);
+  const [configured, setConfigured] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    enabled: true,
+    idp_entity_id: '',
+    idp_sso_url: '',
+    idp_certificate_pem: '',
+    sp_entity_id: '',
+    sp_acs_url: '',
+    attribute_email: 'email',
+    attribute_role: '',
+    attribute_entity: '',
+    default_role: 'ap_clerk',
+    default_entity_id: '',
+    jit_provisioning: true,
+    idp_slo_url: '',
+    sp_slo_url: '',
+  });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const resp = await api(`/api/workspace/saml/config?organization_id=${encodeURIComponent(orgId)}`);
+      setConfigured(!!resp.configured);
+      const c = resp.config || {};
+      setConfig(c);
+      setForm((prev) => ({
+        ...prev,
+        enabled: c.enabled ?? true,
+        idp_entity_id: c.idp_entity_id || '',
+        idp_sso_url: c.idp_sso_url || '',
+        sp_entity_id: c.sp_entity_id || `https://workspace.clearledgr.com/saml/${orgId}/sp`,
+        sp_acs_url: c.sp_acs_url || `https://api.clearledgr.com/saml/${orgId}/acs`,
+        attribute_email: c.attribute_email || 'email',
+        attribute_role: c.attribute_role || '',
+        attribute_entity: c.attribute_entity || '',
+        default_role: c.default_role || 'ap_clerk',
+        default_entity_id: c.default_entity_id || '',
+        jit_provisioning: c.jit_provisioning ?? true,
+        idp_slo_url: c.idp_slo_url || '',
+        sp_slo_url: c.sp_slo_url || '',
+      }));
+    } catch (exc) {
+      toast?.(`Could not load SAML config: ${exc?.message || exc}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [api, orgId, toast]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const setField = (key) => (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const onSave = useCallback(async (e) => {
+    e?.preventDefault?.();
+    if (!canManage) return;
+    setSaving(true);
+    try {
+      const body = {
+        ...form,
+        // PEM is the only credential field; if the user hasn't
+        // pasted a new one and there's an existing fingerprint, we
+        // skip sending it. Backend validates & re-saves the
+        // existing record. (The API requires PEM on every PUT, so
+        // the user MUST paste the cert to save — surface this in
+        // the helper text below.)
+      };
+      const resp = await api(`/api/workspace/saml/config?organization_id=${encodeURIComponent(orgId)}`, {
+        method: 'PUT',
+        body,
+      });
+      setConfigured(true);
+      setConfig(resp.config);
+      toast?.('SAML config saved.', 'success');
+    } catch (exc) {
+      const detail = exc?.payload?.detail;
+      const msg = (detail && typeof detail === 'object' && detail.message) || exc?.message || 'Save failed';
+      toast?.(`Could not save SAML config: ${msg}`, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }, [api, orgId, form, canManage, toast]);
+
+  const onDelete = useCallback(async () => {
+    if (!canManage) return;
+    if (!window.confirm('Remove SAML config? Users will fall back to password / OAuth login.')) return;
+    setSaving(true);
+    try {
+      await api(`/api/workspace/saml/config?organization_id=${encodeURIComponent(orgId)}`, { method: 'DELETE' });
+      setConfigured(false);
+      setConfig(null);
+      toast?.('SAML config removed.', 'success');
+    } catch (exc) {
+      toast?.(`Could not remove SAML config: ${exc?.message || exc}`, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }, [api, orgId, canManage, toast]);
+
+  const spMetadataUrl = `https://api.clearledgr.com/saml/${encodeURIComponent(orgId)}/sp-metadata`;
+  const fingerprint = config?.idp_certificate?.fingerprint_sha256;
+
+  return html`
+    <div class="panel">
+      <div class="panel-head compact">
+        <div>
+          <h3 style="margin-top:0">SAML SSO</h3>
+          <p class="muted" style="margin:0">
+            Federate identity via your IdP. Azure AD, Okta, Google Workspace, OneLogin, and any SAML 2.0 IdP supported.
+          </p>
+        </div>
+        ${configured ? html`
+          <span class="cl-saml-status ${form.enabled ? 'cl-saml-status-on' : 'cl-saml-status-off'}">
+            ${form.enabled ? 'Configured · Enabled' : 'Configured · Disabled'}
+          </span>
+        ` : html`<span class="cl-saml-status cl-saml-status-off">Not configured</span>`}
+      </div>
+
+      ${loading ? html`<div class="muted" style="padding:16px 0">Loading SAML config…</div>` : null}
+
+      ${!loading ? html`
+        <div class="cl-saml-section">
+          <h4>1. Send your IdP this metadata</h4>
+          <p class="muted">Hand your IT team this URL — it's the SP-side metadata your IdP needs to register Clearledgr as a relying party.</p>
+          <div class="cl-saml-metadata-row">
+            <code>${spMetadataUrl}</code>
+            <button type="button" class="btn-secondary btn-sm" onClick=${() => {
+              navigator.clipboard?.writeText(spMetadataUrl);
+              toast?.('SP metadata URL copied.', 'success');
+            }}>Copy</button>
+            <a class="btn-secondary btn-sm" href=${spMetadataUrl} target="_blank" rel="noreferrer">Open</a>
+          </div>
+        </div>
+
+        <form onSubmit=${onSave} class="cl-saml-form">
+          <h4>2. Paste your IdP's settings</h4>
+
+          <label class="cl-saml-field">
+            <span>IdP Entity ID</span>
+            <input type="text" placeholder="https://sts.windows.net/.../"
+              value=${form.idp_entity_id}
+              onInput=${setField('idp_entity_id')}
+              disabled=${!canManage}
+              required />
+          </label>
+          <label class="cl-saml-field">
+            <span>IdP SSO URL (HTTPS)</span>
+            <input type="url" placeholder="https://login.microsoftonline.com/.../saml2"
+              value=${form.idp_sso_url}
+              onInput=${setField('idp_sso_url')}
+              disabled=${!canManage}
+              required />
+          </label>
+          <label class="cl-saml-field">
+            <span>IdP X.509 certificate (PEM)</span>
+            <textarea rows="6"
+              placeholder="-----BEGIN CERTIFICATE-----&#10;..."
+              value=${form.idp_certificate_pem}
+              onInput=${setField('idp_certificate_pem')}
+              disabled=${!canManage}
+              required></textarea>
+            ${fingerprint ? html`<small class="muted">Current cert fingerprint: <code>${fingerprint}</code> · paste a new PEM to rotate.</small>` : null}
+          </label>
+
+          <h4>3. Attribute mapping</h4>
+          <label class="cl-saml-field">
+            <span>Email attribute</span>
+            <input type="text" value=${form.attribute_email} onInput=${setField('attribute_email')} disabled=${!canManage} />
+          </label>
+          <label class="cl-saml-field">
+            <span>Role attribute (optional)</span>
+            <input type="text" placeholder="role / department / title"
+              value=${form.attribute_role} onInput=${setField('attribute_role')} disabled=${!canManage} />
+          </label>
+          <label class="cl-saml-field">
+            <span>Entity attribute (optional, for multi-entity orgs)</span>
+            <input type="text" placeholder="entity / subsidiary"
+              value=${form.attribute_entity} onInput=${setField('attribute_entity')} disabled=${!canManage} />
+          </label>
+
+          <h4>4. Provisioning</h4>
+          <label class="cl-saml-field">
+            <span>Default role for new users</span>
+            <select value=${form.default_role} onChange=${setField('default_role')} disabled=${!canManage}>
+              <option value="ap_clerk">AP Clerk</option>
+              <option value="ap_manager">AP Manager</option>
+              <option value="financial_controller">Financial Controller</option>
+              <option value="cfo">CFO</option>
+              <option value="read_only">Read-only</option>
+            </select>
+          </label>
+          <label class="cl-saml-field cl-saml-field-toggle">
+            <input type="checkbox" checked=${form.jit_provisioning} onChange=${setField('jit_provisioning')} disabled=${!canManage} />
+            <span>Just-in-time provisioning (auto-create users on first SSO login)</span>
+          </label>
+          <label class="cl-saml-field cl-saml-field-toggle">
+            <input type="checkbox" checked=${form.enabled} onChange=${setField('enabled')} disabled=${!canManage} />
+            <span>SAML enabled (when off, users fall back to password / OAuth)</span>
+          </label>
+
+          <details class="cl-saml-advanced">
+            <summary>Optional — Single Logout (SLO)</summary>
+            <label class="cl-saml-field">
+              <span>IdP SLO URL</span>
+              <input type="url" value=${form.idp_slo_url} onInput=${setField('idp_slo_url')} disabled=${!canManage} />
+            </label>
+            <label class="cl-saml-field">
+              <span>SP SLO URL (echo back to IdP)</span>
+              <input type="url" value=${form.sp_slo_url} onInput=${setField('sp_slo_url')} disabled=${!canManage} />
+            </label>
+          </details>
+
+          <div class="cl-saml-actions">
+            <button type="submit" class="btn-primary" disabled=${!canManage || saving}>
+              ${saving ? 'Saving…' : (configured ? 'Save changes' : 'Save and enable SAML')}
+            </button>
+            ${configured ? html`
+              <button type="button" class="btn-danger" onClick=${onDelete} disabled=${!canManage || saving}>
+                Remove SAML config
+              </button>
+            ` : null}
+          </div>
+        </form>
+      ` : null}
+    </div>
+  `;
+}
+
 function ApiKeysPanel({ api, toast, panelRef }) {
   const [keys, setKeys] = useState([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [label, setLabel] = useState('');
   const [revealedKey, setRevealedKey] = useState(null);
+  // Module 11 spec line 353 — scopes. Default to read-only across
+  // AP items + vendors + reports so a fresh key is least-privilege.
+  const [scopeCatalog, setScopeCatalog] = useState([]);
+  const [selectedScopes, setSelectedScopes] = useState(['read:ap_items', 'read:vendors', 'read:reports']);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1640,24 +1918,38 @@ function ApiKeysPanel({ api, toast, panelRef }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // Pull the canonical scope catalog from the backend so the UI
+  // stays in lockstep with _SCOPE_CATALOG without redeploying both.
+  useEffect(() => {
+    api('/api/workspace/api-keys/scopes/catalog')
+      .then((resp) => setScopeCatalog(Array.isArray(resp?.scopes) ? resp.scopes : []))
+      .catch(() => setScopeCatalog([]));
+  }, [api]);
+
+  const toggleScope = (scope) => {
+    setSelectedScopes((prev) => prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope]);
+  };
+
   const onCreate = useCallback(async (e) => {
     e?.preventDefault?.();
     setCreating(true);
     try {
       const resp = await api('/api/workspace/api-keys', {
         method: 'POST',
-        body: JSON.stringify({ label: label.trim() }),
+        body: { label: label.trim(), scopes: selectedScopes },
       });
       setRevealedKey(resp);
       setLabel('');
       toast?.('API key created. Copy it now — it won’t be shown again.', 'success');
       await load();
     } catch (exc) {
-      toast?.(`Create failed: ${String(exc?.message || exc)}`, 'error');
+      const detail = exc?.payload?.detail;
+      const msg = (detail && typeof detail === 'object' && detail.scope) ? `Unknown scope: ${detail.scope}` : (exc?.message || 'Create failed');
+      toast?.(msg, 'error');
     } finally {
       setCreating(false);
     }
-  }, [api, label, toast, load]);
+  }, [api, label, selectedScopes, toast, load]);
 
   const onRotate = useCallback(async (key) => {
     if (!window.confirm(
@@ -1714,10 +2006,31 @@ function ApiKeysPanel({ api, toast, panelRef }) {
             style="width:100%"
           />
         </label>
-        <button type="submit" class="btn btn-primary" disabled=${creating}>
+        <button type="submit" class="btn btn-primary" disabled=${creating || selectedScopes.length === 0}>
           ${creating ? 'Creating…' : 'Create key'}
         </button>
       </form>
+
+      ${scopeCatalog.length > 0 ? html`
+        <div class="cl-api-key-scopes" role="group" aria-label="Scopes">
+          <span class="cl-api-key-scopes-label">Scopes</span>
+          <div class="cl-api-key-scopes-grid">
+            ${scopeCatalog.map((scope) => html`
+              <label key=${scope} class="cl-api-key-scope-cell">
+                <input
+                  type="checkbox"
+                  checked=${selectedScopes.includes(scope)}
+                  onChange=${() => toggleScope(scope)}
+                  disabled=${creating} />
+                <code>${scope}</code>
+              </label>
+            `)}
+          </div>
+          ${selectedScopes.length === 0 ? html`
+            <p class="cl-api-key-scopes-empty">Pick at least one scope. A key with no scopes is rejected by every guarded route.</p>
+          ` : null}
+        </div>
+      ` : null}
 
       ${revealedKey ? html`
         <div class="cl-settings-reveal" role="alert">
@@ -1744,27 +2057,82 @@ function ApiKeysPanel({ api, toast, panelRef }) {
             <tr>
               <th>Label</th>
               <th>Prefix</th>
+              <th>Scopes</th>
               <th>Created</th>
               <th>Last used</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            ${keys.map((k) => html`
-              <tr key=${k.id}>
-                <td>${k.label || html`<span class="muted">(none)</span>`}</td>
-                <td><code>${k.key_prefix}</code></td>
-                <td class="muted">${k.created_at ? formatDisplayDate(k.created_at) : '—'}</td>
-                <td class="muted">${k.last_used_at ? formatDisplayDate(k.last_used_at) : 'never'}</td>
-                <td style="text-align:right">
-                  <button class="btn btn-tertiary btn-sm" onClick=${() => onRotate(k)}>Rotate</button>
-                  <button class="btn btn-tertiary btn-sm" onClick=${() => onRevoke(k)}>Revoke</button>
-                </td>
-              </tr>
-            `)}
+            ${keys.map((k) => {
+              const scopes = Array.isArray(k.scopes) ? k.scopes
+                : (typeof k.scopes === 'string' ? (() => { try { return JSON.parse(k.scopes); } catch { return []; } })() : []);
+              return html`
+                <tr key=${k.id}>
+                  <td>${k.label || html`<span class="muted">(none)</span>`}</td>
+                  <td><code>${k.key_prefix}</code></td>
+                  <td>
+                    ${scopes.length === 0
+                      ? html`<span class="muted">unscoped (legacy — full access)</span>`
+                      : html`<div class="cl-api-key-scope-chips">
+                          ${scopes.map((s) => html`<span key=${s} class="cl-api-key-scope-chip"><code>${s}</code></span>`)}
+                        </div>`}
+                  </td>
+                  <td class="muted">${k.created_at ? formatDisplayDate(k.created_at) : '—'}</td>
+                  <td class="muted">${k.last_used_at ? formatDisplayDate(k.last_used_at) : 'never'}</td>
+                  <td style="text-align:right">
+                    <button class="btn btn-tertiary btn-sm" onClick=${() => onRotate(k)}>Rotate</button>
+                    <button class="btn btn-tertiary btn-sm" onClick=${() => onRevoke(k)}>Revoke</button>
+                  </td>
+                </tr>
+              `;
+            })}
           </tbody>
         </table>
       ` : null}
+    </div>
+  `;
+}
+
+
+// ─── Module 11 — Full-account data export ───────────────────────────
+//
+// Spec line 348 + 352: portable JSON dump of the org's data. Pulls
+// from /api/workspace/account/export which streams the JSON with a
+// Content-Disposition header so the browser handles save-as.
+
+function DataExportPanel({ orgId, toast, canManage }) {
+  const [busy, setBusy] = useState(false);
+  const onExport = useCallback(() => {
+    if (!canManage) return;
+    setBusy(true);
+    try {
+      const url = `/api/workspace/account/export?organization_id=${encodeURIComponent(orgId)}`;
+      window.location.href = url;
+      toast?.('Preparing data export…', 'info');
+    } finally {
+      // The browser navigation handles the download; reset the
+      // button state quickly so a second export is always reachable.
+      setTimeout(() => setBusy(false), 1200);
+    }
+  }, [orgId, toast, canManage]);
+
+  return html`
+    <div class="panel">
+      <div class="panel-head compact">
+        <div>
+          <h3 style="margin-top:0">Account data export</h3>
+          <p class="muted" style="margin:0">
+            Download a JSON dump of this workspace — organization settings, AP items (up to 50K),
+            vendors, approval rules, custom roles, team list, integration metadata, and API key
+            metadata (key hashes never included). Audit log lives behind its own export with retention
+            controls.
+          </p>
+        </div>
+        <button class="btn-secondary" onClick=${onExport} disabled=${!canManage || busy}>
+          ${busy ? 'Preparing…' : 'Download JSON'}
+        </button>
+      </div>
     </div>
   `;
 }
@@ -2187,6 +2555,7 @@ function TeamMembersPanel({ api, toast, orgId, actorEmail, canManage }) {
             <th>Name</th>
             <th>Email</th>
             <th>Role</th>
+            <th>Last active</th>
             <th>Status</th>
             <th></th>
           </tr>
@@ -2201,6 +2570,7 @@ function TeamMembersPanel({ api, toast, orgId, actorEmail, canManage }) {
                 <td><strong>${u.name || u.email}</strong>${isSelf ? html` <span class="muted">(you)</span>` : null}</td>
                 <td><code>${u.email}</code></td>
                 <td>${(u.role || '').replace(/_/g, ' ')}</td>
+                <td><span class="muted">${formatLastActive(u.last_active_at)}</span></td>
                 <td>
                   <span class=${`cl-record-chip cl-record-chip-${tone}`}>
                     ${isActive ? 'active' : 'deactivated'}

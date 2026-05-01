@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import logging
 import secrets
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -62,8 +62,60 @@ def _generate_raw_key() -> str:
     return _KEY_PREFIX + secrets.token_urlsafe(_KEY_ENTROPY_BYTES)
 
 
+# Module 11 spec line 353 — scoped API keys.
+#
+# Scopes are resource:action tokens. The catalog below is the
+# canonical set; create / rotate validate against it. Routes that
+# want to enforce a scope check call ``require_scope(user, "...")``
+# from clearledgr/core/auth.py — when the auth path was an API key,
+# the granted scopes are on the TokenData; cookie + bearer paths
+# pass through untouched (the customer-side scopes are explicitly an
+# API-key-only mechanism).
+_SCOPE_CATALOG: List[str] = [
+    "read:ap_items",
+    "write:ap_items",
+    "read:vendors",
+    "write:vendors",
+    "read:reports",
+    "read:audit",
+    "manage:webhooks",
+]
+
+
 class APIKeyCreateRequest(BaseModel):
     label: str = Field("", max_length=120)
+    scopes: Optional[List[str]] = Field(default=None, max_length=64)
+
+
+def _validate_scopes(scopes: Optional[List[str]]) -> List[str]:
+    """Reject any scope token that isn't in the catalog. Empty / None
+    means no scopes — the key is rejected by every scope-aware route.
+    """
+    if not scopes:
+        return []
+    cleaned = []
+    for raw in scopes:
+        token = str(raw or "").strip().lower()
+        if not token:
+            continue
+        if token not in _SCOPE_CATALOG:
+            raise HTTPException(
+                status_code=422,
+                detail={"reason": "unknown_scope", "scope": token, "catalog": _SCOPE_CATALOG},
+            )
+        cleaned.append(token)
+    # Dedupe but preserve order.
+    seen = set()
+    return [s for s in cleaned if not (s in seen or seen.add(s))]
+
+
+@router.get("/scopes/catalog")
+def get_scope_catalog(
+    user: TokenData = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Return the canonical scope vocabulary so the SPA can build a
+    checkbox group without hardcoding the list."""
+    return {"scopes": _SCOPE_CATALOG}
 
 
 @router.post("")
@@ -79,6 +131,7 @@ def create_api_key(
         "key_prefix": "ck_xxxxx...",
         "raw_key": "ck_<base64>",       # only here, never again
         "label": "...",
+        "scopes": ["read:ap_items", ...],
         ...
       }
     """
@@ -86,17 +139,21 @@ def create_api_key(
     raw_key = _generate_raw_key()
     user_id = getattr(user, "user_id", "") or getattr(user, "email", "")
 
+    scopes = _validate_scopes(body.scopes)
+
     record = db.create_api_key(
         organization_id=user.organization_id,
         user_id=user_id,
         raw_key=raw_key,
         label=body.label or "",
+        scopes=scopes,
     )
     # Echo the raw key in the response — this is the only chance the
     # caller has to capture it. The next list/get call will only
     # return the prefix.
     record["raw_key"] = raw_key
     record["is_active"] = True
+    record["scopes"] = scopes
     return record
 
 
@@ -151,15 +208,29 @@ def rotate_api_key(
 
     raw_key = _generate_raw_key()
     user_id = getattr(user, "user_id", "") or getattr(user, "email", "")
+    # Carry over the prior key's scopes — rotate is a "swap secret"
+    # not a "change permissions". If the caller wants to alter scopes
+    # they should DELETE + create a new key.
+    prior_scopes = existing.get("scopes")
+    if isinstance(prior_scopes, str):
+        try:
+            import json as _json
+            prior_scopes = _json.loads(prior_scopes)
+        except Exception:
+            prior_scopes = []
+    if not isinstance(prior_scopes, list):
+        prior_scopes = []
     record = db.create_api_key(
         organization_id=user.organization_id,
         user_id=user_id,
         raw_key=raw_key,
         label=existing.get("label") or "",
+        scopes=prior_scopes,
     )
     record["raw_key"] = raw_key
     record["is_active"] = True
     record["rotated_from"] = key_id
+    record["scopes"] = prior_scopes
     return record
 
 

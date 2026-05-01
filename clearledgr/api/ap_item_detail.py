@@ -68,7 +68,7 @@ _INTENT_TARGET_STATES: Dict[str, frozenset] = {
     # `reassign_approval` is the existing intent that hands off the
     # current approval step to a named approver; surfacing it in the
     # detail page satisfies the spec's named action.
-    "reassign_approval": frozenset({APState.NEEDS_APPROVAL, APState.PENDING_APPROVAL}),
+    "reassign_approval": frozenset({APState.NEEDS_APPROVAL, APState.NEEDS_SECOND_APPROVAL}),
     "snooze_invoice": frozenset({APState.SNOOZED}),
     "unsnooze_invoice": frozenset({
         APState.VALIDATED, APState.NEEDS_INFO, APState.NEEDS_APPROVAL,

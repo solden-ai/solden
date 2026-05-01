@@ -3982,3 +3982,29 @@ def _v73_ap_items_is_sample(cur, db):
         "CREATE INDEX IF NOT EXISTS idx_ap_items_org_sample "
         "ON ap_items (organization_id) WHERE is_sample = TRUE"
     )
+
+
+@migration(
+    74,
+    "api_keys.scopes: scope tokens for Module 11 scoped API keys",
+)
+def _v74_api_keys_scopes(cur, db):
+    """Add ``scopes`` to api_keys so customers can issue least-
+    privilege API keys per spec line 353 (Module 11).
+
+    The column is a JSONB list of scope strings. Empty list = no
+    scopes granted (key is rejected by scope-aware routes); legacy
+    pre-migration rows default to NULL which the api treats as
+    full-access for backward compat (existing customer integrations
+    don't break on the migration boundary; new keys are scoped from
+    creation).
+
+    Scope vocabulary lives in clearledgr/api/api_keys.py:_SCOPE_CATALOG;
+    enforcement is via the scope-check helper any guarded route can
+    invoke. Initial guarded surfaces: write paths on AP items + audit
+    export. Read paths stay open to all valid keys until we have a
+    customer integration that warrants a sharper gate.
+    """
+    cur.execute(
+        "ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS scopes JSONB"
+    )
