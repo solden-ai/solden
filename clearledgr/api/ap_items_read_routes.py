@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 
 from clearledgr.core.auth import get_current_user
+from clearledgr.core.database import get_db
 from clearledgr.core.money import money_sum, money_to_float
 from clearledgr.api.deps import verify_org_access
 from clearledgr.services.ap_operator_audit import normalize_operator_audit_events
@@ -44,7 +45,7 @@ def get_upcoming_ap_tasks(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     verify_org_access(organization_id, _user)
-    db = shared.get_db()
+    db = get_db()
     return shared._build_upcoming_tasks_payload(db, organization_id, limit=limit)
 
 
@@ -56,7 +57,7 @@ def get_vendor_directory(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     verify_org_access(organization_id, _user)
-    db = shared.get_db()
+    db = get_db()
     rows = shared._build_vendor_summary_rows(db, organization_id, search=search, limit=limit)
     return {
         "organization_id": organization_id,
@@ -74,7 +75,7 @@ def get_vendor_record(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     verify_org_access(organization_id, _user)
-    db = shared.get_db()
+    db = get_db()
     return shared._build_vendor_detail_payload(
         db,
         organization_id,
@@ -92,7 +93,7 @@ def search_ap_items(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     verify_org_access(organization_id, _user)
-    db = shared.get_db()
+    db = get_db()
     query = str(q or "").strip().lower()
     items = db.list_ap_items(organization_id, limit=1000)
     matches = []
@@ -131,7 +132,7 @@ def lookup_compose_record(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     verify_org_access(organization_id, _user)
-    db = shared.get_db()
+    db = get_db()
     normalized_draft_id = str(draft_id or "").strip()
     normalized_thread_id = str(thread_id or "").strip()
 
@@ -166,7 +167,7 @@ def get_ap_aggregation_metrics(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     verify_org_access(organization_id, _user)
-    db = shared.get_db()
+    db = get_db()
     metrics = db.get_ap_aggregation_metrics(
         organization_id=organization_id,
         limit=limit,
@@ -203,7 +204,7 @@ def export_audit_trail(
     Filters by organization, date range, vendor, and AP item state.
     """
     verify_org_access(organization_id, _user)
-    db = shared.get_db()
+    db = get_db()
 
     # Fetch audit events joined with AP item data
     events = db.list_recent_ap_audit_events(organization_id, limit=limit)
@@ -286,7 +287,7 @@ def get_ap_item_detail(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     verify_org_access(organization_id, _user)
-    db = shared.get_db()
+    db = get_db()
     item = shared._resolve_item_for_detail(
         db,
         organization_id=organization_id,
@@ -301,7 +302,7 @@ def get_ap_item_audit(
     browser_only: bool = Query(False),
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
-    db = shared.get_db()
+    db = get_db()
     item = shared._require_item(db, ap_item_id, expected_organization_id=getattr(_user, "organization_id", None))
     verify_org_access(item.get("organization_id") or "default", _user)
     events = db.list_ap_audit_events(ap_item_id)
@@ -331,7 +332,7 @@ def get_ap_item_box(
     state-transition outbox so it's eventually consistent within
     seconds of every transition.
     """
-    db = shared.get_db()
+    db = get_db()
     item = shared._require_item(
         db, ap_item_id,
         expected_organization_id=getattr(_user, "organization_id", None),
@@ -431,7 +432,7 @@ def get_ap_item_history(
     snapshots in descending order. Backed by Gap 6's append-only
     history projection.
     """
-    db = shared.get_db()
+    db = get_db()
     item = shared._require_item(
         db, ap_item_id,
         expected_organization_id=getattr(_user, "organization_id", None),
@@ -457,7 +458,7 @@ def get_ap_item_sources(
     ap_item_id: str,
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
-    db = shared.get_db()
+    db = get_db()
     item = shared._require_item(db, ap_item_id, expected_organization_id=getattr(_user, "organization_id", None))
     verify_org_access(item.get("organization_id") or "default", _user)
     sources = db.list_ap_item_sources(ap_item_id)
@@ -473,7 +474,7 @@ def get_ap_item_tasks(
 ) -> Dict[str, Any]:
     from clearledgr.services.email_tasks import get_tasks_for_ap_item
 
-    db = shared.get_db()
+    db = get_db()
     item = shared._require_item(db, ap_item_id, expected_organization_id=getattr(_user, "organization_id", None))
     verify_org_access(item.get("organization_id") or "default", _user)
     tasks = get_tasks_for_ap_item(
@@ -491,7 +492,7 @@ def get_ap_item_notes(
     ap_item_id: str,
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
-    db = shared.get_db()
+    db = get_db()
     item = shared._require_item(db, ap_item_id, expected_organization_id=getattr(_user, "organization_id", None))
     verify_org_access(item.get("organization_id") or "default", _user)
     metadata = shared._parse_json(item.get("metadata"))
@@ -506,7 +507,7 @@ def get_ap_item_comments(
     ap_item_id: str,
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
-    db = shared.get_db()
+    db = get_db()
     item = shared._require_item(db, ap_item_id, expected_organization_id=getattr(_user, "organization_id", None))
     verify_org_access(item.get("organization_id") or "default", _user)
     metadata = shared._parse_json(item.get("metadata"))
@@ -521,7 +522,7 @@ def get_ap_item_files(
     ap_item_id: str,
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
-    db = shared.get_db()
+    db = get_db()
     item = shared._require_item(db, ap_item_id, expected_organization_id=getattr(_user, "organization_id", None))
     verify_org_access(item.get("organization_id") or "default", _user)
     metadata = shared._parse_json(item.get("metadata"))
@@ -537,7 +538,7 @@ def get_ap_item_context(
     refresh: bool = Query(False),
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
-    db = shared.get_db()
+    db = get_db()
     item = shared._require_item(db, ap_item_id, expected_organization_id=getattr(_user, "organization_id", None))
     verify_org_access(item.get("organization_id") or "default", _user)
 
@@ -584,7 +585,7 @@ def get_consolidated_pipeline(
         raise HTTPException(status_code=403, detail="financial_controller_required")
 
     verify_org_access(parent_org_id, _user)
-    db = shared.get_db()
+    db = get_db()
 
     # Get all child org IDs
     child_orgs = db.get_child_organizations(parent_org_id) if hasattr(db, "get_child_organizations") else []
