@@ -1704,14 +1704,6 @@ def complete_onboarding_step(
     request: OnboardingStepRequest,
     user: TokenData = Depends(get_current_user),
 ):
-    logger.info(
-        "onboarding_step debug user_id=%s role=%r jwt_org=%r body_org=%r step=%s",
-        getattr(user, "user_id", None),
-        getattr(user, "role", None),
-        getattr(user, "organization_id", None),
-        request.organization_id,
-        request.step,
-    )
     _require_admin(user)
     org_id = _resolve_org_id(user, request.organization_id)
     sub = _get_subscription_service().complete_onboarding_step(org_id, request.step)

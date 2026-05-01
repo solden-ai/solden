@@ -12,7 +12,7 @@
 const RETRY_STATUSES = new Set([502, 503, 504]);
 const RETRY_BACKOFFS_MS = [400, 1200, 2400];
 
-const CSRF_COOKIE_NAME = 'workspace_csrf';
+const CSRF_COOKIE_NAME = 'clearledgr_workspace_csrf';
 
 export class ApiError extends Error {
   constructor(status, payload) {
