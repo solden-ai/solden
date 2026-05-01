@@ -898,7 +898,7 @@ class SubscriptionService:
             "estimated_total": round(seat_price * active_seats + read_only_cost + volume_cost, 2),
             "annual_savings_pct": 20 if sub.billing_cycle == "yearly" else 0,
             "limits": {
-                "users_max": limits.users_max,
+                "users_max": limits.users,
                 "invoices_per_month": limits.invoices_per_month,
                 "ai_credits_per_month": limits.ai_credits_per_month,
                 "monthly_llm_cost_usd_hard_cap": getattr(limits, "monthly_llm_cost_usd_hard_cap", None),

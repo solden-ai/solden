@@ -447,6 +447,11 @@ STRICT_PROFILE_ALLOWED_EXACT_PATHS = {
     # OAuth callbacks required for ERP admin connect flows.
     "/erp/quickbooks/callback",
     "/erp/xero/callback",
+    # Per-tenant GL account mapping read/write — Settings page edits
+    # the org's settings_json["gl_account_map"] to translate vendor +
+    # category → ERP GL account. Read on every Settings render; write
+    # when the operator saves a row.
+    "/erp/gl-map",
     # Outlook OAuth + webhooks
     "/outlook/connect/start",
     "/outlook/callback",
