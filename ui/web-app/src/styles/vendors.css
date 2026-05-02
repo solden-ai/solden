@@ -1,0 +1,186 @@
+/* Vendor directory — list of vendor cards.
+ *
+ * Each card: vendor identity on the left (name + sender +
+ * specs row + status chips), spend snapshot on the right,
+ * action buttons across the bottom. The JSX uses
+ * `.secondary-card*` + `.secondary-chip*` + `.cl-vendor-*`
+ * — these are the class names; this file is the rules. */
+
+/* ─── Stat chips above the search ─────────────────────────── */
+
+.secondary-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.secondary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: var(--cl-bg);
+  border: 1px solid var(--cl-border);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--cl-ink-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ─── Search row ──────────────────────────────────────────── */
+
+.secondary-search-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.secondary-search-row input,
+.secondary-search-row [type="search"] {
+  flex: 1 1 auto;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--cl-bg);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--cl-ink-primary);
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.secondary-search-row input:focus,
+.secondary-search-row [type="search"]:focus {
+  outline: none;
+  border-color: var(--cl-teal-500);
+  box-shadow: 0 0 0 3px rgba(24, 191, 176, 0.16);
+}
+
+/* ─── Vendor card list ────────────────────────────────────── */
+
+.secondary-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.secondary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  transition: border-color 0.12s;
+}
+
+.secondary-card:hover {
+  border-color: var(--cl-border-strong);
+}
+
+/* Header row: copy on the left (vendor identity + facts + tags),
+   spend stat on the right. */
+.secondary-card-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .secondary-card-head { grid-template-columns: 1fr; }
+}
+
+.secondary-card-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.secondary-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--cl-ink-primary);
+}
+
+.secondary-card-meta {
+  font-size: 12px;
+  color: var(--cl-ink-muted);
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.cl-vendor-spec-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--cl-ink-secondary);
+}
+
+.cl-vendor-fact {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-vendor-fact .muted {
+  font-weight: 500;
+}
+
+.secondary-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* Right-side spend snapshot: big amount, then count lines. */
+.secondary-card-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 180px;
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  .secondary-card-stat {
+    align-items: flex-start;
+    text-align: left;
+    min-width: 0;
+  }
+}
+
+.secondary-card-stat strong {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--cl-ink-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.secondary-card-stat span {
+  font-size: 11px;
+  color: var(--cl-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Action button row across the bottom. */
+.secondary-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--cl-border);
+}
