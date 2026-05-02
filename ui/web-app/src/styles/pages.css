@@ -448,8 +448,12 @@
 /* Buttons                                                       */
 /* ------------------------------------------------------------ */
 
+.btn,
 .btn-primary,
 .btn-secondary,
+.btn-tertiary,
+.btn-ghost,
+.btn-outline,
 .btn-danger,
 .segmented-button {
   display: inline-flex;
@@ -518,14 +522,78 @@
   border-color: var(--cl-navy);
 }
 
+/* `.btn` is the bare base (sometimes used standalone in older
+   modals); falls back to the secondary look so it never appears
+   unstyled. `.btn-tertiary` is a low-emphasis filled chip and
+   `.btn-outline` is the same as `.btn-secondary` rendered with a
+   stronger border for confirm-style affordances. */
+.btn {
+  background: var(--cl-surface);
+  color: var(--cl-ink-primary);
+  border-color: var(--cl-border);
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--cl-border-strong);
+  background: var(--cl-bg);
+}
+
+.btn-tertiary {
+  background: var(--cl-bg);
+  color: var(--cl-ink-secondary);
+  border-color: transparent;
+}
+.btn-tertiary:hover:not(:disabled) {
+  background: var(--cl-surface);
+  color: var(--cl-ink-primary);
+  border-color: var(--cl-border);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--cl-ink-secondary);
+  border-color: transparent;
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--cl-bg);
+  color: var(--cl-ink-primary);
+}
+
+.btn-outline {
+  background: var(--cl-surface);
+  color: var(--cl-ink-primary);
+  border-color: var(--cl-border-strong);
+}
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--cl-navy);
+}
+
 .btn-sm {
   height: 30px;
   padding: 0 12px;
   font-size: 12px;
 }
 
+.btn-xs {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+  border-radius: 4px;
+}
+
+/* Generic right-aligned action row used in panel heads + topbars. */
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn:disabled,
 .btn-primary:disabled,
 .btn-secondary:disabled,
+.btn-tertiary:disabled,
+.btn-ghost:disabled,
+.btn-outline:disabled,
 .btn-danger:disabled,
 .segmented-button:disabled {
   opacity: 0.5;
@@ -4146,4 +4214,267 @@
   outline: none;
   border-color: #00D67E;
   box-shadow: 0 0 0 3px rgba(0, 214, 126, 0.15);
+}
+
+/* ─── Secondary-page scaffolding (Connections / Exceptions /
+       Health / Activity / etc.) — banner + 2-col body + side ── */
+
+.secondary-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+  max-width: 1200px;
+}
+
+@media (max-width: 1080px) {
+  .secondary-shell { grid-template-columns: 1fr; }
+}
+
+.secondary-shell > .secondary-main { min-width: 0; }
+
+.secondary-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: sticky;
+  top: 16px;
+}
+
+@media (max-width: 1080px) {
+  .secondary-side { position: static; }
+}
+
+/* Stat tile + grid (used at the top of secondary pages). */
+
+.secondary-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.secondary-stat-card {
+  padding: 14px 16px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.secondary-stat-card strong {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--cl-ink-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.secondary-stat-card span {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+}
+
+.secondary-stat-card[data-tone="success"] strong { color: var(--cl-teal-600); }
+.secondary-stat-card[data-tone="warning"] strong { color: #B45309; }
+.secondary-stat-card[data-tone="danger"]  strong { color: var(--cl-danger); }
+
+/* Card body — sits inside .secondary-card after the head. */
+.secondary-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--cl-ink-secondary);
+  line-height: 1.5;
+}
+
+.secondary-card-body p { margin: 0; }
+
+/* ─── Per-page extras (small, scattered) ─────────────────── */
+
+/* PlanPage billing hero */
+.billing-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 16px;
+  padding: 22px 24px;
+  background: linear-gradient(135deg, var(--cl-teal-soft), var(--cl-surface));
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-lg);
+  margin-bottom: 16px;
+}
+
+@media (max-width: 880px) {
+  .billing-hero { grid-template-columns: 1fr; }
+}
+
+/* SettingsPage role-editor permission grid */
+.cl-role-editor-perms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  padding: 12px 0;
+}
+
+/* AuditLogPage retention block */
+.cl-audit-retention {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--cl-bg);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  font-size: 12px;
+  color: var(--cl-ink-secondary);
+  line-height: 1.5;
+}
+
+/* ReportsPage chips */
+.cl-reports-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  background: var(--cl-bg);
+  border: 1px solid var(--cl-border);
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--cl-ink-secondary);
+}
+
+.cl-reports-chip-warning {
+  background: #FEF3C7;
+  border-color: #FCD34D;
+  color: #92400E;
+}
+
+.cl-reports-chip-error {
+  background: #FEE2E2;
+  border-color: #FCA5A5;
+  color: #991B1B;
+}
+
+/* RecordDetailPage extras */
+.cl-record-header-vendor {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--cl-ink-primary);
+  margin: 0 0 4px;
+}
+
+.cl-record-bill-detail {
+  display: grid;
+  grid-template-columns: minmax(140px, max-content) 1fr;
+  column-gap: 14px;
+  row-gap: 6px;
+  padding: 16px 18px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  font-size: 13px;
+}
+
+.cl-record-bill-detail dt {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+  margin: 0;
+}
+
+.cl-record-bill-detail dd {
+  margin: 0;
+  color: var(--cl-ink-primary);
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+
+.cl-record-bank-summary {
+  padding: 12px 14px;
+  background: var(--cl-bg);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+}
+
+/* HomePage activity + status extras */
+.cl-home-activity-tone-success { color: var(--cl-teal-600); }
+.cl-home-activity-tone-warning { color: #B45309; }
+.cl-home-activity-tone-error   { color: var(--cl-danger); }
+.cl-home-activity-tone-info    { color: var(--cl-ink-secondary); }
+
+.cl-home-status-cell-good {
+  border-left: 3px solid var(--cl-teal-500);
+}
+.cl-home-status-cell-warn {
+  border-left: 3px solid #B45309;
+}
+.cl-home-status-cell-off {
+  border-left: 3px solid var(--cl-border-strong);
+}
+
+/* OnboardingPage btn-secondary alias for legacy callsites */
+.cl-onb-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  background: var(--cl-surface);
+  color: var(--cl-ink-primary);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.cl-onb-btn-secondary:hover:not(:disabled) {
+  border-color: var(--cl-border-strong);
+  background: var(--cl-bg);
+}
+
+/* OnboardingPage health-row variant the regex audit flagged */
+.cl-onb-health-row-good { border-left: 3px solid var(--cl-teal-500); }
+.cl-onb-health-row-warn { border-left: 3px solid #B45309; }
+.cl-onb-health-row-off  { border-left: 3px solid var(--cl-border-strong); }
+
+/* AuditLogPage cells */
+.cl-audit-cell-state {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  background: var(--cl-bg);
+  border: 1px solid var(--cl-border);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--cl-ink-secondary);
+  white-space: nowrap;
+}
+
+.cl-audit-cell-confidence {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--cl-ink-secondary);
+}
+
+/* RecordDetailPage timeline body */
+.cl-record-timeline-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
