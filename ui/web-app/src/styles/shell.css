@@ -37,13 +37,15 @@
 /* Sidebar nav */
 
 .cl-sidebar-nav {
-  padding: 20px 12px;
+  padding: 0 12px 20px;
 }
 
 .cl-sidebar-brand {
   display: flex;
   align-items: center;
-  padding: 4px 12px 24px;
+  padding: 18px 8px 18px;
+  margin: 0 -4px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .cl-sidebar-group {
