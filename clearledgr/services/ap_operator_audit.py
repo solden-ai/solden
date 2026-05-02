@@ -338,9 +338,6 @@ def _operator_evidence(event: Dict[str, Any], context: Dict[str, Any]) -> Dict[s
     if event_type in {"deterministic_validation_failed", "state_transition_rejected", "approval_request_blocked", "erp_post_blocked", "route_low_risk_for_approval_blocked"}:
         return {"label": "Policy check", "detail": "Recorded from workflow and policy guardrails."}
 
-    if event_type in {"vendor_followup_waiting_sla", "vendor_followup_blocked", "vendor_followup_failed", "vendor_followup_draft_prepared"}:
-        return {"label": "Vendor follow-up", "detail": "Recorded from the vendor information request workflow."}
-
     if event_type in {"finance_summary_share_previewed", "finance_summary_share_prepared", "finance_summary_shared", "finance_summary_share_failed"}:
         return {"label": "Record summary", "detail": "Prepared from the current invoice record and audit history."}
 
@@ -973,54 +970,6 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
                 "message": reason or "Clearledgr could not recover this ERP posting failure.",
                 "severity": "warning",
                 "next_action": "Review the connector result and retry manually if appropriate.",
-            }
-        )
-        return operator
-
-    if event_type == "vendor_followup_waiting_sla":
-        operator.update(
-            {
-                "code": "vendor_followup_waiting",
-                "title": "Waiting before next vendor follow-up",
-                "message": reason or "Clearledgr is waiting for the vendor follow-up window.",
-                "severity": "info",
-                "next_action": "Wait for the next scheduled follow-up time.",
-            }
-        )
-        return operator
-
-    if event_type == "vendor_followup_blocked":
-        operator.update(
-            {
-                "code": "vendor_followup_blocked",
-                "title": "Vendor follow-up blocked",
-                "message": reason or "A vendor follow-up could not be prepared from the current invoice state.",
-                "severity": "warning",
-                "next_action": "Review the invoice state or required evidence first.",
-            }
-        )
-        return operator
-
-    if event_type == "vendor_followup_failed":
-        operator.update(
-            {
-                "code": "vendor_followup_failed",
-                "title": "Vendor follow-up failed",
-                "message": reason or "Clearledgr could not prepare the vendor follow-up.",
-                "severity": "warning",
-                "next_action": "Retry the follow-up or draft the request manually.",
-            }
-        )
-        return operator
-
-    if event_type == "vendor_followup_draft_prepared":
-        operator.update(
-            {
-                "code": "vendor_followup_prepared",
-                "title": "Vendor follow-up prepared",
-                "message": reason or "A vendor follow-up draft is ready to send.",
-                "severity": "info",
-                "next_action": "Review the draft and send it when ready.",
             }
         )
         return operator

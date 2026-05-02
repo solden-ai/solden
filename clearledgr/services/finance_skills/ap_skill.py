@@ -30,7 +30,6 @@ class APFinanceSkill(FinanceSkill):
             "reassign_approval",
             "reject_invoice",
             "post_to_erp",
-            "prepare_vendor_followups",
             "route_low_risk_for_approval",
             "retry_recoverable_failures",
             # Phase 2 audit-P0 intents (workspace SPA actions). These
@@ -125,11 +124,6 @@ class APFinanceSkill(FinanceSkill):
                 "intent": "route_low_risk_for_approval",
                 "class": "mutating",
                 "description": "Route eligible AP items to approval surfaces.",
-            },
-            {
-                "intent": "prepare_vendor_followups",
-                "class": "mutating",
-                "description": "Prepare vendor info-request follow-up draft with SLA safeguards.",
             },
             {
                 "intent": "retry_recoverable_failures",

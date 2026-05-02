@@ -1463,34 +1463,14 @@ class InvoicePostingMixin:
             action_outcome="needs_info",
         )
 
+        # Solden no longer authors outbound vendor email bodies (2026-05-02).
+        # Persist the operator's needs-info question; the operator drafts and
+        # sends the follow-up themselves from their own inbox.
         ap_row = self.db.get_ap_item(ap_item_id) if ap_item_id and hasattr(self.db, "get_ap_item") else None
         ap_meta = self._parse_metadata_dict((ap_row or {}).get("metadata"))
         followup_question = str(ap_meta.get("needs_info_question") or reason_text).strip() or reason_text
         if followup_question:
             self._update_ap_item_metadata(ap_item_id, {"needs_info_question": followup_question})
-
-        draft_id = await self._create_needs_info_vendor_draft(
-            ap_item_id=ap_item_id,
-            thread_id=gmail_id,
-            to_email=str(invoice_data.get("sender") or ""),
-            invoice_data={
-                "subject": invoice_data.get("email_subject") or invoice_data.get("subject") or "",
-                "vendor_name": invoice_data.get("vendor") or invoice_data.get("vendor_name") or "",
-                "amount": invoice_data.get("amount") or 0.0,
-                "invoice_number": invoice_data.get("invoice_number") or "",
-            },
-            question=followup_question,
-            user_id=invoice_data.get("user_id"),
-        )
-        self._apply_needs_info_followup_metadata(
-            ap_item_id=ap_item_id,
-            draft_id=draft_id,
-            question=followup_question,
-            actor_type="user",
-            actor_id=requested_by,
-            source=resolved_source_channel,
-            correlation_id=correlation_id,
-        )
 
         return {
             "status": "needs_info",

@@ -195,7 +195,6 @@ class CoordinationEngine:
             "validate_kyc_document": self._handle_kyc_validate,
             "update_onboarding_progress": self._handle_onboarding_progress,
             "initiate_iban_verification": self._handle_iban_verify,
-            "check_vendor_response": self._handle_check_vendor_response,
             "evaluate_grn_result": self._handle_evaluate_grn,
             "unsnooze": self._handle_unsnooze,
             "apply_label_matched": self._handle_apply_label,  # alias
@@ -1679,20 +1678,6 @@ class CoordinationEngine:
             "initiated": False,
             "adapter_pending": True,
             "reason": "provider_adapter_pending",
-        }
-
-    async def _handle_check_vendor_response(self, action: Action, plan: Plan) -> dict:
-        """§4.3: Check if vendor has responded to a chase email.
-
-        Dormant per the 2026-04-30 product call — Solden no longer
-        sends chase emails, so there are no responses to scan for.
-        Handler stays registered so plans referencing the action
-        don't blow up; it returns a noop marker.
-        """
-        return {
-            "ok": True,
-            "checked": False,
-            "noop_reason": "vendor_followup_dormant_2026_04_30",
         }
 
     async def _handle_evaluate_grn(self, action: Action, plan: Plan) -> dict:

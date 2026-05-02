@@ -900,13 +900,6 @@ class DraftReplyRequest(BaseModel):
     organization_id: Optional[str] = None
 
 
-# /extension/draft-reply removed 2026-04-30 — the vendor follow-up
-# email templates that backed it are dormant per the AP-as-wedge
-# product call (see memory/project_vendor_followup_templates_dormant.md).
-# Operators compose vendor replies in their own Gmail compose now;
-# Solden no longer authors outbound vendor email bodies.
-
-
 @router.post("/gmail/register-token")
 async def register_gmail_token(request: RegisterGmailTokenRequest):
     """Register Gmail OAuth access token obtained by the browser extension.
@@ -1777,12 +1770,6 @@ async def approval_nudge(
     )
 
     return response
-
-
-# /extension/vendor-followup removed 2026-04-30 — see the dormant
-# call note above /extension/draft-reply. The intent contract
-# (`prepare_vendor_followups`) and the runtime evaluator stay on
-# disk as option-value but no surface mounts them.
 
 
 @router.post("/route-low-risk-approval", dependencies=[Depends(get_current_user)])

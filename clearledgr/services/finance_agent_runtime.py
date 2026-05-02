@@ -296,26 +296,6 @@ class FinanceAgentRuntime:
             return None
 
     @staticmethod
-    def _vendor_followup_sla_hours() -> int:
-        try:
-            hours = int(os.getenv("CLEARLEDGR_VENDOR_FOLLOWUP_SLA_HOURS", "24"))
-        except (TypeError, ValueError):
-            hours = 24
-        return max(1, min(hours, 168))
-
-    @staticmethod
-    def vendor_followup_sla_hours() -> int:
-        return FinanceAgentRuntime._vendor_followup_sla_hours()
-
-    @staticmethod
-    def _vendor_followup_max_attempts() -> int:
-        try:
-            attempts = int(os.getenv("CLEARLEDGR_VENDOR_FOLLOWUP_MAX_ATTEMPTS", "3"))
-        except (TypeError, ValueError):
-            attempts = 3
-        return max(1, min(attempts, 10))
-
-    @staticmethod
     def _item_reference(payload: Dict[str, Any]) -> str:
         return str(
             payload.get("ap_item_id")
@@ -1069,51 +1049,6 @@ class FinanceAgentRuntime:
             skill_id=skill_id,
             evidence_refs=evidence_refs,
         )
-
-    def _evaluate_prepare_vendor_followup(
-        self,
-        ap_item: Dict[str, Any],
-        *,
-        force: bool,
-    ) -> Dict[str, Any]:
-        state = str(ap_item.get("state") or "").strip().lower()
-        metadata = self._parse_json_dict(ap_item.get("metadata"))
-        attempts = max(0, self._safe_int(metadata.get("followup_attempt_count"), 0))
-        max_attempts = self._vendor_followup_max_attempts()
-        sla_hours = self._vendor_followup_sla_hours()
-        now = datetime.now(timezone.utc)
-
-        last_sent_at = self._parse_iso_utc(metadata.get("followup_last_sent_at"))
-        next_due_at = self._parse_iso_utc(metadata.get("followup_sla_due_at")) or (
-            (last_sent_at + timedelta(hours=sla_hours)) if last_sent_at else None
-        )
-
-        reason_codes = []
-        if state != "needs_info":
-            reason_codes.append("state_not_needs_info")
-        if attempts >= max_attempts and not force:
-            reason_codes.append("followup_attempt_limit_reached")
-        if next_due_at and now < next_due_at and not force:
-            reason_codes.append("waiting_for_sla_window")
-
-        return {
-            "eligible": len(reason_codes) == 0,
-            "state": state or None,
-            "reason_codes": reason_codes,
-            "force": force,
-            "followup_attempt_count": attempts,
-            "max_attempts": max_attempts,
-            "followup_sla_due_at": next_due_at.isoformat() if next_due_at else None,
-            "next_allowed_at": next_due_at.isoformat() if next_due_at else None,
-        }
-
-    def evaluate_prepare_vendor_followup(
-        self,
-        ap_item: Dict[str, Any],
-        *,
-        force: bool,
-    ) -> Dict[str, Any]:
-        return self._evaluate_prepare_vendor_followup(ap_item, force=force)
 
     def create_ap_action_context(
         self,

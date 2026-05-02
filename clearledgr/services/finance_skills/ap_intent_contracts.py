@@ -86,17 +86,6 @@ _AUDIT_CONTRACTS: Dict[str, Dict[str, Any]] = {
             "erp_post_blocked",
         ],
     },
-    "prepare_vendor_followups": {
-        "source": "finance_agent_runtime",
-        "idempotent": True,
-        "mutates_ap_state": False,
-        "events": [
-            "vendor_followup_waiting_sla",
-            "vendor_followup_blocked",
-            "vendor_followup_failed",
-            "vendor_followup_draft_prepared",
-        ],
-    },
     "route_low_risk_for_approval": {
         "source": "finance_agent_runtime",
         "idempotent": True,
@@ -282,12 +271,6 @@ _OPERATOR_COPY: Dict[str, Dict[str, str]] = {
         "why_now": "Posting is only allowed once approval and posting-readiness checks are complete.",
         "recommended_allowed": "Post this invoice to ERP.",
         "recommended_blocked": "Wait until the invoice reaches a postable state.",
-    },
-    "prepare_vendor_followups": {
-        "what_happened": "Validated vendor follow-up draft eligibility for a needs-info item.",
-        "why_now": "Follow-up attempts and SLA timing were checked before preparing a draft.",
-        "recommended_allowed": "Prepare the vendor follow-up draft.",
-        "recommended_blocked": "Resolve blockers or wait until the SLA window opens.",
     },
     "route_low_risk_for_approval": {
         "what_happened": "Validated AP item reviewed for low-risk approval routing.",

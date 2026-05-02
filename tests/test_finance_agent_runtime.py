@@ -289,7 +289,6 @@ def test_runtime_registers_ap_and_read_only_health_skills():
     runtime = _runtime(db)
     assert "escalate_approval" in runtime.supported_intents
     assert "reassign_approval" in runtime.supported_intents
-    assert "prepare_vendor_followups" in runtime.supported_intents
     assert "route_low_risk_for_approval" in runtime.supported_intents
     assert "retry_recoverable_failures" in runtime.supported_intents
     assert "read_vendor_compliance_health" in runtime.supported_intents
@@ -1289,77 +1288,6 @@ def test_execute_post_to_erp_blocked_by_field_review_precheck():
     assert result["reason"] == "field_review_required"
     assert result["audit_event_id"]
     workflow.approve_invoice.assert_not_called()
-
-
-def test_execute_prepare_vendor_followups_waiting_sla_block():
-    db = _FakeDB()
-    runtime = _runtime(db)
-    db.items["ap-followup-1"]["metadata"]["followup_attempt_count"] = 1
-    db.items["ap-followup-1"]["metadata"]["followup_last_sent_at"] = "2099-01-01T00:00:00+00:00"
-
-    with patch("clearledgr.services.finance_skills.ap_skill.get_invoice_workflow", return_value=MagicMock()):
-        result = asyncio.run(
-            runtime.execute_intent(
-                "prepare_vendor_followups",
-                {"email_id": "gmail-thread-followup-1"},
-                idempotency_key="idem-runtime-followup-waiting-1",
-            )
-        )
-
-    assert result["status"] == "waiting_sla"
-    assert result["reason"] == "waiting_for_sla_window"
-    assert result["audit_event_id"]
-    assert result["followup_next_action"] == "await_vendor_response"
-
-
-def test_execute_prepare_vendor_followups_prepares_draft_and_replays_idempotent_request():
-    db = _FakeDB()
-    runtime = _runtime(db)
-
-    class _FakeGmailClient:
-        def __init__(self, user_id):
-            self.user_id = user_id
-
-        async def ensure_authenticated(self):
-            return True
-
-    class _FakeFollowupService:
-        def __init__(self, organization_id):
-            self.organization_id = organization_id
-
-        async def create_gmail_draft(self, **_kwargs):
-            return "draft-runtime-followup-1"
-
-    with patch("clearledgr.services.finance_skills.ap_skill.get_invoice_workflow", return_value=MagicMock()):
-        with patch("clearledgr.services.gmail_api.GmailAPIClient", _FakeGmailClient):
-            with patch("clearledgr.services.auto_followup.AutoFollowUpService", _FakeFollowupService):
-                first = asyncio.run(
-                    runtime.execute_intent(
-                        "prepare_vendor_followups",
-                        {"email_id": "gmail-thread-followup-1"},
-                        idempotency_key="idem-runtime-followup-1",
-                    )
-                )
-                second = asyncio.run(
-                    runtime.execute_intent(
-                        "prepare_vendor_followups",
-                        {"email_id": "gmail-thread-followup-1"},
-                        idempotency_key="idem-runtime-followup-1",
-                    )
-                )
-
-    assert first["status"] == "prepared"
-    assert first["draft_id"] == "draft-runtime-followup-1"
-    assert first["audit_event_id"]
-    assert second["status"] == "prepared"
-    assert second["idempotency_replayed"] is True
-    assert db.items["ap-followup-1"]["metadata"]["needs_info_draft_id"] == "draft-runtime-followup-1"
-    assert db.items["ap-followup-1"]["metadata"]["followup_next_action"] == "await_vendor_response"
-    # Filter out the P3 plan_observed audit (audit 2026-04-28) — that
-    # event fires once per sync skill request and is unrelated to the
-    # skill's own idempotent audit emission this test guards.
-    skill_rows = [r for r in db.audit_rows if r.get("event_type") != "plan_observed"]
-    assert len(skill_rows) == 1
 
 
 def test_execute_retry_recoverable_failures_blocked_by_precheck():

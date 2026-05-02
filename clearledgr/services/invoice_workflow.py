@@ -1250,6 +1250,9 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
                 decision_reason="ap_decision_needs_info",
             )
             ap_item_id = self._lookup_ap_item_id(invoice.gmail_id)
+            # Solden no longer authors outbound vendor email bodies (2026-05-02).
+            # Persist the question alone; the operator drafts and sends the
+            # follow-up themselves from their own inbox.
             self._update_ap_item_metadata(
                 ap_item_id,
                 {
@@ -1257,28 +1260,6 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
                     "ap_decision_reasoning": ap_decision.reasoning,
                     "ap_decision_risk_flags": ap_decision.risk_flags,
                 },
-            )
-            draft_id = await self._create_needs_info_vendor_draft(
-                ap_item_id=ap_item_id,
-                thread_id=invoice.gmail_id,
-                to_email=invoice.sender,
-                invoice_data={
-                    "subject": invoice.subject,
-                    "vendor_name": invoice.vendor_name,
-                    "amount": invoice.amount,
-                    "invoice_number": invoice.invoice_number,
-                },
-                question=ap_decision.info_needed,
-                user_id=invoice.user_id,
-            )
-            self._apply_needs_info_followup_metadata(
-                ap_item_id=ap_item_id,
-                draft_id=draft_id,
-                question=ap_decision.info_needed,
-                actor_type="system",
-                actor_id="ap_agent",
-                source="invoice_workflow",
-                correlation_id=correlation_id,
             )
 
             return {

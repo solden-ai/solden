@@ -3307,75 +3307,6 @@ class TestExtensionEndpoints:
         assert activity.get("replyToId") == "msg-42"
         assert "attachments" in activity
 
-    def test_vendor_followup_endpoint_prepares_draft_and_updates_metadata(self):
-        app.dependency_overrides[gmail_extension_module.get_current_user] = self._fake_user
-        fake_audit = self._FakeAuditService()
-        app.dependency_overrides[gmail_extension_module.get_audit_service] = lambda: fake_audit
-
-        runtime_response = {
-            "status": "prepared",
-            "draft_id": "draft-followup-123",
-            "followup_attempt_count": 1,
-            "followup_next_action": "await_vendor_response",
-            "audit_event_id": "audit-followup-1",
-        }
-        mock_runtime = MagicMock()
-        mock_runtime.execute_intent = AsyncMock(return_value=runtime_response)
-
-        try:
-            with patch.object(gmail_extension_module, "_build_finance_runtime", return_value=mock_runtime):
-                response = client.post(
-                    "/extension/vendor-followup",
-                    json={
-                        "email_id": "gmail-thread-followup-1",
-                        "organization_id": "default",
-                    },
-                )
-        finally:
-            app.dependency_overrides.pop(gmail_extension_module.get_current_user, None)
-            app.dependency_overrides.pop(gmail_extension_module.get_audit_service, None)
-
-        assert response.status_code == 200
-        payload = response.json()
-        assert payload["status"] == "prepared"
-        assert payload["draft_id"] == "draft-followup-123"
-        assert payload["followup_attempt_count"] == 1
-        assert payload["followup_next_action"] == "await_vendor_response"
-        assert payload["audit_event_id"]
-        mock_runtime.execute_intent.assert_awaited_once()
-
-    def test_vendor_followup_endpoint_respects_sla_wait_window(self):
-        app.dependency_overrides[gmail_extension_module.get_current_user] = self._fake_user
-        fake_audit = self._FakeAuditService()
-        app.dependency_overrides[gmail_extension_module.get_audit_service] = lambda: fake_audit
-
-        runtime_response = {
-            "status": "waiting_sla",
-            "followup_attempt_count": 1,
-            "followup_next_action": "await_vendor_response",
-        }
-        mock_runtime = MagicMock()
-        mock_runtime.execute_intent = AsyncMock(return_value=runtime_response)
-
-        try:
-            with patch.object(gmail_extension_module, "_build_finance_runtime", return_value=mock_runtime):
-                response = client.post(
-                    "/extension/vendor-followup",
-                    json={
-                        "email_id": "gmail-thread-followup-2",
-                        "organization_id": "default",
-                    },
-                )
-        finally:
-            app.dependency_overrides.pop(gmail_extension_module.get_current_user, None)
-            app.dependency_overrides.pop(gmail_extension_module.get_audit_service, None)
-
-        assert response.status_code == 200
-        payload = response.json()
-        assert payload["status"] == "waiting_sla"
-        assert payload["followup_attempt_count"] == 1
-        assert payload["followup_next_action"] == "await_vendor_response"
-
     def test_record_field_correction_uses_runtime_contract(self, monkeypatch):
         captured: dict = {}
 
@@ -3416,51 +3347,6 @@ class TestExtensionEndpoints:
         assert captured["actor_email"] == "extension@example.com"
         assert captured["kwargs"]["ap_item_id"] == "ap-item-1"
         assert captured["kwargs"]["field"] == "invoice_number"
-
-    def test_vendor_followup_endpoint_idempotency_replays_previous_response(self):
-        app.dependency_overrides[gmail_extension_module.get_current_user] = self._fake_user
-        fake_audit = self._FakeAuditService()
-        app.dependency_overrides[gmail_extension_module.get_audit_service] = lambda: fake_audit
-
-        call_count = {"n": 0}
-
-        async def _mock_execute(intent, payload, *, idempotency_key=None):
-            call_count["n"] += 1
-            base = {
-                "status": "prepared",
-                "draft_id": "draft-followup-idem",
-                "followup_attempt_count": 1,
-                "followup_next_action": "await_vendor_response",
-                "audit_event_id": "audit-followup-idem-1",
-            }
-            if call_count["n"] > 1:
-                base["idempotency_replayed"] = True
-            return base
-
-        mock_runtime = MagicMock()
-        mock_runtime.execute_intent = _mock_execute
-
-        body = {
-            "email_id": "gmail-thread-followup-idem",
-            "organization_id": "default",
-            "idempotency_key": "idem-followup-1",
-        }
-
-        try:
-            with patch.object(gmail_extension_module, "_build_finance_runtime", return_value=mock_runtime):
-                first = client.post("/extension/vendor-followup", json=body)
-                second = client.post("/extension/vendor-followup", json=body)
-        finally:
-            app.dependency_overrides.pop(gmail_extension_module.get_current_user, None)
-            app.dependency_overrides.pop(gmail_extension_module.get_audit_service, None)
-
-        assert first.status_code == 200
-        assert second.status_code == 200
-        first_payload = first.json()
-        second_payload = second.json()
-        assert first_payload["status"] == "prepared"
-        assert second_payload["status"] == "prepared"
-        assert second_payload["idempotency_replayed"] is True
 
     def test_route_low_risk_approval_endpoint_routes_and_replays_idempotent_request(self):
         app.dependency_overrides[gmail_extension_module.get_current_user] = self._fake_user
@@ -3768,38 +3654,6 @@ class TestAgentIntentEndpoints:
 
         assert response.status_code == 200
         assert response.json().get("status") == "pending_approval"
-        mock_runtime.execute_intent.assert_awaited_once()
-
-    def test_execute_intent_endpoint_supports_prepare_vendor_followups(self):
-        app.dependency_overrides[agent_intents_module.get_current_user] = self._fake_operator
-        execute_response = {
-            "intent": "prepare_vendor_followups",
-            "status": "prepared",
-            "ap_item_id": "ap-item-2",
-            "email_id": "gmail-thread-2",
-            "draft_id": "draft-2",
-            "audit_event_id": "audit-2",
-        }
-        mock_runtime = MagicMock()
-        mock_runtime.execute_intent = AsyncMock(return_value=execute_response)
-        try:
-            with patch.object(agent_intents_module, "_runtime_for_request", return_value=mock_runtime):
-                response = client.post(
-                    "/api/agent/intents/execute",
-                    json={
-                        "intent": "prepare_vendor_followups",
-                        "input": {"email_id": "gmail-thread-2", "force": False},
-                        "idempotency_key": "idem-agent-2",
-                        "organization_id": "default",
-                    },
-                )
-        finally:
-            app.dependency_overrides.pop(agent_intents_module.get_current_user, None)
-
-        assert response.status_code == 200
-        payload = response.json()
-        assert payload["status"] == "prepared"
-        assert payload["draft_id"] == "draft-2"
         mock_runtime.execute_intent.assert_awaited_once()
 
     def test_preview_intent_endpoint_supports_read_ap_workflow_health(self):

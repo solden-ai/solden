@@ -307,22 +307,6 @@ def _enrich_approval_row(approval: Dict[str, Any]) -> Dict[str, Any]:
     return enriched
 
 
-def _vendor_followup_sla_hours() -> int:
-    try:
-        hours = int(os.getenv("CLEARLEDGR_VENDOR_FOLLOWUP_SLA_HOURS", "24"))
-    except (TypeError, ValueError):
-        hours = 24
-    return max(1, min(hours, 168))
-
-
-def _vendor_followup_max_attempts() -> int:
-    try:
-        attempts = int(os.getenv("CLEARLEDGR_VENDOR_FOLLOWUP_MAX_ATTEMPTS", "3"))
-    except (TypeError, ValueError):
-        attempts = 3
-    return max(1, min(attempts, 10))
-
-
 def _approval_followup_policy(organization_id: str) -> Dict[str, Any]:
     return get_approval_automation_policy(organization_id=organization_id or "default")
 
@@ -343,34 +327,6 @@ def _approval_followup_escalation_minutes(approval_policy: Optional[Dict[str, An
     except (TypeError, ValueError):
         escalation_hours = 24
     return max(60, min(escalation_hours * 60, 20160))
-
-
-def _derive_followup_next_action(
-    *,
-    state: str,
-    metadata: Dict[str, Any],
-    now: Optional[datetime] = None,
-) -> Optional[str]:
-    if state != APState.NEEDS_INFO.value:
-        return None
-    normalized = str(metadata.get("followup_next_action") or "").strip().lower()
-    attempts = max(0, safe_int(metadata.get("followup_attempt_count"), 0))
-    max_attempts = _vendor_followup_max_attempts()
-    now_utc = now or datetime.now(timezone.utc)
-
-    due_at = _parse_iso(metadata.get("followup_sla_due_at"))
-    if due_at is None:
-        last_sent_at = _parse_iso(metadata.get("followup_last_sent_at"))
-        if last_sent_at is not None:
-            due_at = last_sent_at + timedelta(hours=_vendor_followup_sla_hours())
-
-    if attempts >= max_attempts:
-        return "manual_vendor_escalation"
-    if due_at is not None and due_at <= now_utc:
-        return "nudge_vendor_followup"
-    if attempts <= 0 and not str(metadata.get("needs_info_draft_id") or "").strip():
-        return "prepare_vendor_followup_draft"
-    return normalized or "await_vendor_response"
 
 
 def _pending_approver_ids(db: ClearledgrDB, ap_item_id: str, metadata: Dict[str, Any]) -> List[str]:
@@ -1043,8 +999,7 @@ def _derive_next_action(payload: Dict[str, Any]) -> str:
     if document_type == "invoice" and payload.get("entity_routing_status") == "needs_review":
         return "resolve_entity_route"
     if state in {APState.NEEDS_INFO.value}:
-        followup_next = str(payload.get("followup_next_action") or "").strip().lower()
-        return followup_next or "request_info"
+        return "request_info"
     if state in {APState.FAILED_POST.value}:
         return "retry_post"
     if state in {APState.READY_TO_POST.value, APState.APPROVED.value}:
@@ -1846,20 +1801,11 @@ def build_worklist_item(
         metadata.get("ap_decision_risk_flags") or []
     )
 
-    # needs_info follow-up — surface question + Gmail draft link for sidebar banner.
+    # needs_info follow-up — surface the question only; Solden no longer
+    # authors vendor email bodies (2026-05-02), so no draft link / SLA /
+    # attempt counter is tracked.
     needs_info_question = metadata.get("needs_info_question")
     payload["needs_info_question"] = needs_info_question if needs_info_question else None
-    needs_info_draft_id = metadata.get("needs_info_draft_id")
-    payload["needs_info_draft_id"] = needs_info_draft_id if needs_info_draft_id else None
-    followup_last_sent_at = metadata.get("followup_last_sent_at")
-    payload["followup_last_sent_at"] = str(followup_last_sent_at).strip() if followup_last_sent_at else None
-    payload["followup_attempt_count"] = max(0, safe_int(metadata.get("followup_attempt_count"), 0))
-    followup_sla_due_at = metadata.get("followup_sla_due_at")
-    payload["followup_sla_due_at"] = str(followup_sla_due_at).strip() if followup_sla_due_at else None
-    payload["followup_next_action"] = _derive_followup_next_action(
-        state=str(payload.get("state") or "").strip().lower(),
-        metadata=metadata,
-    )
     payload["queue_entered_at"] = (
         payload.get("queue_entered_at")
         or payload.get("received_at")
@@ -2200,14 +2146,13 @@ def _build_upcoming_task(item: Dict[str, Any], now: datetime) -> Optional[Dict[s
         kind = "vendor_follow_up"
         title = "Vendor follow-up"
         recommended_slice = "needs_info"
-        due_at = _parse_iso(item.get("followup_sla_due_at")) or _parse_iso(item.get("updated_at")) or _parse_iso(item.get("created_at"))
-        followup_next = str(item.get("followup_next_action") or "").strip().lower()
-        if followup_next == "prepare_vendor_followup_draft":
-            detail = "Prepare the first vendor reply so the invoice can continue."
-        elif followup_next == "manual_vendor_escalation":
-            detail = "Vendor follow-up has reached the attempt limit and needs manual escalation."
-        else:
-            detail = "Check whether the vendor needs another nudge or if the reply already arrived."
+        due_at = _parse_iso(item.get("updated_at")) or _parse_iso(item.get("created_at"))
+        question = str(item.get("needs_info_question") or "").strip()
+        detail = (
+            f"Vendor needs to clarify: {question}"
+            if question
+            else "Reach out to the vendor for the missing information."
+        )
     elif state == "failed_post":
         kind = "erp_retry"
         title = "Retry ERP posting"
@@ -2262,8 +2207,6 @@ def _build_upcoming_task(item: Dict[str, Any], now: datetime) -> Optional[Dict[s
         "thread_id": item.get("thread_id"),
         "message_id": item.get("message_id"),
         "erp_status": item.get("erp_status"),
-        "followup_next_action": item.get("followup_next_action"),
-        "followup_draft_id": item.get("needs_info_draft_id"),
         "sender": item.get("sender"),
     }
 

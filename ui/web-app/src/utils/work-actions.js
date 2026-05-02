@@ -181,13 +181,13 @@ export function getOperatorOverrideCopy(state, item = null, documentType = 'invo
   if (mode === 'agent_monitoring') {
     return {
       title: 'Operator overrides',
-      detail: 'Clearledgr will send reminders and escalate automatically. Use these only to intervene now.',
+      detail: 'The agent is monitoring this approval. Use these to nudge, reassign, or override now.',
     };
   }
   if (mode === 'agent_waiting') {
     return {
       title: 'Operator overrides',
-      detail: 'Clearledgr sent a follow-up and is waiting for the vendor. Use these to intervene before the next reminder.',
+      detail: 'This invoice is waiting on the vendor. Use these to override or reach out yourself.',
     };
   }
   if (mode === 'agent_progressing') {
@@ -284,16 +284,11 @@ export function getWorkStateNotice(state, documentType = 'invoice', item = null)
     return financeEffectNotice;
   }
   if (normalized === 'needs_info') {
-    const followupNextAction = String(item?.followup_next_action || '').trim().toLowerCase();
-    if (followupNextAction === 'await_vendor_response') {
-      return 'Waiting on vendor reply. Clearledgr will send reminders automatically.';
+    const question = String(item?.needs_info_question || '').trim();
+    if (question) {
+      return `Reach out to the vendor: ${question}`;
     }
-    if (followupNextAction === 'manual_vendor_escalation') {
-      return 'Vendor did not reply. Manual escalation needed.';
-    }
-    if (followupNextAction === 'nudge_vendor_followup') {
-      return 'The vendor has not replied yet. Send the next follow-up when you are ready.';
-    }
+    return 'Vendor needs to clarify something before this invoice can move forward.';
   }
   if (normalized === 'needs_approval') {
     const approvalFollowup = item?.approval_followup && typeof item.approval_followup === 'object'
@@ -307,9 +302,9 @@ export function getWorkStateNotice(state, documentType = 'invoice', item = null)
       return 'Approval is overdue. Send a reminder now.';
     }
     if (pendingAssignees.length > 0) {
-      return `Waiting on ${pendingAssignees.slice(0, 3).join(', ')}. Clearledgr is monitoring this approval and will remind or escalate if it slips.`;
+      return `Waiting on ${pendingAssignees.slice(0, 3).join(', ')}. Send a nudge or reassign if it slips.`;
     }
-    return 'Waiting on approval. Clearledgr is monitoring this request and will remind or escalate if it slips.';
+    return 'Waiting on approval. Send a nudge or reassign if it slips.';
   }
   if ((normalized === 'approved' || normalized === 'ready_to_post' || normalized === 'failed_post') && !hasErpPostingConnection(item)) {
     return 'ERP is not connected. Connect QuickBooks, Xero, NetSuite, or SAP before Clearledgr can post this invoice.';
