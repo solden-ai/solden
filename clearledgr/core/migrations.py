@@ -4033,3 +4033,42 @@ def _v75_entities_parent_entity_id(cur, db):
         "CREATE INDEX IF NOT EXISTS idx_entities_org_parent "
         "ON entities (organization_id, parent_entity_id)"
     )
+
+
+@migration(
+    76,
+    "subscriptions: paddle billing columns for SaaS revenue collection",
+)
+def _v76_subscriptions_paddle(cur, db):
+    """Module 11 — wire Paddle as the SaaS billing rail.
+
+    Each org's subscription gets:
+      - paddle_subscription_id: external ref Paddle assigns
+      - paddle_customer_id: Paddle's customer-side ref
+      - billing_collection_mode: 'card' (auto-charge) or 'invoice'
+        (Paddle issues an invoice with bank details + net terms)
+      - billing_status: paddle's lifecycle state
+      - next_billed_at: anchor for the renewal cadence
+
+    Decision rationale: Paddle is the Merchant of Record so they
+    handle EU VAT MOSS, sales tax, and chargebacks. The "no card"
+    customer flow is built into Paddle as collection_mode='manual'
+    — flip the column and the next renewal becomes an issued invoice
+    with bank wire details instead of a card charge. See memory entry
+    feedback_agent_cross_checks_erp_doesnt_run for why we don't
+    rebuild billing primitives ourselves.
+    """
+    for col, ddl in (
+        ("paddle_subscription_id", "TEXT"),
+        ("paddle_customer_id", "TEXT"),
+        ("billing_collection_mode", "TEXT NOT NULL DEFAULT 'card'"),
+        ("billing_status", "TEXT"),
+        ("next_billed_at", "TIMESTAMPTZ"),
+    ):
+        cur.execute(
+            f"ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS {col} {ddl}"
+        )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_subscriptions_paddle_sub "
+        "ON subscriptions (paddle_subscription_id) WHERE paddle_subscription_id IS NOT NULL"
+    )

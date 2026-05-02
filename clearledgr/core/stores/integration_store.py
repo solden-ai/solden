@@ -598,6 +598,63 @@ class IntegrationStore:
         data["onboarding_completed"] = bool(data.get("onboarding_completed"))
         return data
 
+    # Convenience alias used by clearledgr/api/paddle_billing.py — same
+    # row, less ambiguous name when the caller doesn't care about the
+    # JSON-decoded structured fields.
+    def get_subscription_row(self, organization_id: str) -> Optional[Dict[str, Any]]:
+        return self.get_subscription_record(organization_id)
+
+    def update_subscription_paddle_state(
+        self,
+        *,
+        organization_id: str,
+        paddle_subscription_id: Optional[str] = None,
+        paddle_customer_id: Optional[str] = None,
+        billing_collection_mode: Optional[str] = None,
+        billing_status: Optional[str] = None,
+        next_billed_at: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Module 11 — apply a Paddle webhook event to the subscriptions row.
+
+        Whitelisted columns only; nothing about plan / limits / usage
+        is touched here (those are owned by SubscriptionService).
+        Idempotent — Paddle delivers events at-least-once, so the
+        callsite expects to be invoked multiple times for the same
+        ``subscription.updated`` and the row should converge to the
+        same state regardless.
+        """
+        self.initialize()
+        existing = self.get_subscription_record(organization_id)
+        if not existing:
+            # Nothing to attach Paddle state to. Caller should
+            # provision the subscription row first via
+            # upsert_subscription_record.
+            return {}
+        sets: List[str] = ["updated_at = %s"]
+        params: List[Any] = [datetime.now(timezone.utc).isoformat()]
+        if paddle_subscription_id is not None:
+            sets.append("paddle_subscription_id = %s")
+            params.append(paddle_subscription_id or None)
+        if paddle_customer_id is not None:
+            sets.append("paddle_customer_id = %s")
+            params.append(paddle_customer_id or None)
+        if billing_collection_mode is not None:
+            sets.append("billing_collection_mode = %s")
+            params.append(billing_collection_mode)
+        if billing_status is not None:
+            sets.append("billing_status = %s")
+            params.append(billing_status)
+        if next_billed_at is not None:
+            sets.append("next_billed_at = %s")
+            params.append(next_billed_at)
+        params.append(organization_id)
+        sql = f"UPDATE subscriptions SET {', '.join(sets)} WHERE organization_id = %s"
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(sql, tuple(params))
+            conn.commit()
+        return self.get_subscription_record(organization_id) or {}
+
     def upsert_subscription_record(self, organization_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         self.initialize()
         import uuid

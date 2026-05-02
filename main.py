@@ -139,6 +139,10 @@ from clearledgr.api.slack_invoices import (
 )
 from clearledgr.api.teams_invoices import router as teams_invoices_router
 from clearledgr.api.api_keys import router as api_keys_router
+from clearledgr.api.paddle_billing import (
+    router as paddle_billing_router,
+    webhook_router as paddle_webhook_router,
+)
 from clearledgr.api.ap_item_detail import router as ap_item_detail_router
 from clearledgr.api.escalation_policies import (
     router as escalation_policies_router,
@@ -517,6 +521,8 @@ STRICT_PROFILE_ALLOWED_PREFIXES = (
     "/api/workspace/account",                   # Module 11 — full-account data export
     "/api/workspace/saml",                      # Module 6 — SAML config (admin)
     "/api/workspace/fraud-thresholds",          # Module 4 — customer fraud rules
+    "/api/workspace/billing",                   # Module 11 — Paddle billing surface
+    "/api/webhooks/paddle",                     # Module 11 — Paddle webhook sink
 )
 
 STRICT_PROFILE_ALLOWED_OPS_PATHS = {
@@ -713,6 +719,8 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         r"^/api/workspace/team/users/[^/]+/(deactivate|reactivate)$",
         # Module 2 — consolidated AP item detail page.
         r"^/api/workspace/ap-items/[^/]+/detail$",
+        # Module 2 — Ask the agent Q&A surface.
+        r"^/api/workspace/ap-items/[^/]+/ask$",
         r"^/api/agent/intents/skills/[^/]+/readiness$",
         r"^/api/agent/sessions/[^/]+$",
         r"^/api/agent/sessions/[^/]+/commands$",
@@ -1519,6 +1527,8 @@ app.include_router(report_subscriptions_router)
 # Show-once semantics on create/rotate; soft-delete revocation
 # preserves the audit trail; org-scoped at every endpoint.
 app.include_router(api_keys_router)
+app.include_router(paddle_billing_router)
+app.include_router(paddle_webhook_router)
 
 # Module 11 — org-level escalation policies.
 # CRUD over escalation_policies; the Celery beat task in

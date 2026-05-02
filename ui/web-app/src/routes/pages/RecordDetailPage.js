@@ -194,6 +194,12 @@ export default function RecordDetailPage({
         item=${item}
       />
 
+      <${AskTheAgentPanel}
+        api=${api}
+        recordId=${recordId}
+        toast=${toast}
+      />
+
       <div class="cl-record-detail-grid">
         <${BillDetailPanel} item=${item} />
         <${ThreeWayMatchPanel} match=${match} />
@@ -930,4 +936,120 @@ function hasAnyBankDetail(bankDetails) {
     || bankDetails.account_number_masked
     || bankDetails.swift,
   );
+}
+
+
+// ─── Module 2 — Ask the agent ─────────────────────────────────────
+//
+// Spec line 100: "Ask the agent: free-form questions about this
+// invoice ('show prior bills from this vendor', 'what does PO 4471-A
+// reference'). Returns within 10 seconds for typical questions."
+//
+// The model is bounded to a structured context bundle for THIS
+// invoice — it can't run other DB queries or web fetches. Citations
+// surface as inline [s1][s2] markers; the source list maps each
+// marker to a context-bundle row.
+
+const ASK_SUGGESTIONS = [
+  'Why is this invoice flagged?',
+  'Show me prior bills from this vendor.',
+  'What was the agent\'s confidence and why?',
+  'Summarise this invoice in two sentences.',
+];
+
+function AskTheAgentPanel({ api, recordId, toast }) {
+  const [question, setQuestion] = useState('');
+  const [history, setHistory] = useState([]); // [{question, answer, sources, fallback, latency_ms}]
+  const [busy, setBusy] = useState(false);
+
+  const ask = async (q) => {
+    const trimmed = String(q || '').trim();
+    if (!trimmed || busy) return;
+    setBusy(true);
+    setQuestion('');
+    try {
+      const resp = await api(
+        `/api/workspace/ap-items/${encodeURIComponent(recordId)}/ask`,
+        { method: 'POST', body: { question: trimmed } },
+      );
+      if (resp?.error) {
+        toast(`Couldn't answer: ${resp.error}`, 'error');
+        return;
+      }
+      setHistory((prev) => [
+        ...prev,
+        {
+          question: trimmed,
+          answer: resp.answer || '',
+          sources: resp.sources || [],
+          fallback: !!resp.fallback,
+          latencyMs: resp.latency_ms || 0,
+          model: resp.model,
+        },
+      ]);
+    } catch (exc) {
+      toast(`Ask failed: ${String(exc?.message || exc)}`, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return html`
+    <section class="cl-record-panel cl-record-ask">
+      <header class="cl-record-panel-head">
+        <h2>Ask the agent</h2>
+        <span class="cl-record-panel-eyebrow">about this invoice</span>
+      </header>
+
+      ${history.length === 0 ? html`
+        <div class="cl-record-ask-suggestions">
+          <p class="cl-record-muted">Try one of these, or type your own question:</p>
+          <div class="cl-record-ask-chip-row">
+            ${ASK_SUGGESTIONS.map((s) => html`
+              <button class="cl-record-ask-chip" key=${s} onClick=${() => ask(s)} disabled=${busy}>
+                ${s}
+              </button>
+            `)}
+          </div>
+        </div>
+      ` : html`
+        <ul class="cl-record-ask-history">
+          ${history.map((turn, i) => html`
+            <li key=${i} class="cl-record-ask-turn">
+              <div class="cl-record-ask-question"><strong>You:</strong> ${turn.question}</div>
+              <div class="cl-record-ask-answer">
+                <strong>Agent:</strong> ${turn.answer}
+                ${turn.fallback ? html` <span class="cl-record-ask-fallback">(deterministic — LLM unavailable)</span>` : null}
+              </div>
+              ${turn.sources && turn.sources.length > 0 ? html`
+                <div class="cl-record-ask-sources">
+                  ${turn.sources.map((s) => html`
+                    <span key=${s.id} class="cl-record-ask-source">[${s.id}] ${s.summary}</span>
+                  `)}
+                </div>
+              ` : null}
+              <div class="cl-record-ask-meta">
+                ${turn.model ? html`${turn.model} · ` : null}${turn.latencyMs} ms
+              </div>
+            </li>
+          `)}
+        </ul>
+      `}
+
+      <form
+        class="cl-record-ask-form"
+        onSubmit=${(e) => { e.preventDefault(); ask(question); }}>
+        <input
+          type="text"
+          placeholder="Ask anything about this invoice…"
+          value=${question}
+          onInput=${(e) => setQuestion(e.target.value)}
+          disabled=${busy}
+          autoFocus />
+        <button type="submit" class="btn btn-primary btn-sm" disabled=${busy || !question.trim()}>
+          ${busy ? 'Thinking…' : 'Ask'}
+        </button>
+      </form>
+    </section>
+  `;
 }

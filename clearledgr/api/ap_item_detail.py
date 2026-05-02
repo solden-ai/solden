@@ -36,6 +36,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
 
 from clearledgr.core.ap_states import APState, normalize_state, VALID_TRANSITIONS
 from clearledgr.core.auth import TokenData, get_current_user
@@ -405,6 +406,44 @@ def _build_erp_gr_url(erp_type: str, deep_id: str, base_url: str, gr_number: str
 # ---------------------------------------------------------------------------
 # The endpoint.
 # ---------------------------------------------------------------------------
+
+class AskTheAgentRequest(BaseModel):
+    """Body for POST /api/workspace/ap-items/{id}/ask."""
+    question: str = Field(..., min_length=2, max_length=1000)
+
+
+@router.post("/ap-items/{ap_item_id}/ask")
+def ask_the_agent_endpoint(
+    ap_item_id: str,
+    request: AskTheAgentRequest,
+    user: TokenData = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Module 2 spec line 100 — "Ask the agent" Q&A.
+
+    The model is bounded to a structured context bundle around the
+    requested invoice (item + vendor profile + last 20 vendor invoices
+    + 3-way match + audit timeline). It cannot run other queries; it
+    answers only what the bundle supports. Returns within 10-15s on a
+    cache-warm Sonnet path.
+    """
+    organization_id = getattr(user, "organization_id", None) or "default"
+    db = get_db()
+
+    # Verify the item belongs to this tenant — _resolve_item_for_detail
+    # already returns 404 (no membership leak) for cross-tenant ids.
+    item = _resolve_item_for_detail(
+        db, organization_id=organization_id, ap_item_ref=ap_item_id,
+    )
+    resolved_id = item.get("id") or ap_item_id
+
+    from clearledgr.services.ask_the_agent import ask_the_agent
+    return ask_the_agent(
+        db,
+        organization_id=organization_id,
+        ap_item_id=resolved_id,
+        question=request.question,
+    )
+
 
 @router.get("/ap-items/{ap_item_id}/detail")
 def get_ap_item_detail(

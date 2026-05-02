@@ -1,4 +1,5 @@
 import { h } from 'preact';
+import { useEffect, useState } from 'preact/hooks';
 import htm from 'htm';
 import { hasCapability, useAction } from '../route-helpers.js';
 
@@ -192,7 +193,7 @@ export default function PlanPage({ bootstrap, api, toast, orgId, onRefresh, navi
     if (!canManagePlan) return;
     await api('/api/workspace/subscription/plan', {
       method: 'PATCH',
-      body: JSON.stringify({ organization_id: orgId, plan: nextPlan }),
+      body: { organization_id: orgId, plan: nextPlan },
     });
     toast?.(
       nextPlan === 'trial'
@@ -201,6 +202,58 @@ export default function PlanPage({ bootstrap, api, toast, orgId, onRefresh, navi
       'success',
     );
     onRefresh?.();
+  });
+
+  // Module 11 — Paddle billing surface. Pull state on mount + when
+  // plan changes; render Subscribe / Manage billing / Switch to
+  // invoicing CTAs based on what's actually wired Paddle-side.
+  const [billingState, setBillingState] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    api('/api/workspace/billing/invoices', { silent: true })
+      .then((r) => { if (!cancelled) setBillingState(r); })
+      .catch(() => { if (!cancelled) setBillingState({ configured: false, invoices: [] }); });
+    return () => { cancelled = true; };
+  }, [api, plan]);
+
+  const [startCheckout, checkingOut] = useAction(async (chosenPlan, mode) => {
+    if (!canManagePlan) return;
+    const resp = await api('/api/workspace/billing/checkout', {
+      method: 'POST',
+      body: {
+        plan: chosenPlan,
+        collection_mode: mode || 'card',
+        return_url: `${window.location.origin}/plan?paddle_return=1`,
+      },
+    });
+    if (resp?.checkout_url) {
+      window.location.href = resp.checkout_url;
+    }
+  });
+
+  const [openPortal, openingPortal] = useAction(async () => {
+    if (!canManagePlan) return;
+    try {
+      const resp = await api('/api/workspace/billing/portal');
+      if (resp?.portal_url) window.location.href = resp.portal_url;
+    } catch (exc) {
+      toast?.(`Portal unavailable: ${exc?.message || exc}`, 'error');
+    }
+  });
+
+  const [flipMode, flippingMode] = useAction(async (mode) => {
+    if (!canManagePlan) return;
+    await api('/api/workspace/billing/collection-mode', {
+      method: 'PATCH',
+      body: { mode },
+    });
+    toast?.(
+      mode === 'invoice'
+        ? 'Switched to invoicing. Next renewal will be issued as a paid invoice with bank wire details.'
+        : 'Switched to card billing. Card on file will auto-charge on next renewal.',
+      'success',
+    );
+    setBillingState((prev) => prev ? { ...prev, billing_collection_mode: mode } : prev);
   });
 
   return html`
@@ -348,13 +401,30 @@ export default function PlanPage({ bootstrap, api, toast, orgId, onRefresh, navi
                     </div>
                   </div>
                   ${canManagePlan
-                    ? html`<button
-                        class=${isCurrent ? 'btn-secondary btn-sm' : 'btn-primary btn-sm'}
-                        onClick=${() => changePlan(action.value)}
-                        disabled=${action.disabled || changingPlan}
-                      >
-                        ${changingPlan ? 'Working…' : action.label}
-                      </button>`
+                    ? html`<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+                        <button
+                          class=${isCurrent ? 'btn-secondary btn-sm' : 'btn-primary btn-sm'}
+                          onClick=${() => changePlan(action.value)}
+                          disabled=${action.disabled || changingPlan}>
+                          ${changingPlan ? 'Working…' : action.label}
+                        </button>
+                        ${(billingState?.configured && !isCurrent && action.value !== 'free') ? html`
+                          <button
+                            class="btn-tertiary btn-sm"
+                            onClick=${() => startCheckout(planId, 'card')}
+                            disabled=${checkingOut}
+                            title="Pay with card via Paddle">
+                            ${checkingOut ? '…' : 'Subscribe with card'}
+                          </button>
+                          <button
+                            class="btn-tertiary btn-sm"
+                            onClick=${() => startCheckout(planId, 'invoice')}
+                            disabled=${checkingOut}
+                            title="Issue an invoice instead — net-30 wire payment">
+                            ${checkingOut ? '…' : 'Subscribe with invoice'}
+                          </button>
+                        ` : null}
+                      </div>`
                     : null}
                 </div>
               </div>`;
@@ -368,6 +438,66 @@ export default function PlanPage({ bootstrap, api, toast, orgId, onRefresh, navi
             Plan changes update workspace entitlement immediately for Clearledgr features, limits, and approval tooling. Billing cadence stays ${String(sub.billing_cycle || 'monthly').toLowerCase() === 'yearly' ? 'annual' : 'monthly'} unless your team changes it outside this Gmail surface.
           </div>
         </div>
+
+        ${billingState?.configured ? html`
+          <div class="panel">
+            <div class="panel-head compact">
+              <div>
+                <h3 style="margin-top:0">Billing & invoices</h3>
+                <p class="muted" style="margin:0">
+                  ${billingState.billing_collection_mode === 'invoice'
+                    ? 'Currently invoiced — Paddle issues an invoice with bank wire details on each renewal.'
+                    : 'Currently auto-charged on a card on file via Paddle.'}
+                  ${billingState.next_billed_at ? html` · Next renewal ${formatDateLabel(billingState.next_billed_at)}.` : null}
+                </p>
+              </div>
+              ${canManagePlan ? html`<div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn-secondary btn-sm" onClick=${openPortal} disabled=${openingPortal}>
+                  ${openingPortal ? '…' : 'Manage in Paddle portal'}
+                </button>
+                ${billingState.billing_collection_mode === 'card' ? html`
+                  <button class="btn-tertiary btn-sm"
+                    onClick=${() => flipMode('invoice')}
+                    disabled=${flippingMode}
+                    title="Switch to issued invoices with net-30 wire terms (good for AP departments that don't authorise cards).">
+                    ${flippingMode ? '…' : 'Switch to invoicing'}
+                  </button>
+                ` : html`
+                  <button class="btn-tertiary btn-sm"
+                    onClick=${() => flipMode('card')}
+                    disabled=${flippingMode}>
+                    ${flippingMode ? '…' : 'Switch to card'}
+                  </button>
+                `}
+              </div>` : null}
+            </div>
+            ${(billingState.invoices || []).length > 0 ? html`
+              <table class="cl-settings-table" style="margin-top:8px">
+                <thead>
+                  <tr>
+                    <th>Invoice</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${billingState.invoices.map((inv) => html`
+                    <tr key=${inv.id}>
+                      <td>${inv.invoice_number || inv.id}</td>
+                      <td class="muted">${inv.billed_at ? formatDateLabel(inv.billed_at) : '—'}</td>
+                      <td>${inv.currency || ''} ${inv.amount || '—'}</td>
+                      <td><span class="status-badge ${String(inv.status || '').toLowerCase() === 'paid' ? 'connected' : ''}">${inv.status || '—'}</span></td>
+                      <td style="text-align:right">
+                        ${inv.invoice_pdf_url ? html`<a class="btn-tertiary btn-sm" href=${inv.invoice_pdf_url} target="_blank" rel="noreferrer">PDF</a>` : null}
+                      </td>
+                    </tr>`)}
+                </tbody>
+              </table>
+            ` : html`<p class="muted" style="margin:8px 0 0">No invoices yet. The first one is generated on your next renewal.</p>`}
+          </div>
+        ` : null}
       </div>
     </div>
   `;

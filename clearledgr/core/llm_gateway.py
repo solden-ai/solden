@@ -65,6 +65,9 @@ class LLMAction(str, Enum):
     SINGLE_PASS_EXTRACT = "single_pass_extract"
     EXPLAIN_ANOMALY = "explain_anomaly"
     NARRATE_INSIGHT = "narrate_insight"
+    # Module 2 spec line 100 — "Ask the agent" free-form Q&A on the
+    # exception detail page. Returns within 10s for typical questions.
+    ASK_THE_AGENT = "ask_the_agent"
 
 
 @dataclass(frozen=True)
@@ -115,6 +118,13 @@ ACTION_REGISTRY: Dict[LLMAction, ActionConfig] = {
     # only writes the operator-facing copy and never changes which
     # insights are surfaced.
     LLMAction.NARRATE_INSIGHT:        ActionConfig(max_output_tokens=600,  model_tier="haiku", timeout_seconds=10),
+    # Ask-the-agent — Q&A bounded to the current invoice's context
+    # bundle (item + vendor + recent history + 3-way match). Sonnet
+    # tier because the questions can be open-ended ("show prior bills
+    # from this vendor that exceeded $5K"); 10s timeout matches the
+    # spec acceptance line ("returns within 10 seconds for typical
+    # questions").
+    LLMAction.ASK_THE_AGENT:          ActionConfig(max_output_tokens=1500, model_tier="sonnet", timeout_seconds=15),
 }
 
 
