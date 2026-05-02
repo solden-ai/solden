@@ -333,6 +333,52 @@ def _resolve_org_id(user: TokenData, organization_id: Optional[str]) -> str:
     return resolved
 
 
+def _default_org_name(user: TokenData, org_id: str) -> str:
+    """Derive a friendlier display name for a brand-new organization.
+
+    Used as the auto-provision default when the bootstrap call creates
+    an organizations row that doesn't exist yet. Previously the name
+    was set to the org_id itself ("default"), so every new tenant
+    landed with "Workspace default" in the topbar and had to discover
+    the rename UI.
+
+    Order of preference (Linear / Vercel / Mercury all do similar):
+      1. The user's email domain mapped to a title-cased label
+         ("acme.com" → "Acme"). Skips public providers (gmail.com,
+         outlook.com, etc.) where the domain isn't the org.
+      2. The user's first name + "'s workspace" ("Mo's workspace").
+      3. The literal org_id (legacy fallback — preserves old behaviour
+         when no signal is available).
+
+    Owners can rename it at any time via Settings → Workspace.
+    """
+    public_email_domains = {
+        "gmail.com", "googlemail.com", "outlook.com", "hotmail.com",
+        "yahoo.com", "icloud.com", "me.com", "live.com", "aol.com",
+        "proton.me", "protonmail.com", "pm.me",
+    }
+    email = (getattr(user, "email", "") or "").strip().lower()
+    if "@" in email:
+        domain = email.rsplit("@", 1)[-1].strip()
+        if domain and domain not in public_email_domains:
+            label = domain.split(".")[0]
+            if label:
+                return label[:1].upper() + label[1:]
+
+    name = (getattr(user, "name", "") or "").strip()
+    if name:
+        first = name.split()[0]
+        if first:
+            return f"{first}'s workspace"
+
+    if "@" in email:
+        local = email.split("@", 1)[0].strip()
+        if local:
+            return f"{local[:1].upper()}{local[1:]}'s workspace"
+
+    return org_id or "Workspace"
+
+
 def _load_org_settings(org: Dict[str, Any]) -> Dict[str, Any]:
     settings = org.get("settings_json") or org.get("settings") or {}
     if isinstance(settings, str):
@@ -634,7 +680,7 @@ def _teams_status_for_org(organization_id: str) -> Dict[str, Any]:
 
 def _build_health(organization_id: str, user: TokenData) -> Dict[str, Any]:
     db = get_db()
-    org = db.ensure_organization(organization_id, organization_name=organization_id)
+    org = db.ensure_organization(organization_id, organization_name=_default_org_name(user, organization_id))
     settings = _load_org_settings(org)
     integrations = {
         "gmail": _gmail_status_for_org(organization_id, user),
@@ -970,7 +1016,7 @@ async def get_admin_bootstrap(
         pass
     org_id = _resolve_org_id(user, organization_id)
     db = get_db()
-    org = db.ensure_organization(org_id, organization_name=org_id)
+    org = db.ensure_organization(org_id, organization_name=_default_org_name(user, org_id))
     org_settings = _load_org_settings(org)
     subscription = _get_subscription_service().get_subscription(org_id).to_dict()
     health = _build_health(org_id, user)
@@ -1300,7 +1346,7 @@ async def slack_install_callback(
         raise HTTPException(status_code=400, detail="invalid_slack_install_payload")
 
     db = get_db()
-    db.ensure_organization(org_id, organization_name=org_id)
+    db.ensure_organization(org_id, organization_name=_default_org_name(user, org_id))
     db.upsert_slack_installation(
         organization_id=org_id,
         team_id=team_id,
@@ -1336,7 +1382,7 @@ def set_slack_channel(
     _require_admin(user)
     org_id = _resolve_org_id(user, request.organization_id)
     db = get_db()
-    org = db.ensure_organization(org_id, organization_name=org_id)
+    org = db.ensure_organization(org_id, organization_name=_default_org_name(user, org_id))
     settings = _load_org_settings(org)
     channels = settings.get("slack_channels") if isinstance(settings.get("slack_channels"), dict) else {}
     channels["invoices"] = request.channel_id.strip()
@@ -1963,7 +2009,7 @@ def get_org_settings(
 ):
     org_id = _resolve_org_id(user, organization_id)
     db = get_db()
-    org = db.ensure_organization(org_id, organization_name=org_id)
+    org = db.ensure_organization(org_id, organization_name=_default_org_name(user, org_id))
     return {"organization_id": org_id, "settings": _load_org_settings(org)}
 
 
@@ -2020,7 +2066,7 @@ def patch_org_settings(
     _require_admin(user)
     org_id = _resolve_org_id(user, request.organization_id)
     db = get_db()
-    org_before = db.ensure_organization(org_id, organization_name=org_id)
+    org_before = db.ensure_organization(org_id, organization_name=_default_org_name(user, org_id))
     settings = _load_org_settings(org_before)
     patch = request.patch or {}
 

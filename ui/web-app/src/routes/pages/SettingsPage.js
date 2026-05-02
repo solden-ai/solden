@@ -118,6 +118,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
   const canManagePlan = hasCapability(bootstrap, 'manage_plan');
   const canManageAny = canManageTeam || canManageCompany || canManagePlan;
 
+  const workspaceRef = useRef(null);
   const erpRef = useRef(null);
   const glMappingRef = useRef(null);
   const policyRef = useRef(null);
@@ -146,7 +147,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
   const erpKind = erp?.connections?.[0]?.erp_type || '';
   const erpType = erpKind.charAt(0).toUpperCase() + erpKind.slice(1);
 
-  const [activeSection, setActiveSection] = useState('erp');
+  const [activeSection, setActiveSection] = useState('workspace');
   const scrollToSection = (ref, key) => {
     if (key) setActiveSection(key);
     try {
@@ -252,6 +253,53 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
     }
     toast?.(`Workspace renamed to ${next}.`, 'success');
     setEditingOrgName(false);
+    onRefresh?.();
+  });
+
+  // ── Workspace domain inline edit ──
+  // Same PATCH endpoint, patch.organization_domain. Domain is optional —
+  // empty string clears it server-side. Used for SAML/SCIM matching and
+  // the "Setup connection" sender allowlist on outbound vendor email.
+  const [editingOrgDomain, setEditingOrgDomain] = useState(false);
+  const [orgDomainDraft, setOrgDomainDraft] = useState(org.domain || '');
+  const _ORG_DOMAIN_ERROR_COPY = {
+    organization_domain_too_long: 'Domain is too long.',
+    organization_domain_invalid_characters: 'Domain contains invalid characters.',
+    admin_required: 'Only owners and admins can edit the workspace domain.',
+    org_mismatch: 'Cross-organization edit is not allowed.',
+  };
+  const beginEditOrgDomain = () => {
+    if (!canManageCompany) return;
+    setOrgDomainDraft(org.domain || '');
+    setEditingOrgDomain(true);
+  };
+  const cancelEditOrgDomain = () => {
+    setEditingOrgDomain(false);
+    setOrgDomainDraft(org.domain || '');
+  };
+  const [saveOrgDomain, savingOrgDomain] = useAction(async () => {
+    if (!canManageCompany) return;
+    const next = String(orgDomainDraft || '').trim();
+    if (next === (org.domain || '').trim()) {
+      setEditingOrgDomain(false);
+      return;
+    }
+    try {
+      await api('/api/workspace/org/settings', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          organization_id: orgId,
+          patch: { organization_domain: next },
+        }),
+      });
+    } catch (err) {
+      const detail = err?.detail || err?.body?.detail;
+      const copy = _ORG_DOMAIN_ERROR_COPY[detail] || 'Could not save workspace domain.';
+      toast?.(copy, 'error');
+      return;
+    }
+    toast?.(next ? `Domain set to ${next}.` : 'Domain cleared.', 'success');
+    setEditingOrgDomain(false);
     onRefresh?.();
   });
 
@@ -444,6 +492,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         </p>
       </div>
       <div class="secondary-banner-actions" style="flex-wrap:wrap">
+        <button class=${`segmented-button btn-sm${activeSection === 'workspace' ? ' is-active' : ''}`} onClick=${() => scrollToSection(workspaceRef, 'workspace')}>Workspace</button>
         <button class=${`segmented-button btn-sm${activeSection === 'erp' ? ' is-active' : ''}`} onClick=${() => scrollToSection(erpRef, 'erp')}>ERP Connection</button>
         <button class=${`segmented-button btn-sm${activeSection === 'gl' ? ' is-active' : ''}`} onClick=${() => scrollToSection(glMappingRef, 'gl')}>GL Mapping</button>
         <button class=${`segmented-button btn-sm${activeSection === 'policy' ? ' is-active' : ''}`} onClick=${() => scrollToSection(policyRef, 'policy')}>AP Policy</button>
@@ -523,6 +572,100 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
     </div>
 
     <div class="secondary-main">
+      <!-- Workspace identity (org name + domain). The topbar reads
+           bootstrap.organization.name; without this panel the auto-
+           provisioned default ("default") sticks because the rename
+           UI was previously hidden in a summary card. -->
+      <div class="panel" ref=${workspaceRef}>
+        <div class="panel-head compact">
+          <div>
+            <h3>Workspace</h3>
+            <p class="muted">The display name and domain for this organization. The name appears in the topbar and on every email the agent sends.</p>
+          </div>
+        </div>
+        <div class="settings-section-grid" style="grid-template-columns: 1fr 1fr; gap:20px">
+          <div>
+            <label class="muted small" style="display:block;margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase">Workspace name</label>
+            ${editingOrgName
+              ? html`
+                <div class="cl-inline-edit">
+                  <input
+                    type="text"
+                    class="cl-inline-edit-input"
+                    value=${orgNameDraft}
+                    maxLength=${128}
+                    disabled=${savingOrgName}
+                    onInput=${(e) => setOrgNameDraft(e.target.value)}
+                    onKeyDown=${(e) => {
+                      if (e.key === 'Enter') saveOrgName();
+                      if (e.key === 'Escape') cancelEditOrgName();
+                    }}
+                    autoFocus
+                    aria-label="Workspace display name" />
+                  <div class="cl-inline-edit-actions" style="margin-top:8px">
+                    <button class="btn btn-sm btn-primary" onClick=${saveOrgName} disabled=${savingOrgName}>
+                      ${savingOrgName ? 'Saving…' : 'Save'}
+                    </button>
+                    <button class="btn btn-sm btn-tertiary" onClick=${cancelEditOrgName} disabled=${savingOrgName}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>`
+              : html`
+                <div style="display:flex;align-items:center;gap:12px">
+                  <span style="font-size:16px;font-weight:600">${org.name || 'Untitled'}</span>
+                  ${canManageCompany
+                    ? html`<button class="btn btn-sm btn-tertiary" onClick=${beginEditOrgName} aria-label="Rename workspace">Rename</button>`
+                    : null}
+                </div>
+                ${(org.name || '').trim().toLowerCase() === 'default'
+                  ? html`<p class="muted small" style="margin-top:6px;color:var(--warning)">This is the placeholder name. Rename it to your company so it shows correctly in the topbar and in vendor emails.</p>`
+                  : null}`}
+          </div>
+          <div>
+            <label class="muted small" style="display:block;margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase">Email domain</label>
+            ${editingOrgDomain
+              ? html`
+                <div class="cl-inline-edit">
+                  <input
+                    type="text"
+                    class="cl-inline-edit-input"
+                    value=${orgDomainDraft}
+                    maxLength=${253}
+                    placeholder="acme.com"
+                    disabled=${savingOrgDomain}
+                    onInput=${(e) => setOrgDomainDraft(e.target.value)}
+                    onKeyDown=${(e) => {
+                      if (e.key === 'Enter') saveOrgDomain();
+                      if (e.key === 'Escape') cancelEditOrgDomain();
+                    }}
+                    autoFocus
+                    aria-label="Workspace email domain" />
+                  <div class="cl-inline-edit-actions" style="margin-top:8px">
+                    <button class="btn btn-sm btn-primary" onClick=${saveOrgDomain} disabled=${savingOrgDomain}>
+                      ${savingOrgDomain ? 'Saving…' : 'Save'}
+                    </button>
+                    <button class="btn btn-sm btn-tertiary" onClick=${cancelEditOrgDomain} disabled=${savingOrgDomain}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>`
+              : html`
+                <div style="display:flex;align-items:center;gap:12px">
+                  <span style="font-size:14px">${org.domain || html`<span class="muted">Not set</span>`}</span>
+                  ${canManageCompany
+                    ? html`<button class="btn btn-sm btn-tertiary" onClick=${beginEditOrgDomain} aria-label="Edit workspace domain">${org.domain ? 'Edit' : 'Add'}</button>`
+                    : null}
+                </div>
+                <p class="muted small" style="margin-top:6px">Used for SAML/SCIM matching and outbound vendor email.</p>`}
+          </div>
+        </div>
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--cl-line);font-size:12px;color:var(--cl-ink-muted);display:flex;gap:24px;flex-wrap:wrap">
+          <span><strong style="color:var(--cl-ink-secondary)">Organization ID</strong> · <code style="font-family:var(--cl-font-mono)">${org.id || orgId}</code></span>
+          <span><strong style="color:var(--cl-ink-secondary)">Mode</strong> · ${org.integration_mode === 'per_org' ? 'Per organization' : 'Shared workspace'}</span>
+        </div>
+      </div>
+
       <!-- §16.1 ERP Connection -->
       <div class="panel" ref=${erpRef}>
         <div class="panel-head compact">
