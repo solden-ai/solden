@@ -1,394 +1,540 @@
-/* Review queue — the operator's exception + blocker workbench.
+/* Review queue — burst-mode focus surface.
  *
- * Stack of panels, each with a section header + cards. Brand-
- * aligned with the rest of the workspace SPA: navy ink, teal
- * accent, calm density. References: Linear inbox + Vercel
- * deployments — dense lists, status pills, tone-coded badges.
+ * One item at a time, three big tone-coded action buttons, auto-
+ * advance on resolve. Operator clears 30 stuck items in a few
+ * minutes without scrolling.
  *
- * Without these rules the page rendered as raw text — the JSX
- * shipped before the stylesheet did.
- */
+ * Reference idiom: Linear inbox + Superhuman triage. Dense, fast.
+ * The diff between email-says / attachment-says is the hero of
+ * the focus card. */
 
-.review-shell {
+.review-shell.review-burst {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 960px;
+  max-width: 760px;
   margin-inline: auto;
+  padding-bottom: 32px;
 }
 
-/* ── Overview panel (top of page) ─────────────────────────────── */
+/* ─── Burst header ───────────────────────────────────────────── */
 
-.review-overview-panel {
-  margin-bottom: 0;
-}
-
-.review-overview-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-
-.review-overview-copy {
-  flex: 1 1 480px;
-  min-width: 0;
-}
-
-.review-overview-copy h3 {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--cl-ink-primary);
-  margin: 0 0 6px;
-}
-
-.review-overview-copy p {
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--cl-ink-secondary);
-}
-
-/* Compact metric pills under the header copy. */
-.review-metric-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.review-metric-pill {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--cl-bg);
-  border: 1px solid var(--cl-border);
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.review-metric-pill .review-metric-label {
-  color: var(--cl-ink-muted);
-  font-weight: 500;
-}
-
-.review-metric-pill .review-metric-value {
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--cl-ink-primary);
-}
-
-.review-metric-pill[data-tone="warning"] {
-  background: #FEF3C7;
-  border-color: #FCD34D;
-}
-.review-metric-pill[data-tone="warning"] .review-metric-value { color: #92400E; }
-
-.review-metric-pill[data-tone="danger"] {
-  background: #FEE2E2;
-  border-color: #FCA5A5;
-}
-.review-metric-pill[data-tone="danger"] .review-metric-value { color: #991B1B; }
-
-.review-metric-pill[data-tone="success"] {
-  background: var(--cl-teal-soft);
-  border-color: rgba(24, 191, 176, 0.35);
-}
-.review-metric-pill[data-tone="success"] .review-metric-value { color: var(--cl-teal-600); }
-
-/* ── Search + bulk-actions command panel ─────────────────────── */
-
-.review-command-panel {
-  margin-bottom: 0;
-}
-
-.review-search-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--cl-border);
-}
-
-.review-search-box {
-  position: relative;
-  flex: 1 1 360px;
-  min-width: 240px;
-}
-
-.review-search-box input {
-  width: 100%;
-  height: 38px;
-  padding: 0 12px 0 36px;
-  background: var(--cl-bg);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-sm);
-  font-family: inherit;
-  font-size: 14px;
-  color: var(--cl-ink-primary);
-  transition: border-color 0.12s, box-shadow 0.12s;
-}
-
-.review-search-box input:focus {
-  outline: none;
-  border-color: var(--cl-teal-500);
-  box-shadow: 0 0 0 3px rgba(24, 191, 176, 0.16);
-}
-
-.review-search-helper {
-  font-size: 12px;
-  color: var(--cl-ink-muted);
-}
-
-.review-bulk-bar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+.review-burst-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "headline controls"
+    "mix      mix";
   gap: 16px;
-  flex-wrap: wrap;
-}
-
-.review-bulk-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-/* ── Section stack (one panel per section) ───────────────────── */
-
-.review-section-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.review-section-panel {
-  margin-bottom: 0;
-}
-
-.review-section-head h3 {
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--cl-ink-primary);
-}
-
-.review-section-head p {
-  font-size: 13px;
-  color: var(--cl-ink-secondary);
-  line-height: 1.5;
-}
-
-.review-count-pill {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 10px;
-  background: var(--cl-bg);
-  border: 1px solid var(--cl-border);
-  border-radius: 11px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--cl-ink-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── Card (one record in a section) ──────────────────────────── */
-
-.review-card {
-  padding: 14px 16px;
+  padding: 20px 22px;
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
   border-radius: var(--cl-radius);
-  cursor: pointer;
-  transition: border-color 0.12s, box-shadow 0.12s, transform 0.08s;
 }
 
-.review-card:hover {
-  border-color: var(--cl-border-strong);
-  transform: translateY(-1px);
-}
+.review-burst-headline { grid-area: headline; min-width: 0; }
+.review-burst-controls { grid-area: controls; display: flex; gap: 8px; align-items: center; }
+.review-burst-mix      { grid-area: mix; display: flex; gap: 6px; flex-wrap: wrap; }
 
-.review-card-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.review-badge-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.review-badge {
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 8px;
-  border-radius: 10px;
-  background: var(--cl-bg);
-  border: 1px solid var(--cl-border);
+.review-burst-eyebrow {
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--cl-ink-secondary);
-  white-space: nowrap;
-}
-
-.review-badge.info {
-  background: var(--cl-teal-soft);
-  border-color: rgba(24, 191, 176, 0.3);
-  color: var(--cl-teal-600);
-}
-
-.review-card-meta {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--cl-ink-muted);
-}
-
-.review-card-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.review-card-summary {
-  margin-top: 10px;
-  padding: 10px 12px;
-  background: var(--cl-bg);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-sm);
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--cl-ink-secondary);
-}
-
-/* ── Field-review block (the dense per-blocker grid) ───────────
- * Cap the layout's max width so on a wide viewport the facts
- * column doesn't sprawl with hundreds of empty pixels between
- * it and the "Why it stopped" sidebar. */
-
-.review-block-layout {
-  display: grid;
-  /* Facts column hugs its content width (one or two short pairs);
-     Why-it-stopped + actions fills the remainder. Removes the
-     dead horizontal space the previous 460px-fixed left column
-     introduced when facts were short. */
-  grid-template-columns: minmax(220px, max-content) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
-}
-
-@media (max-width: 720px) {
-  .review-block-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-.review-block-main {
-  min-width: 0;
-}
-
-.review-block-side {
-  border-left: 1px solid var(--cl-border);
-  padding-left: 20px;
-}
-
-@media (max-width: 720px) {
-  .review-block-side {
-    border-left: 0;
-    border-top: 1px solid var(--cl-border);
-    padding-left: 0;
-    padding-top: 12px;
-  }
-}
-
-.review-block-facts {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  column-gap: 12px;
-  row-gap: 6px;
-  margin-bottom: 10px;
-}
-
-.review-block-fact-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--cl-ink-muted);
-  align-self: center;
-}
-
-.review-block-fact-value {
-  font-size: 13px;
-  color: var(--cl-ink-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-.review-block-heading {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--cl-ink-muted);
   margin-bottom: 6px;
 }
 
-.review-block-copy {
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--cl-ink-secondary);
-  margin-bottom: 10px;
+.review-burst-counter {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
-.review-block-note {
+.review-burst-remaining {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--cl-ink-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.review-burst-counter-label {
+  font-size: 14px;
+  color: var(--cl-ink-secondary);
+}
+
+.review-burst-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.review-burst-progress-bar {
+  height: 4px;
+  background: var(--cl-bg);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.review-burst-progress-fill {
+  height: 100%;
+  background: var(--cl-teal-500);
+  transition: width 0.3s ease;
+}
+
+.review-burst-progress-label {
   font-size: 12px;
   color: var(--cl-ink-muted);
-  margin-bottom: 10px;
-  font-style: italic;
 }
 
-.review-block-actions {
+.review-burst-search {
+  height: 32px;
+  width: 220px;
+  padding: 0 10px;
+  background: var(--cl-bg);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--cl-ink-primary);
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.review-burst-search:focus {
+  outline: none;
+  border-color: var(--cl-teal-500);
+  box-shadow: 0 0 0 3px rgba(24, 191, 176, 0.16);
+}
+
+/* Section-mix pills — small, dense, tone-coded so the operator
+   sees the queue's makeup at a glance. */
+.review-burst-mix-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 4px 10px;
+  background: var(--cl-bg);
+  border: 1px solid var(--cl-border);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--cl-ink-secondary);
+}
+
+.review-burst-mix-pill strong {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--cl-ink-primary);
+}
+
+.review-burst-mix-warning { background: #FEF3C7; border-color: #FCD34D; }
+.review-burst-mix-warning strong { color: #92400E; }
+.review-burst-mix-danger  { background: #FEE2E2; border-color: #FCA5A5; }
+.review-burst-mix-danger strong { color: #991B1B; }
+.review-burst-mix-info    { background: var(--cl-teal-soft); border-color: rgba(24,191,176,0.3); }
+.review-burst-mix-info strong { color: var(--cl-teal-600); }
+
+/* ─── Bulk-resolve banner ────────────────────────────────────── */
+
+.review-bulk-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  background: linear-gradient(0deg, rgba(24, 191, 176, 0.06), rgba(24, 191, 176, 0.06)), var(--cl-surface);
+  border: 1px solid rgba(24, 191, 176, 0.35);
+  border-radius: var(--cl-radius);
+}
+
+.review-bulk-banner-copy {
+  flex: 1 1 auto;
+  font-size: 13px;
+  color: var(--cl-ink-primary);
+}
+
+.review-bulk-banner-copy strong { color: var(--cl-navy); }
+
+.review-bulk-banner-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* ─── Focus card — the hero ─────────────────────────────────── */
+
+.review-focus-card {
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.review-focus-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 22px;
+  border-bottom: 1px solid var(--cl-border);
+  background: var(--cl-bg);
+}
+
+.review-focus-head-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.review-focus-section {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.review-focus-section-warning { background: #FEF3C7; color: #92400E; }
+.review-focus-section-danger  { background: #FEE2E2; color: #991B1B; }
+.review-focus-section-info    { background: var(--cl-teal-soft); color: var(--cl-teal-600); }
+
+.review-focus-position {
+  font-size: 12px;
+  color: var(--cl-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.review-focus-head-right {
+  display: flex;
+  gap: 6px;
+}
+
+.review-focus-meta {
+  padding: 20px 22px 18px;
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.review-focus-vendor {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--cl-ink-primary);
+}
+
+.review-focus-fact-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 13px;
+  color: var(--cl-ink-primary);
+}
+
+.review-focus-fact-row strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.review-focus-sep {
+  color: var(--cl-ink-muted);
+  opacity: 0.5;
+}
+
+.review-focus-summary {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--cl-ink-secondary);
+}
+
+/* ── Action area: the question + diff + manual ─────────────── */
+
+.review-focus-actions {
+  padding: 22px 22px 24px;
+}
+
+.review-focus-question {
+  margin-bottom: 16px;
+}
+
+.review-focus-question-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+  margin-bottom: 4px;
+}
+
+.review-focus-question-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+  letter-spacing: -0.01em;
+}
+
+.review-focus-question-meta {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* The diff: 3 columns — Email / Attachment / Manual. Each is a
+   button. Clicking the button IS the decision (no modal except
+   for manual which prompts for the value). */
+.review-focus-diff {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 720px) {
+  .review-focus-diff { grid-template-columns: 1fr; }
+}
+
+.review-diff-option {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 14px 16px;
+  background: var(--cl-surface);
+  border: 1.5px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.12s, transform 0.08s, background 0.12s;
+}
+
+.review-diff-option:hover:not(:disabled) {
+  border-color: var(--cl-teal-500);
+  transform: translateY(-1px);
+}
+
+.review-diff-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.review-diff-option.is-unavailable {
+  background: var(--cl-bg);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.review-diff-option-manual {
+  border-style: dashed;
+  background: var(--cl-bg);
+}
+.review-diff-option-manual:hover:not(:disabled) {
+  background: var(--cl-surface);
+  border-style: solid;
+}
+
+.review-diff-option-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+}
+
+.review-diff-option-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+
+.review-focus-why {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: var(--cl-bg);
+  border-left: 3px solid var(--cl-teal-500);
+  border-radius: var(--cl-radius-sm);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--cl-ink-secondary);
+}
+
+/* Non-invoice + open-record fallback action lists */
+.review-focus-noninvoice {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.review-block-actions .btn-secondary,
-.review-block-actions .btn-primary,
-.review-block-actions .btn-ghost {
-  width: 100%;
-  justify-content: center;
+.review-noninvoice-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--cl-surface);
+  border: 1.5px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.12s, transform 0.08s;
 }
 
-/* ── Empty + disputes panels ─────────────────────────────────── */
+.review-noninvoice-option:hover:not(:disabled) {
+  border-color: var(--cl-teal-500);
+  transform: translateY(-1px);
+}
 
-.review-empty-panel {
-  text-align: center;
-  padding: 36px 24px;
+.review-noninvoice-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--cl-ink-primary);
+}
+
+.review-noninvoice-state {
+  font-size: 14px;
+  color: var(--cl-ink-muted);
+}
+
+/* ─── Focus footer (escape hatches) ──────────────────────────── */
+
+.review-focus-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 22px;
+  background: var(--cl-bg);
+  border-top: 1px solid var(--cl-border);
+  flex-wrap: wrap;
+}
+
+.review-focus-escapes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ─── Up-next peek ─────────────────────────────────────────── */
+
+.review-queue-peek {
+  padding: 14px 18px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+}
+
+.review-queue-peek-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+  margin-bottom: 8px;
+}
+
+.review-queue-peek-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.review-queue-peek-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
   color: var(--cl-ink-secondary);
 }
 
-.review-empty-panel h3 {
-  font-size: 15px;
+.review-queue-peek-vendor {
   font-weight: 600;
   color: var(--cl-ink-primary);
-  margin: 0 0 6px;
 }
 
-.review-disputes-panel {
-  margin-bottom: 0;
+/* ─── Empty / completion state ─────────────────────────────── */
+
+.review-empty-card {
+  text-align: center;
+  padding: 48px 24px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
 }
+
+.review-empty-card h3 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--cl-ink-primary);
+}
+
+.review-empty-card p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--cl-ink-secondary);
+  margin: 0;
+}
+
+.review-empty-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.review-empty-card-celebrate .review-empty-checkmark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  background: var(--cl-teal-soft);
+  color: var(--cl-teal-600);
+  font-size: 28px;
+  font-weight: 700;
+  border-radius: 50%;
+  margin: 0 auto 14px;
+}
+
+/* ─── Disputes panel ───────────────────────────────────────── */
+
+.review-disputes-panel {
+  padding: 14px 18px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+}
+
+.review-dispute-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--cl-border);
+  font-size: 12px;
+}
+.review-dispute-row:last-child { border-bottom: 0; }
+
+.review-dispute-status {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.review-dispute-status-info { background: var(--cl-teal-soft); color: var(--cl-teal-600); }
+.review-dispute-status-warn { background: #FEF3C7; color: #92400E; }
