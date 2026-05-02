@@ -16,9 +16,12 @@ import { html } from '../utils/htm.js';
  * separate "solden" text node should drop that extra text — the
  * wordmark is in the asset itself.
  */
+// Version-tagged URLs cache-bust the lockup whenever the brand
+// asset changes. Bump the suffix on any future re-export so the
+// browser doesn't serve a stale opaque-background copy.
 const LOCKUP_SRC = {
-  primary: '/solden-lockup-dark.png',
-  'on-dark': '/solden-lockup-white.png',
+  primary: '/solden-lockup-dark.png?v=2',
+  'on-dark': '/solden-lockup-white.png?v=2',
 };
 
 export function BrandMark({ height = 28, tone = 'primary', class: className = '' }) {
