@@ -13,7 +13,7 @@ export default function HealthPage({ bootstrap, api }) {
     <div class=${`secondary-banner ${actions.length ? 'warning' : ''}`}>
       <div class="secondary-banner-copy">
         <h3>${actions.length ? 'Something needs attention' : 'Everything looks healthy'}</h3>
-        <p class="muted">${actions.length ? 'Check the broken connection or missing setup before it blocks work.' : 'Clearledgr is ready to keep working in Gmail.'}</p>
+        <p class="muted">${actions.length ? 'Check the broken connection or missing setup before it blocks work.' : 'Solden is ready to keep working in Gmail.'}</p>
       </div>
     </div>
 

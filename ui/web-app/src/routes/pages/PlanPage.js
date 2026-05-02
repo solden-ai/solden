@@ -435,7 +435,7 @@ export default function PlanPage({ bootstrap, api, toast, orgId, onRefresh, navi
         <div class="panel">
           <h3 style="margin-top:0">What changes when you switch</h3>
           <div class="secondary-note">
-            Plan changes update workspace entitlement immediately for Clearledgr features, limits, and approval tooling. Billing cadence stays ${String(sub.billing_cycle || 'monthly').toLowerCase() === 'yearly' ? 'annual' : 'monthly'} unless your team changes it outside this Gmail surface.
+            Plan changes update workspace entitlement immediately for Solden features, limits, and approval tooling. Billing cadence stays ${String(sub.billing_cycle || 'monthly').toLowerCase() === 'yearly' ? 'annual' : 'monthly'} unless your team changes it outside this Gmail surface.
           </div>
         </div>
 

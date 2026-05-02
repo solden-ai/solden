@@ -219,7 +219,7 @@ function humanizeRouteFailure(reason, detail = '') {
     merged_source: 'This record is part of a merged source and cannot be routed directly.',
     autonomy_gate_blocked: 'Autonomy policy blocked approval routing for this invoice.',
     policy_precheck_failed: 'This invoice is not ready for approval routing yet.',
-    network_error: 'Clearledgr could not reach the backend to route this invoice.',
+    network_error: 'Solden could not reach the backend to route this invoice.',
   };
   return mapping[token] || safeDetail || token.replace(/_/g, ' ');
 }

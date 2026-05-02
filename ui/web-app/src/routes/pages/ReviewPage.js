@@ -57,7 +57,7 @@ const SECTION_CONFIG = {
   },
   needs_info: {
     title: 'Vendor follow-up',
-    detail: 'Items waiting on vendor replies or missing finance data. Clearledgr may already be following up.',
+    detail: 'Items waiting on vendor replies or missing finance data. Solden may already be following up.',
     sliceId: 'needs_info',
   },
   failed_post: {
@@ -304,7 +304,7 @@ function FieldReviewCard({ item, blockers, onResolve, resolvingField }) {
               <div class="review-block-facts">
                 ${blocker.kind === 'confidence' && html`
                   <>
-                    <span class="review-block-fact-label">Clearledgr read</span>
+                    <span class="review-block-fact-label">Solden read</span>
                     <span class="review-block-fact-value">${safeDisplayText(blocker.current_value_display, 'Not found')}</span>
                   </>
                 `}
@@ -375,10 +375,10 @@ function FieldReviewCard({ item, blockers, onResolve, resolvingField }) {
     </div>
   `;
   } catch (error) {
-    console.error('Clearledgr review field card render failed', error, item);
+    console.error('Solden review field card render failed', error, item);
     return html`
       <div style="padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-size:12px;line-height:1.5;color:var(--ink-secondary)">
-        Clearledgr could not render the full field-review detail for this record, but the item is still available for operator review.
+        Solden could not render the full field-review detail for this record, but the item is still available for operator review.
       </div>
     `;
   }
@@ -428,7 +428,7 @@ function ReviewCard({
       : executionMode === 'agent_waiting'
         ? 'Waiting on vendor'
         : executionMode === 'agent_progressing'
-          ? 'Clearledgr progressing'
+          ? 'Solden progressing'
           : executionMode === 'operator_attention'
             ? 'Needs your review'
             : '';
@@ -511,7 +511,7 @@ function ReviewCard({
     </div>
   `;
   } catch (error) {
-    console.error('Clearledgr review card render failed', error, item);
+    console.error('Solden review card render failed', error, item);
     return html`
       <div class="review-card">
         <div class="review-badge-row" style="margin-bottom:6px">
@@ -519,7 +519,7 @@ function ReviewCard({
           <span class="review-badge">${safeDisplayText(String(item?.state || 'received').replace(/_/g, ' '), 'received')}</span>
         </div>
         <div class="muted review-card-meta" style="font-size:12px;line-height:1.55">
-          This record is still in the review queue, but Clearledgr could not render the full operator card from the current payload.
+          This record is still in the review queue, but Solden could not render the full operator card from the current payload.
         </div>
         <div class="row-actions review-card-actions" style="margin-top:12px">
           <button class="btn-secondary btn-sm" onClick=${(event) => { event.stopPropagation(); onOpenRecord(item); }}>Open record</button>
@@ -718,7 +718,7 @@ export default function ReviewPage({ api, orgId, userEmail, navigate, toast }) {
         actionType: 'field_review_manual',
         title: `Resolve ${blocker.field_label || blocker.field}`,
         label: 'Resolved value',
-        message: `Set the canonical value for ${blocker.field_label || blocker.field}. Clearledgr will keep the losing evidence in audit history and resume workflow if this clears the last blocker.`,
+        message: `Set the canonical value for ${blocker.field_label || blocker.field}. Solden will keep the losing evidence in audit history and resume workflow if this clears the last blocker.`,
         placeholder: `Enter ${String(blocker.field_label || blocker.field || 'value').toLowerCase()}`,
         defaultValue: blocker.winning_value != null
           ? String(blocker.winning_value)
@@ -996,7 +996,7 @@ export default function ReviewPage({ api, orgId, userEmail, navigate, toast }) {
       ${overallSummary.total === 0 && html`
         <div class="panel review-empty-panel">
           <h3 style="margin:0 0 6px">Nothing needs review right now</h3>
-          <p class="muted" style="margin:0">Clearledgr will show anything that needs review here as it appears.</p>
+          <p class="muted" style="margin:0">Solden will show anything that needs review here as it appears.</p>
         </div>
       `}
 

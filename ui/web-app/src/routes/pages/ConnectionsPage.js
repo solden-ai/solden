@@ -67,8 +67,8 @@ function getSetupSummary({ gmail, gmailReconnectRequired, approvalConnected, sla
   if (!approvalConnected || slack.requires_reauthorization) missing.push('Slack or Teams approvals');
   if (!erp.connected) missing.push('ERP');
   if (missing.length === 0) return 'Gmail, approvals, and ERP are ready for this workspace.';
-  if (missing.length === 1) return `Finish ${missing[0]} before Clearledgr can run the full AP flow.`;
-  return `Finish ${missing.slice(0, -1).join(', ')}, and ${missing[missing.length - 1]} before Clearledgr can run the full AP flow.`;
+  if (missing.length === 1) return `Finish ${missing[0]} before Solden can run the full AP flow.`;
+  return `Finish ${missing.slice(0, -1).join(', ')}, and ${missing[missing.length - 1]} before Solden can run the full AP flow.`;
 }
 
 function getSlackConnectionDetail(slack = {}) {
@@ -358,7 +358,7 @@ function ERPConnectionCard({
     <${ApprovalSurfaceCard}
       title="ERP posting connection"
       status=${erp.status || (erp.connected ? 'connected' : 'disconnected')}
-      detail="Choose the ERP Clearledgr should post into. OAuth ERPs open a connect flow; NetSuite and SAP finish here with credentials."
+      detail="Choose the ERP Solden should post into. OAuth ERPs open a connect flow; NetSuite and SAP finish here with credentials."
     >
       <div class="secondary-inline-actions">
         <select value=${erpType} onChange=${(event) => setErpType(event.target.value)} disabled=${!canManageConnections || erpConnectPending || erpSubmitPending} style="min-width:170px">
@@ -375,7 +375,7 @@ function ERPConnectionCard({
           <div class="secondary-card-head">
             <div class="secondary-card-copy">
               <strong class="secondary-card-title">Finish ${getErpOptionLabel(erpType)} setup</strong>
-              <div class="secondary-card-meta">Clearledgr will test the connection before saving it for this workspace.</div>
+              <div class="secondary-card-meta">Solden will test the connection before saving it for this workspace.</div>
             </div>
           </div>
           <div class="secondary-card-body" style="display:grid;gap:12px">
@@ -570,7 +570,7 @@ function WebhooksPanel({ api, canManage, toast }) {
 //   PUT /api/workspace/erp/field-mappings?organization_id=  body={erp_type, mappings}
 //
 // The default field id is rendered as the input placeholder so the
-// operator sees what Clearledgr will fall back to if they don't
+// operator sees what Solden will fall back to if they don't
 // override. A "Reset" link reverts a single field to the default.
 function FieldMappingPanel({ api, orgId, erpType, erpConnected, canManage, toast }) {
   const [catalog, setCatalog] = useState(null);
@@ -721,7 +721,7 @@ function FieldMappingPanel({ api, orgId, erpType, erpConnected, canManage, toast
         <div>
           <h3 style="margin:0">Custom field mapping</h3>
           <p class="muted" style="margin:4px 0 0;font-size:12px">
-            Override the default ${erpLabel} field IDs that Clearledgr writes
+            Override the default ${erpLabel} field IDs that Solden writes
             to. Leave a field blank to use the default.
           </p>
         </div>

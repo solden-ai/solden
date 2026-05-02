@@ -2,7 +2,7 @@
  * Vendor detail — Module 4 §154.
  *
  * The leader's per-vendor screen: ERP data (name, address, tax ID,
- * terms) plus the Clearledgr layer (verified IBANs, fraud flags,
+ * terms) plus the Solden layer (verified IBANs, fraud flags,
  * custom routing, agent confidence) plus recent invoice history and
  * exception trend.
  *
@@ -115,7 +115,7 @@ export default function VendorDetailPage({ api, orgId, navigate, toast, vendorNa
 
       <div class="cl-vendor-grid">
         <${ErpDataPanel} erp=${erp} profile=${profile} />
-        <${ClearledgrLayerPanel}
+        <${SoldenLayerPanel}
           profile=${profile}
           verifiedIbans=${verifiedIbans}
           fraudFlags=${fraudFlags}
@@ -219,9 +219,9 @@ function ErpDataPanel({ erp, profile }) {
 }
 
 
-// ─── Clearledgr-layer panel ────────────────────────────────────────
+// ─── Solden-layer panel ────────────────────────────────────────
 
-function ClearledgrLayerPanel({
+function SoldenLayerPanel({
   profile, verifiedIbans, fraudFlags, summary,
 }) {
   const agentConfidence = summary.agent_confidence ?? profile.agent_confidence;
@@ -231,7 +231,7 @@ function ClearledgrLayerPanel({
   return html`
     <section class="cl-record-panel">
       <header class="cl-record-panel-head">
-        <h2>Clearledgr layer</h2>
+        <h2>Solden layer</h2>
         <span class="cl-record-panel-eyebrow">What the agent knows</span>
       </header>
 

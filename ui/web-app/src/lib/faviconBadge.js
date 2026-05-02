@@ -1,7 +1,7 @@
 /**
  * Status-aware favicon badge for the workspace SPA.
  *
- * The base favicon (the Clearledgr logomark) lives at /favicon.png and
+ * The base favicon (the Solden logomark) lives at /favicon.png and
  * is referenced by ``<link rel="icon" href="/favicon.png">`` in
  * ``index.html``. When there's something operator-actionable in the
  * pipeline (pending approvals waiting on the current user), this
@@ -130,7 +130,7 @@ function _paint(baseImg, count) {
   const cy = radius + 2;
 
   // White outline ring — gives the badge contrast against any underlying
-  // mark color (the Clearledgr mark has both navy and mint pixels).
+  // mark color (the Solden mark has both navy and mint pixels).
   ctx.beginPath();
   ctx.arc(cx, cy, radius + 2, 0, Math.PI * 2);
   ctx.fillStyle = '#ffffff';

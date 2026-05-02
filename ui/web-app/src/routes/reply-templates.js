@@ -38,7 +38,7 @@ export const DEFAULT_REPLY_TEMPLATES = [
       'Please take a look when you can.',
       '',
       'Best,',
-      'Clearledgr AP',
+      'Solden AP',
     ].join('\n'),
   },
   {
@@ -281,7 +281,7 @@ export function buildReplyTemplateContext(item = {}, extra = {}) {
     due_date: item?.due_date || 'No due date',
     po_number: item?.po_number || 'No PO',
     state_label: String(item?.state || 'received').replace(/_/g, ' '),
-    next_action: item?.next_action || 'Review in Clearledgr',
+    next_action: item?.next_action || 'Review in Solden',
     issue_summary: extra?.issue_summary || item?.exception_code || 'additional information is required',
     subject: item?.subject || `Invoice ${item?.invoice_number || ''}`.trim() || 'Invoice follow-up',
     sender_email: item?.sender || '',

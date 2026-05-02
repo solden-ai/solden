@@ -3,7 +3,7 @@ import { html } from '../utils/htm.js';
 /**
  * Self-hosted legal pages that satisfy the GA-readiness requirement
  * for enterprise security questionnaires AND the login-form fineprint
- * links until the standalone marketing site at clearledgr.com is up.
+ * links until the standalone marketing site at soldenai.com is up.
  *
  * Both pages are intentionally minimal — they're placeholder copy
  * vetted against the GDPR / SOC2 / DPA expectations every enterprise
@@ -27,7 +27,7 @@ export function PrivacyPage() {
       <section class="cl-legal-body">
         <h2>What we collect</h2>
         <p>
-          Clearledgr collects only the data you explicitly connect:
+          Solden collects only the data you explicitly connect:
           invoice content from Gmail or your ERP, vendor records,
           approval-routing metadata, and your team's identities and
           roles. We do not collect inbox contents beyond what your
@@ -44,7 +44,7 @@ export function PrivacyPage() {
 
         <h2>Where it lives</h2>
         <p>
-          Clearledgr operates on Railway-managed infrastructure.
+          Solden operates on Railway-managed infrastructure.
           Customer data is encrypted in transit (TLS 1.3) and at rest
           (AES-256). Database backups are retained for 30 days and
           encrypted with the same keys.
@@ -61,14 +61,14 @@ export function PrivacyPage() {
         <h2>Your rights</h2>
         <p>
           You can request export or deletion of your organization's
-          data at any time by emailing <a href="mailto:privacy@clearledgr.com">privacy@clearledgr.com</a>.
+          data at any time by emailing <a href="mailto:privacy@soldenai.com">privacy@soldenai.com</a>.
           Requests are honored within 30 days per GDPR Article 17.
         </p>
 
         <h2>Contact</h2>
         <p>
-          Privacy questions: <a href="mailto:privacy@clearledgr.com">privacy@clearledgr.com</a><br />
-          Data Protection Officer: <a href="mailto:dpo@clearledgr.com">dpo@clearledgr.com</a>
+          Privacy questions: <a href="mailto:privacy@soldenai.com">privacy@soldenai.com</a><br />
+          Data Protection Officer: <a href="mailto:dpo@soldenai.com">dpo@soldenai.com</a>
         </p>
       </section>
       <a class="cl-legal-back" href="/">← Back to workspace</a>
@@ -83,7 +83,7 @@ export function TermsPage() {
       <section class="cl-legal-body">
         <h2>Service</h2>
         <p>
-          Clearledgr provides an AP coordination layer for finance
+          Solden provides an AP coordination layer for finance
           teams: invoice intake, validation, approval routing, ERP
           posting, and vendor management. Service is provided on a
           subscription basis with terms agreed in your order form.
@@ -93,7 +93,7 @@ export function TermsPage() {
         <p>
           You're responsible for maintaining the confidentiality of
           your credentials and for all activity under your account.
-          Notify <a href="mailto:security@clearledgr.com">security@clearledgr.com</a>
+          Notify <a href="mailto:security@soldenai.com">security@soldenai.com</a>
           immediately if you suspect unauthorized access.
         </p>
 
@@ -121,9 +121,9 @@ export function TermsPage() {
 
         <h2>Liability</h2>
         <p>
-          To the maximum extent permitted by law, Clearledgr's
+          To the maximum extent permitted by law, Solden's
           liability is limited to the fees paid in the 12 months
-          preceding the claim. Clearledgr does not assume liability
+          preceding the claim. Solden does not assume liability
           for ERP-side or banking-side errors that result from
           actions you explicitly authorized.
         </p>
@@ -137,7 +137,7 @@ export function TermsPage() {
 
         <h2>Contact</h2>
         <p>
-          Legal: <a href="mailto:legal@clearledgr.com">legal@clearledgr.com</a>
+          Legal: <a href="mailto:legal@soldenai.com">legal@soldenai.com</a>
         </p>
       </section>
       <a class="cl-legal-back" href="/">← Back to workspace</a>
@@ -151,7 +151,7 @@ export function RequestDemoPage() {
       ${COMMON_HEADER("Let's set up your workspace.", 'Get started')}
       <section class="cl-legal-body">
         <p class="cl-legal-lead">
-          Clearledgr is sold through a sales-led onboarding so we can
+          Solden is sold through a sales-led onboarding so we can
           properly connect your ERP, configure your AP policy, and
           integrate with Slack or Teams before your team's first
           invoice arrives. Reach out and we'll have you up and running
@@ -168,7 +168,7 @@ export function RequestDemoPage() {
 
         <h2>Contact</h2>
         <p>
-          Email <a href="mailto:hello@clearledgr.com">hello@clearledgr.com</a>
+          Email <a href="mailto:hello@soldenai.com">hello@soldenai.com</a>
           with your company name and current AP stack — we'll respond
           within one business day.
         </p>

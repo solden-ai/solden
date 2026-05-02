@@ -47,10 +47,10 @@ export function AppFooter() {
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>
         <a href="/status">Status</a>
-        <a href="mailto:hello@clearledgr.com">Help</a>
+        <a href="mailto:hello@soldenai.com">Help</a>
       </div>
       <div class="cl-footer-meta">
-        © ${new Date().getFullYear()} Clearledgr
+        © ${new Date().getFullYear()} Solden
       </div>
     </footer>
   `;

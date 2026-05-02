@@ -1,7 +1,7 @@
-# Design System — Clearledgr
+# Design System — Solden
 
 ## Product Context
-- **What this is:** Clearledgr is an embedded finance-ops execution layer. It coordinates work across the systems finance teams already use instead of forcing them into a new standalone back office.
+- **What this is:** Solden is an embedded finance-ops execution layer. It coordinates work across the systems finance teams already use instead of forcing them into a new standalone back office.
 - **Product analogy:** The current Gmail/AP wedge should feel like Streak for finance ops, but that is the MVP interaction model, not the full product boundary.
 - **Who it's for:** Finance teams at growing companies who need execution, follow-up, approvals, and system-of-record updates to happen across inbox, chat, ERP, and other finance surfaces.
 - **Primary product truth:** Clearledgr is broader than Gmail and broader than AP. Gmail-first AP is the first production wedge.
@@ -29,14 +29,17 @@
 - **Visual goal:** A user should feel like they are still inside the host tool, just with a much better operating system for finance work.
 
 ## Brand Identity
-- **Logo:** Two vertical bars (ledger icon) on a navy rounded square
-- **Brand color:** Mint green `#00D67E`
-- **Brand dark:** Navy `#0A1628`
-- **Personality:** Practical, reliable, efficient. The product should feel more like an operator’s workspace than a marketing surface.
+- **Logomark:** Three stacked slabs forming a stylized "S" — two navy horizontal bars top + bottom with a teal middle stripe running upper-right to lower-left. The slants on the navy bars feed visually into the diagonal so the silhouette reads as a continuous S. Implemented as inline SVG in [`ui/web-app/src/shell/BrandMark.js`](ui/web-app/src/shell/BrandMark.js).
+- **Wordmark:** "solden" — Inter, weight 700, lowercase, letter-spacing -1% to -2%.
+- **Brand color (primary accent):** Teal `#18BFB0` (`--cl-teal-500`).
+- **Brand dark (primary ink):** Navy `#0A1F44` (`--cl-navy`).
+- **Variants:** Primary lockup (navy + teal-stripe on white) for light surfaces; one-color white lockup for the dark sidebar rail and any teal-fill hero treatment.
+- **Personality:** Practical, reliable, efficient. The product should feel more like an operator's workspace than a marketing surface.
 
 ## Typography
+- **Brand wordmark:** Inter (700), lowercase, letter-spacing -1% to -2% (`--cl-font-brand`)
 - **Display/Headings:** Instrument Sans (600/700)
-- **Body:** DM Sans (400/500)
+- **Body:** DM Sans (400/500), or Inter (500/600) on workspace surfaces (`--cl-font-body`)
 - **Data/Numbers:** Geist Mono (400/500/600)
 - **Code:** Geist Mono
 - **Scale:**
@@ -55,12 +58,13 @@
 ### Brand
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `--brand` | `#00D67E` | Primary CTA, active state, app identity |
-| `--brand-hover` | `#00BC6E` | CTA hover |
-| `--brand-soft` | `#ECFDF5` | Light status fills, supportive emphasis |
-| `--brand-muted` | `#10B981` | Secondary brand text, positive links |
-| `--navy` | `#0A1628` | Dense text, dark controls, logo base |
-| `--navy-light` | `#1E293B` | Dark hover states |
+| `--cl-teal-500` | `#18BFB0` | Primary CTA, active state, brand accent (flat) |
+| `--cl-teal-400` | `#1FC7B6` | Gradient start, hover-light variant |
+| `--cl-teal-600` | `#12B3A6` | Gradient end, hover-deep variant |
+| `--cl-teal-soft` | `#DDF7F3` | Light status fills, supportive emphasis |
+| `--cl-navy` | `#0A1F44` | Primary ink, dark controls, sidebar rail, logo navy bars |
+| `--cl-navy-light` | `#1E293B` | Dark hover states |
+| `--cl-mint*` (legacy) | aliased | Old `--cl-mint` / `--cl-mint-strong` / `--cl-mint-soft` tokens are aliased to the teal palette so existing call sites keep working until renamed. |
 
 ### Surfaces
 | Token | Hex | Usage |
@@ -258,3 +262,4 @@
 | 2026-03-23 | Primary Gmail work path narrowed to Home, Pipeline, Review, Upcoming | Keeps the product legible and operational inside Gmail |
 | 2026-05-02 | Workspace Home defined as a foyer, not a BILL.com / Ramp dashboard | Page was leading with a big KPI tile row, modeled on Bill / Ramp / Mixmax. Mo flagged it. Numbers belong as a thin glance line under the welcome; quick access lifts to position #3; two-column panels carry the work. Streak / Stripe / Mercury references stand. |
 | 2026-05-02 | Workspace Home recalibrated: coordination-layer control center, not foyer | Mo: DESIGN.md was Gmail-era (Streak foyer). Once Solden broadened to a coordination layer with Gmail / Slack / Teams / NetSuite / SAP as render targets and the workspace as the control center, the foyer doctrine no longer fits the workspace surface. Reference hierarchy moves to Linear / Vercel / Datadog / Modal (still anti-Bill / anti-Ramp). Hero becomes the live agent activity ribbon (SSE-driven); stat tiles return as a compact control-center row with a live-pulse dot; quick-access cards drop (header + ⌘K cover navigation). Foyer pattern preserved for the Gmail Home only. |
+| 2026-05-02 | Solden rebrand applied | Mo lifted the rebrand hold and shipped the brand kit: navy `#0A1F44`, teal palette `#1FC7B6 / #18BFB0 / #12B3A6`, white. Wordmark "solden" in Inter 700 lowercase, tracking -1% to -2%. Logomark is a three-slab stylized S (navy bars + teal middle stripe). DESIGN.md, the SidebarNav, login + invite-accept cards, footer, page title, legal copy, and operational status strings all swept from "Clearledgr" → "Solden". Domain stays at clearledgr.com for now (cookie domain + SAML SP URLs unchanged); `@clearledgr.com` mailto addresses moved to `@soldenai.com`. Old `--cl-mint*` tokens aliased to the new teal palette so unfinished call sites keep compiling. |

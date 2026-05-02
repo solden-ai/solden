@@ -1,18 +1,27 @@
 import { html } from '../utils/htm.js';
 
 /**
- * The Clearledgr brand mark — navy rounded square with two mint
- * vertical bars (the ledger icon, per DESIGN.md §Brand Identity).
+ * The Solden brand mark — three stacked slabs forming a stylized
+ * "S" (per the brand kit shipped 2026-05-02).
  *
- * Inline SVG so it renders without a network round-trip, scales
- * cleanly at any size, and inherits CSS sizing. Used by the sidebar
- * wordmark, the auth-card brand, and the invite-accept brand.
+ * Two render variants:
+ *   primary  — navy slabs + teal middle stripe. For light surfaces
+ *              (login card, footer, body content).
+ *   on-dark  — single-fill white. For the navy sidebar rail and
+ *              any teal/dark hero treatment.
+ *
+ * Inline SVG so it ships with the bundle, scales cleanly at any
+ * size, and inherits CSS sizing without a network round-trip.
  *
  * Props:
- *   size  — pixel size of the square (defaults to 22).
+ *   size  — pixel size of the square (default 24).
+ *   tone  — 'primary' (default) | 'on-dark'.
  *   class — additional CSS class for layout / spacing.
  */
-export function BrandMark({ size = 22, class: className = '' }) {
+export function BrandMark({ size = 24, tone = 'primary', class: className = '' }) {
+  const isOnDark = tone === 'on-dark';
+  const slabFill = isOnDark ? '#FFFFFF' : '#0A1F44';
+  const stripeFill = isOnDark ? '#FFFFFF' : '#18BFB0';
   return html`
     <svg
       class=${`cl-brand-mark ${className}`.trim()}
@@ -21,11 +30,14 @@ export function BrandMark({ size = 22, class: className = '' }) {
       viewBox="0 0 24 24"
       fill="none"
       role="img"
-      aria-label="Clearledgr"
+      aria-label="Solden"
       xmlns="http://www.w3.org/2000/svg">
-      <rect width="24" height="24" rx="5.5" fill="#0A1628" />
-      <rect x="7.25"  y="6.5" width="3.25" height="11" rx="0.9" fill="#00D67E" />
-      <rect x="13.5"  y="6.5" width="3.25" height="11" rx="0.9" fill="#00D67E" />
+      <!-- Top slab — extends right at the bottom (▟ shape) -->
+      <path d="M 3 5 L 16 5 L 19 9 L 3 9 Z" fill=${slabFill} />
+      <!-- Middle teal diagonal stripe — runs upper-right to lower-left -->
+      <path d="M 7 10 L 19 10 L 17 14 L 5 14 Z" fill=${stripeFill} />
+      <!-- Bottom slab — extends left at the top (▙ shape, mirror of top) -->
+      <path d="M 5 15 L 21 15 L 21 19 L 8 19 Z" fill=${slabFill} />
     </svg>
   `;
 }

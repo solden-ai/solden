@@ -153,7 +153,7 @@ export function OnboardingPage() {
     <div class="cl-onb-shell">
       <header class="cl-onb-header">
         <div class="cl-onb-eyebrow">Workspace setup</div>
-        <h1 class="cl-onb-title">${completed ? 'Setup complete.' : "Let's get Clearledgr ready."}</h1>
+        <h1 class="cl-onb-title">${completed ? 'Setup complete.' : "Let's get Solden ready."}</h1>
         <p class="cl-onb-sub">
           ${completed
             ? 'Every required integration is connected. You can revisit any step from this page; nothing here is destructive.'

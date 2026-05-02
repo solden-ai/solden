@@ -106,7 +106,7 @@ export function StatusPage() {
         <h2>Incidents</h2>
         <p class="cl-status-empty">
           No active or recent incidents. Subscribe at
-          <a href="mailto:hello@clearledgr.com?subject=Status%20notifications">hello@clearledgr.com</a>
+          <a href="mailto:hello@soldenai.com?subject=Status%20notifications">hello@soldenai.com</a>
           to be notified about scheduled maintenance and incidents.
         </p>
       </section>

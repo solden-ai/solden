@@ -193,12 +193,12 @@ export function getOperatorOverrideCopy(state, item = null, documentType = 'invo
   if (mode === 'agent_progressing') {
     return {
       title: 'Operator overrides',
-      detail: 'Clearledgr is processing this record. Use these to override.',
+      detail: 'Solden is processing this record. Use these to override.',
     };
   }
   return {
     title: 'Operator overrides',
-    detail: 'Use these to change what Clearledgr does next.',
+    detail: 'Use these to change what Solden does next.',
   };
 }
 
@@ -307,13 +307,13 @@ export function getWorkStateNotice(state, documentType = 'invoice', item = null)
     return 'Waiting on approval. Send a nudge or reassign if it slips.';
   }
   if ((normalized === 'approved' || normalized === 'ready_to_post' || normalized === 'failed_post') && !hasErpPostingConnection(item)) {
-    return 'ERP is not connected. Connect QuickBooks, Xero, NetSuite, or SAP before Clearledgr can post this invoice.';
+    return 'ERP is not connected. Connect QuickBooks, Xero, NetSuite, or SAP before Solden can post this invoice.';
   }
   if (normalized === 'approved') {
-    return 'Approval received. Clearledgr is preparing the posting step.';
+    return 'Approval received. Solden is preparing the posting step.';
   }
   if (normalized === 'ready_to_post') {
-    return 'Invoice is ready and Clearledgr can post it to the ERP.';
+    return 'Invoice is ready and Solden can post it to the ERP.';
   }
   if (normalized === 'posted_to_erp' || normalized === 'closed') {
     return 'Invoice has already been posted to the ERP.';

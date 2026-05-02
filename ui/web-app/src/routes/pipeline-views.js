@@ -125,7 +125,7 @@ function buildFallbackBlockerCopy(kind, type, source = {}) {
       return {
         chip_label: 'ERP not connected',
         title: 'ERP is not connected',
-        detail: 'Connect QuickBooks, Xero, NetSuite, or SAP before Clearledgr can post this invoice.',
+        detail: 'Connect QuickBooks, Xero, NetSuite, or SAP before Solden can post this invoice.',
       };
     }
     return {
@@ -139,14 +139,14 @@ function buildFallbackBlockerCopy(kind, type, source = {}) {
     return {
       chip_label: label,
       title: label,
-      detail: getIssueSummary(source) || 'Clearledgr needs review before this invoice can continue.',
+      detail: getIssueSummary(source) || 'Solden needs review before this invoice can continue.',
     };
   }
   if (kind === 'confidence') {
     return {
       chip_label: 'Field review',
       title: 'Needs a field check',
-      detail: normalizeText(source?.workflow_paused_reason) || 'Check the extracted fields before Clearledgr continues.',
+      detail: normalizeText(source?.workflow_paused_reason) || 'Check the extracted fields before Solden continues.',
     };
   }
   if (kind === 'budget') {
@@ -174,7 +174,7 @@ function buildFallbackBlockerCopy(kind, type, source = {}) {
     return {
       chip_label: 'Processing issue',
       title: 'Processing issue',
-      detail: 'Clearledgr needs another pass before this invoice can continue.',
+      detail: 'Solden needs another pass before this invoice can continue.',
     };
   }
   return { chip_label: '', title: '', detail: '' };

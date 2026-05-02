@@ -671,7 +671,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         <div class="panel-head compact">
           <div>
             <h3 >ERP Connection</h3>
-            <p class="muted" >Connect your accounting system. Clearledgr posts approved invoices here.</p>
+            <p class="muted" >Connect your accounting system. Solden posts approved invoices here.</p>
           </div>
         </div>
         <div class="settings-summary-grid">
@@ -716,7 +716,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           <div>
             <h3 >GL Account Mapping</h3>
             <p class="muted" >
-              Map Clearledgr's AP categories to the GL codes in your ${erpType || 'ERP'}. Bills post to these accounts when approved.
+              Map Solden's AP categories to the GL codes in your ${erpType || 'ERP'}. Bills post to these accounts when approved.
             </p>
           </div>
           ${erp.connected ? html`
@@ -1937,7 +1937,7 @@ function SAMLPanel({ api, orgId, toast, canManage }) {
       ${!loading ? html`
         <div class="cl-saml-section">
           <h4>1. Send your IdP this metadata</h4>
-          <p class="muted">Hand your IT team this URL — it's the SP-side metadata your IdP needs to register Clearledgr as a relying party.</p>
+          <p class="muted">Hand your IT team this URL — it's the SP-side metadata your IdP needs to register Solden as a relying party.</p>
           <div class="cl-saml-metadata-row">
             <code>${spMetadataUrl}</code>
             <button type="button" class="btn-secondary btn-sm" onClick=${() => {
@@ -2185,7 +2185,7 @@ function ApiKeysPanel({ api, toast, panelRef }) {
         <div class="cl-settings-reveal" role="alert">
           <strong>Copy this key now</strong>
           <p class="muted" style="margin:4px 0 8px">
-            Clearledgr stores only a hash. After you close this banner the key cannot be retrieved.
+            Solden stores only a hash. After you close this banner the key cannot be retrieved.
           </p>
           <div class="cl-settings-reveal-row">
             <code style="font-family:monospace;flex:1;word-break:break-all">${revealedKey.raw_key}</code>

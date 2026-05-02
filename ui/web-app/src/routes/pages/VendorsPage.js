@@ -356,7 +356,7 @@ function VendorStatusButton({ api, orgId, vendor, toast, onChanged }) {
 }
 
 
-// ─── Module 4 Pass D — Reverse vendor sync (Clearledgr → ERP) ─────────
+// ─── Module 4 Pass D — Reverse vendor sync (Solden → ERP) ─────────
 // "Push to ERP" button: calls POST /api/vendors/{name}/sync-erp,
 // surfaces the structured PushResult as a toast. Admin-gated server-
 // side; the button is always visible so the role gate's the source
@@ -400,7 +400,7 @@ function VendorPushButton({ api, orgId, vendor, toast }) {
       class="btn-ghost btn-sm"
       onClick=${run}
       disabled=${pending}
-      title="Push the in-Clearledgr vendor profile to the connected ERP.">
+      title="Push the in-Solden vendor profile to the connected ERP.">
       ${pending ? 'Pushing…' : 'Push to ERP'}
     </button>
   `;

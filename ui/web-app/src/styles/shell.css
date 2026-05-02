@@ -43,16 +43,23 @@
 .cl-sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 4px 12px 24px;
-  font-weight: 600;
-  font-size: 15px;
   color: #fff;
 }
 
 .cl-sidebar-mark {
   flex-shrink: 0;
   display: block;
+}
+
+.cl-sidebar-wordmark {
+  font-family: var(--cl-font-brand);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  text-transform: lowercase;
+  color: #fff;
 }
 
 .cl-sidebar-group {
@@ -368,10 +375,12 @@
 }
 
 .cl-auth-brand-name {
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--cl-ink-primary);
-  letter-spacing: -0.01em;
+  font-family: var(--cl-font-brand);
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--cl-navy);
+  letter-spacing: -0.015em;
+  text-transform: lowercase;
 }
 
 .cl-auth-title {
