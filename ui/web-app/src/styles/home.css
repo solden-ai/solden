@@ -1,13 +1,16 @@
-/* Workspace Home — foyer pattern (DESIGN.md §Home Pattern).
- * Welcome → onboarding banner → quick-access strip → 2-col panels →
- * approver workload → system status. KPI numbers live as a thin
- * inline glance line under the welcome, never as a tile row. */
+/* Workspace Home — coordination-layer control center.
+ * (DESIGN.md §Workspace Surface Pattern.) Reference hierarchy:
+ * Linear, Vercel deployments, Datadog overview, Modal jobs.
+ * Order: header → onboarding banner → compact stat strip →
+ * agent activity ribbon (hero) → 2-col panels → approver workload
+ * → system status footer. Real-time SSE keeps stats / workload /
+ * activity within ~15s of the agent acting. */
 
 .cl-home {
   max-width: 1240px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 .cl-home-header {
@@ -37,32 +40,9 @@
 }
 
 .cl-home-sub {
-  margin: 0 0 10px;
+  margin: 0;
   color: var(--cl-ink-secondary);
   font-size: 14px;
-}
-
-/* Thin "at a glance" metrics line — Stripe-discreet, not BILL-loud. */
-.cl-home-glance {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
-  font-size: 13px;
-  color: var(--cl-ink-secondary);
-}
-.cl-home-glance-item {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
-  font-variant-numeric: tabular-nums;
-}
-.cl-home-glance-item strong {
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--cl-ink-primary);
-}
-.cl-home-glance-warn strong {
-  color: var(--cl-warning);
 }
 
 .cl-home-actions {
@@ -110,12 +90,219 @@
   color: var(--cl-ink-primary);
 }
 
-/* Quick-access strip (foyer position #3 — horizontal row near the top) */
-.cl-home-quick-row {
+/* ─── Compact stat strip (control-center idiom) ────────────────── */
+
+.cl-home-stat-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
 }
+
+@media (max-width: 880px) {
+  .cl-home-stat-strip { grid-template-columns: repeat(2, 1fr); }
+}
+
+.cl-home-stat {
+  position: relative;
+  padding: 14px 16px 12px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  transition: border-color 0.12s, transform 0.08s;
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cl-home-stat-clickable {
+  cursor: pointer;
+}
+.cl-home-stat-clickable:hover {
+  border-color: var(--cl-border-strong);
+  transform: translateY(-1px);
+}
+
+.cl-home-stat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cl-home-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+}
+
+/* Tiny live-pulse dot — confirms SSE is delivering frames. Uses
+ * Linear's calm glow rather than Datadog's alarm pulse. */
+.cl-home-stat-pulse {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cl-mint-strong);
+  box-shadow: 0 0 0 0 rgba(0, 214, 126, 0.45);
+  animation: cl-home-pulse 2.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  flex-shrink: 0;
+}
+
+@keyframes cl-home-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(0, 214, 126, 0.45); }
+  60%  { box-shadow: 0 0 0 6px rgba(0, 214, 126, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 214, 126, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-home-stat-pulse { animation: none; }
+}
+
+.cl-home-stat-value {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--cl-ink-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+.cl-home-stat-sub {
+  font-size: 12px;
+  color: var(--cl-ink-secondary);
+}
+
+.cl-home-stat-good .cl-home-stat-value  { color: var(--cl-mint-strong); }
+.cl-home-stat-warn .cl-home-stat-value  { color: var(--cl-warning); }
+.cl-home-stat-pending .cl-home-stat-value { color: #B45309; }
+.cl-home-stat-brand     { border-color: rgba(0, 214, 126, 0.25); }
+
+
+/* ─── Agent activity ribbon (the hero) ────────────────────────── */
+
+.cl-home-activity {
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  overflow: hidden;
+}
+
+.cl-home-activity-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.cl-home-activity-head h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.cl-home-activity-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--cl-ink-muted);
+}
+
+.cl-home-activity-pulse {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cl-mint-strong);
+  animation: cl-home-pulse 2.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.cl-home-activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cl-home-activity-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--cl-border);
+  cursor: pointer;
+  transition: background 0.08s;
+}
+.cl-home-activity-row:last-child { border-bottom: 0; }
+.cl-home-activity-row:hover { background: var(--cl-bg); }
+
+.cl-home-activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+.cl-home-activity-dot-success { background: var(--cl-mint-strong); }
+.cl-home-activity-dot-warning { background: #F59E0B; }
+.cl-home-activity-dot-error   { background: #DC2626; }
+.cl-home-activity-dot-info    { background: #94A3B8; }
+
+.cl-home-activity-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cl-home-activity-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cl-home-activity-action {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+}
+
+.cl-home-activity-subject {
+  font-size: 13px;
+  color: var(--cl-ink-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-home-activity-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--cl-ink-muted);
+}
+
+.cl-home-activity-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-home-activity-actor,
+.cl-home-activity-surface {
+  text-transform: capitalize;
+}
+
+.cl-home-activity-sep {
+  color: var(--cl-ink-muted);
+  opacity: 0.6;
+}
+
 
 /* Activity + vendors grid */
 .cl-home-grid {
@@ -270,36 +457,6 @@
   color: var(--cl-ink-muted);
   font-size: 13px;
 }
-
-/* Quick-access cards (used by .cl-home-quick-row) */
-.cl-home-qa {
-  text-align: left;
-  padding: 14px 16px;
-  background: var(--cl-surface);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius);
-  cursor: pointer;
-  font-family: inherit;
-  transition: border-color 0.12s, transform 0.08s;
-}
-
-.cl-home-qa:hover {
-  border-color: var(--cl-mint-strong);
-  transform: translateY(-1px);
-}
-
-.cl-home-qa-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--cl-ink-primary);
-}
-
-.cl-home-qa-desc {
-  font-size: 12px;
-  color: var(--cl-ink-secondary);
-  margin-top: 3px;
-}
-
 
 /* Module 1 — Approver workload strip */
 

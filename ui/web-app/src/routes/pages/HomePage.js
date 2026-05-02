@@ -6,30 +6,37 @@ import { useBootstrap, useOrgId } from '../../shell/BootstrapContext.js';
 import { formatAmount } from '../../utils/formatters.js';
 
 /**
- * Workspace Home — foyer, not dashboard.
+ * Workspace Home — coordination-layer control center.
  *
- * DESIGN.md §Home Pattern: lightweight foyer, open and light.
- * Order: welcome → thin status banner (if needed) → horizontal
- * quick-access strip → broad 2-column panels for work in progress.
+ * DESIGN.md §Workspace Surface Pattern: this is the leader's daily
+ * landing page. It shows the live state of the coordination layer —
+ * what the agent is doing across surfaces right now, what needs
+ * judgment, what just shipped to ERP. Reference hierarchy: Linear
+ * (real-time activity, dense lists), Vercel deployments (live stream
+ * is the page), Datadog overview (professional density), Modal jobs
+ * (running work primary). NOT BILL.com / Ramp / Mixmax.
  *
- * The Module 1 spec asks for the four stat values (in flight,
- * awaiting approval, processed this week, agent exceptions) — we
- * keep them as a thin inline glance line under the welcome, NOT as
- * the page's lead element. Reference: Stripe Dashboard's discreet
- * metric strip, Mercury's resume-work calm.
+ * Page order:
+ *   1. Welcome header + primary actions
+ *   2. Onboarding banner (only if onboarding incomplete)
+ *   3. Compact stat strip (4 dense tiles, live-pulse indicators)
+ *   4. Agent activity ribbon (the hero — live stream of agent / op
+ *      actions across all surfaces)
+ *   5. 2-col panels: Exception queue + Top vendors
+ *   6. Approver workload
+ *   7. System status footer
  *
- * Each panel fetches independently so a slow endpoint doesn't gate
- * the rest of the page. Empty + error states are explicit; we never
- * show "Loading…" forever.
+ * Each panel fetches independently; one slow endpoint never gates
+ * the rest. SSE keeps stats / workload / activity live within ~15s.
  */
 
 function fmtRelative(ts) {
   if (!ts) return '';
   const d = new Date(ts);
   if (isNaN(d.getTime())) return '';
-  const now = Date.now();
-  const diff = now - d.getTime();
+  const diff = Date.now() - d.getTime();
   const sec = Math.round(diff / 1000);
+  if (sec < 5) return 'just now';
   if (sec < 60) return `${sec}s ago`;
   if (sec < 3600) return `${Math.round(sec / 60)}m ago`;
   if (sec < 86400) return `${Math.round(sec / 3600)}h ago`;
@@ -62,21 +69,32 @@ export function HomePage() {
   const [, navigate] = useLocation();
 
   const orgQuery = `organization_id=${encodeURIComponent(orgId)}`;
-  const upcoming = useEndpoint(`/api/ap/items/upcoming?${orgQuery}&limit=10`, [orgId]);
   const metrics = useEndpoint(`/api/ap/items/metrics/aggregation?${orgQuery}&vendor_limit=5`, [orgId]);
+  const upcoming = useEndpoint(`/api/ap/items/upcoming?${orgQuery}&limit=10`, [orgId]);
   const workload = useEndpoint('/api/workspace/dashboard/approver-workload', [orgId]);
   const exceptions = useEndpoint('/api/admin/box/exceptions?box_type=ap_item&limit=10', [orgId]);
+  const activity = useEndpoint('/api/workspace/dashboard/recent-activity?limit=20', [orgId]);
 
-  // SSE-pushed dashboard stats (Module 1 spec line 92, max 30s lag).
+  // SSE-pushed live updates: stats, workload, activity. Keeps the
+  // control center honest within ~15s of the agent acting (per
+  // Module 1 spec line 92, 30s ceiling).
   const [liveDashboard, setLiveDashboard] = useState(null);
+  const [liveActivity, setLiveActivity] = useState(null);
+  const [liveWorkload, setLiveWorkload] = useState(null);
+  const [streamPulse, setStreamPulse] = useState(0);  // increments on every frame; powers the live-pulse dot
+
   useEffect(() => {
     if (typeof EventSource === 'undefined') return undefined;
     const source = new EventSource('/api/workspace/dashboard/stream', { withCredentials: true });
     source.onmessage = (event) => {
       try {
         const frame = JSON.parse(event.data);
-        if (frame?.type === 'stats' && frame.data) setLiveDashboard(frame.data);
-      } catch { /* ignore */ }
+        if (!frame?.type) return;
+        if (frame.type === 'stats' && frame.data)    setLiveDashboard(frame.data);
+        if (frame.type === 'workload' && frame.data) setLiveWorkload(frame.data);
+        if (frame.type === 'activity' && frame.data) setLiveActivity(frame.data);
+        setStreamPulse((p) => (p + 1) % 1_000_000);
+      } catch { /* ignore bad frame */ }
     };
     source.onerror = () => { if (source.readyState === 2) source.close(); };
     return () => source.close();
@@ -105,10 +123,20 @@ export function HomePage() {
   const upcomingItems = upcoming.data?.items || upcoming.data?.upcoming || [];
   const topVendors = m.top_vendors || m.vendors || [];
 
+  // Activity ribbon: live SSE feed wins over the initial HTTP fetch.
+  const activityItems = (liveActivity?.items)
+    || (Array.isArray(activity.data?.items) ? activity.data.items : []);
+
+  // Workload: live SSE wins.
+  const workloadState = liveWorkload
+    ? { status: 'ready', data: liveWorkload, error: null }
+    : workload;
+
   const integrations = Array.isArray(bootstrap?.integrations) ? bootstrap.integrations : [];
   const agentLastAction = bootstrap?.dashboard_stats?.last_action_at
     || bootstrap?.dashboard?.last_action_at
     || dash.last_action_at
+    || activityItems[0]?.ts
     || null;
 
   const now = useMemo(() => new Date(), []);
@@ -120,21 +148,7 @@ export function HomePage() {
         <div class="cl-home-headline">
           <div class="cl-home-eyebrow">${today}</div>
           <h1 class="cl-home-title">Welcome back, ${userName}.</h1>
-          <p class="cl-home-sub">${orgName} · workspace overview</p>
-          <div class="cl-home-glance" aria-label="At a glance">
-            <span class="cl-home-glance-item">
-              <strong>${inFlight}</strong> in flight
-            </span>
-            <span class="cl-home-glance-item">
-              <strong>${awaitingApproval}</strong> awaiting approval
-            </span>
-            <span class="cl-home-glance-item">
-              <strong>${processedWeek}</strong> processed this week
-            </span>
-            <span class=${`cl-home-glance-item ${exceptionCount > 0 ? 'cl-home-glance-warn' : ''}`}>
-              <strong>${exceptionCount}</strong> ${exceptionCount === 1 ? 'exception' : 'exceptions'}
-            </span>
-          </div>
+          <p class="cl-home-sub">${orgName} · coordination layer</p>
         </div>
         <div class="cl-home-actions">
           <button class="cl-home-btn cl-home-btn-secondary" onClick=${() => navigate('/pipeline')}>
@@ -159,12 +173,45 @@ export function HomePage() {
           `
         : null}
 
-      <section class="cl-home-quick-row" aria-label="Quick access">
-        <${QuickAction} label="Open pipeline"        desc="See every AP item by stage"        onClick=${() => navigate('/pipeline')} />
-        <${QuickAction} label="Review queue"         desc="Items needing your call"           onClick=${() => navigate('/review')} />
-        <${QuickAction} label="Invite teammate"      desc="Add an approver or AP clerk"       onClick=${() => navigate('/settings')} />
-        <${QuickAction} label="Connect integration"  desc="ERP, Slack, Teams, Gmail"          onClick=${() => navigate('/connections')} />
+      <section class="cl-home-stat-strip" aria-label="Coordination layer at a glance">
+        <${StatTile}
+          label="In flight"
+          value=${inFlight}
+          sub=${inFlight === 0 ? 'No invoices in progress' : 'Across all open states'}
+          tone="brand"
+          live=${streamPulse > 0}
+          onClick=${() => navigate('/pipeline')}
+        />
+        <${StatTile}
+          label="Awaiting approval"
+          value=${awaitingApproval}
+          sub=${awaitingApproval === 0 ? 'No bottleneck' : 'In approver queues'}
+          tone=${awaitingApproval > 0 ? 'pending' : 'good'}
+          live=${streamPulse > 0}
+          onClick=${() => navigate('/pipeline?scope=approvals')}
+        />
+        <${StatTile}
+          label="Processed this week"
+          value=${processedWeek}
+          sub="Last 7 days · posted or closed"
+          tone="neutral"
+          live=${streamPulse > 0}
+        />
+        <${StatTile}
+          label="Agent exceptions"
+          value=${exceptionCount}
+          sub=${exceptionCount > 0 ? 'Need judgment' : 'Clean'}
+          tone=${exceptionCount > 0 ? 'warn' : 'good'}
+          live=${streamPulse > 0}
+          onClick=${() => exceptionCount > 0 && navigate('/exceptions')}
+        />
       </section>
+
+      <${AgentActivityRibbon}
+        state=${activity}
+        items=${activityItems}
+        live=${!!liveActivity}
+        navigate=${navigate} />
 
       <section class="cl-home-grid">
         <div class="cl-home-panel">
@@ -262,13 +309,130 @@ export function HomePage() {
         </div>
       </section>
 
-      <${ApproverWorkloadStrip} state=${workload} navigate=${navigate} />
+      <${ApproverWorkloadStrip} state=${workloadState} navigate=${navigate} />
 
       <${SystemStatusFooter}
         integrations=${integrations}
         agentLastAction=${agentLastAction}
         navigate=${navigate} />
     </div>
+  `;
+}
+
+
+// ─── Compact stat tile (control-center idiom) ─────────────────────
+//
+// Smaller / denser than a Bill / Ramp KPI tile. Live-pulse dot in the
+// corner indicates the SSE stream is connected. Tabular numerals.
+// Click navigates to the relevant slice.
+
+function StatTile({ label, value, sub, tone = 'neutral', live = false, onClick }) {
+  const clickable = typeof onClick === 'function';
+  return html`
+    <div
+      class=${`cl-home-stat cl-home-stat-${tone} ${clickable ? 'cl-home-stat-clickable' : ''}`}
+      onClick=${clickable ? onClick : undefined}
+      role=${clickable ? 'button' : undefined}
+      tabindex=${clickable ? 0 : undefined}>
+      <div class="cl-home-stat-head">
+        <span class="cl-home-stat-label">${label}</span>
+        ${live ? html`<span class="cl-home-stat-pulse" aria-label="Live"></span>` : null}
+      </div>
+      <div class="cl-home-stat-value">${value}</div>
+      ${sub ? html`<div class="cl-home-stat-sub">${sub}</div>` : null}
+    </div>
+  `;
+}
+
+
+// ─── Agent activity ribbon (the hero) ─────────────────────────────
+//
+// Live stream of the last N agent / operator actions across surfaces.
+// Modeled on Vercel deployments + Linear inbox: timestamp, verb,
+// subject, surface tag, click → AP record. Live-pulse dot when the
+// SSE stream is delivering frames; falls back to the initial HTTP
+// snapshot when SSE is unavailable.
+
+function AgentActivityRibbon({ state, items, live, navigate }) {
+  if ((!items || items.length === 0) && state.status === 'loading') {
+    return html`
+      <section class="cl-home-activity">
+        <header class="cl-home-activity-head">
+          <h2>Agent activity</h2>
+        </header>
+        <div class="cl-home-skeleton">Loading activity…</div>
+      </section>
+    `;
+  }
+
+  if ((!items || items.length === 0) && state.status === 'error') {
+    return html`
+      <section class="cl-home-activity">
+        <header class="cl-home-activity-head">
+          <h2>Agent activity</h2>
+        </header>
+        <div class="cl-home-empty">
+          <div class="cl-home-empty-title cl-home-empty-error">Couldn't load activity.</div>
+          <div class="cl-home-empty-sub">${state.error || 'Try again in a moment.'}</div>
+        </div>
+      </section>
+    `;
+  }
+
+  if (!items || items.length === 0) {
+    return html`
+      <section class="cl-home-activity">
+        <header class="cl-home-activity-head">
+          <h2>Agent activity</h2>
+          <span class="cl-home-activity-meta">No actions yet.</span>
+        </header>
+        <div class="cl-home-empty">
+          <div class="cl-home-empty-title">Nothing to show yet.</div>
+          <div class="cl-home-empty-sub">
+            Once invoices flow through, every agent and operator action
+            shows up here in real time — what was decided, where, and when.
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  return html`
+    <section class="cl-home-activity">
+      <header class="cl-home-activity-head">
+        <h2>Agent activity</h2>
+        <span class="cl-home-activity-meta">
+          ${live ? html`<span class="cl-home-activity-pulse" aria-hidden="true"></span> Live` : 'Recent'}
+          · last ${items.length}
+        </span>
+      </header>
+      <ul class="cl-home-activity-list">
+        ${items.map((row) => html`
+          <li class=${`cl-home-activity-row cl-home-activity-tone-${row.tone || 'info'}`}
+            key=${row.id || `${row.ts}-${row.event_type}`}
+            onClick=${() => row.box_id && navigate(`/records/${encodeURIComponent(row.box_id)}`)}
+            role=${row.box_id ? 'button' : undefined}
+            tabindex=${row.box_id ? 0 : undefined}>
+            <span class=${`cl-home-activity-dot cl-home-activity-dot-${row.tone || 'info'}`} aria-hidden="true"></span>
+            <div class="cl-home-activity-body">
+              <div class="cl-home-activity-line">
+                <span class="cl-home-activity-action">${row.action}</span>
+                <span class="cl-home-activity-subject">${row.subject}</span>
+              </div>
+              <div class="cl-home-activity-meta-row">
+                <span class="cl-home-activity-time">${fmtRelative(row.ts)}</span>
+                <span class="cl-home-activity-sep">·</span>
+                <span class="cl-home-activity-actor">${row.actor_label || 'Agent'}</span>
+                ${row.surface && row.surface !== 'agent' ? html`
+                  <span class="cl-home-activity-sep">·</span>
+                  <span class="cl-home-activity-surface">via ${row.surface}</span>
+                ` : null}
+              </div>
+            </div>
+          </li>
+        `)}
+      </ul>
+    </section>
   `;
 }
 
@@ -360,9 +524,7 @@ function ApproverWorkloadStrip({ state, navigate }) {
             </div>
             <div class="cl-home-workload-stats">
               <span class="cl-home-workload-count">${a.pending_count}</span>
-              <span class="cl-home-workload-count-label">
-                pending
-              </span>
+              <span class="cl-home-workload-count-label">pending</span>
               ${a.oldest_pending_age_days != null ? html`
                 <span class=${`cl-home-workload-age cl-home-workload-age-${ageTone(a.oldest_pending_age_days)}`}>
                   oldest ${a.oldest_pending_age_days}d
@@ -373,9 +535,7 @@ function ApproverWorkloadStrip({ state, navigate }) {
         `)}
       </ul>
       ${approvers.length > 8 ? html`
-        <div class="cl-home-workload-more">
-          + ${approvers.length - 8} more approvers
-        </div>
+        <div class="cl-home-workload-more">+ ${approvers.length - 8} more approvers</div>
       ` : null}
     </section>
   `;
@@ -388,17 +548,7 @@ function ageTone(days) {
 }
 
 
-function QuickAction({ label, desc, onClick }) {
-  return html`
-    <button class="cl-home-qa" onClick=${onClick}>
-      <div class="cl-home-qa-label">${label}</div>
-      <div class="cl-home-qa-desc">${desc}</div>
-    </button>
-  `;
-}
-
-
-// ─── Module 1 — System status footer ──────────────────────────────
+// ─── System status footer ─────────────────────────────────────────
 
 function SystemStatusFooter({ integrations, agentLastAction, navigate }) {
   const watch = integrations.find((i) => i.name === 'gmail') || {};

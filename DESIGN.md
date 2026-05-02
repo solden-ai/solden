@@ -148,22 +148,34 @@
   - long explanatory copy
   - admin/settings sprawl
 
-## Workspace Home Pattern
-- The workspace Home (`workspace.clearledgr.com/`) inherits the foyer doctrine. It is **not** a BILL.com / Ramp / Mixmax admin overview, even though it's the leader's daily landing page.
-- Reference hierarchy: **Streak Home** (foyer minimalism), **Stripe Dashboard** (discreet metric strip + typography discipline), **Mercury** (resume-work calm). Never BILL.com or Ramp.
-- Module 1 spec asks for four numbers — in flight, awaiting approval, processed this week, agent exceptions. They live as a **thin inline glance line** under the welcome header (one row of muted text with bolded tabular-nums values), never as a row of large KPI tiles. Numbers are visible at a glance; they do not dominate.
+## Workspace Surface Pattern
+- The Workspace Home (`workspace.clearledgr.com/`) is the **coordination-layer control center** — the leader's daily landing page where they see what the agent is doing across every surface (Gmail, Slack, Teams, NetSuite SuiteApp, SAP Fiori extension) right now, what needs human judgment, what just shipped to ERP. It is **not** a foyer (Gmail-era doctrine, retained for the Gmail surface), and it is **not** a BILL.com / Ramp / Mixmax admin overview.
+- Reference hierarchy:
+  - **Linear** — sticky command-center feel, real-time activity, dense lists with status indicators
+  - **Vercel deployments** — live activity stream is the page; metrics are sidecar
+  - **Datadog overview** — professional density, real-time pulse, restrained typography
+  - **Modal jobs** — running work primary, history secondary
+  - **Stripe Dashboard** — typography discipline + tabular numerals (carries over from prior doctrine)
+  - **Anti-references**: BILL.com, Ramp admin, Mixmax overview, generic SaaS dashboards.
+- The **hero** of the page is the **agent activity ribbon** — a live SSE-driven stream of recent agent / operator actions across every surface. Each row: tone-dot + verb + subject + timestamp + actor + surface. The page literally changes while the leader watches.
+- Stat tiles **return** as a compact control-center row (four dense tiles, each ~90px tall, tabular-nums, with a small live-pulse dot in the corner). Not a big BILL.com KPI row — a calm Linear / Vercel-style strip.
 - Order on the workspace Home:
-  1. Welcome header with date eyebrow, name, org sub, inline glance line, and one secondary + one primary action
+  1. Welcome header with date eyebrow, name, "coordination layer" sub, and one secondary + one primary action button
   2. Onboarding banner (only when `onboarding.completed === false`)
-  3. Horizontal quick-access strip (4 cards: Open pipeline, Reconciliation, Invite teammate, Connect integration)
-  4. Two-column main panels: Exception queue (1.4fr) + Top vendors (1fr)
-  5. Approver workload (logistics, not scoring)
-  6. System status footer (agent + Gmail + approval surface + ERP)
+  3. **Compact stat strip** — 4 tiles: In flight · Awaiting approval · Processed this week · Agent exceptions
+  4. **Agent activity ribbon (hero)** — live stream of last ~20 agent / operator actions
+  5. Two-column main panels: Exception queue (1.4fr) + Top vendors (1fr)
+  6. Approver workload (logistics, not scoring)
+  7. System status footer (agent + Gmail + approval surface + ERP)
+- The Workspace Home does **not** carry a horizontal "quick-access cards" strip. Quick navigation lives in the header buttons + the `⌘K` palette. Linear / Vercel / Datadog do not surface a quick-action card row on their landing pages.
 - Anti-patterns specific to the workspace Home:
-  - Big KPI tile row leading the page
-  - Dashboard-shaped "control center" framing
-  - Sticky `Loading…` placeholders — every panel must fall through to a real empty or error state. Each panel fetches independently; one slow endpoint never gates the rest of the page.
-  - Modeling the page on BILL.com / Ramp / Mixmax
+  - **Foyer framing** — calling the page a "lightweight foyer" or "hub" understates what it does. The workspace is where the leader watches the coordination layer; framing it as a foyer leads to a static page with no live signal.
+  - **BILL.com KPI tile row** — big static numbers leading the page with no live pulse, no activity context. The numbers belong as compact tiles, not as the hero element.
+  - **Sticky `Loading…` placeholders** — every panel falls through to an empty or error state. Each panel fetches independently; one slow endpoint never gates the rest of the page.
+  - **Static-only data** — if the page doesn't change while the leader watches, the live SSE stream is broken or under-used. The activity ribbon is the canary for "is the control center actually live?"
+
+## Home Pattern (Gmail surface only)
+- The §Home Pattern above (welcome → quick-access strip → 2-col panels) applies to the **Gmail extension's Home route**, where Streak's foyer model is the right reference. The Workspace Surface Pattern (this section) supersedes it for `workspace.clearledgr.com/`.
 
 ## Pipeline Pattern
 - Pipeline is the main operating surface for finance teams.
@@ -245,3 +257,4 @@
 | 2026-03-23 | Home redefined as a hub, not a dashboard | The product should resume work quickly instead of explaining itself |
 | 2026-03-23 | Primary Gmail work path narrowed to Home, Pipeline, Review, Upcoming | Keeps the product legible and operational inside Gmail |
 | 2026-05-02 | Workspace Home defined as a foyer, not a BILL.com / Ramp dashboard | Page was leading with a big KPI tile row, modeled on Bill / Ramp / Mixmax. Mo flagged it. Numbers belong as a thin glance line under the welcome; quick access lifts to position #3; two-column panels carry the work. Streak / Stripe / Mercury references stand. |
+| 2026-05-02 | Workspace Home recalibrated: coordination-layer control center, not foyer | Mo: DESIGN.md was Gmail-era (Streak foyer). Once Solden broadened to a coordination layer with Gmail / Slack / Teams / NetSuite / SAP as render targets and the workspace as the control center, the foyer doctrine no longer fits the workspace surface. Reference hierarchy moves to Linear / Vercel / Datadog / Modal (still anti-Bill / anti-Ramp). Hero becomes the live agent activity ribbon (SSE-driven); stat tiles return as a compact control-center row with a live-pulse dot; quick-access cards drop (header + ⌘K cover navigation). Foyer pattern preserved for the Gmail Home only. |
