@@ -28,6 +28,10 @@ keys/
 Screenshot *.png
 Claude rules.jpeg
 
+# Brand-asset source folder — derived PNGs live in ui/web-app/public/.
+# Keep the master sources locally for re-export, not in the repo.
+solden logo/
+
 # Local build/package artifacts
 *.zip
 ui/gmail-extension/build/config.js

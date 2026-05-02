@@ -43,7 +43,7 @@ export function InviteAcceptPage() {
     return html`
       <main class="cl-auth-shell">
         <div class="cl-auth-card">
-          <div class="cl-auth-brand"><${BrandMark} size=${28} /><span class="cl-auth-brand-name">solden</span></div>
+          <div class="cl-auth-brand"><${BrandMark} height=${36} /></div>
           <h1 class="cl-auth-title">Invite link incomplete</h1>
           <p class="cl-auth-sub">
             The invite token is missing from this URL. Open the link from
@@ -102,7 +102,7 @@ export function InviteAcceptPage() {
   return html`
     <main class="cl-auth-shell">
       <div class="cl-auth-card">
-        <div class="cl-auth-brand"><${BrandMark} size=${28} /><span class="cl-auth-brand-name">solden</span></div>
+        <div class="cl-auth-brand"><${BrandMark} height=${36} /></div>
         <h1 class="cl-auth-title">Join your team</h1>
         <p class="cl-auth-sub">
           Set a password to finish accepting your invite. You'll sign in

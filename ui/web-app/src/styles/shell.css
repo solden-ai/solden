@@ -43,23 +43,7 @@
 .cl-sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
   padding: 4px 12px 24px;
-  color: #fff;
-}
-
-.cl-sidebar-mark {
-  flex-shrink: 0;
-  display: block;
-}
-
-.cl-sidebar-wordmark {
-  font-family: var(--cl-font-brand);
-  font-weight: 700;
-  font-size: 18px;
-  letter-spacing: -0.01em;
-  text-transform: lowercase;
-  color: #fff;
 }
 
 .cl-sidebar-group {
@@ -370,17 +354,7 @@
 .cl-auth-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
   margin-bottom: 24px;
-}
-
-.cl-auth-brand-name {
-  font-family: var(--cl-font-brand);
-  font-weight: 700;
-  font-size: 22px;
-  color: var(--cl-navy);
-  letter-spacing: -0.015em;
-  text-transform: lowercase;
 }
 
 .cl-auth-title {

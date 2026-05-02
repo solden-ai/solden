@@ -88,8 +88,7 @@ export function LoginPage() {
     <main class="cl-auth-shell">
       <div class="cl-auth-card">
         <div class="cl-auth-brand">
-          <${BrandMark} size=${28} />
-          <span class="cl-auth-brand-name">solden</span>
+          <${BrandMark} height=${36} />
         </div>
         <h1 class="cl-auth-title">Sign in</h1>
         <p class="cl-auth-sub">Coordination layer for finance teams.</p>

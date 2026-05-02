@@ -36,8 +36,7 @@ export function SidebarNav() {
   return html`
     <nav class="cl-sidebar-nav" aria-label="Primary">
       <div class="cl-sidebar-brand">
-        <${BrandMark} size=${24} tone="on-dark" class="cl-sidebar-mark" />
-        <span class="cl-sidebar-wordmark">solden</span>
+        <${BrandMark} height=${28} tone="on-dark" />
       </div>
       ${groups.map(
         (group) => html`
