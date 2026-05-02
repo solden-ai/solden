@@ -721,6 +721,8 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         r"^/api/workspace/ap-items/[^/]+/detail$",
         # Module 2 — Ask the agent Q&A surface.
         r"^/api/workspace/ap-items/[^/]+/ask$",
+        # Bank-match status for one AP item (closing leg of AP).
+        r"^/api/workspace/ap-items/[^/]+/bank-match$",
         r"^/api/agent/intents/skills/[^/]+/readiness$",
         r"^/api/agent/sessions/[^/]+$",
         r"^/api/agent/sessions/[^/]+/commands$",

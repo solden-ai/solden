@@ -445,6 +445,113 @@ def ask_the_agent_endpoint(
     )
 
 
+@router.get("/ap-items/{ap_item_id}/bank-match")
+def get_ap_item_bank_match(
+    ap_item_id: str,
+    user: TokenData = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Bank reconciliation status for one AP item.
+
+    Pulls ``payment_confirmations`` for the bill, then the matched
+    ``bank_statement_lines`` linked to those confirmations. Returns
+    a composite ``status`` the SPA renders on the record detail page:
+
+      - ``no_payment``     — the bill hasn't been paid yet (no
+                             confirmation rows). Bank match doesn't
+                             apply at this stage.
+      - ``awaiting_match`` — payment confirmed by the ERP but no
+                             bank statement line has matched it yet.
+                             Either no statement imported or the
+                             matcher hasn't found the line.
+      - ``matched``        — every confirmation has a matched/
+                             reconciled bank line. Closes the loop.
+      - ``ambiguous``      — at least one bank line is ``ambiguous``
+                             or ``unmatched`` despite being linked to
+                             a confirmation. Needs human review.
+    """
+    organization_id = getattr(user, "organization_id", None) or "default"
+    db = get_db()
+
+    # _resolve_item_for_detail enforces tenant isolation; cross-tenant
+    # ids 404 without leaking membership.
+    item = _resolve_item_for_detail(
+        db, organization_id=organization_id, ap_item_ref=ap_item_id,
+    )
+    resolved_id = item.get("id") or ap_item_id
+
+    confirmations: List[Dict[str, Any]] = []
+    if hasattr(db, "list_payment_confirmations_for_ap_item"):
+        try:
+            confirmations = db.list_payment_confirmations_for_ap_item(
+                organization_id, resolved_id,
+            ) or []
+        except Exception as exc:
+            logger.warning(
+                "[bank-match] confirmations lookup failed for %s: %s",
+                resolved_id, exc,
+            )
+
+    confirmation_ids = [str(c.get("id")) for c in confirmations if c.get("id")]
+    lines: List[Dict[str, Any]] = []
+    if confirmation_ids and hasattr(db, "list_bank_statement_lines_for_confirmations"):
+        try:
+            lines = db.list_bank_statement_lines_for_confirmations(
+                organization_id, confirmation_ids,
+            ) or []
+        except Exception as exc:
+            logger.warning(
+                "[bank-match] lines lookup failed for %s: %s",
+                resolved_id, exc,
+            )
+
+    if not confirmations:
+        status = "no_payment"
+    elif not lines:
+        status = "awaiting_match"
+    else:
+        clean_states = {"matched", "reconciled"}
+        if all(str(l.get("match_status") or "").lower() in clean_states for l in lines):
+            status = "matched"
+        else:
+            status = "ambiguous"
+
+    def _compact_confirmation(c: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "id": c.get("id"),
+            "source": c.get("source"),
+            "payment_id": c.get("payment_id"),
+            "status": c.get("status"),
+            "amount": float(c["amount"]) if c.get("amount") is not None else None,
+            "currency": c.get("currency"),
+            "settlement_at": c.get("settlement_at"),
+            "rail": c.get("rail"),
+            "payment_reference": c.get("payment_reference"),
+        }
+
+    def _compact_line(line: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "id": line.get("id"),
+            "import_id": line.get("import_id"),
+            "value_date": line.get("value_date"),
+            "amount": float(line["amount"]) if line.get("amount") is not None else None,
+            "currency": line.get("currency"),
+            "counterparty": line.get("counterparty"),
+            "description": line.get("description"),
+            "bank_reference": line.get("bank_reference"),
+            "match_status": line.get("match_status"),
+            "match_confidence": line.get("match_confidence"),
+            "match_reason": line.get("match_reason"),
+            "payment_confirmation_id": line.get("payment_confirmation_id"),
+        }
+
+    return {
+        "status": status,
+        "ap_item_id": resolved_id,
+        "confirmations": [_compact_confirmation(c) for c in confirmations],
+        "lines": [_compact_line(l) for l in lines],
+    }
+
+
 @router.get("/ap-items/{ap_item_id}/detail")
 def get_ap_item_detail(
     ap_item_id: str,

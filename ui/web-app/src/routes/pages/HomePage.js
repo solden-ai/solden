@@ -161,7 +161,7 @@ export function HomePage() {
 
       <section class="cl-home-quick-row" aria-label="Quick access">
         <${QuickAction} label="Open pipeline"        desc="See every AP item by stage"        onClick=${() => navigate('/pipeline')} />
-        <${QuickAction} label="Reconciliation"       desc="Match bank ↔ ERP"                  onClick=${() => navigate('/reconciliation')} />
+        <${QuickAction} label="Review queue"         desc="Items needing your call"           onClick=${() => navigate('/review')} />
         <${QuickAction} label="Invite teammate"      desc="Add an approver or AP clerk"       onClick=${() => navigate('/settings')} />
         <${QuickAction} label="Connect integration"  desc="ERP, Slack, Teams, Gmail"          onClick=${() => navigate('/connections')} />
       </section>

@@ -19,8 +19,8 @@ import { useBootstrap } from './BootstrapContext.js';
  *     bootstrap.
  *
  * Daily-work surfaces (/pipeline, /review, /exceptions, /vendors,
- * /reconciliation, /activity) intentionally stay gated — there's no
- * meaningful work to do on them before integrations are connected.
+ * /activity) intentionally stay gated — there's no meaningful work
+ * to do on them before integrations are connected.
  *
  * The gate is opt-in via bootstrap.onboarding.completed === false.
  * If bootstrap is unloaded or the field is missing, render through
@@ -47,7 +47,6 @@ const ONBOARDING_PASSTHROUGH = new Set([
   '/review',
   '/exceptions',
   '/vendors',
-  '/reconciliation',
   '/activity',
   '/reports',
   '/approval-rules',

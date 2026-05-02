@@ -22,7 +22,6 @@ import { RulesRoute } from './routes/pages/RulesRoute.js';
 import { VendorDetailRoute } from './routes/pages/VendorDetailRoute.js';
 import { ExceptionsRoute } from './routes/pages/ExceptionsRoute.js';
 import { VendorsRoute } from './routes/pages/VendorsRoute.js';
-import { ReconciliationRoute } from './routes/pages/ReconciliationRoute.js';
 import { ActivityRoute } from './routes/pages/ActivityRoute.js';
 import { AuditLogRoute } from './routes/pages/AuditLogRoute.js';
 import { ConnectionsRoute } from './routes/pages/ConnectionsRoute.js';
@@ -58,7 +57,6 @@ export function App() {
                     <${Route} path="/vendors/:name">
                       ${(params) => html`<${VendorDetailRoute} vendorName=${decodeURIComponent(params.name || '')} />`}
                     <//>
-                    <${Route} path="/reconciliation"><${ReconciliationRoute} /><//>
                     <${Route} path="/activity"><${ActivityRoute} /><//>
                     <${Route} path="/audit"><${AuditLogRoute} /><//>
                     <${Route} path="/reports"><${ReportsRoute} /><//>

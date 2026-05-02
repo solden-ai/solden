@@ -12,7 +12,7 @@ import { setFaviconBadge } from '../lib/faviconBadge.js';
  *
  * The provider also exposes a `refresh` callback that re-fetches
  * /api/workspace/bootstrap; pages that take an `onRefresh` prop
- * (ConnectionsPage, SettingsPage, ReconciliationPage, etc.) get this
+ * (ConnectionsPage, SettingsPage, etc.) get this
  * via `usePageProps()` so admin actions which change integration
  * state can invalidate the cached bootstrap.
  */

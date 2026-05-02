@@ -233,6 +233,33 @@ class BankStatementStore:
             if d is not None
         ]
 
+    def list_bank_statement_lines_for_confirmations(
+        self,
+        organization_id: str,
+        confirmation_ids: List[str],
+    ) -> List[Dict[str, Any]]:
+        """Return every statement line linked to one of these
+        ``payment_confirmation_id``s. Used by the AP record detail
+        page to render the bank-match panel — given an AP item's
+        confirmations, find which bank lines have matched them."""
+        self.initialize()
+        if not confirmation_ids:
+            return []
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT * FROM bank_statement_lines "
+                "WHERE organization_id = %s "
+                "AND payment_confirmation_id = ANY(%s) "
+                "ORDER BY value_date DESC NULLS LAST, line_index ASC",
+                (organization_id, list(confirmation_ids)),
+            )
+            rows = cur.fetchall()
+        return [
+            d for d in (self._decode_bank_line_row(r) for r in rows)
+            if d is not None
+        ]
+
     def update_bank_statement_line_match(
         self,
         line_id: str,

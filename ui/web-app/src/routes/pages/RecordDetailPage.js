@@ -205,6 +205,8 @@ export default function RecordDetailPage({
         <${ThreeWayMatchPanel} match=${match} />
       </div>
 
+      <${BankMatchPanel} api=${api} recordId=${recordId} item=${item} />
+
       <${WorkflowTimeline} events=${timeline} />
     </div>
   `;
@@ -842,6 +844,179 @@ function ThreeWayMatchPanel({ match }) {
 }
 
 
+// ─── Bank match (closing leg of AP) ─────────────────────────────────
+//
+// AP item posts to ERP → vendor paid → bank statement line clears →
+// bank-rec matches the line back to the posted AP item → record
+// moves Posted → Paid → Closed. This panel surfaces that final leg
+// on the AP record itself, since reconciliation is AP-subordinate
+// (not a peer surface). Backed by GET /ap-items/{id}/bank-match
+// which composes payment_confirmations + bank_statement_lines.
+
+const BANK_MATCH_LABEL = {
+  no_payment: 'Awaiting payment',
+  awaiting_match: 'Paid · awaiting bank match',
+  matched: 'Reconciled to bank',
+  ambiguous: 'Match needs review',
+};
+
+const BANK_MATCH_TONE = {
+  no_payment: 'info',
+  awaiting_match: 'info',
+  matched: 'success',
+  ambiguous: 'warning',
+};
+
+function BankMatchPanel({ api, recordId, item }) {
+  const [state, setState] = useState({ status: 'loading', data: null, error: null });
+
+  useEffect(() => {
+    if (!recordId) return undefined;
+    let cancelled = false;
+    setState({ status: 'loading', data: null, error: null });
+    api(`/api/workspace/ap-items/${encodeURIComponent(recordId)}/bank-match`, { silent: true })
+      .then((data) => { if (!cancelled) setState({ status: 'ready', data, error: null }); })
+      .catch((err) => { if (!cancelled) setState({ status: 'error', data: null, error: err?.message || 'load_failed' }); });
+    return () => { cancelled = true; };
+  }, [recordId, api]);
+
+  // Hide the panel for AP states where bank match doesn't apply yet —
+  // the bill needs to at least be approved/posted before payment is
+  // even possible. Pre-posting states get Three-way match instead.
+  const stateLc = String(item?.state || item?.status || '').toLowerCase();
+  const PRE_POSTING = new Set([
+    'received', 'validated', 'needs_info', 'needs_approval',
+    'pending_approval', 'needs_second_approval', 'rejected', 'snoozed',
+  ]);
+  if (PRE_POSTING.has(stateLc)) return null;
+
+  if (state.status === 'loading') {
+    return html`
+      <section class="cl-record-panel">
+        <header class="cl-record-panel-head">
+          <h2>Bank match</h2>
+        </header>
+        <div class="cl-record-bank-skeleton">Loading bank match…</div>
+      </section>
+    `;
+  }
+
+  if (state.status === 'error') {
+    return html`
+      <section class="cl-record-panel">
+        <header class="cl-record-panel-head">
+          <h2>Bank match</h2>
+        </header>
+        <p class="cl-record-empty cl-record-empty-error">
+          Couldn't load bank-match status. ${state.error || ''}
+        </p>
+      </section>
+    `;
+  }
+
+  const { status, confirmations = [], lines = [] } = state.data || {};
+  const tone = BANK_MATCH_TONE[status] || 'neutral';
+  const label = BANK_MATCH_LABEL[status] || 'Unknown';
+
+  return html`
+    <section class="cl-record-panel">
+      <header class="cl-record-panel-head">
+        <h2>Bank match</h2>
+        <span class=${`cl-record-chip cl-record-chip-${tone}`}>${label}</span>
+      </header>
+
+      ${status === 'no_payment' ? html`
+        <p class="cl-record-empty">
+          The bill hasn't been paid yet. Bank reconciliation closes the loop
+          once the ERP confirms a payment and the bank statement clears.
+        </p>
+      ` : null}
+
+      ${status === 'awaiting_match' ? html`
+        <div class="cl-record-bank-summary">
+          <p class="cl-record-empty">
+            Payment confirmed. Waiting for the bank statement line to import
+            and match. Either no statement covering this date has been
+            ingested, or the matcher couldn't find the line yet.
+          </p>
+        </div>
+      ` : null}
+
+      ${confirmations.length > 0 ? html`
+        <div class="cl-record-bank-block">
+          <h3 class="cl-record-bank-subhead">Payment confirmations</h3>
+          <ul class="cl-record-bank-list">
+            ${confirmations.map((c) => html`
+              <li class="cl-record-bank-row" key=${c.id}>
+                <div class="cl-record-bank-row-main">
+                  <div class="cl-record-bank-row-amount">
+                    ${c.amount != null ? formatBankAmount(c.amount, c.currency) : '—'}
+                  </div>
+                  <div class="cl-record-bank-row-meta">
+                    ${c.source || 'erp'}
+                    ${c.rail ? ` · ${c.rail}` : ''}
+                    ${c.payment_reference ? ` · ${c.payment_reference}` : ''}
+                  </div>
+                </div>
+                <div class="cl-record-bank-row-side">
+                  <span class=${`cl-record-chip cl-record-chip-${c.status === 'confirmed' ? 'success' : c.status === 'failed' ? 'error' : 'info'}`}>
+                    ${c.status || 'pending'}
+                  </span>
+                  ${c.settlement_at ? html`
+                    <div class="cl-record-bank-row-meta">${fmtDate(c.settlement_at)}</div>
+                  ` : null}
+                </div>
+              </li>
+            `)}
+          </ul>
+        </div>
+      ` : null}
+
+      ${lines.length > 0 ? html`
+        <div class="cl-record-bank-block">
+          <h3 class="cl-record-bank-subhead">Bank statement lines</h3>
+          <ul class="cl-record-bank-list">
+            ${lines.map((line) => html`
+              <li class="cl-record-bank-row" key=${line.id}>
+                <div class="cl-record-bank-row-main">
+                  <div class="cl-record-bank-row-amount">
+                    ${line.amount != null ? formatBankAmount(line.amount, line.currency) : '—'}
+                  </div>
+                  <div class="cl-record-bank-row-meta">
+                    ${line.counterparty || line.description || 'bank line'}
+                    ${line.bank_reference ? ` · ${line.bank_reference}` : ''}
+                  </div>
+                </div>
+                <div class="cl-record-bank-row-side">
+                  <span class=${`cl-record-chip cl-record-chip-${matchStatusTone(line.match_status)}`}>
+                    ${line.match_status || 'unknown'}
+                  </span>
+                  ${line.value_date ? html`
+                    <div class="cl-record-bank-row-meta">${fmtDate(line.value_date)}</div>
+                  ` : null}
+                </div>
+              </li>
+            `)}
+          </ul>
+        </div>
+      ` : null}
+    </section>
+  `;
+}
+
+function formatBankAmount(amount, currency) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currency || 'USD',
+      maximumFractionDigits: 2,
+    }).format(Number(amount));
+  } catch {
+    return `${amount} ${currency || ''}`.trim();
+  }
+}
+
+
 // ─── Workflow timeline ──────────────────────────────────────────────
 
 function WorkflowTimeline({ events }) {
@@ -921,10 +1096,11 @@ function formatMatchStatus(status) {
 
 function matchStatusTone(status) {
   const s = String(status || '').toLowerCase();
-  if (s === 'matched' || s === 'match') return 'success';
+  if (s === 'matched' || s === 'match' || s === 'reconciled') return 'success';
   if (s === 'no_po' || s === 'pending') return 'info';
   if (s === 'exception' || s === 'mismatch') return 'error';
-  if (s === 'partial' || s === 'partial_match' || s === 'partial_match_warn') return 'warning';
+  if (s === 'partial' || s === 'partial_match' || s === 'partial_match_warn'
+      || s === 'ambiguous' || s === 'unmatched') return 'warning';
   return 'info';
 }
 

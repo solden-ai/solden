@@ -25,7 +25,6 @@ const NAV_ENTRIES = [
   { kind: 'nav', label: 'Review queue', sub: 'Items needing attention', path: '/review', tokens: ['review', 'queue'] },
   { kind: 'nav', label: 'Exceptions', sub: 'Items with blockers', path: '/exceptions', tokens: ['exceptions', 'errors', 'blockers'] },
   { kind: 'nav', label: 'Vendors', sub: 'Vendor directory', path: '/vendors', tokens: ['vendors', 'suppliers'] },
-  { kind: 'nav', label: 'Reconciliation', sub: 'Match bank ↔ ERP', path: '/reconciliation', tokens: ['reconciliation', 'recon', 'match'] },
   { kind: 'nav', label: 'Activity', sub: 'Audit trail', path: '/activity', tokens: ['activity', 'audit', 'history'] },
   { kind: 'nav', label: 'Connections', sub: 'ERP, Slack, Teams, Gmail', path: '/connections', tokens: ['connections', 'integrations', 'erp', 'slack', 'teams', 'gmail'] },
   { kind: 'nav', label: 'Settings', sub: 'Org, users, policies, billing', path: '/settings', tokens: ['settings', 'config', 'preferences', 'billing'] },

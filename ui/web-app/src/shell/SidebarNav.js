@@ -13,7 +13,6 @@ export const NAV_ITEMS = [
   { path: '/review', label: 'Review queue', group: 'work' },
   { path: '/exceptions', label: 'Exceptions', group: 'work' },
   { path: '/vendors', label: 'Vendors', group: 'work' },
-  { path: '/reconciliation', label: 'Reconciliation', group: 'work' },
   { path: '/activity', label: 'Activity', group: 'ops' },
   { path: '/audit', label: 'Audit log', group: 'ops' },
   { path: '/reports', label: 'Reports', group: 'ops' },
