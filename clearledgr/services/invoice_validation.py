@@ -826,8 +826,23 @@ class InvoiceValidationMixin:
         workflow_id: Optional[str],
         run_id: Optional[str],
         decision_reason: Optional[str],
+        actor_type: Optional[str] = None,
+        actor_id: Optional[str] = None,
+        intent: Optional[str] = None,
+        ui_surface: Optional[str] = None,
     ) -> None:
-        """Attach tracking metadata to kwargs before a DB status update."""
+        """Attach tracking metadata to kwargs before a DB status update.
+
+        Phase 2 (audit-trail compose) — propagates ``_actor_type`` /
+        ``_actor_id`` / ``_intent`` / ``_ui_surface`` so the operator-
+        driven workflow methods (approve_invoice / reject_invoice /
+        request_info / route_low_risk_for_approval) carry the human's
+        attribution into the state_transition audit row that Phase 1's
+        decision_context auto-build reads. Without this, every state
+        transition driven through ``_transition_invoice_state`` lost
+        ``actor_type`` to the default ``"system"``, even when the row
+        was changing because a human clicked Approve in Teams / Slack.
+        """
         if correlation_id:
             kwargs["_correlation_id"] = correlation_id
         if source:
@@ -838,6 +853,14 @@ class InvoiceValidationMixin:
             kwargs["_run_id"] = run_id
         if decision_reason:
             kwargs["_decision_reason"] = decision_reason
+        if actor_type:
+            kwargs["_actor_type"] = actor_type
+        if actor_id:
+            kwargs["_actor_id"] = actor_id
+        if intent:
+            kwargs["_intent"] = intent
+        if ui_surface:
+            kwargs["_ui_surface"] = ui_surface
 
     def _transition_invoice_state(
         self,
@@ -848,6 +871,10 @@ class InvoiceValidationMixin:
         workflow_id: Optional[str] = None,
         run_id: Optional[str] = None,
         decision_reason: Optional[str] = None,
+        actor_type: Optional[str] = None,
+        actor_id: Optional[str] = None,
+        intent: Optional[str] = None,
+        ui_surface: Optional[str] = None,
         **kwargs: Any,
     ) -> bool:
         """
@@ -879,6 +906,10 @@ class InvoiceValidationMixin:
             workflow_id=workflow_id,
             run_id=run_id,
             decision_reason=decision_reason,
+            actor_type=actor_type,
+            actor_id=actor_id,
+            intent=intent,
+            ui_surface=ui_surface,
         )
 
         if current_state == normalized_target:

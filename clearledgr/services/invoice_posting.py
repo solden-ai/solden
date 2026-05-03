@@ -402,24 +402,64 @@ class InvoicePostingMixin:
 
         approved_at = datetime.now(timezone.utc).isoformat()
         current_state = invoice_state
+        # Phase 2 (audit-trail compose) — every state transition driven
+        # by an operator-initiated approve_invoice carries the operator's
+        # channel as ``source``. Without this, ``_transition_invoice_state``
+        # falls back to its default ``"invoice_workflow"`` and Phase 1's
+        # decision_context auto-build records ``ui_surface="invoice_workflow"``
+        # instead of ``"slack"`` / ``"teams"`` — losing the operator-surface
+        # attribution the SoR audit chain depends on.
         if current_state == "received":
-            self._transition_invoice_state(gmail_id, "validated", correlation_id=correlation_id)
+            self._transition_invoice_state(
+                gmail_id, "validated",
+                correlation_id=correlation_id,
+                source=resolved_source_channel,
+                decision_reason="approve_invoice_state_walk",
+                actor_type="user",
+                actor_id=approved_by,
+                intent="approve_invoice",
+                ui_surface=resolved_source_channel,
+            )
             current_state = self._canonical_invoice_state(self.db.get_invoice_status(gmail_id))
         if current_state == "validated":
-            self._transition_invoice_state(gmail_id, "needs_approval", correlation_id=correlation_id)
+            self._transition_invoice_state(
+                gmail_id, "needs_approval",
+                correlation_id=correlation_id,
+                source=resolved_source_channel,
+                decision_reason="approve_invoice_state_walk",
+                actor_type="user",
+                actor_id=approved_by,
+                intent="approve_invoice",
+                ui_surface=resolved_source_channel,
+            )
             current_state = self._canonical_invoice_state(self.db.get_invoice_status(gmail_id))
         if current_state in {"needs_approval", "approved"}:
             self._transition_invoice_state(
                 gmail_id=gmail_id,
                 target_state="approved",
                 correlation_id=correlation_id,
+                source=resolved_source_channel,
+                decision_reason="approve_invoice",
+                actor_type="user",
+                actor_id=approved_by,
+                intent="approve_invoice",
+                ui_surface=resolved_source_channel,
                 approved_by=approved_by,
                 approved_at=approved_at,
             )
             current_state = self._canonical_invoice_state(self.db.get_invoice_status(gmail_id))
         if current_state not in {"approved", "ready_to_post"}:
             return {"status": "error", "reason": f"invalid_state_for_post:{current_state or 'unknown'}"}
-        self._transition_invoice_state(gmail_id, "ready_to_post", correlation_id=correlation_id)
+        self._transition_invoice_state(
+            gmail_id, "ready_to_post",
+            correlation_id=correlation_id,
+            source=resolved_source_channel,
+            decision_reason="approve_invoice_route_to_post",
+            actor_type="user",
+            actor_id=approved_by,
+            intent="approve_invoice",
+            ui_surface=resolved_source_channel,
+        )
 
         # Build invoice object for ERP
         _approve_meta = self._parse_metadata_dict((self.db.get_ap_item(ap_item_id) or {}).get("metadata")) if ap_item_id else {}
@@ -974,7 +1014,12 @@ class InvoicePostingMixin:
                 "decision_idempotency_key": decision_idempotency_key,
             }
 
-        # Update status
+        # Update status. Phase 2 (audit-trail compose): plumb through
+        # ``_actor_type`` / ``_actor_id`` / ``_intent`` / ``_ui_surface``
+        # so the state_transition audit row carries the operator's
+        # surface attribution that Phase 1's decision_context auto-build
+        # reads. Without these, the row records ``actor_type="system"``
+        # even when a human clicked Reject in Slack / Teams.
         self.db.update_invoice_status(
             gmail_id=gmail_id,
             status="rejected",
@@ -986,6 +1031,10 @@ class InvoicePostingMixin:
             _workflow_id="approval_decision",
             _run_id=action_run_id,
             _decision_reason="reject",
+            _actor_type="user",
+            _actor_id=rejected_by,
+            _intent="reject_invoice",
+            _ui_surface=resolved_source_channel,
         )
 
         # Update Slack thread status
@@ -1405,6 +1454,8 @@ class InvoicePostingMixin:
                 "decision_idempotency_key": decision_idempotency_key,
             }
 
+        # Phase 2 (audit-trail compose): pass actor + intent + ui_surface
+        # through so the audit row records the human-driven surface.
         self.db.update_invoice_status(
             gmail_id=gmail_id,
             status="needs_info",
@@ -1416,6 +1467,10 @@ class InvoicePostingMixin:
             _workflow_id="approval_decision",
             _run_id=action_run_id,
             _decision_reason="request_info",
+            _actor_type="user",
+            _actor_id=requested_by,
+            _intent="request_info",
+            _ui_surface=resolved_source_channel,
         )
 
         if resolved_source_channel == "slack" and resolved_channel_id and resolved_message_ref:
