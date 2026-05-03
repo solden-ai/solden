@@ -1327,7 +1327,7 @@ function CustomRolesPanel({ api, orgId, toast, canManage, panelRef }) {
     <div class="panel" ref=${panelRef}>
       <div class="panel-head compact">
         <div>
-          <h3>Roles &amp; permissions${!canManage ? html`<span class="status-badge" style="font-size:10px;margin-left:8px">Read-only</span>` : null}</h3>
+          <h3>Roles & permissions${!canManage ? html`<span class="status-badge" style="font-size:10px;margin-left:8px">Read-only</span>` : null}</h3>
           <p class="muted">Six standard roles cover most cases. Compose up to ${limit} custom roles for finer-grained control.</p>
         </div>
         ${canManage ? html`
@@ -2077,7 +2077,7 @@ function SAMLPanel({ api, orgId, toast, canManage }) {
               <div class="cl-saml-step-head">
                 <span class="cl-saml-step-marker">4</span>
                 <div>
-                  <h4>Provisioning &amp; enable</h4>
+                  <h4>Provisioning & enable</h4>
                   <p class="muted">What happens when a new SAML user lands on Solden.</p>
                 </div>
               </div>

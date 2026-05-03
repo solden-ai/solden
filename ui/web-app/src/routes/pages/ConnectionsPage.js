@@ -552,7 +552,7 @@ function WebhooksPanel({ api, canManage, toast }) {
             <button class="btn-secondary btn-sm" onClick=${addWebhook} disabled=${adding || !url.trim()}>${adding ? 'Adding…' : 'Add webhook'}</button>
           </div>
         </div>
-        <div class="secondary-note" style="margin-top:10px">Events can be &quot;*&quot; for all AP events, or a comma-separated list like &quot;invoice.approved, invoice.posted_to_erp&quot;.</div>
+        <div class="secondary-note" style="margin-top:10px">Events can be "*" for all AP events, or a comma-separated list like "invoice.approved, invoice.posted_to_erp".</div>
       `}
     </div>
   `;
