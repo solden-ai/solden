@@ -250,7 +250,17 @@ class InvoicePostingMixin:
         invoice_state = self._canonical_invoice_state(invoice_data)
         if invoice_state in {"posted_to_erp", "closed"}:
             return {"status": "error", "reason": "Invoice already posted"}
-        if invoice_data.get("erp_bill_id") or invoice_data.get("erp_reference"):
+        # ``erp_reference`` set with state past needs_approval means a
+        # previous post completed — refusing protects against duplicates.
+        # ``erp_reference`` set with state still at ``needs_approval`` /
+        # ``validated`` is the SuiteApp / Fiori case: the bill exists in
+        # the ERP under a payment-hold flag and Solden is the gate that
+        # releases it. The downstream ``post_to_erp`` step detects
+        # ``invoice.erp_native=True`` and skips the duplicate post; the
+        # state walk to ``posted_to_erp`` still happens so the audit
+        # chain records the operator's decision in the same shape as a
+        # Gmail-arrived approval.
+        if (invoice_data.get("erp_bill_id") or invoice_data.get("erp_reference")) and invoice_state not in {"needs_approval", "validated"}:
             return {"status": "error", "reason": "Invoice already posted"}
 
         field_review_gate = self.evaluate_financial_action_field_review_gate(
@@ -461,8 +471,17 @@ class InvoicePostingMixin:
             ui_surface=resolved_source_channel,
         )
 
-        # Build invoice object for ERP
+        # Build invoice object for ERP. Carry the ERP-native flag through
+        # so ``post_to_erp`` (line ~1561) skips the actual ERP write when
+        # the bill is already in the ERP — the Vendor Bill panel + Fiori
+        # extension paths approve bills that landed in the ERP via EDI /
+        # vendor portal / AP-clerk-typed entry. Without this flag the
+        # post step would create a duplicate vendor bill.
         _approve_meta = self._parse_metadata_dict((self.db.get_ap_item(ap_item_id) or {}).get("metadata")) if ap_item_id else {}
+        _erp_reference = str(invoice_data.get("erp_reference") or invoice_data.get("erp_bill_id") or "").strip()
+        _erp_native = bool(_erp_reference)
+        _erp_metadata = _approve_meta.get("erp_metadata") if isinstance(_approve_meta.get("erp_metadata"), dict) else None
+        _approve_source_type = str(_approve_meta.get("source_type") or "").strip() or None
         invoice = InvoiceData(
             gmail_id=gmail_id,
             subject=invoice_data.get("email_subject", ""),
@@ -476,6 +495,10 @@ class InvoicePostingMixin:
             invoice_text=invoice_data.get("email_body", ""),  # For discount detection
             budget_impact=budget_checks,
             line_items=_approve_meta.get("line_items") if isinstance(_approve_meta.get("line_items"), list) else None,
+            erp_native=_erp_native,
+            erp_metadata=_erp_metadata,
+            source_type=_approve_source_type or "gmail",
+            source_id=_erp_reference or None,
         )
         if isinstance(field_confidences, dict) and field_confidences:
             self._update_ap_item_metadata(ap_item_id, {"field_confidences": field_confidences})

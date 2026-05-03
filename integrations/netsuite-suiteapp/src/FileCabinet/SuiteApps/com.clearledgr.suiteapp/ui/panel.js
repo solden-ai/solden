@@ -224,21 +224,34 @@
         }
     }
 
+    // Maps the panel button's `data-action` value to the path segment
+    // on the backend's NetSuite-panel action endpoints. The NetSuite-
+    // specific endpoints exist (vs reusing the gmail_extension routes)
+    // so the dispatch carries source_channel="erp_native_netsuite" and
+    // the audit chain records ui_surface="erp_native_netsuite" on the
+    // resulting state_transition row — preserving the SoR claim that
+    // the audit identifies *which surface* the operator approved from.
+    const ACTION_PATH_SEGMENT = {
+        approve: 'approve',
+        reject: 'reject',
+        needs_info: 'request-info',
+    };
+
     async function dispatchAction(action) {
-        const ctx = window.__clState || {};
-        if (!ctx.apItemId) return;
+        if (!config.billId || !config.accountId) return;
+        const segment = ACTION_PATH_SEGMENT[action];
+        if (!segment) return;
         const buttons = document.querySelectorAll('#cl-actions .cl-btn');
         buttons.forEach((b) => { b.setAttribute('disabled', ''); });
         try {
-            const path = action === 'approve'
-                ? '/extension/route-low-risk-approval'
-                : action === 'reject'
-                    ? '/extension/reject-invoice'
-                    : '/extension/submit-for-approval';
+            const path = '/extension/ap-items/by-netsuite-bill/'
+                + encodeURIComponent(config.billId)
+                + '/' + segment
+                + '?account_id=' + encodeURIComponent(config.accountId);
             await api(path, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ap_item_id: ctx.apItemId, source: 'netsuite_panel' }),
+                body: JSON.stringify({}),
             });
             await load();  // refresh the panel state
         } catch (err) {

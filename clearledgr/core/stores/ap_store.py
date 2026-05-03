@@ -1921,7 +1921,20 @@ class APStore:
         now = payload.get("ts") or datetime.now(timezone.utc).isoformat()
         event_id = payload.get("id") or f"EVT-{uuid.uuid4().hex}"
 
-        idempotency_key = payload.get("idempotency_key")
+        # Normalise the idempotency_key: empty string + whitespace → None
+        # so the row is INSERTed with SQL NULL, not "". The audit_events
+        # table has ``UNIQUE(idempotency_key)`` and Postgres treats two
+        # NULLs as distinct (NULLS DISTINCT is the default) but two ""
+        # as equal — without normalisation, every caller that passed an
+        # empty key collided with every other one. Symptom was a 500
+        # on the second non-state-transition audit row in any flow that
+        # didn't bother to mint a deterministic key.
+        raw_idempotency_key = payload.get("idempotency_key")
+        idempotency_key: Optional[str] = (
+            str(raw_idempotency_key).strip()
+            if raw_idempotency_key is not None
+            else ""
+        ) or None
         if idempotency_key:
             existing = self.get_ap_audit_event_by_key(idempotency_key)
             if existing:

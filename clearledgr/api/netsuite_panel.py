@@ -39,16 +39,24 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel, Field
 
-from clearledgr.api.ap_items_read_routes import shared
 from clearledgr.api.deps import verify_org_access
 from clearledgr.core.auth import TokenData
+from clearledgr.core.database import get_db as _get_db
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/extension", tags=["netsuite-panel"])
+
+
+# Canonical ui_surface token for actions originating in the NetSuite
+# Vendor Bill panel. Phase 1's decision_context auto-build records this
+# value on every state_transition audit row driven from inside NetSuite,
+# distinguishing NetSuite-rendered approvals from Slack / Teams / web.
+NETSUITE_PANEL_SOURCE_CHANNEL = "erp_native_netsuite"
 _security = HTTPBearer(auto_error=False)
 
 
@@ -149,7 +157,7 @@ def _resolve_panel_user(
     if credentials is None or not credentials.credentials:
         raise HTTPException(status_code=401, detail="netsuite_panel: missing bearer token")
     token = credentials.credentials.strip()
-    db = shared.get_db()
+    db = _get_db()
 
     # Path A — dev token bootstrap (Phase 1-2)
     dev_token = os.getenv("NETSUITE_PANEL_DEV_TOKEN", "").strip()
@@ -245,7 +253,7 @@ def get_ap_item_by_netsuite_bill(
     Clearledgr app).
     """
     user = _resolve_panel_user(credentials, account_id, ns_internal_id)
-    db = shared.get_db()
+    db = _get_db()
     item = db.get_ap_item_by_erp_reference(user.organization_id, ns_internal_id)
     if not item:
         raise HTTPException(
@@ -294,3 +302,165 @@ def get_ap_item_by_netsuite_bill(
         "exceptions": exceptions,
         "outcome": outcome,
     }
+
+
+# ─── Action endpoints ───────────────────────────────────────────────
+#
+# Phase 3 (audit-trail compose): the panel calls these instead of the
+# generic ``/extension/route-low-risk-approval`` etc., because those
+# bake ``source_channel="slack"`` by default. Routing through dedicated
+# NetSuite endpoints means the dispatch carries
+# ``source_channel="erp_native_netsuite"`` and Phase 1's decision_context
+# auto-build records ``ui_surface="erp_native_netsuite"`` on the
+# resulting state_transition audit row — preserving the SoR claim that
+# the audit chain identifies *which surface* the operator used.
+
+
+class NetSuitePanelActionRequest(BaseModel):
+    """Body for POST actions from the NetSuite Vendor Bill panel.
+
+    The panel JWT carries the bill_id + account_id in path / query,
+    so the body only needs the optional reason text + idempotency key.
+    """
+
+    reason: Optional[str] = Field(default=None, max_length=4000)
+    idempotency_key: Optional[str] = Field(default=None, max_length=200)
+
+
+async def _dispatch_netsuite_panel_action(
+    *,
+    intent: str,
+    ns_internal_id: str,
+    account_id: str,
+    credentials: Optional[HTTPAuthorizationCredentials],
+    request: NetSuitePanelActionRequest,
+    default_reason: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Shared pre-flight + runtime dispatch for the three panel actions.
+
+    The pre-flight is identical to the GET endpoint's: validate the
+    panel auth, resolve the org, look up the AP item by NetSuite bill
+    id. The dispatch wraps ``dispatch_runtime_intent`` with the canonical
+    NetSuite source channel + the panel user's identity so the audit row
+    records the human approver, not ``actor_type="system"``.
+    """
+    from clearledgr.services.agent_command_dispatch import (
+        build_channel_runtime,
+        dispatch_runtime_intent,
+    )
+
+    user = _resolve_panel_user(credentials, account_id, ns_internal_id)
+    db = _get_db()
+    item = db.get_ap_item_by_erp_reference(user.organization_id, ns_internal_id)
+    if not item:
+        raise HTTPException(
+            status_code=404,
+            detail={"reason": "no_clearledgr_item_for_bill", "ns_internal_id": ns_internal_id},
+        )
+    verify_org_access(item.get("organization_id") or "default", user)
+    ap_item_id = str(item.get("id") or "").strip()
+
+    actor_id = user.user_id or user.email or "netsuite_panel"
+    actor_email = user.email or actor_id
+
+    runtime = build_channel_runtime(
+        organization_id=user.organization_id,
+        actor_id=actor_id,
+        actor_email=actor_email,
+        db=db,
+        fallback_actor="netsuite_panel",
+    )
+    reason_text = (request.reason or default_reason or "").strip() or None
+    payload = {
+        "ap_item_id": ap_item_id,
+        "email_id": str(item.get("thread_id") or item.get("message_id") or ap_item_id),
+        "reason": reason_text,
+        "source_channel": NETSUITE_PANEL_SOURCE_CHANNEL,
+        "source_channel_id": account_id,
+        "source_message_ref": ns_internal_id,
+        "actor_id": actor_id,
+        "actor_email": actor_email,
+        "actor_display": actor_email,
+    }
+    try:
+        result = await dispatch_runtime_intent(
+            runtime, intent, payload, idempotency_key=request.idempotency_key,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(
+            "netsuite_panel_action_failed: intent=%s ap_item_id=%s err=%s",
+            intent, ap_item_id, exc,
+        )
+        raise HTTPException(status_code=500, detail="netsuite_panel: action dispatch failed")
+
+    return {
+        "ap_item_id": ap_item_id,
+        "ns_internal_id": ns_internal_id,
+        "intent": intent,
+        "result": result,
+    }
+
+
+@router.post("/ap-items/by-netsuite-bill/{ns_internal_id}/approve")
+async def approve_netsuite_bill(
+    ns_internal_id: str,
+    account_id: str = Query(..., min_length=1),
+    body: NetSuitePanelActionRequest = Body(default_factory=NetSuitePanelActionRequest),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_security),
+) -> Dict[str, Any]:
+    """Approve the AP item linked to this NetSuite bill from inside the
+    Vendor Bill panel. Dispatches the ``approve_invoice`` runtime intent
+    with ``source_channel="erp_native_netsuite"`` so the audit chain
+    records the operator's NetSuite-side click.
+    """
+    return await _dispatch_netsuite_panel_action(
+        intent="approve_invoice",
+        ns_internal_id=ns_internal_id,
+        account_id=account_id,
+        credentials=credentials,
+        request=body,
+        default_reason="approved_in_netsuite_panel",
+    )
+
+
+@router.post("/ap-items/by-netsuite-bill/{ns_internal_id}/reject")
+async def reject_netsuite_bill(
+    ns_internal_id: str,
+    account_id: str = Query(..., min_length=1),
+    body: NetSuitePanelActionRequest = Body(default_factory=NetSuitePanelActionRequest),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_security),
+) -> Dict[str, Any]:
+    """Reject the AP item linked to this NetSuite bill from inside the
+    Vendor Bill panel.
+    """
+    return await _dispatch_netsuite_panel_action(
+        intent="reject_invoice",
+        ns_internal_id=ns_internal_id,
+        account_id=account_id,
+        credentials=credentials,
+        request=body,
+        default_reason="rejected_in_netsuite_panel",
+    )
+
+
+@router.post("/ap-items/by-netsuite-bill/{ns_internal_id}/request-info")
+async def request_info_netsuite_bill(
+    ns_internal_id: str,
+    account_id: str = Query(..., min_length=1),
+    body: NetSuitePanelActionRequest = Body(default_factory=NetSuitePanelActionRequest),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_security),
+) -> Dict[str, Any]:
+    """Move the AP item to ``needs_info`` from inside the Vendor Bill
+    panel. Used when the operator wants more documentation or vendor
+    clarification before approving.
+    """
+    return await _dispatch_netsuite_panel_action(
+        intent="request_info",
+        ns_internal_id=ns_internal_id,
+        account_id=account_id,
+        credentials=credentials,
+        request=body,
+        default_reason="info_requested_from_netsuite_panel",
+    )
