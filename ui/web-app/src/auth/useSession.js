@@ -62,10 +62,18 @@ async function _consumePostOAuthAuthCode() {
   return true;
 }
 
-async function loadSession() {
-  if (typeof window !== 'undefined') {
+async function loadSession({ force = false } = {}) {
+  if (!force && typeof window !== 'undefined') {
     const path = window.location.pathname || '';
     if (UNAUTHENTICATED_ROUTES.has(path)) {
+      // First-load short-circuit on a public page: skip probing
+      // /auth/me so the browser console doesn't log a 401 line on
+      // every fresh visit. ``force: true`` bypasses this — used by
+      // refreshSession() right after a successful login, where the
+      // user is technically still on /login but a fresh session
+      // cookie was just set and we need to read it back. Without
+      // the bypass the post-login refreshSession would set the
+      // session to null and bounce the user back to /login.
       cachedSession = null;
       notify();
       return cachedSession;
@@ -105,7 +113,11 @@ if (typeof window !== 'undefined') {
 }
 
 export async function refreshSession() {
-  return loadSession();
+  // Force-probe /auth/me even on /login. Callers (the OAuth post-
+  // exchange flow, password sign-in success) need the session to
+  // hydrate before they navigate, regardless of which route the
+  // user happens to be on at the moment of the call.
+  return loadSession({ force: true });
 }
 
 export async function logout() {
