@@ -47,6 +47,8 @@ class APItemDict(TypedDict, total=False):
     confidence_blockers: Optional[Any]
     source_conflicts: Optional[Any]
     field_confidences: Optional[Dict[str, Any]]
+    field_provenance: Optional[Dict[str, Any]]
+    field_evidence: Optional[Dict[str, Any]]
     metadata: Any  # JSON blob stored as str or dict
     invoice_key: Optional[str]
     workflow_id: Optional[str]
@@ -136,6 +138,7 @@ class ValidationGateResult(TypedDict, total=False):
     checked_at: str
     reason_codes: List[str]
     reasons: List[Dict[str, Any]]
+    rule_results: List[Dict[str, Any]]
     policy_compliance: Dict[str, Any]
     po_match_result: Optional[Dict[str, Any]]
     budget_impact: List[Dict[str, Any]]
@@ -144,8 +147,84 @@ class ValidationGateResult(TypedDict, total=False):
     erp_preflight: Optional[Dict[str, Any]]
 
 
+class FieldProvenance(TypedDict, total=False):
+    """Per-field provenance: where each extracted value came from.
+
+    Stored in ``ap_items.metadata.field_provenance`` keyed by field name.
+    Every extraction producer (email/LLM, Claude Vision, PEPPOL UBL,
+    each ERP-native intake adapter) emits one of these per field so the
+    audit trail can answer "which source produced this value, by what
+    method, when".
+    """
+
+    source: str
+    # source_ref: message_id, attachment content hash, ERP bill id, UBL file hash
+    source_ref: Optional[str]
+    # method: e.g. "llm_extract" | "ubl_parser" | "api_passthrough" | "claude_vision"
+    method: str
+    extracted_at: str
+    value: Any
+    # candidates: alternate values from other sources (used by the email path
+    # which juggles email-body vs attachment vs LLM extractions)
+    candidates: Dict[str, Any]
+    confidence: Optional[float]
+
+
+class RuleResult(TypedDict, total=False):
+    """Outcome of a single deterministic validation rule.
+
+    Aggregated into the ``validation_gate_evaluated`` audit_event payload
+    so reviewers can see every rule that ran, not just the failures.
+    """
+
+    rule_id: str
+    # verdict: "pass" | "fail" | "skip" | "warn"
+    verdict: str
+    # severity: "info" | "warning" | "error"
+    severity: str
+    message: Optional[str]
+    evidence: Dict[str, Any]
+    evaluated_at: str
+
+
+class DecisionContext(TypedDict, total=False):
+    """Captured at the moment an operator (or autonomous agent) takes a
+    routing decision on an AP item.
+
+    Included in the audit_event.payload_json under ``decision_context``.
+    The intent: an auditor opening the audit row should see exactly what
+    was on the operator's screen at decision time — current Box state,
+    agent recommendation, validation verdict, vendor history snapshot,
+    risk flags — without needing to reconstruct it from other tables.
+    """
+
+    # Routing the agent recommended at decision time (approve | reject |
+    # needs_info | escalate). None for autonomous transitions where the
+    # agent itself acted without an explicit recommendation step.
+    agent_recommendation: Optional[str]
+    # Validation gate verdict as it stood when the decision was taken
+    # (so a later re-evaluation does not overwrite the historical view).
+    validation_gate_at_decision: Dict[str, Any]
+    # Vendor profile/history snapshot shown to the decider.
+    vendor_profile_snapshot: Dict[str, Any]
+    risk_flags_shown: List[str]
+    confidence_at_decision: Optional[float]
+    field_confidences_at_decision: Dict[str, Any]
+    # ui_surface: which surface the decision came from. Canonical values:
+    # "slack" | "teams" | "gmail" | "outlook" | "web" | "api" |
+    # "erp_native_netsuite" | "erp_native_sap" | "erp_native_quickbooks" |
+    # "erp_native_xero" | "agent_autonomous" | "agent_background"
+    ui_surface: str
+    policy_version: Optional[str]
+    intent: Optional[str]
+    intent_input: Dict[str, Any]
+
+
 __all__ = [
     "APItemDict",
     "WorklistItemDict",
     "ValidationGateResult",
+    "FieldProvenance",
+    "RuleResult",
+    "DecisionContext",
 ]

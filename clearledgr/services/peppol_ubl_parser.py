@@ -179,13 +179,29 @@ class ParsedPeppolInvoice:
     warnings: List[str] = field(default_factory=list)
 
     def to_invoice_data_kwargs(self) -> Dict[str, Any]:
-        """Subset suitable for constructing :class:`InvoiceData`."""
-        return {
+        """Subset suitable for constructing :class:`InvoiceData`.
+
+        Includes ``field_provenance`` and ``field_evidence`` so the
+        SoR audit trail records that every PEPPOL UBL field was a
+        deterministic parse of the supplier's structured invoice
+        document, not an LLM extraction. ``source_ref`` is the
+        invoice ID from the document (the unique identifier inside
+        the UBL payload) — sufficient for audit reconstruction.
+        """
+        from clearledgr.services.extraction_provenance import (
+            METHOD_UBL_PARSER,
+            SOURCE_PEPPOL_UBL,
+            build_passthrough_evidence,
+            build_passthrough_provenance,
+        )
+
+        amount_float = (
+            float(self.payable_amount)
+            if self.payable_amount is not None else 0.0
+        )
+        kwargs: Dict[str, Any] = {
             "vendor_name": self.supplier_name or "",
-            "amount": (
-                float(self.payable_amount)
-                if self.payable_amount is not None else 0.0
-            ),
+            "amount": amount_float,
             "currency": self.currency or "EUR",
             "invoice_number": self.invoice_id,
             "due_date": self.due_date,
@@ -203,6 +219,28 @@ class ParsedPeppolInvoice:
             "line_items": list(self.line_items) if self.line_items else None,
             "payment_terms": self.payment_terms,
         }
+        provenance_fields = {
+            "vendor_name": kwargs["vendor_name"],
+            "amount": kwargs["amount"],
+            "currency": kwargs["currency"],
+            "invoice_number": kwargs["invoice_number"],
+            "due_date": kwargs["due_date"],
+            "tax_amount": kwargs["tax_amount"],
+            "subtotal": kwargs["subtotal"],
+            "payment_terms": kwargs["payment_terms"],
+        }
+        provenance = build_passthrough_provenance(
+            source=SOURCE_PEPPOL_UBL,
+            source_ref=self.invoice_id,
+            method=METHOD_UBL_PARSER,
+            fields=provenance_fields,
+        )
+        kwargs["field_provenance"] = provenance
+        kwargs["field_evidence"] = build_passthrough_evidence(
+            field_provenance=provenance,
+            source_label="PEPPOL e-invoice",
+        )
+        return kwargs
 
 
 # ── Parser entry points ────────────────────────────────────────────

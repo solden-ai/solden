@@ -826,16 +826,27 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
         # Phase 2.1.a: bank_details flow through as a typed kwarg so they
         # land in the bank_details_encrypted column, not the metadata
         # blob. The store handles encryption.
+        # field_provenance / field_evidence / erp_metadata propagate the
+        # SoR audit trail (which source produced each value, by what
+        # method) through to ap_items.metadata. The email path covers
+        # this in finance_agent_runtime._persist; this is the parallel
+        # path for ERP-native and PEPPOL UBL intake.
         invoice_id = self.db.save_invoice_status(
             gmail_id=invoice.gmail_id,
             status="received",
             email_subject=invoice.subject,
+            sender=invoice.sender,
             vendor=invoice.vendor_name,
             amount=invoice.amount,
             currency=invoice.currency,
             invoice_number=invoice.invoice_number,
             due_date=invoice.due_date,
             confidence=invoice.confidence,
+            field_confidences=getattr(invoice, "field_confidences", None),
+            field_provenance=getattr(invoice, "field_provenance", None),
+            field_evidence=getattr(invoice, "field_evidence", None),
+            erp_metadata=getattr(invoice, "erp_metadata", None),
+            source_type=getattr(invoice, "source_type", None),
             organization_id=self.organization_id,
             user_id=invoice.user_id,
             bank_details=getattr(invoice, "bank_details", None),

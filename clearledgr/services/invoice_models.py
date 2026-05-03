@@ -79,6 +79,21 @@ class InvoiceData:
     potential_duplicates: int = 0
     insights: Optional[list] = None
     field_confidences: Optional[Dict[str, Any]] = None
+    # Per-field provenance: where each field's value came from and by what
+    # method. Built by the email path's ``_build_field_provenance`` (multi-
+    # source merge across email body / attachment / vision) and by
+    # ``extraction_provenance.build_passthrough_provenance`` for the
+    # structured-source intakes (PEPPOL UBL + the four ERP-native
+    # adapters). Persisted on ``ap_items.metadata.field_provenance`` so
+    # the audit trail can answer "which source authored this value" per
+    # field, not just per item. ``FieldProvenance`` TypedDict in
+    # ``clearledgr.core.typed_dicts`` documents the entry shape.
+    field_provenance: Optional[Dict[str, Any]] = None
+    # UI-facing companion to ``field_provenance`` — same per-field keys,
+    # human-readable labels for the sidebar/audit surfaces. Empty when the
+    # producer didn't bother to build one (the audit chain is still
+    # complete via ``field_provenance``).
+    field_evidence: Optional[Dict[str, Any]] = None
     correlation_id: Optional[str] = None
     erp_preflight: Optional[Dict[str, Any]] = None
     # Payment terms (e.g. "Net 30", "Due on receipt", "2/10 Net 30")

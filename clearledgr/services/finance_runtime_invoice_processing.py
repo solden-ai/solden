@@ -114,6 +114,15 @@ async def execute_ap_invoice_processing(
         invoice_text=str(invoice.get("invoice_text") or "").strip() or None,
         correlation_id=resolved_correlation_id,
         field_confidences=invoice.get("field_confidences") if isinstance(invoice.get("field_confidences"), dict) else None,
+        # Preserve the SoR audit trail across the dict -> InvoiceData
+        # rebuild boundary. Without these, any downstream consumer that
+        # operates on the dataclass (rather than the raw dict) loses the
+        # per-field origin / source-document references that the
+        # extraction producer attached.
+        field_provenance=invoice.get("field_provenance") if isinstance(invoice.get("field_provenance"), dict) else None,
+        field_evidence=invoice.get("field_evidence") if isinstance(invoice.get("field_evidence"), dict) else None,
+        erp_metadata=invoice.get("erp_metadata") if isinstance(invoice.get("erp_metadata"), dict) else None,
+        source_type=invoice.get("source_type") or "gmail",
         line_items=invoice.get("line_items") if isinstance(invoice.get("line_items"), list) else None,
     )
 

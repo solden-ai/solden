@@ -289,6 +289,24 @@ class APStore:
         workflow_id = kwargs.pop("_workflow_id", None)
         run_id = kwargs.pop("_run_id", None)
         decision_reason = kwargs.pop("_decision_reason", None)
+        # Phase 1, Gap 4 — structured DecisionContext snapshot. Carries
+        # what the operator (or autonomous agent) saw at decision time:
+        # agent_recommendation, validation_gate_at_decision,
+        # vendor_profile_snapshot, risk_flags_shown, ui_surface,
+        # policy_version, intent, intent_input. Lands on the
+        # state_transition audit_event.payload_json under
+        # ``decision_context`` so an auditor opening the row can
+        # reproduce the decision view without joining 4 other tables.
+        # ``DecisionContext`` TypedDict in clearledgr.core.typed_dicts
+        # documents the shape.
+        decision_context = kwargs.pop("_decision_context", None)
+        # Companion kwargs for the auto-built decision_context. Handlers
+        # plumb these through so the audit row records who-clicked-what-
+        # where without requiring every workflow method to be rewritten
+        # to take a full DecisionContext object.
+        intent_kw = kwargs.pop("_intent", None)
+        intent_input_kw = kwargs.pop("_intent_input", None)
+        ui_surface_kw = kwargs.pop("_ui_surface", None)
         # §11.2.5: Optimistic locking — if provided, WHERE includes updated_at check
         expected_updated_at = kwargs.pop("_expected_updated_at", None)
 
@@ -376,11 +394,47 @@ class APStore:
                      workflow_id, run_id, decision_reason, organization_id, ts)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
                 )
-                audit_payload = {
-                    k: v
-                    for k, v in kwargs.items()
-                    if k not in ("state", "updated_at", "metadata")
+                audit_payload: Dict[str, Any] = {
+                    "column_updates": {
+                        k: v
+                        for k, v in kwargs.items()
+                        if k not in ("state", "updated_at", "metadata")
+                    },
                 }
+                # Phase 1, Gap 4 — every state-transition audit row
+                # carries a structured ``decision_context`` snapshot.
+                # We auto-build it from ``current`` (loaded above) so
+                # the typical workflow callers don't need to pass it
+                # manually; callers that provide ``_decision_context``
+                # override the auto-built fields. Combined with the
+                # ``_intent`` / ``_intent_input`` / ``_ui_surface``
+                # kwargs the handlers plumb through, this gives an
+                # auditor the full "what the operator saw" snapshot at
+                # decision time without a join across 4 tables.
+                auto_ctx: Dict[str, Any] = self._build_decision_context_snapshot(
+                    current_ap_item=current or {},
+                    intent=intent_kw,
+                    intent_input=intent_input_kw,
+                    ui_surface=ui_surface_kw,
+                    actor_type=actor_type,
+                    actor_id=actor_id,
+                    decision_reason=decision_reason,
+                    audit_source=audit_source,
+                )
+                if isinstance(decision_context, dict) and decision_context:
+                    # Caller-provided keys win on collision so an
+                    # explicit override always takes precedence over
+                    # the auto-snapshot.
+                    auto_ctx.update(decision_context)
+                    audit_payload["decision_context"] = auto_ctx
+                elif decision_context not in (None, "", {}):
+                    # Caller passed a non-dict — keep the auto-snapshot
+                    # as the structured field, preserve the raw value
+                    # under a separate key for forensic inspection.
+                    audit_payload["decision_context"] = auto_ctx
+                    audit_payload["decision_context_raw"] = decision_context
+                else:
+                    audit_payload["decision_context"] = auto_ctx
                 cur.execute(
                     audit_sql,
                     (
@@ -524,6 +578,118 @@ class APStore:
                     )
 
         return updated
+
+    def _build_decision_context_snapshot(
+        self,
+        *,
+        current_ap_item: Dict[str, Any],
+        intent: Optional[str] = None,
+        intent_input: Optional[Any] = None,
+        ui_surface: Optional[str] = None,
+        actor_type: Optional[str] = None,
+        actor_id: Optional[str] = None,
+        decision_reason: Optional[str] = None,
+        audit_source: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Snapshot the AP item's decision-time context for the audit trail.
+
+        Phase 1, Gap 4 — auto-built every time ``update_ap_item`` records a
+        state transition, so an auditor can reproduce what the decider saw
+        without joining four tables. ``DecisionContext`` TypedDict in
+        ``clearledgr.core.typed_dicts`` documents the shape.
+
+        Reads from ``current_ap_item.metadata`` (parsed if needed) and a
+        few top-level columns. Lookups are intentionally cheap — no DB
+        round-trips — because this runs on every state transition. Vendor
+        profile snapshots and other heavier reads should be supplied by
+        callers via the ``_decision_context`` kwarg when needed.
+        """
+        metadata: Dict[str, Any] = {}
+        raw_metadata = current_ap_item.get("metadata")
+        if isinstance(raw_metadata, dict):
+            metadata = raw_metadata
+        elif isinstance(raw_metadata, str) and raw_metadata:
+            try:
+                parsed = json.loads(raw_metadata)
+            except json.JSONDecodeError:
+                parsed = {}
+            if isinstance(parsed, dict):
+                metadata = parsed
+
+        def _coerce_list(raw: Any) -> List[Any]:
+            if isinstance(raw, list):
+                return list(raw)
+            if isinstance(raw, str) and raw:
+                try:
+                    parsed = json.loads(raw)
+                except json.JSONDecodeError:
+                    parsed = None
+                if isinstance(parsed, list):
+                    return parsed
+            return []
+
+        validation_gate = (
+            metadata.get("validation_gate")
+            if isinstance(metadata.get("validation_gate"), dict)
+            else metadata.get("confidence_gate")
+            if isinstance(metadata.get("confidence_gate"), dict)
+            else {}
+        )
+        risk_flags: List[Any] = []
+        risk_flags.extend(_coerce_list(metadata.get("fraud_flags")))
+        risk_flags.extend(_coerce_list(metadata.get("reasoning_risks")))
+        risk_flags.extend(_coerce_list(metadata.get("ap_decision_risk_flags")))
+
+        field_confidences: Dict[str, Any] = {}
+        raw_fc = current_ap_item.get("field_confidences") or metadata.get("field_confidences")
+        if isinstance(raw_fc, dict):
+            field_confidences = raw_fc
+        elif isinstance(raw_fc, str) and raw_fc:
+            try:
+                parsed_fc = json.loads(raw_fc)
+            except json.JSONDecodeError:
+                parsed_fc = None
+            if isinstance(parsed_fc, dict):
+                field_confidences = parsed_fc
+
+        # ui_surface: explicit kwarg > legacy ``audit_source`` hint > fallback
+        resolved_ui_surface = (
+            str(ui_surface or "").strip()
+            or str(audit_source or "").strip()
+            or "api"
+        )
+
+        snapshot: Dict[str, Any] = {
+            "agent_recommendation": (
+                metadata.get("ap_decision_recommendation")
+                or metadata.get("agent_recommendation")
+                or metadata.get("ap_decision_reasoning")
+            ),
+            "validation_gate_at_decision": validation_gate,
+            "vendor_profile_snapshot": (
+                metadata.get("vendor_intelligence")
+                if isinstance(metadata.get("vendor_intelligence"), dict)
+                else {}
+            ),
+            "risk_flags_shown": [str(flag) for flag in risk_flags if flag is not None],
+            "confidence_at_decision": current_ap_item.get("confidence"),
+            "field_confidences_at_decision": field_confidences,
+            "ui_surface": resolved_ui_surface,
+            "policy_version": (
+                current_ap_item.get("approval_policy_version")
+                or metadata.get("approval_policy_version")
+            ),
+            "intent": intent,
+            "intent_input": (
+                intent_input if isinstance(intent_input, dict) else None
+            ),
+            "actor_type": actor_type,
+            "actor_id": actor_id,
+            "decision_reason": decision_reason,
+            "snapshotted_at": datetime.now(timezone.utc).isoformat(),
+        }
+        # Drop empty / None values so the audit row is compact.
+        return {k: v for k, v in snapshot.items() if v not in (None, "", [], {})}
 
     def update_ap_item_metadata_merge(self, ap_item_id: str, patch: Dict[str, Any]) -> bool:
         """Merge *patch* into an AP item's existing metadata JSON column.
@@ -748,8 +914,13 @@ class APStore:
     def save_invoice_status(self, **kwargs) -> str:
         """Create a new AP item from invoice data.
 
-        Accepts the kwargs historically used by invoice_workflow
-        and maps them to the ap_items schema.
+        Accepts the kwargs historically used by invoice_workflow and
+        maps them to the ap_items schema. ``field_provenance``,
+        ``field_evidence``, and ``erp_metadata`` (when provided) land on
+        ``ap_items.metadata`` so the ERP-native intake path persists the
+        same SoR-grade audit trail as the email/Gmail path. Without
+        this propagation the audit chain would silently drop on every
+        bill that came in through QuickBooks/NetSuite/Xero/SAP.
         """
         from clearledgr.core.ap_states import normalize_state
 
@@ -768,6 +939,30 @@ class APStore:
                 invoice_key = f"{vendor}::{inv_num}"
             elif gmail_id:
                 invoice_key = f"gmail::{gmail_id}"
+
+        # Build metadata to carry the audit-trail extras through to
+        # ap_items.metadata. Caller-provided metadata wins on key
+        # collision (so the workflow can override defaults), but the
+        # provenance/evidence keys are append-only.
+        metadata: Dict[str, Any] = {}
+        caller_metadata = kwargs.get("metadata")
+        if isinstance(caller_metadata, dict):
+            metadata.update(caller_metadata)
+        elif isinstance(caller_metadata, str):
+            try:
+                parsed = json.loads(caller_metadata) if caller_metadata else {}
+            except json.JSONDecodeError:
+                parsed = {}
+            if isinstance(parsed, dict):
+                metadata.update(parsed)
+        if isinstance(kwargs.get("field_provenance"), dict) and kwargs.get("field_provenance"):
+            metadata["field_provenance"] = kwargs.get("field_provenance")
+        if isinstance(kwargs.get("field_evidence"), dict) and kwargs.get("field_evidence"):
+            metadata["field_evidence"] = kwargs.get("field_evidence")
+        if isinstance(kwargs.get("erp_metadata"), dict) and kwargs.get("erp_metadata"):
+            metadata["erp_metadata"] = kwargs.get("erp_metadata")
+        if isinstance(kwargs.get("source_type"), str) and kwargs.get("source_type"):
+            metadata.setdefault("source_type", kwargs.get("source_type"))
 
         payload = {
             "invoice_key": invoice_key,
@@ -790,6 +985,8 @@ class APStore:
             # which is the in-memory dict from the LLM extractor.
             "bank_details": kwargs.get("bank_details"),
         }
+        if metadata:
+            payload["metadata"] = metadata
         result = self.create_ap_item(payload)
         return result.get("id", gmail_id) if result else gmail_id
 

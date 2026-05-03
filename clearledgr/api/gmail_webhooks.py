@@ -1580,7 +1580,12 @@ async def process_invoice_email(
             archived_hash = str(entry["content_hash"])
             break
 
-    # Build invoice data object
+    # Build invoice data object. ``field_confidences`` /
+    # ``field_provenance`` / ``field_evidence`` are carried on the
+    # InvoiceData itself (parallel to the runtime payload below) so any
+    # path that consumes the dataclass — workflow.process_new_invoice,
+    # save_invoice_status, downstream serialisation — has the SoR audit
+    # trail attached without depending on which dispatch route runs.
     invoice = InvoiceData(
         gmail_id=message.id,
         subject=message.subject,
@@ -1596,6 +1601,9 @@ async def process_invoice_email(
         invoice_text=invoice_text,  # For discount detection
         line_items=extraction.get("line_items") if isinstance(extraction.get("line_items"), list) else None,
         attachment_content_hash=archived_hash,
+        field_confidences=extraction.get("field_confidences") if isinstance(extraction.get("field_confidences"), dict) else None,
+        field_provenance=extraction.get("field_provenance") if isinstance(extraction.get("field_provenance"), dict) else None,
+        field_evidence=extraction.get("field_evidence") if isinstance(extraction.get("field_evidence"), dict) else None,
     )
     
     if extracted_document_type != "invoice":

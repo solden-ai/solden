@@ -1294,10 +1294,23 @@ class InvoiceValidationMixin:
         Apply deterministic pre-routing controls before confidence/agent-based routing.
 
         A failed gate forces human approval with reason codes.
+
+        Per-rule audit (Phase 1, Gap 2 — SoR audit trail):
+        the gate records every rule's verdict (``pass`` / ``fail`` /
+        ``skip``) into ``rule_results``, not just the failures. This is
+        what lets an auditor prove "rule X was evaluated and passed"
+        rather than only "rule X did not fire", which is the difference
+        between a system-of-record audit trail and a coordinator's log.
+        After the gate completes, ``_emit_validation_gate_audit`` writes
+        a single ``validation_gate_evaluated`` audit_event with the full
+        per-rule breakdown so the chain is reproducible at decision
+        granularity. ``RuleResult`` TypedDict in
+        ``clearledgr.core.typed_dicts`` documents the entry shape.
         """
         checked_at = datetime.now(timezone.utc).isoformat()
         reason_codes: List[str] = []
         reasons: List[Dict[str, Any]] = []
+        rule_results: List[Dict[str, Any]] = []
 
         def add_reason(
             code: str,
@@ -1317,8 +1330,59 @@ class InvoiceValidationMixin:
                 }
             )
 
+        def _record_rule_verdict(
+            rule_id: str,
+            baseline: int,
+            *,
+            severity: str = "info",
+            skipped: bool = False,
+            skip_reason: Optional[str] = None,
+            evidence: Optional[Dict[str, Any]] = None,
+        ) -> None:
+            """Append a RuleResult entry derived from how many ``reasons``
+            were added during the rule's evaluation window
+            (``baseline`` = ``len(reasons)`` immediately before the rule
+            ran). Adding 0 reasons → ``pass``; ≥1 reasons → ``fail`` and
+            the new reason rows are attached as evidence. Pass
+            ``skipped=True`` when a rule is intentionally not evaluated
+            (e.g. dependency missing, feature disabled).
+            """
+            now_iso = datetime.now(timezone.utc).isoformat()
+            base_evidence: Dict[str, Any] = dict(evidence or {})
+            if skipped:
+                rule_results.append({
+                    "rule_id": rule_id,
+                    "verdict": "skip",
+                    "severity": "info",
+                    "message": skip_reason or None,
+                    "evidence": base_evidence,
+                    "evaluated_at": now_iso,
+                })
+                return
+            new_reasons = reasons[baseline:]
+            if new_reasons:
+                primary = new_reasons[0]
+                rule_results.append({
+                    "rule_id": rule_id,
+                    "verdict": "fail",
+                    "severity": str(primary.get("severity") or severity),
+                    "message": str(primary.get("message") or rule_id),
+                    "evidence": {**base_evidence, "reasons": new_reasons},
+                    "evaluated_at": now_iso,
+                })
+            else:
+                rule_results.append({
+                    "rule_id": rule_id,
+                    "verdict": "pass",
+                    "severity": severity,
+                    "message": None,
+                    "evidence": base_evidence,
+                    "evaluated_at": now_iso,
+                })
+
         # 0) Field-presence checks — required fields must be non-null/non-empty.
         #    PLAN.md §4.2-1: deterministic field presence/format check.
+        _baseline_field_presence = len(reasons)
         _REQUIRED_FIELDS = {
             "vendor_name": invoice.vendor_name,
             "amount": invoice.amount,
@@ -1340,10 +1404,12 @@ class InvoiceValidationMixin:
                     details={"field": field_name, "value": field_val},
                 )
 
+        _record_rule_verdict("field_presence", _baseline_field_presence, severity="error")
         # 0b) §7.6 Extraction Guardrail: Amount cross-validation.
         # "The extracted amount is compared against any amount visible in the
         # email subject, body, and attachment. If they disagree, the agent
         # raises a low-confidence flag and does not proceed."
+        _baseline_amount_cross_validation = len(reasons)
         if invoice.amount and invoice.subject:
             import re
             # Only match amounts that look like currency values:
@@ -1382,9 +1448,11 @@ class InvoiceValidationMixin:
                 except (ValueError, TypeError):
                     pass
 
+        _record_rule_verdict("amount_cross_validation", _baseline_amount_cross_validation, severity="warning")
         # 0c) §7.6 Extraction Guardrail: Currency consistency.
         # "The extracted currency is validated against the vendor's configured
         # currency in the ERP. A EUR invoice from a GBP vendor is flagged."
+        _baseline_currency_consistency = len(reasons)
         if invoice.currency and invoice.vendor_name:
             try:
                 vendor_profile = (
@@ -1416,11 +1484,13 @@ class InvoiceValidationMixin:
             except Exception:
                 pass
 
+        _record_rule_verdict("currency_consistency", _baseline_currency_consistency, severity="warning")
         # 0d) §7.6 Extraction Guardrail: Reference format validation.
         # "Invoice references are validated against the format pattern
         # established from this vendor's historical invoices. A vendor who
         # always uses INV-XXXX format triggering an extraction of PO-2041
         # is flagged as a possible extraction error."
+        _baseline_reference_format = len(reasons)
         if invoice.invoice_number and invoice.vendor_name:
             try:
                 mismatch = _check_reference_format(
@@ -1448,6 +1518,8 @@ class InvoiceValidationMixin:
             except Exception as exc:
                 logger.debug("[guardrail] reference_format check failed: %s", exc)
 
+        _record_rule_verdict("reference_format", _baseline_reference_format, severity="warning")
+        _baseline_amount_range = len(reasons)
         # 0e) §7.6 Extraction Guardrail: Amount range check.
         # "An invoice for £1,200,000 from a vendor whose largest previous
         # invoice was £12,000 triggers a mandatory human review regardless
@@ -1482,6 +1554,8 @@ class InvoiceValidationMixin:
             except Exception as exc:
                 logger.debug("[guardrail] amount_range check failed: %s", exc)
 
+        _record_rule_verdict("amount_range", _baseline_amount_range, severity="warning")
+        _baseline_po_reference_exists = len(reasons)
         # 0f) §7.6 Extraction Guardrail: PO reference existence.
         # "The extracted PO reference is validated against the ERP before
         # any matching begins. If the PO does not exist, the agent stops
@@ -1519,6 +1593,8 @@ class InvoiceValidationMixin:
             except Exception as exc:
                 logger.debug("[guardrail] po_reference_exists check failed: %s", exc)
 
+        _record_rule_verdict("po_reference_exists", _baseline_po_reference_exists, severity="warning")
+        _baseline_policy_compliance = len(reasons)
         # 1) Policy checks (PO-required and any explicit blocking actions).
         policy_result = invoice.policy_compliance
         if not isinstance(policy_result, dict):
@@ -1573,6 +1649,8 @@ class InvoiceValidationMixin:
                     details=violation,
                 )
 
+        _record_rule_verdict("policy_compliance", _baseline_policy_compliance, severity="warning")
+        _baseline_po_match = len(reasons)
         # 2) PO/receipt matching.
         #    - 3-way match when PO number is available (PO + GR + Invoice)
         #    - 2-way match when no PO but goods receipts exist (GR + Invoice)
@@ -1631,6 +1709,8 @@ class InvoiceValidationMixin:
                     details={"status": match_status},
                 )
 
+        _record_rule_verdict("po_match", _baseline_po_match, severity="warning")
+        _baseline_budget_impact = len(reasons)
         # 3) Budget impact checks.
         budget_checks = self._get_invoice_budget_checks(invoice)
         budget_summary = self._compute_budget_summary(budget_checks)
@@ -1650,6 +1730,8 @@ class InvoiceValidationMixin:
                     details=budget,
                 )
 
+        _record_rule_verdict("budget_impact", _baseline_budget_impact, severity="warning")
+        _baseline_erp_preflight = len(reasons)
         # 3b) ERP pre-flight checks (vendor exists, duplicate bill, GL validity).
         #     Non-blocking on ERP unavailability — warnings only if ERP is down.
         erp_preflight = None
@@ -1700,6 +1782,8 @@ class InvoiceValidationMixin:
         except Exception as preflight_exc:
             logger.warning("ERP pre-flight check failed (non-fatal): %s", preflight_exc)
 
+        _record_rule_verdict("erp_preflight", _baseline_erp_preflight, severity="warning")
+        _baseline_duplicate_invoice = len(reasons)
         # 4) Duplicate invoice check — same vendor + invoice_number already exists.
         #    PLAN.md §4.2: deterministic dedup at validation boundary.
         if invoice.vendor_name and invoice.invoice_number:
@@ -1766,6 +1850,8 @@ class InvoiceValidationMixin:
             except Exception as fuzzy_dedup_exc:
                 logger.warning("Fuzzy duplicate check failed (non-fatal): %s", fuzzy_dedup_exc)
 
+        _record_rule_verdict("duplicate_invoice", _baseline_duplicate_invoice, severity="error")
+        _baseline_discount_consistency = len(reasons)
         # 4b) Discount amount consistency check.
         if invoice.discount_amount is not None and invoice.discount_amount > 0:
             # Informational: check if discount + amount ~= subtotal
@@ -1799,6 +1885,8 @@ class InvoiceValidationMixin:
                         },
                     )
 
+        _record_rule_verdict("discount_consistency", _baseline_discount_consistency, severity="warning")
+        _baseline_bank_details_mismatch = len(reasons)
         # 4c) Bank/payment details mismatch check.
         # Phase 2.1.a: read the stored vendor bank details via the typed
         # decryption accessor — never from `vendor_intelligence` (which
@@ -1895,6 +1983,8 @@ class InvoiceValidationMixin:
             except Exception as bank_exc:
                 logger.warning("Bank details comparison failed (non-fatal): %s", bank_exc)
 
+        _record_rule_verdict("bank_details_mismatch", _baseline_bank_details_mismatch, severity="warning")
+        _baseline_iban_change_freeze = len(reasons)
         # 4d) IBAN change freeze — blocks every invoice for a vendor
         # whose freeze is still active (Phase 2.1.b). This fires
         # independently of the 4c mismatch detection above: the freeze
@@ -1941,6 +2031,8 @@ class InvoiceValidationMixin:
                 freeze_check_exc,
             )
 
+        _record_rule_verdict("iban_change_freeze", _baseline_iban_change_freeze, severity="error")
+        _baseline_vendor_domain_lock = len(reasons)
         # 4e) Vendor domain lock (Phase 2.2, DESIGN_THESIS.md §8 Group B).
         # Detects vendor impersonation: an inbound invoice arriving
         # from a sender domain that doesn't match the vendor's known
@@ -2034,6 +2126,8 @@ class InvoiceValidationMixin:
                 domain_check_exc,
             )
 
+        _record_rule_verdict("vendor_domain_lock", _baseline_vendor_domain_lock, severity="warning")
+        _baseline_payment_terms_mismatch = len(reasons)
         # 5a-pre) Payment terms mismatch detection.
         try:
             invoice_terms = getattr(invoice, "payment_terms", None) or ""
@@ -2054,6 +2148,8 @@ class InvoiceValidationMixin:
         except Exception:
             pass
 
+        _record_rule_verdict("payment_terms_mismatch", _baseline_payment_terms_mismatch, severity="warning")
+        _baseline_gl_code_validity = len(reasons)
         # 5a-pre2) GL code validation against cached chart of accounts.
         try:
             if invoice.line_items:
@@ -2084,6 +2180,8 @@ class InvoiceValidationMixin:
         except Exception as exc:
             logger.warning("GL code validation against CoA skipped: %s", exc)
 
+        _record_rule_verdict("gl_code_validity", _baseline_gl_code_validity, severity="warning")
+        _baseline_period_close = len(reasons)
         # 5a) Period close — block posting to locked periods.
         try:
             from clearledgr.services.period_close import get_period_close_service
@@ -2100,6 +2198,8 @@ class InvoiceValidationMixin:
         except Exception:
             pass
 
+        _record_rule_verdict("period_close", _baseline_period_close, severity="error")
+        _baseline_tax_compliance = len(reasons)
         # 5b) Tax compliance — validate vendor tax ID if available.
         try:
             from clearledgr.services.tax_compliance import validate_tax_id
@@ -2128,6 +2228,8 @@ class InvoiceValidationMixin:
         except Exception:
             pass
 
+        _record_rule_verdict("tax_compliance", _baseline_tax_compliance, severity="warning")
+        _baseline_currency_entity_mismatch = len(reasons)
         # 5c) Currency mismatch — convert if entity default differs from invoice currency.
         try:
             invoice_currency = str(invoice.currency or "").strip().upper()
@@ -2155,6 +2257,8 @@ class InvoiceValidationMixin:
         except Exception:
             pass
 
+        _record_rule_verdict("currency_entity_mismatch", _baseline_currency_entity_mismatch, severity="warning")
+        _baseline_confidence_gate = len(reasons)
         # 5) Critical-field confidence gate (launch-critical, server-enforced).
         confidence_gate = self._evaluate_invoice_confidence_gate(invoice)
         if confidence_gate.get("requires_field_review"):
@@ -2170,6 +2274,8 @@ class InvoiceValidationMixin:
             )
 
         # ---------------------------------------------------------------
+        _record_rule_verdict("confidence_gate", _baseline_confidence_gate, severity="warning")
+        _baseline_fraud_controls = len(reasons)
         # 6) Fraud-control primitives (DESIGN_THESIS.md §8 — architectural,
         #    not configurational). Every check here uses severity="error"
         #    so it is unambiguously blocking. Numeric parameters come from
@@ -2514,6 +2620,13 @@ class InvoiceValidationMixin:
             )
         ]
 
+        # Close the fraud-controls rule. The remaining rule sections
+        # produced their own ``_record_rule_verdict`` calls inline (one
+        # per section), so by the time we reach the gate-assembly block
+        # every rule that ran has a verdict in ``rule_results`` —
+        # passes included, not just failures.
+        _record_rule_verdict("fraud_controls", _baseline_fraud_controls, severity="error")
+
         gate = {
             "passed": len(blocking_reasons) == 0,
             "checked_at": checked_at,
@@ -2524,6 +2637,13 @@ class InvoiceValidationMixin:
             "reason_codes": reason_codes,
             "blocking_reason_codes": blocking_reason_codes,
             "reasons": reasons,
+            # Phase 1, Gap 2 — per-rule audit trail. Every rule the gate
+            # evaluated has an entry here with verdict (pass/fail/skip),
+            # severity, message, evidence, and timestamp. The
+            # ``validation_gate_evaluated`` audit_event below carries
+            # the same payload so the audit chain is reproducible at
+            # rule granularity, not just at gate granularity.
+            "rule_results": rule_results,
             "policy_compliance": policy_result or {},
             "po_match_result": po_match_result,
             "budget_impact": budget_checks,
@@ -2539,6 +2659,48 @@ class InvoiceValidationMixin:
             "requires_decision": bool(budget_summary.get("requires_decision")),
             "budget_impact": budget_checks,
         }
+
+        # Phase 1, Gap 2 — emit a single ``validation_gate_evaluated``
+        # audit_event capturing every rule's verdict for this run. Best-
+        # effort: an audit-write failure must NOT break the validation
+        # path (the gate's verdict still routes the invoice; we just
+        # lose this single audit row, which the next eval will rewrite).
+        try:
+            if hasattr(self.db, "append_audit_event"):
+                _ap_item_id = self._lookup_ap_item_id(
+                    invoice.gmail_id,
+                    vendor_name=invoice.vendor_name,
+                    invoice_number=invoice.invoice_number,
+                )
+                if _ap_item_id:
+                    self.db.append_audit_event({
+                        "ap_item_id": _ap_item_id,
+                        "box_id": _ap_item_id,
+                        "box_type": "ap_item",
+                        "event_type": "validation_gate_evaluated",
+                        "actor_type": "agent",
+                        "actor_id": "invoice_validation",
+                        "organization_id": self.organization_id,
+                        "source": "invoice_validation",
+                        "idempotency_key": f"validation_gate:{_ap_item_id}:{checked_at}",
+                        "metadata": {
+                            "passed": gate["passed"],
+                            "rule_count": len(rule_results),
+                            "pass_count": sum(1 for r in rule_results if r.get("verdict") == "pass"),
+                            "fail_count": sum(1 for r in rule_results if r.get("verdict") == "fail"),
+                            "skip_count": sum(1 for r in rule_results if r.get("verdict") == "skip"),
+                            "rules": rule_results,
+                            "reason_codes": list(reason_codes),
+                            "blocking_reason_codes": list(blocking_reason_codes),
+                            "checked_at": checked_at,
+                        },
+                    })
+        except Exception:
+            logger.warning(
+                "validation_gate_evaluated audit emit failed for ap_item",
+                exc_info=True,
+            )
+
         return gate
 
     def _record_validation_gate_failure(

@@ -163,7 +163,31 @@ class NetSuiteIntakeAdapter:
     def _thin_invoice_from_envelope(
         self, envelope: IntakeEnvelope, organization_id: str,
     ) -> InvoiceData:
+        from clearledgr.services.extraction_provenance import (
+            METHOD_API_PASSTHROUGH,
+            SOURCE_ERP_NATIVE_NETSUITE,
+            build_passthrough_evidence,
+            build_passthrough_provenance,
+        )
+
         bill = envelope.raw_payload.get("bill") or {}
+        vendor_name = bill.get("entity_name") or "Unknown vendor"
+        amount = _safe_float(bill.get("amount"), default=0.0)
+        currency = str(bill.get("currency") or "USD").upper()
+        invoice_number = str(bill.get("invoice_number") or envelope.source_id).strip()
+        due_date = str(bill.get("due_date") or "").strip() or None
+        provenance = build_passthrough_provenance(
+            source=SOURCE_ERP_NATIVE_NETSUITE,
+            source_ref=envelope.source_id,
+            method=METHOD_API_PASSTHROUGH,
+            fields={
+                "vendor_name": vendor_name,
+                "amount": amount,
+                "currency": currency,
+                "invoice_number": invoice_number,
+                "due_date": due_date,
+            },
+        )
         return InvoiceData(
             source_type="netsuite",
             source_id=envelope.source_id,
@@ -175,14 +199,19 @@ class NetSuiteIntakeAdapter:
             },
             subject=f"NetSuite Bill {bill.get('invoice_number') or envelope.source_id} — {bill.get('entity_name') or 'vendor'}",
             sender=f"{bill.get('entity_name') or 'vendor'} <netsuite@erp-native>",
-            vendor_name=bill.get("entity_name") or "Unknown vendor",
-            amount=_safe_float(bill.get("amount"), default=0.0),
-            currency=str(bill.get("currency") or "USD").upper(),
-            invoice_number=str(bill.get("invoice_number") or envelope.source_id).strip(),
-            due_date=str(bill.get("due_date") or "").strip() or None,
+            vendor_name=vendor_name,
+            amount=amount,
+            currency=currency,
+            invoice_number=invoice_number,
+            due_date=due_date,
             confidence=1.0,
             organization_id=organization_id,
             correlation_id=f"erp-intake:{envelope.event_id or envelope.source_id}",
+            field_provenance=provenance,
+            field_evidence=build_passthrough_evidence(
+                field_provenance=provenance,
+                source_label="NetSuite (thin intake)",
+            ),
         )
 
     @staticmethod
@@ -266,6 +295,36 @@ class NetSuiteIntakeAdapter:
         }
         erp_metadata = {k: v for k, v in erp_metadata.items() if v not in (None, "", [])}
 
+        from clearledgr.services.extraction_provenance import (
+            METHOD_API_PASSTHROUGH,
+            SOURCE_ERP_NATIVE_NETSUITE,
+            build_passthrough_evidence,
+            build_passthrough_provenance,
+        )
+
+        vendor_name_value = header.get("vendor_name") or "Unknown vendor"
+        amount_value = _safe_float(header.get("amount"), default=0.0)
+        currency_value = str(header.get("currency_id") or "USD").upper()
+        invoice_number_value = str(header.get("tran_id") or envelope.source_id).strip()
+        due_date_value = str(header.get("due_date") or "").strip() or None
+        tax_amount_value = _safe_float(header.get("tax_amount")) or None
+        subtotal_value = _safe_float(header.get("subtotal")) or None
+        provenance = build_passthrough_provenance(
+            source=SOURCE_ERP_NATIVE_NETSUITE,
+            source_ref=envelope.source_id,
+            method=METHOD_API_PASSTHROUGH,
+            fields={
+                "vendor_name": vendor_name_value,
+                "amount": amount_value,
+                "currency": currency_value,
+                "invoice_number": invoice_number_value,
+                "due_date": due_date_value,
+                "po_number": po_number or None,
+                "tax_amount": tax_amount_value,
+                "subtotal": subtotal_value,
+            },
+            confidences=field_confidences,
+        )
         return InvoiceData(
             source_type="netsuite",
             source_id=envelope.source_id,
@@ -273,11 +332,11 @@ class NetSuiteIntakeAdapter:
             erp_metadata=erp_metadata,
             subject=f"NetSuite Bill {header.get('tran_id') or envelope.source_id} — {header.get('vendor_name') or 'vendor'}",
             sender=sender,
-            vendor_name=header.get("vendor_name") or "Unknown vendor",
-            amount=_safe_float(header.get("amount"), default=0.0),
-            currency=str(header.get("currency_id") or "USD").upper(),
-            invoice_number=str(header.get("tran_id") or envelope.source_id).strip(),
-            due_date=str(header.get("due_date") or "").strip() or None,
+            vendor_name=vendor_name_value,
+            amount=amount_value,
+            currency=currency_value,
+            invoice_number=invoice_number_value,
+            due_date=due_date_value,
             po_number=po_number or None,
             confidence=1.0,
             bank_details=bank_details,
@@ -285,8 +344,13 @@ class NetSuiteIntakeAdapter:
             field_confidences=field_confidences,
             organization_id=organization_id,
             correlation_id=f"erp-intake:{envelope.event_id or envelope.source_id}",
-            tax_amount=_safe_float(header.get("tax_amount")) or None,
-            subtotal=_safe_float(header.get("subtotal")) or None,
+            tax_amount=tax_amount_value,
+            subtotal=subtotal_value,
+            field_provenance=provenance,
+            field_evidence=build_passthrough_evidence(
+                field_provenance=provenance,
+                source_label="NetSuite Vendor Bill",
+            ),
         )
 
 

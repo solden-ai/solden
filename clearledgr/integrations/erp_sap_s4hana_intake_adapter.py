@@ -213,8 +213,32 @@ class SapS4HanaIntakeAdapter:
     def _thin_invoice_from_envelope(
         self, envelope: IntakeEnvelope, organization_id: str,
     ) -> InvoiceData:
+        from clearledgr.services.extraction_provenance import (
+            METHOD_API_PASSTHROUGH,
+            SOURCE_ERP_NATIVE_SAP,
+            build_passthrough_evidence,
+            build_passthrough_provenance,
+        )
+
         payload = envelope.channel_metadata.get("invoice_payload") or {}
         cc, doc, fy = (envelope.source_id.split("/", 2) + ["", "", ""])[:3]
+        vendor_name = _pick(payload, "SupplierName", "supplier_name") or "Unknown supplier"
+        amount = _safe_float(_pick(payload, "InvoiceGrossAmount", "GrossAmount", "amount", "WRBTR"), default=0.0)
+        currency = str(_pick(payload, "DocumentCurrency", "Currency", "WAERS") or "USD").upper()
+        invoice_number = _pick(payload, "SupplierInvoiceIDByInvcgParty", "invoice_number") or doc
+        due_date = _pick(payload, "NetDueDate", "due_date") or None
+        provenance = build_passthrough_provenance(
+            source=SOURCE_ERP_NATIVE_SAP,
+            source_ref=envelope.source_id,
+            method=METHOD_API_PASSTHROUGH,
+            fields={
+                "vendor_name": vendor_name,
+                "amount": amount,
+                "currency": currency,
+                "invoice_number": invoice_number,
+                "due_date": due_date,
+            },
+        )
         return InvoiceData(
             source_type="sap_s4hana",
             source_id=envelope.source_id,
@@ -225,14 +249,19 @@ class SapS4HanaIntakeAdapter:
             },
             subject=f"SAP Supplier Invoice {doc} — {_pick(payload, 'SupplierName', 'supplier_name') or 'vendor'}",
             sender=f"{_pick(payload, 'SupplierName', 'supplier_name') or 'vendor'} <sap-s4hana@erp-native>",
-            vendor_name=_pick(payload, "SupplierName", "supplier_name") or "Unknown supplier",
-            amount=_safe_float(_pick(payload, "InvoiceGrossAmount", "GrossAmount", "amount", "WRBTR"), default=0.0),
-            currency=str(_pick(payload, "DocumentCurrency", "Currency", "WAERS") or "USD").upper(),
-            invoice_number=_pick(payload, "SupplierInvoiceIDByInvcgParty", "invoice_number") or doc,
-            due_date=_pick(payload, "NetDueDate", "due_date") or None,
+            vendor_name=vendor_name,
+            amount=amount,
+            currency=currency,
+            invoice_number=invoice_number,
+            due_date=due_date,
             confidence=1.0,
             organization_id=organization_id,
             correlation_id=f"erp-intake:{envelope.event_id or envelope.source_id}",
+            field_provenance=provenance,
+            field_evidence=build_passthrough_evidence(
+                field_provenance=provenance,
+                source_label="SAP S/4HANA (thin intake)",
+            ),
         )
 
     @staticmethod
@@ -310,6 +339,34 @@ class SapS4HanaIntakeAdapter:
         }
         erp_metadata = {k: v for k, v in erp_metadata.items() if v not in (None, "", [])}
 
+        from clearledgr.services.extraction_provenance import (
+            METHOD_API_PASSTHROUGH,
+            SOURCE_ERP_NATIVE_SAP,
+            build_passthrough_evidence,
+            build_passthrough_provenance,
+        )
+
+        vendor_name_value = header.get("supplier_name") or "Unknown supplier"
+        amount_value = _safe_float(header.get("amount")) or 0.0
+        currency_value = str(header.get("currency") or "USD").upper()
+        invoice_number_value = str(header.get("invoice_number") or doc).strip()
+        due_date_value = str(header.get("due_date") or "").strip() or None
+        tax_amount_value = _safe_float(header.get("tax_amount")) or None
+        provenance = build_passthrough_provenance(
+            source=SOURCE_ERP_NATIVE_SAP,
+            source_ref=envelope.source_id,
+            method=METHOD_API_PASSTHROUGH,
+            fields={
+                "vendor_name": vendor_name_value,
+                "amount": amount_value,
+                "currency": currency_value,
+                "invoice_number": invoice_number_value,
+                "due_date": due_date_value,
+                "po_number": po_number or None,
+                "tax_amount": tax_amount_value,
+            },
+            confidences=field_confidences,
+        )
         return InvoiceData(
             source_type="sap_s4hana",
             source_id=envelope.source_id,
@@ -317,11 +374,11 @@ class SapS4HanaIntakeAdapter:
             erp_metadata=erp_metadata,
             subject=f"SAP Supplier Invoice {header.get('invoice_number') or doc} — {header.get('supplier_name') or 'vendor'}",
             sender=sender,
-            vendor_name=header.get("supplier_name") or "Unknown supplier",
-            amount=_safe_float(header.get("amount")) or 0.0,
-            currency=str(header.get("currency") or "USD").upper(),
-            invoice_number=str(header.get("invoice_number") or doc).strip(),
-            due_date=str(header.get("due_date") or "").strip() or None,
+            vendor_name=vendor_name_value,
+            amount=amount_value,
+            currency=currency_value,
+            invoice_number=invoice_number_value,
+            due_date=due_date_value,
             po_number=po_number or None,
             confidence=1.0,
             bank_details=bank_details,
@@ -329,7 +386,12 @@ class SapS4HanaIntakeAdapter:
             field_confidences=field_confidences,
             organization_id=organization_id,
             correlation_id=f"erp-intake:{envelope.event_id or envelope.source_id}",
-            tax_amount=_safe_float(header.get("tax_amount")) or None,
+            tax_amount=tax_amount_value,
+            field_provenance=provenance,
+            field_evidence=build_passthrough_evidence(
+                field_provenance=provenance,
+                source_label="SAP S/4HANA Supplier Invoice",
+            ),
         )
 
 

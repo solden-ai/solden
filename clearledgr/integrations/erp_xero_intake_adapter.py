@@ -190,6 +190,19 @@ class XeroIntakeAdapter:
     def _thin_invoice_from_envelope(
         self, envelope: IntakeEnvelope, organization_id: str,
     ) -> InvoiceData:
+        from clearledgr.services.extraction_provenance import (
+            METHOD_API_PASSTHROUGH,
+            SOURCE_ERP_NATIVE_XERO,
+            build_passthrough_evidence,
+            build_passthrough_provenance,
+        )
+
+        provenance = build_passthrough_provenance(
+            source=SOURCE_ERP_NATIVE_XERO,
+            source_ref=envelope.source_id,
+            method=METHOD_API_PASSTHROUGH,
+            fields={"invoice_number": envelope.source_id},
+        )
         return InvoiceData(
             source_type="xero",
             source_id=envelope.source_id,
@@ -208,6 +221,11 @@ class XeroIntakeAdapter:
             confidence=1.0,
             organization_id=organization_id,
             correlation_id=f"erp-intake:xero:{envelope.event_id or envelope.source_id}",
+            field_provenance=provenance,
+            field_evidence=build_passthrough_evidence(
+                field_provenance=provenance,
+                source_label="Xero (thin intake)",
+            ),
         )
 
     def _marker_invoice_for_skip(
@@ -289,6 +307,34 @@ class XeroIntakeAdapter:
             or f"{vendor_name} <xero@erp-native>"
         )
 
+        from clearledgr.services.extraction_provenance import (
+            METHOD_API_PASSTHROUGH,
+            SOURCE_ERP_NATIVE_XERO,
+            build_passthrough_evidence,
+            build_passthrough_provenance,
+        )
+
+        due_date_value = _xero_iso_date(invoice.get("DueDate"))
+        tax_amount_value = _safe_float(invoice.get("TotalTax"))
+        subtotal_value = _safe_float(invoice.get("SubTotal"))
+        provenance = build_passthrough_provenance(
+            source=SOURCE_ERP_NATIVE_XERO,
+            source_ref=str(invoice.get("InvoiceID") or envelope.source_id),
+            method=METHOD_API_PASSTHROUGH,
+            fields={
+                "vendor_name": vendor_name,
+                "amount": amount,
+                "currency": currency,
+                "invoice_number": invoice_number,
+                "due_date": due_date_value,
+                "tax_amount": tax_amount_value,
+                "subtotal": subtotal_value,
+            },
+            confidences={
+                "vendor_name": 1.0, "amount": 1.0, "currency": 1.0,
+                "invoice_number": 1.0, "due_date": 1.0,
+            },
+        )
         return InvoiceData(
             source_type="xero",
             source_id=envelope.source_id,
@@ -300,17 +346,22 @@ class XeroIntakeAdapter:
             amount=amount,
             currency=currency,
             invoice_number=invoice_number,
-            due_date=_xero_iso_date(invoice.get("DueDate")),
+            due_date=due_date_value,
             confidence=1.0,
             line_items=line_items or None,
-            tax_amount=_safe_float(invoice.get("TotalTax")),
-            subtotal=_safe_float(invoice.get("SubTotal")),
+            tax_amount=tax_amount_value,
+            subtotal=subtotal_value,
             organization_id=organization_id,
             correlation_id=f"erp-intake:xero:{envelope.event_id or envelope.source_id}",
             field_confidences={
                 "vendor_name": 1.0, "amount": 1.0, "currency": 1.0,
                 "invoice_number": 1.0, "due_date": 1.0,
             },
+            field_provenance=provenance,
+            field_evidence=build_passthrough_evidence(
+                field_provenance=provenance,
+                source_label="Xero",
+            ),
         )
 
 

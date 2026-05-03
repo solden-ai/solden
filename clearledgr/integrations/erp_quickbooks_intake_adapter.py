@@ -184,6 +184,19 @@ class QuickBooksIntakeAdapter:
     def _thin_invoice_from_envelope(
         self, envelope: IntakeEnvelope, organization_id: str,
     ) -> InvoiceData:
+        from clearledgr.services.extraction_provenance import (
+            METHOD_API_PASSTHROUGH,
+            SOURCE_ERP_NATIVE_QUICKBOOKS,
+            build_passthrough_evidence,
+            build_passthrough_provenance,
+        )
+
+        provenance = build_passthrough_provenance(
+            source=SOURCE_ERP_NATIVE_QUICKBOOKS,
+            source_ref=envelope.source_id,
+            method=METHOD_API_PASSTHROUGH,
+            fields={"invoice_number": envelope.source_id},
+        )
         return InvoiceData(
             source_type="quickbooks",
             source_id=envelope.source_id,
@@ -202,6 +215,11 @@ class QuickBooksIntakeAdapter:
             confidence=1.0,
             organization_id=organization_id,
             correlation_id=f"erp-intake:qb:{envelope.event_id or envelope.source_id}",
+            field_provenance=provenance,
+            field_evidence=build_passthrough_evidence(
+                field_provenance=provenance,
+                source_label="QuickBooks Online (thin intake)",
+            ),
         )
 
     @staticmethod
@@ -253,6 +271,30 @@ class QuickBooksIntakeAdapter:
             bill.get("DocNumber") or envelope.source_id,
         ).strip()
 
+        from clearledgr.services.extraction_provenance import (
+            METHOD_API_PASSTHROUGH,
+            SOURCE_ERP_NATIVE_QUICKBOOKS,
+            build_passthrough_evidence,
+            build_passthrough_provenance,
+        )
+
+        due_date_value = str(bill.get("DueDate") or "").strip() or None
+        provenance = build_passthrough_provenance(
+            source=SOURCE_ERP_NATIVE_QUICKBOOKS,
+            source_ref=str(bill.get("Id") or envelope.source_id),
+            method=METHOD_API_PASSTHROUGH,
+            fields={
+                "vendor_name": vendor_name,
+                "amount": amount,
+                "currency": currency,
+                "invoice_number": invoice_number,
+                "due_date": due_date_value,
+            },
+            confidences={
+                "vendor_name": 1.0, "amount": 1.0, "currency": 1.0,
+                "invoice_number": 1.0, "due_date": 1.0,
+            },
+        )
         return InvoiceData(
             source_type="quickbooks",
             source_id=envelope.source_id,
@@ -264,7 +306,7 @@ class QuickBooksIntakeAdapter:
             amount=amount,
             currency=currency,
             invoice_number=invoice_number,
-            due_date=str(bill.get("DueDate") or "").strip() or None,
+            due_date=due_date_value,
             confidence=1.0,
             line_items=line_items or None,
             organization_id=organization_id,
@@ -273,6 +315,11 @@ class QuickBooksIntakeAdapter:
                 "vendor_name": 1.0, "amount": 1.0, "currency": 1.0,
                 "invoice_number": 1.0, "due_date": 1.0,
             },
+            field_provenance=provenance,
+            field_evidence=build_passthrough_evidence(
+                field_provenance=provenance,
+                source_label="QuickBooks Online",
+            ),
         )
 
 
