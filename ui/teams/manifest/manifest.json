@@ -1,0 +1,64 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.0",
+  "id": "154bd109-4a0f-4df3-ab40-d34f6908fe99",
+  "packageName": "com.solden.teams",
+  "developer": {
+    "name": "Solden",
+    "websiteUrl": "https://soldenai.com",
+    "privacyUrl": "https://soldenai.com/privacy",
+    "termsOfUseUrl": "https://soldenai.com/terms",
+    "mpnId": ""
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "Solden",
+    "full": "Solden — Finance Agent"
+  },
+  "description": {
+    "short": "Coordination layer for finance teams. Approve, escalate, and resolve AP exceptions in Teams.",
+    "full": "Solden is the embedded coordination layer for finance teams. The Solden bot brings AP approvals, exception triage, and workflow actions into Microsoft Teams as Adaptive Cards — review the bill, see the agent's reasoning + validation gate verdict + vendor history, and approve/reject/escalate without leaving the channel. Solden coordinates across Gmail, Slack, Teams, and the ERP, so the audit chain is complete: who decided what, where, with what evidence."
+  },
+  "accentColor": "#0A1F44",
+  "bots": [
+    {
+      "botId": "${MICROSOFT_APP_ID}",
+      "scopes": ["personal", "team", "groupchat"],
+      "supportsFiles": false,
+      "isNotificationOnly": false,
+      "commandLists": [
+        {
+          "scopes": ["personal", "team", "groupchat"],
+          "commands": [
+            {
+              "title": "status",
+              "description": "Check the AP queue health"
+            },
+            {
+              "title": "exceptions",
+              "description": "Review pending AP exceptions"
+            },
+            {
+              "title": "tasks",
+              "description": "List your pending finance tasks"
+            },
+            {
+              "title": "help",
+              "description": "Show available commands"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": [
+    "api.solden.com",
+    "app.solden.com",
+    "soldenai.com"
+  ]
+}
