@@ -63,8 +63,16 @@ Two-way bridge between SAP S/4HANA and Clearledgr's coordination layer
 | 3 (read) | Real BTP deploy: MTA + Approuter + Destination + HTML5 Repo | ✅ scaffolded | 5 |
 | 1 (write) | Webhook dispatcher accepts BTP Event Mesh CloudEvents + ABAP-BAdI shapes; creates/advances Boxes | ✅ scaffolded | 3 |
 | 2 (write) | Slack approval card on payment block (reuses NetSuite path); approve clears block via OData; reject cancels via OData action | ✅ scaffolded | 3 |
+| Audit-trail compose | Panel actions dispatch via dedicated SAP endpoints (`/extension/ap-items/by-sap-invoice/{approve,reject,request-info}`) so every state_transition audit row records `ui_surface=erp_native_sap` (Phase 1 Gap 4 SoR contract) | ✅ shipped | 1 |
 | 4 (read) | Manifest Extension on `Display Supplier Invoice` standard app | not started | weeks (customer-side) |
 | 4 (write) | Customer-tenant deploy: BTP subaccount, Cloud Connector, IDP federation, role assignments | not started | 3-6 weeks (customer-side) |
+| 5 | SAP Store listing | runbook ready | see below |
+
+**SAP Store + ICC runbooks:**
+- [ICC_CERTIFICATION.md](ICC_CERTIFICATION.md) — Integration and Certification Center prep: test scenarios, security questionnaire, performance benchmarks, customer reference (Booking.com).
+- [SAP_STORE.md](SAP_STORE.md) — PartnerEdge enrollment, namespace reservation, MTA submission, per-tenant install.
+
+Total realistic ship-to-store timeline: **6–12 months** (longest of the three render-target markets — PartnerEdge + ICC review are the long poles).
 
 The code on disk is Phase-1+2+3 (read) + Phase-1+2 (write) ready. What
 still needs human action: a BTP trial subaccount, an XSUAA service
