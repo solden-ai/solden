@@ -3700,123 +3700,361 @@
 }
 
 
-/* ─── Module 6 — SAML config panel ─────────────────────────────── */
+/* ─── SAML SSO config panel ────────────────────────────────────── *
+ *
+ * Reference idiom: Linear / Vercel / Stripe SSO settings — clear
+ * "register us with your IdP first" step with copy-able SP values,
+ * then "paste your IdP's values" with inline guidance per field.
+ * Numbered step markers, monospace cert + URLs, status pill in
+ * the header, and a sticky-ish footer with Save + Test + Remove. */
 
+.cl-saml-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.cl-saml-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.cl-saml-header-copy { min-width: 0; flex: 1 1 auto; }
+
+.cl-saml-header h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--cl-ink-primary);
+}
+
+.cl-saml-header p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--cl-ink-secondary);
+}
+
+/* Status pill — replaces the previous bare green/grey one. */
 .cl-saml-status {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
+  gap: 6px;
+  padding: 5px 12px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.02em;
   white-space: nowrap;
+  flex-shrink: 0;
 }
+
+.cl-saml-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
 .cl-saml-status-on {
-  background: #ECFDF5;
-  color: #047857;
-  border: 1px solid #10B981;
+  background: var(--cl-teal-soft);
+  color: var(--cl-teal-600);
+  border: 1px solid rgba(24, 191, 176, 0.4);
 }
+.cl-saml-status-on .cl-saml-status-dot { background: var(--cl-teal-500); }
+
 .cl-saml-status-off {
-  background: #F1F5F9;
-  color: #475569;
-  border: 1px solid #CBD5E1;
+  background: #FEF3C7;
+  color: #92400E;
+  border: 1px solid #FCD34D;
 }
+.cl-saml-status-off .cl-saml-status-dot { background: #B45309; }
 
-.cl-saml-section {
-  padding: 14px 0;
-  border-top: 1px solid var(--cl-line);
+.cl-saml-status-idle {
+  background: var(--cl-bg);
+  color: var(--cl-ink-secondary);
+  border: 1px solid var(--cl-border);
 }
-.cl-saml-section h4 {
-  margin: 0 0 4px;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--cl-ink-muted);
-}
+.cl-saml-status-idle .cl-saml-status-dot { background: var(--cl-ink-muted); }
 
-.cl-saml-metadata-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  background: #F8FAFC;
-  border: 1px solid var(--cl-line);
-  border-radius: 6px;
-  margin-top: 8px;
-}
-.cl-saml-metadata-row code {
-  flex: 1;
-  font-family: 'Geist Mono', monospace;
-  font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--cl-ink);
-}
-
-.cl-saml-form {
+/* The flow stack: 4 sections, each a numbered step. */
+.cl-saml-flow {
   display: flex;
   flex-direction: column;
+  gap: 24px;
+}
+
+.cl-saml-flow-form {
+  display: contents;
+}
+
+.cl-saml-step {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cl-saml-step-head {
+  display: flex;
+  align-items: flex-start;
   gap: 12px;
-  padding-top: 8px;
 }
-.cl-saml-form h4 {
-  margin: 12px 0 4px;
+
+.cl-saml-step-marker {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--cl-navy);
+  color: #fff;
+  border-radius: 50%;
+  font-family: var(--cl-font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.cl-saml-step-head h4 {
+  margin: 0 0 3px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--cl-ink-primary);
+}
+
+.cl-saml-step-head p {
+  margin: 0;
   font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--cl-ink-muted);
+  line-height: 1.5;
+  color: var(--cl-ink-secondary);
 }
-.cl-saml-field {
+
+/* Step 1 read-only SP values — three rows with Copy buttons. */
+.cl-saml-readonly-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 40px; /* aligns under the step copy, not the marker */
+}
+
+.cl-saml-readonly {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-.cl-saml-field span {
-  font-size: 12px;
+
+.cl-saml-readonly-label {
+  font-size: 11px;
   font-weight: 600;
-  color: var(--cl-ink);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
 }
-.cl-saml-field input,
-.cl-saml-field textarea,
-.cl-saml-field select {
-  border: 1px solid var(--cl-line);
-  border-radius: 6px;
-  padding: 8px 10px;
-  font-size: 13px;
-  font-family: inherit;
-}
-.cl-saml-field textarea {
-  font-family: 'Geist Mono', monospace;
-  font-size: 12px;
-  resize: vertical;
-}
-.cl-saml-field-toggle {
-  flex-direction: row;
+
+.cl-saml-readonly-row {
+  display: flex;
   align-items: center;
   gap: 8px;
+  padding: 8px 10px 8px 12px;
+  background: var(--cl-bg);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
 }
-.cl-saml-field-toggle input {
-  width: auto;
-  margin: 0;
+
+.cl-saml-readonly-value {
+  flex: 1 1 auto;
+  font-family: var(--cl-font-mono);
+  font-size: 12px;
+  color: var(--cl-ink-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: transparent;
+  padding: 0;
 }
+
+.cl-saml-readonly-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Step 2/3/4 form fields. */
+.cl-saml-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-left: 40px; /* aligns under the step copy */
+}
+
+.cl-saml-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cl-saml-field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+}
+
+.cl-saml-field-required {
+  color: var(--cl-ink-muted);
+  font-weight: 500;
+}
+
+.cl-saml-field input,
+.cl-saml-field select {
+  height: 36px;
+  padding: 0 12px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--cl-ink-primary);
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.cl-saml-field input:focus,
+.cl-saml-field select:focus,
+.cl-saml-cert:focus {
+  outline: none;
+  border-color: var(--cl-teal-500);
+  box-shadow: 0 0 0 3px rgba(24, 191, 176, 0.16);
+}
+
+/* Cert textarea — capped height + monospace. The previous version
+   was rows="6" which expanded to 200+px even when empty; now it's
+   sized for a typical PEM and scrolls if larger. */
+.cl-saml-cert {
+  width: 100%;
+  min-height: 120px;
+  max-height: 220px;
+  padding: 10px 12px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  font-family: var(--cl-font-mono);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--cl-ink-primary);
+  resize: vertical;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.cl-saml-field-hint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--cl-ink-muted);
+}
+
+.cl-saml-field-hint code {
+  font-family: var(--cl-font-mono);
+  font-size: 11px;
+  padding: 1px 4px;
+  background: var(--cl-bg);
+  border-radius: 3px;
+  color: var(--cl-ink-secondary);
+}
+
+/* Toggle row — checkbox + label stack with an explanatory subline. */
+.cl-saml-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--cl-bg);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  cursor: pointer;
+}
+
+.cl-saml-toggle:has(input:checked) {
+  background: var(--cl-teal-soft);
+  border-color: rgba(24, 191, 176, 0.35);
+}
+
+.cl-saml-toggle input[type="checkbox"] {
+  margin: 3px 0 0 0;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: var(--cl-teal-500);
+}
+
+.cl-saml-toggle > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.cl-saml-toggle strong {
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+}
+
+.cl-saml-toggle .muted.small {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* Optional SLO disclosure. */
 .cl-saml-advanced {
-  border-top: 1px dashed var(--cl-line);
-  padding-top: 8px;
-  margin-top: 4px;
+  margin-left: 40px;
+  border-top: 1px solid var(--cl-border);
+  padding-top: 16px;
 }
+
 .cl-saml-advanced summary {
   font-size: 13px;
   font-weight: 600;
-  color: var(--cl-ink-muted);
+  color: var(--cl-ink-secondary);
   cursor: pointer;
   user-select: none;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
-.cl-saml-actions {
+
+.cl-saml-advanced summary::before {
+  content: '▸';
+  font-size: 10px;
+  color: var(--cl-ink-muted);
+  transition: transform 0.12s;
+}
+
+.cl-saml-advanced[open] summary::before {
+  transform: rotate(90deg);
+}
+
+/* Footer: Save + Test + Remove sit on a separator. */
+.cl-saml-footer {
   display: flex;
-  gap: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--cl-line);
+  gap: 10px;
+  padding-top: 16px;
+  margin-top: 8px;
+  border-top: 1px solid var(--cl-border);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+  .cl-saml-readonly-stack,
+  .cl-saml-fields,
+  .cl-saml-advanced {
+    padding-left: 0;
+    margin-left: 0;
+  }
 }
 
 

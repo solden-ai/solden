@@ -1915,129 +1915,250 @@ function SAMLPanel({ api, orgId, toast, canManage }) {
 
   const spMetadataUrl = `https://api.clearledgr.com/saml/${encodeURIComponent(orgId)}/sp-metadata`;
   const fingerprint = config?.idp_certificate?.fingerprint_sha256;
+  const statusTone = !configured ? 'idle' : (form.enabled ? 'on' : 'off');
+  const statusLabel = !configured
+    ? 'Not configured'
+    : (form.enabled ? 'Active' : 'Disabled');
+
+  const copy = (value, label) => {
+    navigator.clipboard?.writeText(value);
+    toast?.(`${label} copied.`, 'success');
+  };
 
   return html`
-    <div class="panel">
-      <div class="panel-head compact">
-        <div>
-          <h3 style="margin-top:0">SAML SSO</h3>
-          <p class="muted" style="margin:0">
-            Federate identity via your IdP. Azure AD, Okta, Google Workspace, OneLogin, and any SAML 2.0 IdP supported.
+    <div class="panel cl-saml-panel">
+      <header class="cl-saml-header">
+        <div class="cl-saml-header-copy">
+          <h3>SAML SSO</h3>
+          <p class="muted">
+            Federate sign-in through your identity provider — Azure AD, Okta, Google Workspace, OneLogin, or any SAML 2.0 IdP.
           </p>
         </div>
-        ${configured ? html`
-          <span class="cl-saml-status ${form.enabled ? 'cl-saml-status-on' : 'cl-saml-status-off'}">
-            ${form.enabled ? 'Configured · Enabled' : 'Configured · Disabled'}
-          </span>
-        ` : html`<span class="cl-saml-status cl-saml-status-off">Not configured</span>`}
-      </div>
+        <span class=${`cl-saml-status cl-saml-status-${statusTone}`}>
+          <span class="cl-saml-status-dot"></span>
+          ${statusLabel}
+        </span>
+      </header>
 
-      ${loading ? html`<div class="muted" style="padding:16px 0">Loading SAML config…</div>` : null}
+      ${loading ? html`<div class="muted" style="padding:24px 0">Loading SAML config…</div>` : null}
 
       ${!loading ? html`
-        <div class="cl-saml-section">
-          <h4>1. Send your IdP this metadata</h4>
-          <p class="muted">Hand your IT team this URL — it's the SP-side metadata your IdP needs to register Solden as a relying party.</p>
-          <div class="cl-saml-metadata-row">
-            <code>${spMetadataUrl}</code>
-            <button type="button" class="btn-secondary btn-sm" onClick=${() => {
-              navigator.clipboard?.writeText(spMetadataUrl);
-              toast?.('SP metadata URL copied.', 'success');
-            }}>Copy</button>
-            <a class="btn-secondary btn-sm" href=${spMetadataUrl} target="_blank" rel="noreferrer">Open</a>
-          </div>
-        </div>
+        <div class="cl-saml-flow">
 
-        <form onSubmit=${onSave} class="cl-saml-form">
-          <h4>2. Paste your IdP's settings</h4>
+          <!-- STEP 1: SP-side values to register Solden in the IdP. -->
+          <section class="cl-saml-step">
+            <div class="cl-saml-step-head">
+              <span class="cl-saml-step-marker">1</span>
+              <div>
+                <h4>Register Solden with your IdP</h4>
+                <p class="muted">Send your IT team the metadata URL — or paste these three values into the IdP's SAML application form.</p>
+              </div>
+            </div>
+            <div class="cl-saml-readonly-stack">
+              <${SamlReadonlyField}
+                label="Metadata URL (recommended)"
+                value=${spMetadataUrl}
+                onCopy=${() => copy(spMetadataUrl, 'Metadata URL')}
+                openHref=${spMetadataUrl}
+              />
+              <${SamlReadonlyField}
+                label="SP entity ID"
+                value=${form.sp_entity_id}
+                onCopy=${() => copy(form.sp_entity_id, 'SP entity ID')}
+              />
+              <${SamlReadonlyField}
+                label="ACS URL (HTTP-POST)"
+                value=${form.sp_acs_url}
+                onCopy=${() => copy(form.sp_acs_url, 'ACS URL')}
+              />
+            </div>
+          </section>
 
-          <label class="cl-saml-field">
-            <span>IdP Entity ID</span>
-            <input type="text" placeholder="https://sts.windows.net/.../"
-              value=${form.idp_entity_id}
-              onInput=${setField('idp_entity_id')}
-              disabled=${!canManage}
-              required />
-          </label>
-          <label class="cl-saml-field">
-            <span>IdP SSO URL (HTTPS)</span>
-            <input type="url" placeholder="https://login.microsoftonline.com/.../saml2"
-              value=${form.idp_sso_url}
-              onInput=${setField('idp_sso_url')}
-              disabled=${!canManage}
-              required />
-          </label>
-          <label class="cl-saml-field">
-            <span>IdP X.509 certificate (PEM)</span>
-            <textarea rows="6"
-              placeholder="-----BEGIN CERTIFICATE-----&#10;..."
-              value=${form.idp_certificate_pem}
-              onInput=${setField('idp_certificate_pem')}
-              disabled=${!canManage}
-              required></textarea>
-            ${fingerprint ? html`<small class="muted">Current cert fingerprint: <code>${fingerprint}</code> · paste a new PEM to rotate.</small>` : null}
-          </label>
+          <form onSubmit=${onSave} class="cl-saml-flow-form">
 
-          <h4>3. Attribute mapping</h4>
-          <label class="cl-saml-field">
-            <span>Email attribute</span>
-            <input type="text" value=${form.attribute_email} onInput=${setField('attribute_email')} disabled=${!canManage} />
-          </label>
-          <label class="cl-saml-field">
-            <span>Role attribute (optional)</span>
-            <input type="text" placeholder="role / department / title"
-              value=${form.attribute_role} onInput=${setField('attribute_role')} disabled=${!canManage} />
-          </label>
-          <label class="cl-saml-field">
-            <span>Entity attribute (optional, for multi-entity orgs)</span>
-            <input type="text" placeholder="entity / subsidiary"
-              value=${form.attribute_entity} onInput=${setField('attribute_entity')} disabled=${!canManage} />
-          </label>
+            <!-- STEP 2: Paste IdP-side values back into Solden. -->
+            <section class="cl-saml-step">
+              <div class="cl-saml-step-head">
+                <span class="cl-saml-step-marker">2</span>
+                <div>
+                  <h4>Paste your IdP's settings</h4>
+                  <p class="muted">Find these in your IdP's SAML application overview after creating it.</p>
+                </div>
+              </div>
+              <div class="cl-saml-fields">
+                <label class="cl-saml-field">
+                  <span class="cl-saml-field-label">IdP entity ID</span>
+                  <input
+                    type="text"
+                    placeholder="https://sts.windows.net/<tenant-id>/"
+                    value=${form.idp_entity_id}
+                    onInput=${setField('idp_entity_id')}
+                    disabled=${!canManage}
+                    required />
+                </label>
+                <label class="cl-saml-field">
+                  <span class="cl-saml-field-label">IdP SSO URL (HTTP-POST)</span>
+                  <input
+                    type="url"
+                    placeholder="https://login.microsoftonline.com/<tenant-id>/saml2"
+                    value=${form.idp_sso_url}
+                    onInput=${setField('idp_sso_url')}
+                    disabled=${!canManage}
+                    required />
+                </label>
+                <label class="cl-saml-field">
+                  <span class="cl-saml-field-label">IdP X.509 certificate (PEM)</span>
+                  <textarea
+                    class="cl-saml-cert"
+                    rows="5"
+                    placeholder="-----BEGIN CERTIFICATE-----&#10;MIIC8TCCAdkC..."
+                    value=${form.idp_certificate_pem}
+                    onInput=${setField('idp_certificate_pem')}
+                    disabled=${!canManage}
+                    required></textarea>
+                  ${fingerprint ? html`
+                    <small class="cl-saml-field-hint">
+                      Current fingerprint <code>${fingerprint.slice(0, 32)}…</code> · paste a fresh PEM to rotate.
+                    </small>
+                  ` : html`
+                    <small class="cl-saml-field-hint">
+                      Paste the entire signing cert including the BEGIN/END lines.
+                    </small>
+                  `}
+                </label>
+              </div>
+            </section>
 
-          <h4>4. Provisioning</h4>
-          <label class="cl-saml-field">
-            <span>Default role for new users</span>
-            <select value=${form.default_role} onChange=${setField('default_role')} disabled=${!canManage}>
-              <option value="ap_clerk">AP Clerk</option>
-              <option value="ap_manager">AP Manager</option>
-              <option value="financial_controller">Financial Controller</option>
-              <option value="cfo">CFO</option>
-              <option value="read_only">Read-only</option>
-            </select>
-          </label>
-          <label class="cl-saml-field cl-saml-field-toggle">
-            <input type="checkbox" checked=${form.jit_provisioning} onChange=${setField('jit_provisioning')} disabled=${!canManage} />
-            <span>Just-in-time provisioning (auto-create users on first SSO login)</span>
-          </label>
-          <label class="cl-saml-field cl-saml-field-toggle">
-            <input type="checkbox" checked=${form.enabled} onChange=${setField('enabled')} disabled=${!canManage} />
-            <span>SAML enabled (when off, users fall back to password / OAuth)</span>
-          </label>
+            <!-- STEP 3: Attribute mapping with sensible defaults + IdP-specific guidance. -->
+            <section class="cl-saml-step">
+              <div class="cl-saml-step-head">
+                <span class="cl-saml-step-marker">3</span>
+                <div>
+                  <h4>Map IdP attributes</h4>
+                  <p class="muted">Tell Solden which SAML claim carries the user's email, role, and (if multi-entity) which subsidiary they belong to.</p>
+                </div>
+              </div>
+              <div class="cl-saml-fields">
+                <label class="cl-saml-field">
+                  <span class="cl-saml-field-label">Email <span class="cl-saml-field-required">(required)</span></span>
+                  <input
+                    type="text"
+                    value=${form.attribute_email}
+                    onInput=${setField('attribute_email')}
+                    disabled=${!canManage}
+                    placeholder="email" />
+                  <small class="cl-saml-field-hint">Common values — Azure AD: <code>http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress</code> · Okta: <code>email</code> · Google: <code>email</code>.</small>
+                </label>
+                <label class="cl-saml-field">
+                  <span class="cl-saml-field-label">Role <span class="muted">(optional)</span></span>
+                  <input
+                    type="text"
+                    value=${form.attribute_role}
+                    onInput=${setField('attribute_role')}
+                    disabled=${!canManage}
+                    placeholder="role" />
+                  <small class="cl-saml-field-hint">If your IdP sends a role/group claim, Solden will map it to AP Clerk / Manager / etc. Leave blank to assign the default role to everyone.</small>
+                </label>
+                <label class="cl-saml-field">
+                  <span class="cl-saml-field-label">Entity <span class="muted">(optional, multi-entity only)</span></span>
+                  <input
+                    type="text"
+                    value=${form.attribute_entity}
+                    onInput=${setField('attribute_entity')}
+                    disabled=${!canManage}
+                    placeholder="subsidiary" />
+                  <small class="cl-saml-field-hint">For groups with multiple legal entities. Solden routes the user to the entity scope your IdP sends.</small>
+                </label>
+              </div>
+            </section>
 
-          <details class="cl-saml-advanced">
-            <summary>Optional — Single Logout (SLO)</summary>
-            <label class="cl-saml-field">
-              <span>IdP SLO URL</span>
-              <input type="url" value=${form.idp_slo_url} onInput=${setField('idp_slo_url')} disabled=${!canManage} />
-            </label>
-            <label class="cl-saml-field">
-              <span>SP SLO URL (echo back to IdP)</span>
-              <input type="url" value=${form.sp_slo_url} onInput=${setField('sp_slo_url')} disabled=${!canManage} />
-            </label>
-          </details>
+            <!-- STEP 4: Provisioning + enablement. -->
+            <section class="cl-saml-step">
+              <div class="cl-saml-step-head">
+                <span class="cl-saml-step-marker">4</span>
+                <div>
+                  <h4>Provisioning &amp; enable</h4>
+                  <p class="muted">What happens when a new SAML user lands on Solden.</p>
+                </div>
+              </div>
+              <div class="cl-saml-fields">
+                <label class="cl-saml-field">
+                  <span class="cl-saml-field-label">Default role for new users</span>
+                  <select value=${form.default_role} onChange=${setField('default_role')} disabled=${!canManage}>
+                    <option value="ap_clerk">AP Clerk</option>
+                    <option value="ap_manager">AP Manager</option>
+                    <option value="financial_controller">Financial Controller</option>
+                    <option value="cfo">CFO</option>
+                    <option value="read_only">Read-only</option>
+                  </select>
+                </label>
+                <label class="cl-saml-toggle">
+                  <input type="checkbox" checked=${form.jit_provisioning} onChange=${setField('jit_provisioning')} disabled=${!canManage} />
+                  <span>
+                    <strong>Just-in-time provisioning</strong>
+                    <span class="muted small">Auto-create the user on their first SSO login. Off → only pre-invited users can sign in.</span>
+                  </span>
+                </label>
+                <label class="cl-saml-toggle">
+                  <input type="checkbox" checked=${form.enabled} onChange=${setField('enabled')} disabled=${!canManage} />
+                  <span>
+                    <strong>SAML enabled</strong>
+                    <span class="muted small">When off, users fall back to email/password or OAuth.</span>
+                  </span>
+                </label>
+              </div>
+            </section>
 
-          <div class="cl-saml-actions">
-            <button type="submit" class="btn-primary" disabled=${!canManage || saving}>
-              ${saving ? 'Saving…' : (configured ? 'Save changes' : 'Save and enable SAML')}
-            </button>
-            ${configured ? html`
-              <button type="button" class="btn-danger" onClick=${onDelete} disabled=${!canManage || saving}>
-                Remove SAML config
+            <details class="cl-saml-advanced">
+              <summary>Single Logout (SLO) — optional</summary>
+              <div class="cl-saml-fields" style="margin-top:12px">
+                <label class="cl-saml-field">
+                  <span class="cl-saml-field-label">IdP SLO URL</span>
+                  <input type="url" value=${form.idp_slo_url} onInput=${setField('idp_slo_url')} disabled=${!canManage} placeholder="https://..." />
+                </label>
+                <label class="cl-saml-field">
+                  <span class="cl-saml-field-label">SP SLO URL (echo back to IdP)</span>
+                  <input type="url" value=${form.sp_slo_url} onInput=${setField('sp_slo_url')} disabled=${!canManage} placeholder="https://..." />
+                </label>
+              </div>
+            </details>
+
+            <footer class="cl-saml-footer">
+              <button type="submit" class="btn-primary" disabled=${!canManage || saving}>
+                ${saving ? 'Saving…' : (configured ? 'Save changes' : 'Save and enable SAML')}
               </button>
-            ` : null}
-          </div>
-        </form>
+              ${configured ? html`
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  onClick=${() => window.open(`/auth/saml/${encodeURIComponent(orgId)}/initiate?return_to=/`, '_blank')}
+                  disabled=${!canManage || saving}>
+                  Test SSO sign-in
+                </button>
+                <button type="button" class="btn-danger" onClick=${onDelete} disabled=${!canManage || saving}>
+                  Remove SAML
+                </button>
+              ` : null}
+            </footer>
+          </form>
+        </div>
       ` : null}
+    </div>
+  `;
+}
+
+
+function SamlReadonlyField({ label, value, onCopy, openHref }) {
+  return html`
+    <div class="cl-saml-readonly">
+      <div class="cl-saml-readonly-label">${label}</div>
+      <div class="cl-saml-readonly-row">
+        <code class="cl-saml-readonly-value">${value}</code>
+        <div class="cl-saml-readonly-actions">
+          <button type="button" class="btn-ghost btn-sm" onClick=${onCopy}>Copy</button>
+          ${openHref ? html`<a class="btn-ghost btn-sm" href=${openHref} target="_blank" rel="noreferrer">Open</a>` : null}
+        </div>
+      </div>
     </div>
   `;
 }
