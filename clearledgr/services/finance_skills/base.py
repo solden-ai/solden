@@ -19,10 +19,9 @@ if TYPE_CHECKING:
 class FinanceSkill(ABC):
     """Contract for operational skills hosted by the finance agent runtime.
 
-    Also known as OperationalSkill. Provides preview/execute for runtime intents.
-
-    For the planning skill ABC (Claude tool-use in AgentPlanningEngine),
-    see clearledgr.core.skills.base.FinanceSkill (PlanningSkill).
+    Provides preview/execute for runtime intents. The standalone
+    PlanningSkill ABC was consolidated into the deterministic planning
+    engine — there is no separate ``core/skills/`` module.
     """
 
     @property
