@@ -540,7 +540,10 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
                     amount=invoice.amount,
                     invoice_number=getattr(invoice, "invoice_number", None),
                     invoice_date=getattr(invoice, "due_date", None),
-                    currency=getattr(invoice, "currency", "USD"),
+                    # Empty when extraction missed it — analyzer is
+                    # responsible for handling missing currency, not us
+                    # for fabricating one.
+                    currency=getattr(invoice, "currency", "") or "",
                     gmail_id=invoice.gmail_id,
                 )
                 cross_analysis_dict = cross_result.to_dict() if cross_result else None
@@ -573,7 +576,7 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
                                 vendor_name=invoice.vendor_name,
                                 invoice_amount=float(invoice.amount or 0.0),
                                 recent_amounts=[float(x) for x in historical_amounts],
-                                currency=str(getattr(invoice, "currency", "USD") or "USD"),
+                                currency=str(getattr(invoice, "currency", "") or ""),
                             )
                         except Exception as ex_exc:
                             logger.debug(

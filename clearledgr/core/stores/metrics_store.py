@@ -247,7 +247,7 @@ class MetricsStore:
                         "amount": round(safe_float(item.get("amount"), 0.0), 2)
                         if item.get("amount") is not None
                         else None,
-                        "currency": str(item.get("currency") or "USD").strip().upper(),
+                        "currency": str(item.get("currency") or "").strip().upper(),
                         "state": state or "received",
                         "created_at": item_ts.isoformat(),
                         "sort_ts": float(item_ts.timestamp()),
@@ -1286,7 +1286,7 @@ class MetricsStore:
                     "box_type": box_type,
                     "vendor_name": item.get("vendor_name") or item.get("vendor"),
                     "amount": safe_float(item.get("amount"), 0.0),
-                    "currency": item.get("currency") or "USD",
+                    "currency": item.get("currency") or "",
                     "state": state,
                     "time_in_stage_minutes": round(tis_min, 2),
                     "entered_stage_at": entry_ts.isoformat(),

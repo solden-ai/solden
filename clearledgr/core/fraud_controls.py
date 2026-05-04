@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 # raise/lower them via the /fraud-controls API.
 # ---------------------------------------------------------------------------
 
-DEFAULT_PAYMENT_CEILING = 10_000.0  # in org base currency (default USD)
+DEFAULT_PAYMENT_CEILING = 10_000.0  # denominated in the org's configured base currency
 DEFAULT_VENDOR_VELOCITY_MAX_PER_WEEK = 10
 DEFAULT_FIRST_PAYMENT_DORMANCY_DAYS = 180
 
@@ -68,7 +68,12 @@ class FraudControlConfig:
     # The org's base currency — payment_ceiling is denominated in this.
     # Resolved from organization settings (locale.default_currency) at
     # load time; stored here so consumers don't need to re-resolve.
-    base_currency: str = "USD"
+    # Empty when the org hasn't configured a base currency yet — the
+    # ceiling check skips FX conversion in that case rather than
+    # silently comparing against a fabricated USD baseline. Solden
+    # launched in EU/UK; USD as a default would be wrong for the
+    # entire target market.
+    base_currency: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize for settings_json storage or API responses."""
@@ -79,7 +84,7 @@ class FraudControlConfig:
         cls,
         data: Optional[Dict[str, Any]],
         *,
-        base_currency: str = "USD",
+        base_currency: str = "",
     ) -> "FraudControlConfig":
         """Build a config from a settings_json sub-dict.
 
@@ -130,7 +135,7 @@ class FraudControlConfig:
             first_payment_dormancy_days=_int(
                 "first_payment_dormancy_days", DEFAULT_FIRST_PAYMENT_DORMANCY_DAYS
             ),
-            base_currency=(str(data.get("base_currency") or base_currency or "USD")).upper(),
+            base_currency=(str(data.get("base_currency") or base_currency or "")).upper(),
         )
 
 
@@ -146,7 +151,12 @@ def _resolve_base_currency(org_settings: Dict[str, Any]) -> str:
       1. settings_json["fraud_controls"]["base_currency"] (explicit override)
       2. settings_json["locale"]["default_currency"] (standard org locale)
       3. settings_json["default_currency"] (legacy flat shape)
-      4. "USD" (fallback)
+      4. "" (empty — the org hasn't configured a base currency yet)
+
+    Returns empty string when the org has no configured currency. The
+    ceiling check skips FX conversion in that case (see
+    ``evaluate_payment_ceiling``) — better than fabricating USD,
+    which would be wrong for the entire EU/UK launch market.
     """
     fraud_section = org_settings.get("fraud_controls") or {}
     if isinstance(fraud_section, dict) and fraud_section.get("base_currency"):
@@ -160,7 +170,7 @@ def _resolve_base_currency(org_settings: Dict[str, Any]) -> str:
     if flat:
         return str(flat).upper()
 
-    return "USD"
+    return ""
 
 
 def _load_org_settings(org_id: str, db: Any) -> Dict[str, Any]:
@@ -317,11 +327,41 @@ def evaluate_payment_ceiling(
     failure (unavailable pair, network error) returns
     ``fx_unavailable=True`` and ``exceeds_ceiling=True`` — fail-closed
     per DESIGN_THESIS.md §8 "better to hold than to overpay."
+
+    If neither the invoice nor the org config carries a currency, the
+    check skips FX entirely and treats the invoice amount as if it
+    were already in the (unknown) base currency. This is the safe
+    behaviour for a newly-provisioned org that hasn't completed
+    locale setup — fabricating USD would be wrong for an EU/UK
+    workspace that just hasn't picked GBP/EUR yet.
     """
     from clearledgr.services.fx_conversion import convert
 
-    invoice_currency = (invoice_currency or config.base_currency).upper()
-    base_currency = (config.base_currency or "USD").upper()
+    invoice_currency = (invoice_currency or "").upper()
+    base_currency = (config.base_currency or "").upper()
+
+    # When the org hasn't configured a base currency yet, we can't
+    # convert. Trust the invoice currency (or its absence) as the
+    # implicit base — comparing in whichever unit the invoice is
+    # denominated in is more honest than fail-closing on every
+    # invoice in a freshly-provisioned workspace.
+    if not base_currency:
+        amount = float(invoice_amount or 0)
+        return CeilingCheckResult(
+            exceeds_ceiling=amount > config.payment_ceiling,
+            invoice_amount=amount,
+            invoice_currency=invoice_currency,
+            base_currency=invoice_currency,
+            converted_amount=amount,
+            rate=1.0,
+            fx_unavailable=False,
+            ceiling=config.payment_ceiling,
+        )
+
+    # Invoice currency missing but base is set — assume invoice is in
+    # the org's base currency rather than fail-closing.
+    if not invoice_currency:
+        invoice_currency = base_currency
 
     if invoice_currency == base_currency:
         converted = float(invoice_amount or 0)

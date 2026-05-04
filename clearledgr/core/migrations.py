@@ -1300,7 +1300,7 @@ def _v33_purchase_orders(cur, db):
             subtotal REAL NOT NULL DEFAULT 0,
             tax_amount REAL NOT NULL DEFAULT 0,
             total_amount REAL NOT NULL DEFAULT 0,
-            currency TEXT NOT NULL DEFAULT 'USD',
+            currency TEXT,
             status TEXT NOT NULL DEFAULT 'draft',
             requested_by TEXT,
             approved_by TEXT,

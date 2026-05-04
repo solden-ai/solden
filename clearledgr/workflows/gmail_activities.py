@@ -235,8 +235,9 @@ async def extract_email_data_activity(payload: Dict[str, Any]) -> Dict[str, Any]
         amounts = parsed.get("amounts") or []
         if isinstance(amounts, list) and amounts and isinstance(amounts[0], dict):
             currency = str(amounts[0].get("currency") or "").strip().upper()
-    if not currency:
-        currency = "USD"
+    # Empty when extraction yielded no currency — persist NULL rather
+    # than fabricating one. Solden launched in EU/UK; USD masquerading
+    # as the default would be wrong for the entire target market.
 
     invoice_number = str(parsed.get("primary_invoice") or "").strip()
     if not invoice_number:
@@ -341,7 +342,7 @@ async def match_bank_feed_activity(payload: Dict[str, Any]) -> Dict[str, Any]:
                     "id": candidate.get("id"),
                     "date": candidate.get("date"),
                     "amount": safe_float(candidate.get("amount"), 0.0),
-                    "currency": candidate.get("currency") or "USD",
+                    "currency": candidate.get("currency") or "",
                     "vendor": candidate.get("vendor"),
                     "reference": candidate.get("reference"),
                     "description": candidate.get("description"),
@@ -459,7 +460,7 @@ async def send_slack_notification_activity(payload: Dict[str, Any]) -> Dict[str,
 
     vendor = str(extraction.get("vendor") or "Unknown")
     amount = safe_float(extraction.get("amount"), 0.0)
-    currency = str(extraction.get("currency") or "USD")
+    currency = str(extraction.get("currency") or "")
     confidence_pct = _normalize_confidence_pct(
         confidence_result.get("confidence_pct")
         if confidence_result.get("confidence_pct") is not None

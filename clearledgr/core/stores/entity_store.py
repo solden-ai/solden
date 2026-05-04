@@ -37,7 +37,7 @@ class EntityStore:
             erp_connection_id TEXT,
             gl_mapping_json TEXT,
             approval_rules_json TEXT,
-            default_currency TEXT DEFAULT 'USD',
+            default_currency TEXT,
             settings_json TEXT DEFAULT '{}',
             is_active INTEGER DEFAULT 1,
             created_at TEXT,
@@ -58,10 +58,16 @@ class EntityStore:
         erp_connection_id: Optional[str] = None,
         gl_mapping: Optional[Dict[str, Any]] = None,
         approval_rules: Optional[Dict[str, Any]] = None,
-        currency: str = "USD",
+        currency: str = "",
         parent_entity_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Create a new entity within an organization (Module 9 hierarchy)."""
+        """Create a new entity within an organization (Module 9 hierarchy).
+
+        ``currency`` should be the entity's reporting currency. Empty
+        string when caller hasn't determined one yet — onboarding
+        captures it from locale, so production callers always pass a
+        real value.
+        """
         self.initialize()
         now = datetime.now(timezone.utc).isoformat()
         entity_id = f"ENT-{uuid.uuid4().hex}"
@@ -79,7 +85,7 @@ class EntityStore:
             cur = conn.cursor()
             cur.execute(sql, (
                 entity_id, organization_id, name, code, erp_connection_id,
-                gl_mapping_json, approval_rules_json, currency or "USD",
+                gl_mapping_json, approval_rules_json, currency or None,
                 parent_entity_id,
                 now, now,
             ))

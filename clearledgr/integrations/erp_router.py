@@ -792,7 +792,7 @@ class Bill:
     vendor_id: str
     vendor_name: str
     amount: float
-    currency: str = "USD"
+    currency: str = ""
     invoice_number: Optional[str] = None
     invoice_date: Optional[str] = None
     due_date: Optional[str] = None
@@ -813,7 +813,7 @@ class CreditApplication:
 
     target_erp_reference: str
     amount: float
-    currency: str = "USD"
+    currency: str = ""
     credit_note_number: Optional[str] = None
     target_invoice_number: Optional[str] = None
     note: Optional[str] = None
@@ -827,7 +827,7 @@ class SettlementApplication:
 
     target_erp_reference: str
     amount: float
-    currency: str = "USD"
+    currency: str = ""
     source_reference: Optional[str] = None
     source_document_type: Optional[str] = None
     target_invoice_number: Optional[str] = None
@@ -1762,7 +1762,7 @@ class Vendor:
     phone: Optional[str] = None
     address: Optional[str] = None
     tax_id: Optional[str] = None
-    currency: str = "USD"
+    currency: str = ""
     payment_terms: Optional[str] = None  # e.g., "Net 30"
 
 

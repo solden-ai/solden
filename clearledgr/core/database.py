@@ -814,7 +814,7 @@ class _ClearledgrDBBase:
                     sender TEXT,
                     vendor_name TEXT,
                     amount REAL,
-                    currency TEXT DEFAULT 'USD',
+                    currency TEXT,
                     invoice_number TEXT,
                     invoice_date TEXT,
                     due_date TEXT,
@@ -1455,7 +1455,7 @@ class _ClearledgrDBBase:
             self._ensure_column(cur, "payments", "ap_item_id", "TEXT")
             self._ensure_column(cur, "payments", "vendor_name", "TEXT")
             self._ensure_column(cur, "payments", "amount", "REAL")
-            self._ensure_column(cur, "payments", "currency", "TEXT DEFAULT 'USD'")
+            self._ensure_column(cur, "payments", "currency", "TEXT")
             self._ensure_column(cur, "payments", "status", "TEXT DEFAULT 'ready_for_payment'")
             self._ensure_column(cur, "payments", "payment_method", "TEXT")
             self._ensure_column(cur, "payments", "payment_reference", "TEXT")

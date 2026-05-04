@@ -606,7 +606,7 @@ def _build_linked_finance_document_entry(
         "invoice_number": source_item.get("invoice_number"),
         "vendor_name": source_item.get("vendor_name") or source_item.get("vendor"),
         "amount": safe_float(source_item.get("amount")),
-        "currency": source_item.get("currency") or "USD",
+        "currency": source_item.get("currency") or "",
         "outcome": resolution.get("outcome"),
         "accounting_treatment": resolution.get("accounting_treatment"),
         "downstream_queue": resolution.get("downstream_queue"),
@@ -743,7 +743,7 @@ def _link_related_item_for_non_invoice_resolution(
                 "linked_document_type": _normalize_document_type_token(source_document_type),
                 "linked_invoice_number": source_item.get("invoice_number"),
                 "linked_amount": safe_float(source_item.get("amount")),
-                "linked_currency": source_item.get("currency") or "USD",
+                "linked_currency": source_item.get("currency") or "",
                 "related_reference": resolution.get("related_reference"),
                 "accounting_treatment": resolution.get("accounting_treatment"),
                 "finance_effect_summary": related_metadata.get("finance_effect_summary"),
@@ -776,7 +776,9 @@ async def _execute_non_invoice_erp_follow_on(
 
     source_currency = str(source_item.get("currency") or "").strip().upper()
     related_currency = str(related_item.get("currency") or "").strip().upper()
-    resolved_currency = source_currency or related_currency or "USD"
+    # Empty when neither side carries a currency — the caller decides
+    # whether that's actionable. Don't fabricate USD.
+    resolved_currency = source_currency or related_currency or ""
 
     if source_currency and related_currency and source_currency != related_currency:
         return {
@@ -1038,7 +1040,7 @@ def _superseded_invoice_key(source: Dict[str, Any], request: ResubmitRejectedIte
             str(request.vendor_name or source.get("vendor_name") or "").strip().lower(),
             str(request.invoice_number or source.get("invoice_number") or "").strip(),
             str(request.amount if request.amount is not None else source.get("amount") or "").strip(),
-            str(request.currency or source.get("currency") or "USD").strip().upper(),
+            str(request.currency or source.get("currency") or "").strip().upper(),
         ]
     )
 
@@ -2202,7 +2204,7 @@ def _build_upcoming_task(item: Dict[str, Any], now: datetime) -> Optional[Dict[s
         "vendor_name": item.get("vendor_name") or item.get("vendor"),
         "invoice_number": item.get("invoice_number"),
         "amount": safe_float(item.get("amount")),
-        "currency": item.get("currency") or "USD",
+        "currency": item.get("currency") or "",
         "state": state,
         "thread_id": item.get("thread_id"),
         "message_id": item.get("message_id"),

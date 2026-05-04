@@ -116,7 +116,10 @@ class TestFraudControlConfigDefaults:
         assert config.payment_ceiling == DEFAULT_PAYMENT_CEILING == 10_000.0
         assert config.vendor_velocity_max_per_week == DEFAULT_VENDOR_VELOCITY_MAX_PER_WEEK == 10
         assert config.first_payment_dormancy_days == DEFAULT_FIRST_PAYMENT_DORMANCY_DAYS == 180
-        assert config.base_currency == "USD"
+        # Solden launches in EU/UK; the dataclass default is empty — the
+        # org's actual base currency is resolved from locale settings at
+        # load time, not fabricated as USD.
+        assert config.base_currency == ""
 
     def test_config_is_frozen(self):
         from clearledgr.core.fraud_controls import FraudControlConfig
@@ -709,7 +712,9 @@ class TestFraudControlsAPI:
             assert body["payment_ceiling"] == 10_000.0
             assert body["vendor_velocity_max_per_week"] == 10
             assert body["first_payment_dormancy_days"] == 180
-            assert body["base_currency"] == "USD"
+            # Empty until the org configures locale; no longer
+            # fabricated as USD (Solden EU/UK launch).
+            assert body["base_currency"] == ""
         finally:
             main.app.dependency_overrides.pop(get_current_user, None)
 

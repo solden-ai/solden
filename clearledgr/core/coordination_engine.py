@@ -802,7 +802,11 @@ class CoordinationEngine:
             "sender": ctx.get("sender", ""),
             "vendor_name": extracted.get("vendor_name") or ctx.get("sender", ""),
             "amount": extracted.get("amount") or extracted.get("total_amount"),
-            "currency": extracted.get("currency", "USD"),
+            # Don't fabricate "USD" when extraction couldn't determine the
+            # currency — persist NULL so a non-USD invoice with a missed
+            # currency code never silently gets relabeled. Render layer
+            # surfaces the gap honestly.
+            "currency": extracted.get("currency"),
             "invoice_number": extracted.get("invoice_number") or extracted.get("invoice_reference"),
             "invoice_date": extracted.get("invoice_date"),
             "due_date": extracted.get("due_date"),
@@ -885,7 +889,12 @@ class CoordinationEngine:
         ctx = self._ensure_ctx(plan)
         extracted = ctx.get("extracted_fields", {})
         amount = float(extracted.get("amount") or extracted.get("total_amount") or 0)
-        currency = extracted.get("currency", "USD")
+        # Pass extracted currency raw — evaluate_payment_ceiling falls back
+        # to the org's configured base_currency when invoice_currency is
+        # empty (fraud_controls.py:323), which is the right anchor for the
+        # ceiling comparison. Defaulting to "USD" upstream lied to the
+        # check whenever the org's base wasn't USD.
+        currency = extracted.get("currency") or ""
         if amount <= 0:
             return {"ok": True}
         try:
@@ -1065,7 +1074,10 @@ class CoordinationEngine:
             sender=ctx.get("sender", ""),
             vendor_name=extracted.get("vendor_name") or ctx.get("sender", ""),
             amount=float(extracted.get("amount") or extracted.get("total_amount") or 0),
-            currency=extracted.get("currency", "USD"),
+            # Empty string when extraction missed it — persistence
+            # carries this through as NULL so the dashboard renders
+            # honestly instead of fabricating "USD".
+            currency=extracted.get("currency") or "",
             invoice_number=extracted.get("invoice_number") or extracted.get("invoice_reference"),
             due_date=extracted.get("due_date"),
             po_number=extracted.get("po_reference") or extracted.get("po_number"),
@@ -1132,7 +1144,11 @@ class CoordinationEngine:
                 sender=item.get("sender") or "",
                 vendor_name=item.get("vendor_name") or "",
                 amount=float(item.get("amount") or 0),
-                currency=item.get("currency") or "USD",
+                # Carry the row's raw currency through — empty string
+                # if absent. The downstream ERP poster decides how to
+                # handle missing currency (its own base_currency
+                # fallback, or reject if mandatory).
+                currency=item.get("currency") or "",
                 invoice_number=item.get("invoice_number"),
                 organization_id=self.organization_id,
             )

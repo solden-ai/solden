@@ -104,11 +104,14 @@ def build_box_summary(
         # Current stage
         summary.current_stage = item.get("state") or "unknown"
 
-        # Key fields
+        # Key fields. Currency is left empty when the row didn't carry
+        # one — fabricating "USD" hides extraction gaps and silently
+        # mislabels non-USD invoices in any downstream surface that
+        # reads this summary.
         summary.key_fields = {
             "vendor_name": item.get("vendor_name") or "Unknown",
             "amount": item.get("amount"),
-            "currency": item.get("currency") or "USD",
+            "currency": item.get("currency") or "",
             "invoice_number": item.get("invoice_number") or "",
             "due_date": item.get("due_date") or "",
             "po_number": item.get("po_number") or "",

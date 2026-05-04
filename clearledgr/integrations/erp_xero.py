@@ -1434,7 +1434,7 @@ async def list_all_purchase_orders_xero(connection) -> List[Dict[str, Any]]:
                     "subtotal": float(po.get("SubTotal") or 0.0),
                     "tax_amount": float(po.get("TotalTax") or 0.0),
                     "total_amount": float(po.get("Total") or 0.0),
-                    "currency": str(po.get("CurrencyCode") or "USD"),
+                    "currency": str(po.get("CurrencyCode") or "") or None,
                     "status": _status_from_xero(po),
                     "requested_by": "xero_sync",
                     "erp_po_id": str(po.get("PurchaseOrderID") or ""),

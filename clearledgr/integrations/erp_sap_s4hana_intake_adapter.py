@@ -224,7 +224,7 @@ class SapS4HanaIntakeAdapter:
         cc, doc, fy = (envelope.source_id.split("/", 2) + ["", "", ""])[:3]
         vendor_name = _pick(payload, "SupplierName", "supplier_name") or "Unknown supplier"
         amount = _safe_float(_pick(payload, "InvoiceGrossAmount", "GrossAmount", "amount", "WRBTR"), default=0.0)
-        currency = str(_pick(payload, "DocumentCurrency", "Currency", "WAERS") or "USD").upper()
+        currency = str(_pick(payload, "DocumentCurrency", "Currency", "WAERS") or "").upper()
         invoice_number = _pick(payload, "SupplierInvoiceIDByInvcgParty", "invoice_number") or doc
         due_date = _pick(payload, "NetDueDate", "due_date") or None
         provenance = build_passthrough_provenance(
@@ -348,7 +348,7 @@ class SapS4HanaIntakeAdapter:
 
         vendor_name_value = header.get("supplier_name") or "Unknown supplier"
         amount_value = _safe_float(header.get("amount")) or 0.0
-        currency_value = str(header.get("currency") or "USD").upper()
+        currency_value = str(header.get("currency") or "").upper()
         invoice_number_value = str(header.get("invoice_number") or doc).strip()
         due_date_value = str(header.get("due_date") or "").strip() or None
         tax_amount_value = _safe_float(header.get("tax_amount")) or None

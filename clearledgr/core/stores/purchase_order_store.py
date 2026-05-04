@@ -118,7 +118,7 @@ class PurchaseOrderStore:
             float(po.get("subtotal") or 0.0),
             float(po.get("tax_amount") or 0.0),
             float(po.get("total_amount") or 0.0),
-            str(po.get("currency") or "USD"),
+            str(po.get("currency") or "") or None,
             str(po.get("status") or "draft"),
             str(po.get("requested_by") or ""),
             str(po.get("approved_by") or "") or None,

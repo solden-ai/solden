@@ -212,7 +212,7 @@ class APStore:
             payload.get("sender"),
             payload.get("vendor_name"),
             payload.get("amount"),
-            payload.get("currency") or "USD",
+            payload.get("currency") or None,
             payload.get("invoice_number"),
             payload.get("invoice_date"),
             payload.get("due_date"),
@@ -972,7 +972,10 @@ class APStore:
             "sender": kwargs.get("sender"),
             "vendor_name": kwargs.get("vendor"),
             "amount": kwargs.get("amount"),
-            "currency": kwargs.get("currency", "USD"),
+            # Persist None when the caller didn't pass a currency. The
+            # render layer surfaces this as a missing-currency signal
+            # rather than masking it with a fabricated "USD".
+            "currency": kwargs.get("currency"),
             "invoice_number": kwargs.get("invoice_number"),
             "due_date": kwargs.get("due_date"),
             "state": state,
