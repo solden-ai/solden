@@ -343,26 +343,48 @@
   text-align: center;
 }
 
-.form__success {
+.form__success,
+.form__error {
   display: none;
-  padding: 24px;
+  padding: 20px 24px;
   border-radius: var(--radius);
-  background: rgba(24, 191, 176, 0.10);
-  border: 1px solid rgba(24, 191, 176, 0.32);
-  color: var(--navy);
   font-size: 15px;
   line-height: 1.55;
   text-align: center;
+  margin-top: 8px;
 }
+
+.form__success {
+  background: rgba(24, 191, 176, 0.10);
+  border: 1px solid rgba(24, 191, 176, 0.32);
+  color: var(--navy);
+}
+
+.form__error {
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.30);
+  color: #991B1B;
+  text-align: left;
+}
+
+.form__error strong { color: #7F1D1D; }
 
 .form.is-sent .form__success { display: block; }
 .form.is-sent .form__inner { display: none; }
+.form.is-error .form__error { display: block; }
+
+.form.is-submitting .form__submit {
+  opacity: 0.75;
+  cursor: progress;
+}
 
 /* honeypot — invisible to users, harvested by bots */
 .form__hp {
   position: absolute;
   left: -9999px;
+  top: -9999px;
   width: 1px;
   height: 1px;
   opacity: 0;
+  pointer-events: none;
 }

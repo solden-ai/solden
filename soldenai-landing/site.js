@@ -2,14 +2,12 @@
  * site.js — tiny shared client behaviour for soldenai.com.
  *
  * Loaded from every page. Intentionally framework-free: the marketing
- * site is static HTML by design, and the workspace SPA already eats
- * the framework budget elsewhere.
+ * site is static HTML by design.
  *
  * Two responsibilities:
  *   1. Stamp the current year into any `[data-year]` element.
- *   2. Wire the contact form (if present) — Netlify Forms POST with a
- *      JS-only success state so the local preview shows confirmation
- *      without round-tripping through Netlify.
+ *   2. Wire the contact form (if present) — POST to /api/contact and
+ *      flip into success or error state in place.
  */
 
 (function () {
@@ -24,32 +22,70 @@
   var form = document.querySelector('form[data-contact]');
   if (!form) return;
 
+  var submitBtn = form.querySelector('button[type="submit"]');
+  var submitOriginalLabel = submitBtn ? submitBtn.innerHTML : '';
+
+  function setSubmitting(on) {
+    if (!submitBtn) return;
+    if (on) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending…';
+      form.classList.add('is-submitting');
+    } else {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = submitOriginalLabel;
+      form.classList.remove('is-submitting');
+    }
+  }
+
+  function collectFields() {
+    var data = {};
+    for (var i = 0; i < form.elements.length; i++) {
+      var el = form.elements[i];
+      if (!el.name) continue;
+      data[el.name] = el.value;
+    }
+    return data;
+  }
+
   form.addEventListener('submit', function (ev) {
-    // Honeypot tripped? Silently swallow — bots get no feedback.
+    ev.preventDefault();
+
+    // Honeypot — silently flip into success state, do NOT send.
     var hp = form.querySelector('input[name="company_website"]');
     if (hp && hp.value) {
-      ev.preventDefault();
       form.classList.add('is-sent');
+      form.classList.remove('is-error');
       return;
     }
 
-    // Real submit. On Netlify production the POST is intercepted by
-    // their bot detector + form handler. Locally there's no Netlify
-    // proxy — fall back to a JS-only success state so the preview
-    // doesn't 404.
-    var isLocal = location.hostname === 'localhost' ||
-                  location.hostname === '127.0.0.1' ||
-                  location.hostname === '0.0.0.0';
+    form.classList.remove('is-error');
+    setSubmitting(true);
 
-    if (isLocal) {
-      ev.preventDefault();
-      form.classList.add('is-sent');
-      return;
-    }
+    var payload = collectFields();
+    delete payload['form-name']; // legacy field; harmless if missing
 
-    // Production: let the browser POST natively to Netlify, then
-    // flip into the success state. (Netlify will redirect on success
-    // unless we also do this — keeping the user on-page is friendlier.)
-    setTimeout(function () { form.classList.add('is-sent'); }, 50);
+    fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (json) {
+          return { status: res.status, ok: res.ok, json: json };
+        });
+      })
+      .then(function (out) {
+        if (out.ok && out.json && out.json.ok) {
+          form.classList.add('is-sent');
+        } else {
+          form.classList.add('is-error');
+          setSubmitting(false);
+        }
+      })
+      .catch(function () {
+        form.classList.add('is-error');
+        setSubmitting(false);
+      });
   });
 })();

@@ -79,24 +79,23 @@
           </aside>
 
           <!--
-            Netlify Forms markup. The `data-netlify` attribute + matching
-            hidden `form-name` input is the canonical Netlify pattern;
-            on the production deploy Netlify intercepts the POST and
-            stores submissions. Locally, site.js short-circuits and
-            shows the success state without round-tripping.
+            Posts to our own Express server (`POST /api/contact`),
+            which writes to a small Postgres `leads` table and
+            optionally fires a Slack notification. site.js intercepts
+            the submit, sends JSON via fetch, and shows the success
+            state in place. The form still has a real `action`
+            attribute so it degrades to a plain POST if JS is off.
           -->
           <form
             class="form"
             name="contact"
             method="POST"
-            action="/thanks"
+            action="/api/contact"
+            enctype="application/x-www-form-urlencoded"
             data-contact
-            data-netlify="true"
-            data-netlify-honeypot="company_website"
           >
-            <input type="hidden" name="form-name" value="contact" />
-            <p class="form__hp">
-              <label>Don't fill this out: <input name="company_website" /></label>
+            <p class="form__hp" aria-hidden="true">
+              <label>Don't fill this out: <input name="company_website" tabindex="-1" autocomplete="off" /></label>
             </p>
 
             <div class="form__inner">
@@ -162,6 +161,10 @@
             <div class="form__success">
               <strong>Thanks — we've got it.</strong><br />
               A founder will reply within one business day.
+            </div>
+
+            <div class="form__error" role="alert">
+              Something broke on our end. Email <strong>sales@soldenai.com</strong> directly and we'll pick it up.
             </div>
           </form>
 
