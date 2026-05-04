@@ -244,7 +244,7 @@ export function HomePage() {
                     onClick=${() => navigate(`/exceptions/${encodeURIComponent(row.box_id || row.id || '')}`)}>
                     <div class="cl-home-row-main">
                       <div class="cl-home-row-vendor">
-                        ${row.vendor_name || row.vendor || row.box_summary?.vendor_name || 'Unknown vendor'}
+                        ${row.vendor_name || row.vendor || row.box_summary?.vendor_name || 'Vendor not extracted'}
                       </div>
                       <div class="cl-home-row-meta">
                         ${humanizeExceptionType(row.exception_type)}

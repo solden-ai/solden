@@ -12,6 +12,46 @@ const SEVERITY_COLORS = {
   low: '#6B7280',
 };
 
+function humanizeExceptionType(code) {
+  if (!code) return 'Exception raised';
+  return String(code).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatTimeAgo(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const hours = Math.floor((Date.now() - d.getTime()) / 3600000);
+    if (hours < 1) return 'just now';
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  } catch { return ''; }
+}
+
+function formatAmount(amount, currency) {
+  if (amount == null || amount === '') return '';
+  const num = Number(amount);
+  if (!Number.isFinite(num)) return '';
+  const ccy = String(currency || '').trim().toUpperCase();
+  const fixed = num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return ccy ? `${ccy} ${fixed}` : fixed;
+}
+
+function rowHeadline(row) {
+  const summary = row.box_summary || {};
+  const vendor = row.vendor_name || row.vendor || summary.vendor_name;
+  const invoice = summary.invoice_number;
+  if (vendor && invoice) return `${vendor} — ${invoice}`;
+  if (vendor) return vendor;
+  if (invoice) return invoice;
+  // No enrichable signal — fall back to a short id rather than the
+  // full UUID so the row stays scannable.
+  const id = String(row.box_id || '');
+  return id.length > 14 ? `${row.box_type || 'Box'} · ${id.slice(0, 14)}…` : `${row.box_type || 'Box'} · ${id}`;
+}
+
 export default function ExceptionsPage({ api }) {
   const [items, setItems] = useState(null);
   const [stats, setStats] = useState(null);
@@ -109,14 +149,37 @@ export default function ExceptionsPage({ api }) {
             : sorted.length === 0
               ? html`<div class="secondary-empty">No exceptions match the current filters.</div>`
               : html`<div class="secondary-list" style="margin-top:4px">
-                  ${sorted.map((row) => html`
-                    <div key=${row.id} class="secondary-row" style="flex-direction:column;align-items:stretch;gap:6px;border-left:3px solid ${SEVERITY_COLORS[row.severity] || '#6B7280'};padding:10px 12px">
+                  ${sorted.map((row) => {
+                    const summary = row.box_summary || {};
+                    const headline = rowHeadline(row);
+                    const typeLabel = humanizeExceptionType(row.exception_type);
+                    // Hide the reason if it's just the code repeated —
+                    // backend falls back to ``reason = exception_code``
+                    // when no human reason was supplied. Showing both
+                    // is noise, so collapse the duplicate.
+                    const reason = String(row.reason || '').trim();
+                    const showReason = reason && reason.toLowerCase() !== String(row.exception_type || '').toLowerCase();
+                    const amountLabel = formatAmount(summary.amount, summary.currency);
+                    const ageLabel = formatTimeAgo(row.raised_at);
+                    const openRecord = () => {
+                      if (row.synthetic) {
+                        const v = row.metadata?.vendor_name;
+                        if (v) window.location.hash = `#/vendors/${encodeURIComponent(v)}`;
+                        return;
+                      }
+                      if (row.box_type === 'ap_item' && row.box_id) {
+                        window.location.hash = `#/items/${encodeURIComponent(row.box_id)}`;
+                      }
+                    };
+                    return html`
+                    <div key=${row.id} class="secondary-row" style="flex-direction:column;align-items:stretch;gap:6px;border-left:3px solid ${SEVERITY_COLORS[row.severity] || '#6B7280'};padding:10px 12px;cursor:pointer"
+                      onClick=${openRecord}>
                       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-                        <div>
-                          <strong>${row.exception_type}</strong>
-                          <span class="muted" style="margin-left:8px;font-size:11px">${row.box_type} · ${row.box_id}</span>
+                        <div style="min-width:0">
+                          <strong style="font-size:14px">${headline}</strong>
+                          <div class="muted" style="font-size:11px;margin-top:2px">${typeLabel}${amountLabel ? ` · ${amountLabel}` : ''}${ageLabel ? ` · ${ageLabel}` : ''}</div>
                         </div>
-                        <div style="display:flex;gap:10px;align-items:center">
+                        <div style="display:flex;gap:10px;align-items:center;flex-shrink:0" onClick=${(e) => e.stopPropagation()}>
                           <span class="status-badge" style="color:${SEVERITY_COLORS[row.severity] || '#6B7280'};font-weight:700">${row.severity}</span>
                           ${row.synthetic
                             ? html`<button
@@ -136,10 +199,10 @@ export default function ExceptionsPage({ api }) {
                               </button>`}
                         </div>
                       </div>
-                      <div style="font-size:12px;line-height:1.4">${row.reason || '(no reason recorded)'}</div>
-                      <div class="muted" style="font-size:11px">raised ${row.raised_at || 'unknown'} · by ${row.raised_by || 'system'}</div>
+                      ${showReason ? html`<div style="font-size:12px;line-height:1.4">${reason}</div>` : null}
                     </div>
-                  `)}
+                  `;
+                  })}
                 </div>`}
         </div>
       </div>
@@ -165,7 +228,7 @@ export default function ExceptionsPage({ api }) {
             ? html`<div class="secondary-list" style="margin-top:10px">
                 ${Object.entries(stats.by_type).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([t, n]) => html`
                   <div key=${t} class="secondary-row" style="justify-content:space-between">
-                    <span>${t}</span>
+                    <span>${humanizeExceptionType(t)}</span>
                     <strong>${n}</strong>
                   </div>
                 `)}
