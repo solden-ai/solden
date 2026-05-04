@@ -1005,10 +1005,20 @@ function BankMatchPanel({ api, recordId, item }) {
 }
 
 function formatBankAmount(amount, currency) {
+  // No currency on the record → render the number alone rather than
+  // misrepresenting it as USD. Intl.NumberFormat in 'currency' mode
+  // requires a code, so use 'decimal' when one isn't available.
   try {
+    if (!currency) {
+      return new Intl.NumberFormat(undefined, {
+        style: 'decimal',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(Number(amount));
+    }
     return new Intl.NumberFormat(undefined, {
       style: 'currency',
-      currency: currency || 'USD',
+      currency,
       maximumFractionDigits: 2,
     }).format(Number(amount));
   } catch {

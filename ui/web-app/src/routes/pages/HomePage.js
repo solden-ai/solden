@@ -44,7 +44,11 @@ function fmtRelative(ts) {
 }
 
 function fmtCurrency(amount, currency) {
-  return formatAmount(amount, currency || 'USD');
+  // Don't default to USD when currency is missing — that misrepresents
+  // non-USD records (a GHS invoice rendered as "USD 5,000.00" is worse
+  // than "5,000.00" with no code). The org's functional currency is
+  // the right fallback if we ever need one, not USD.
+  return formatAmount(amount, currency);
 }
 
 // Each panel resolves on its own timer; stuck panels fall through
@@ -106,7 +110,8 @@ export function HomePage() {
 
   const m = metrics.data?.metrics || metrics.data || {};
   const totalsByCurrency = m.outstanding_total_by_currency || m.totals_by_currency || {};
-  const primaryCurrency = Object.keys(totalsByCurrency)[0] || 'USD';
+  // No transactions yet → no currency to display. Don't fabricate USD.
+  const primaryCurrency = Object.keys(totalsByCurrency)[0] || '';
 
   const dash = liveDashboard || bootstrap?.dashboard_stats || bootstrap?.dashboard || {};
   const inFlight = Number(dash.in_flight || 0);

@@ -157,7 +157,7 @@ function VendorHeader({ name, profile, summary }) {
         ${avgAmount != null ? html`
           <div class="cl-record-header-meta-cell">
             <dt>Avg amount</dt>
-            <dd>${formatAmount(avgAmount, profile.currency || 'USD')}</dd>
+            <dd>${formatAmount(avgAmount, profile.currency)}</dd>
           </div>` : null}
         ${exceptionRate != null ? html`
           <div class="cl-record-header-meta-cell">

@@ -345,7 +345,7 @@ function summaryCellsFor(reportId, s) {
         { label: 'Total invoices', value: s.total_invoices ?? 0 },
         {
           label: 'Total amount',
-          value: formatAmount(s.total_amount ?? 0, s.currency || 'USD'),
+          value: formatAmount(s.total_amount ?? 0, s.currency),
         },
         { label: 'Distinct vendors', value: s.distinct_vendors ?? 0 },
       ];
@@ -576,7 +576,7 @@ function breakdownTitleFor(reportId) {
 
 function formatBreakdownCell(reportId, key, value, row) {
   if (value === null || value === undefined) return '—';
-  if (key === 'total_amount') return formatAmount(value, 'USD');
+  if (key === 'total_amount') return formatAmount(value, row?.currency);
   if (key === 'avg_cycle_days') {
     const days = Number(value);
     return Number.isNaN(days) ? '—' : `${days.toFixed(1)}d`;
