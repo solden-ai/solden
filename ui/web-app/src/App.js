@@ -26,7 +26,6 @@ import { ActivityRoute } from './routes/pages/ActivityRoute.js';
 import { AuditLogRoute } from './routes/pages/AuditLogRoute.js';
 import { ConnectionsRoute } from './routes/pages/ConnectionsRoute.js';
 import { SettingsRoute } from './routes/pages/SettingsRoute.js';
-import { TemplatesRoute } from './routes/pages/TemplatesRoute.js';
 import { HealthRoute } from './routes/pages/HealthRoute.js';
 import { PlanRoute } from './routes/pages/PlanRoute.js';
 
@@ -66,7 +65,6 @@ export function App() {
                     <${Route} path="/settings/:section">
                       ${(params) => html`<${SettingsRoute} routeId=${params.section} />`}
                     <//>
-                    <${Route} path="/templates"><${TemplatesRoute} /><//>
                     <${Route} path="/health"><${HealthRoute} /><//>
                     <${Route} path="/status"><${StatusPage} /><//>
                     <${Route} path="/items/:id">

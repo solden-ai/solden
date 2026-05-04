@@ -28,7 +28,6 @@ const NAV_ENTRIES = [
   { kind: 'nav', label: 'Activity', sub: 'Audit trail', path: '/activity', tokens: ['activity', 'audit', 'history'] },
   { kind: 'nav', label: 'Connections', sub: 'ERP, Slack, Teams, Gmail', path: '/connections', tokens: ['connections', 'integrations', 'erp', 'slack', 'teams', 'gmail'] },
   { kind: 'nav', label: 'Settings', sub: 'Org, users, policies, billing', path: '/settings', tokens: ['settings', 'config', 'preferences', 'billing'] },
-  { kind: 'nav', label: 'Templates', sub: 'Reply + email templates', path: '/templates', tokens: ['templates'] },
   { kind: 'nav', label: 'Status', sub: 'Operational health', path: '/status', tokens: ['status', 'health', 'uptime', 'incidents'] },
   { kind: 'nav', label: 'Onboarding', sub: 'Setup wizard', path: '/onboarding', tokens: ['onboarding', 'setup', 'wizard'] },
 ];
