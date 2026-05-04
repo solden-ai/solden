@@ -110,6 +110,28 @@ def test_list_returns_unresolved_exceptions_ordered_by_severity(client, db):
     assert severities == ["critical", "high", "low"]
 
 
+def test_list_attaches_box_summary_for_ap_items(client, db):
+    """Workspace exception queue renders vendor / invoice / amount
+    inline; the API must enrich each ap_item row with a box_summary
+    pulled from the linked AP record so the UI doesn't fall back to
+    "Unknown vendor".
+    """
+    _seed_ap_box(db, "AP-EXC-SUMMARY-1")
+    _seed_exception(db, "AP-EXC-SUMMARY-1", "amount_anomaly", severity="medium")
+
+    resp = client.get("/api/admin/box/exceptions")
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert len(items) == 1
+    summary = items[0].get("box_summary") or {}
+    assert summary.get("vendor_name") == "Acme"
+    assert summary.get("invoice_number") == "INV-AP-EXC-SUMMARY-1"
+    assert summary.get("amount") == 500.0
+    assert summary.get("currency") == "USD"
+    # vendor_name also exposed at top level for legacy clients.
+    assert items[0].get("vendor_name") == "Acme"
+
+
 def test_list_severity_filter(client, db):
     _seed_ap_box(db, "AP-EXC-SEV-1")
     _seed_ap_box(db, "AP-EXC-SEV-2")

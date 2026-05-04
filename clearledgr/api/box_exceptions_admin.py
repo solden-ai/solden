@@ -59,6 +59,51 @@ def _assert_org_match(user: TokenData, organization_id: str) -> None:
         raise HTTPException(status_code=403, detail="org_mismatch")
 
 
+def _attach_box_summaries(db, rows: List[Dict[str, Any]]) -> None:
+    """Mutate rows in place, attaching a ``box_summary`` object so the
+    workspace exception queue can render vendor / invoice / amount
+    inline instead of falling back to "Unknown vendor".
+
+    For ``ap_item`` rows the summary comes from the AP item record.
+    For synthetic vendor-onboarding rows it comes from the metadata
+    payload the synthesizer already populated. AP items are fetched
+    one-at-a-time but the queue is capped at 200 rows so the latency
+    cost is bounded; if this becomes hot, switch to a batched
+    ``id IN (...)`` query.
+    """
+    for row in rows:
+        if row.get("box_summary"):
+            continue
+        box_type = str(row.get("box_type") or "")
+        box_id = str(row.get("box_id") or "")
+        if box_type == "ap_item" and box_id and hasattr(db, "get_ap_item"):
+            try:
+                item = db.get_ap_item(box_id)
+            except Exception:
+                item = None
+            if item:
+                row["box_summary"] = {
+                    "vendor_name": item.get("vendor_name") or item.get("vendor"),
+                    "invoice_number": item.get("invoice_number"),
+                    "amount": item.get("amount"),
+                    "currency": item.get("currency"),
+                }
+                # Also expose vendor_name at the top level so older
+                # clients that didn't read box_summary still render
+                # something useful.
+                if item.get("vendor_name") or item.get("vendor"):
+                    row.setdefault(
+                        "vendor_name",
+                        item.get("vendor_name") or item.get("vendor"),
+                    )
+        elif row.get("synthetic"):
+            meta = row.get("metadata") or {}
+            vendor = meta.get("vendor_name")
+            if vendor:
+                row["box_summary"] = {"vendor_name": vendor}
+                row.setdefault("vendor_name", vendor)
+
+
 def _gather_unresolved(
     db,
     organization_id: str,
@@ -74,25 +119,29 @@ def _gather_unresolved(
     Synthetic rows are only included when the caller didn't filter
     out the ``vendor_onboarding_session`` box type. The combined list
     is returned unsorted; callers handle severity ordering.
+
+    Each row is enriched with a ``box_summary`` object so the
+    workspace can render vendor / invoice / amount without an extra
+    round-trip per row.
     """
     canonical = db.list_unresolved_exceptions(
         organization_id, box_type=box_type, limit=limit,
     )
-    # Skip the synthesizer when the caller is filtering for a non-
-    # onboarding box_type — those rows would never appear in the
-    # filtered output.
     include_synthetic = (
         box_type is None
         or box_type == "vendor_onboarding_session"
     )
     if not include_synthetic:
+        _attach_box_summaries(db, canonical)
         return canonical
 
     from clearledgr.services.vendor_onboarding_exceptions import (
         synthesize_onboarding_exceptions,
     )
     synthetic = synthesize_onboarding_exceptions(db, organization_id)
-    return [*canonical, *synthetic]
+    merged = [*canonical, *synthetic]
+    _attach_box_summaries(db, merged)
+    return merged
 
 
 @router.get("/exceptions")
