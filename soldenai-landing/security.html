@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <title>Security · Solden</title>
+    <meta name="description" content="How Solden secures finance data: SOC 2 Type 1 controls, DPA, sub-processors, and the architecture decisions behind a coordination layer that touches Gmail, Slack, Teams, NetSuite and SAP." />
+    <meta name="theme-color" content="#0A1F44" />
+
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="128x128" href="/assets/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+
+    <link rel="preconnect" href="https://rsms.me" />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/pages.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="shell topbar__row">
+        <a class="brand" href="/" aria-label="Solden home">
+          <img class="brand__lockup" src="/assets/solden-lockup-dark.png" alt="Solden" />
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a class="nav__link" href="/#how">How it works</a>
+          <a class="nav__link" href="/#surfaces">Surfaces</a>
+          <a class="nav__link" href="/security.html">Security</a>
+          <a class="nav__link" href="/about.html">About</a>
+        </nav>
+        <div class="topbar__cta">
+          <a class="btn btn--primary" href="/contact.html">Talk to sales <span class="btn__arrow">→</span></a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero ────────────────────────────────────────────────── -->
+    <section class="subpage-hero">
+      <div class="subpage-hero__grid-bg" aria-hidden="true"></div>
+      <div class="shell subpage-hero__inner">
+        <span class="subpage-hero__eyebrow">Security &amp; Trust</span>
+        <h1 class="subpage-hero__title">Defaults an audit committee can sign off on.</h1>
+        <p class="subpage-hero__sub">
+          Solden touches finance data across Gmail, Slack, Teams, NetSuite and SAP. The architecture is built to that brief — least-privilege scopes, deterministic decision rules, append-only audit, and a vendor footprint we can defend in a DPIA.
+        </p>
+      </div>
+    </section>
+
+    <!-- Body ────────────────────────────────────────────────── -->
+    <section class="section">
+      <div class="shell shell--tight">
+
+        <div class="prose">
+          <h2 id="posture">Compliance posture</h2>
+          <p>
+            <strong>SOC 2 Type 1</strong> achieved at launch. <strong>Type 2</strong> observation window is in progress; the report will be available under NDA when the window closes. <strong>GDPR</strong> compliant by design — EU launch market, EU data residency available, and a DPA executed with every customer before production data flows.
+          </p>
+          <p>
+            We do not store cardholder data and we are not a payment processor. Solden never debits, credits, or initiates a vendor payment. <strong>Treasury runs the payment batch out of your ERP</strong> on its own schedule.
+          </p>
+
+          <h2 id="controls">Controls</h2>
+        </div>
+
+        <div class="controls">
+          <article class="control">
+            <h3 class="control__name">Encryption at rest</h3>
+            <p class="control__body">AES-256 for all stored data. Per-tenant Fernet envelope keys for sensitive material like OAuth tokens.</p>
+          </article>
+          <article class="control">
+            <h3 class="control__name">Encryption in transit</h3>
+            <p class="control__body">TLS 1.2+ end-to-end. HSTS preloaded; sub-processor connections all enforce TLS.</p>
+          </article>
+          <article class="control">
+            <h3 class="control__name">Append-only audit</h3>
+            <p class="control__body">Every record event lands in an audit table protected by database triggers, not application logic. Tamper-evident by design.</p>
+          </article>
+          <article class="control">
+            <h3 class="control__name">Tenant isolation</h3>
+            <p class="control__body">Row-level filtering on every query plus per-tenant credential boundaries. Cross-tenant access is impossible at the schema layer.</p>
+          </article>
+          <article class="control">
+            <h3 class="control__name">Least-privilege scopes</h3>
+            <p class="control__body">Gmail/Outlook: read + label only. We do not request <code>gmail.send</code> for vendor outreach (Solden authors zero vendor email).</p>
+          </article>
+          <article class="control">
+            <h3 class="control__name">Deterministic decisions</h3>
+            <p class="control__body">Match tolerance, sanctions checks, budget gates, 3-way validation, and routing are rules. The model reads input and writes prose — no vote on outcomes.</p>
+          </article>
+          <article class="control">
+            <h3 class="control__name">Secret management</h3>
+            <p class="control__body">Production secrets injected from the platform vault; no plaintext in environment files. Required-secret guard crashes prod startup if any secret is missing.</p>
+          </article>
+          <article class="control">
+            <h3 class="control__name">Backup &amp; recovery</h3>
+            <p class="control__body">Postgres point-in-time recovery (7-day window). Restore is rehearsed on every release candidate.</p>
+          </article>
+          <article class="control">
+            <h3 class="control__name">Access control</h3>
+            <p class="control__body">SSO via OIDC. SCIM provisioning available on enterprise plans. Role-based authorisation enforced in the API layer.</p>
+          </article>
+        </div>
+
+        <div class="prose">
+          <h2 id="data">What data Solden touches</h2>
+          <p>
+            <strong>In:</strong> invoice PDFs, invoice email bodies and attachments, PO and GRN extracts from your ERP, vendor master extracts (read-only), bank-detail records (encrypted at rest, surfaced only for the validation gate).
+          </p>
+          <p>
+            <strong>Out:</strong> AP record writes back to your ERP (bills, GL postings, vendor balance updates) on approval; Slack, Teams, NetSuite SuiteApp, and SAP Fiori cards for human decisions; structured audit events.
+          </p>
+          <p>
+            <strong>Never out:</strong> emails to your vendors. Solden does not author vendor body text and does not send vendor-facing email. Vendor outreach stays with the operator.
+          </p>
+
+          <h2 id="dpa">Data Processing Agreement</h2>
+          <p>
+            We sign a DPA with every customer before production data flows. The standard agreement is GDPR-aligned and includes the EU Standard Contractual Clauses where relevant. <a href="/contact.html">Request a copy</a>.
+          </p>
+
+          <h2 id="subprocessors">Sub-processors</h2>
+          <p>The infrastructure footprint is intentionally small. Each sub-processor processes data for a defined purpose and is bound by a signed DPA with us.</p>
+        </div>
+
+        <div style="overflow-x:auto">
+          <table class="subprocs">
+            <thead>
+              <tr>
+                <th>Sub-processor</th>
+                <th>Purpose</th>
+                <th>Region</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Anthropic</td>
+                <td>LLM extraction &amp; operator-facing prose generation</td>
+                <td>US (zero-retention)</td>
+              </tr>
+              <tr>
+                <td>AWS</td>
+                <td>Application hosting, Postgres, object storage</td>
+                <td>EU (eu-west-1)</td>
+              </tr>
+              <tr>
+                <td>Cloudflare</td>
+                <td>Edge TLS termination &amp; DDoS protection</td>
+                <td>Global</td>
+              </tr>
+              <tr>
+                <td>Google Workspace</td>
+                <td>OAuth-scoped Gmail read for invoice capture (per customer)</td>
+                <td>Customer-controlled</td>
+              </tr>
+              <tr>
+                <td>Microsoft 365</td>
+                <td>OAuth-scoped Outlook read for invoice capture (per customer)</td>
+                <td>Customer-controlled</td>
+              </tr>
+              <tr>
+                <td>Sentry</td>
+                <td>Error monitoring (PII scrubbed in transit)</td>
+                <td>EU</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="prose">
+          <h2 id="incidents">Incident response</h2>
+          <p>
+            Customers are notified within 72 hours of any confirmed security incident affecting their data — faster where the incident is material. The runbook is tested quarterly. Post-incident reports are shared with affected customers and include scope, root cause, mitigations, and forward-looking changes.
+          </p>
+
+          <h2 id="reporting">Responsible disclosure</h2>
+          <p>
+            Researchers can email <strong>security@soldenai.com</strong> with vulnerability reports. We acknowledge within one business day and aim to remediate critical issues within 7 days. We do not pursue good-faith researchers.
+          </p>
+
+          <h2 id="contact">Contact</h2>
+          <p>
+            Security questions, audit requests, or DPA copies: <a href="/contact.html">contact us</a> and select "Security &amp; compliance".
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Footer CTA ─────────────────────────────────────────── -->
+    <section class="footer-cta">
+      <div class="shell shell--tight">
+        <h2 class="footer-cta__title">Want the full security pack?</h2>
+        <p class="footer-cta__sub">SOC 2 report, pen-test summary, sub-processor map and DPA template — under NDA.</p>
+        <div class="footer-cta__ctas">
+          <a class="btn btn--teal btn--lg" href="/contact.html">Request the pack <span class="btn__arrow">→</span></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer ─────────────────────────────────────────────── -->
+    <footer class="footer">
+      <div class="shell">
+        <div class="footer__row">
+          <div class="footer__brand-block">
+            <img class="footer__brand-lockup" src="/assets/solden-lockup-white.png" alt="Solden" />
+            <p class="footer__tagline">The coordination layer for finance teams. AP records that don't drop a thread.</p>
+          </div>
+          <div>
+            <span class="footer__col-title">Product</span>
+            <ul class="footer__col-list">
+              <li><a href="/#how">How it works</a></li>
+              <li><a href="/#surfaces">Surfaces</a></li>
+              <li><a href="/contact.html">Talk to sales</a></li>
+            </ul>
+          </div>
+          <div>
+            <span class="footer__col-title">Trust</span>
+            <ul class="footer__col-list">
+              <li><a href="/security.html">Security</a></li>
+              <li><a href="/security.html#dpa">DPA</a></li>
+              <li><a href="/security.html#subprocessors">Sub-processors</a></li>
+            </ul>
+          </div>
+          <div>
+            <span class="footer__col-title">Company</span>
+            <ul class="footer__col-list">
+              <li><a href="/about.html">About</a></li>
+              <li><a href="/contact.html">Contact</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer__bottom">
+          <span>© <span data-year>2026</span> Solden, Inc.</span>
+          <span>soldenai.com</span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="/site.js" defer></script>
+  </body>
+</html>
