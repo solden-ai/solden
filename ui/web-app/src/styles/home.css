@@ -650,3 +650,44 @@
   margin-top: 4px;
   line-height: 1.4;
 }
+
+
+/* ─── Activity page shell ─────────────────────────────────────────
+ * The dedicated /activity route renders the same AgentActivityRibbon
+ * shown on Home, with a thin page header above it (title + Refresh +
+ * Open pipeline). The ribbon component itself uses `cl-home-activity-*`
+ * classes (see top of this file). */
+
+.cl-activity-page {
+  max-width: 1240px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cl-activity-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.cl-activity-page-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.cl-activity-page-sub {
+  margin: 0;
+  color: var(--cl-ink-secondary);
+  font-size: 14px;
+  max-width: 540px;
+}
+
+.cl-activity-page-actions {
+  display: flex;
+  gap: 8px;
+}

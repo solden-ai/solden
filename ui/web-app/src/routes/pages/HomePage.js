@@ -3,7 +3,8 @@ import { useLocation } from 'wouter-preact';
 import { html } from '../../utils/htm.js';
 import { api } from '../../api/client.js';
 import { useBootstrap, useOrgId } from '../../shell/BootstrapContext.js';
-import { formatAmount } from '../../utils/formatters.js';
+import { formatAmount, formatRelative } from '../../utils/formatters.js';
+import { AgentActivityRibbon } from '../../components/AgentActivityRibbon.js';
 
 /**
  * Workspace Home — coordination-layer control center.
@@ -30,18 +31,11 @@ import { formatAmount } from '../../utils/formatters.js';
  * the rest. SSE keeps stats / workload / activity live within ~15s.
  */
 
-function fmtRelative(ts) {
-  if (!ts) return '';
-  const d = new Date(ts);
-  if (isNaN(d.getTime())) return '';
-  const diff = Date.now() - d.getTime();
-  const sec = Math.round(diff / 1000);
-  if (sec < 5) return 'just now';
-  if (sec < 60) return `${sec}s ago`;
-  if (sec < 3600) return `${Math.round(sec / 60)}m ago`;
-  if (sec < 86400) return `${Math.round(sec / 3600)}h ago`;
-  return `${Math.round(sec / 86400)}d ago`;
-}
+// formatRelative lives in utils/formatters.js so the shared
+// AgentActivityRibbon component can reuse it. Kept as a local alias so
+// the existing call sites in this file (status footer, agent last
+// action) don't churn.
+const fmtRelative = formatRelative;
 
 function fmtCurrency(amount, currency) {
   // Don't default to USD when currency is missing — that misrepresents
@@ -346,98 +340,6 @@ function StatTile({ label, value, sub, tone = 'neutral', live = false, onClick }
       <div class="cl-home-stat-value">${value}</div>
       ${sub ? html`<div class="cl-home-stat-sub">${sub}</div>` : null}
     </div>
-  `;
-}
-
-
-// ─── Agent activity ribbon (the hero) ─────────────────────────────
-//
-// Live stream of the last N agent / operator actions across surfaces.
-// Modeled on Vercel deployments + Linear inbox: timestamp, verb,
-// subject, surface tag, click → AP record. Live-pulse dot when the
-// SSE stream is delivering frames; falls back to the initial HTTP
-// snapshot when SSE is unavailable.
-
-function AgentActivityRibbon({ state, items, live, navigate }) {
-  if ((!items || items.length === 0) && state.status === 'loading') {
-    return html`
-      <section class="cl-home-activity">
-        <header class="cl-home-activity-head">
-          <h2>Agent activity</h2>
-        </header>
-        <div class="cl-home-skeleton">Loading activity…</div>
-      </section>
-    `;
-  }
-
-  if ((!items || items.length === 0) && state.status === 'error') {
-    return html`
-      <section class="cl-home-activity">
-        <header class="cl-home-activity-head">
-          <h2>Agent activity</h2>
-        </header>
-        <div class="cl-home-empty">
-          <div class="cl-home-empty-title cl-home-empty-error">Couldn't load activity.</div>
-          <div class="cl-home-empty-sub">${state.error || 'Try again in a moment.'}</div>
-        </div>
-      </section>
-    `;
-  }
-
-  if (!items || items.length === 0) {
-    return html`
-      <section class="cl-home-activity">
-        <header class="cl-home-activity-head">
-          <h2>Agent activity</h2>
-          <span class="cl-home-activity-meta">No actions yet.</span>
-        </header>
-        <div class="cl-home-empty">
-          <div class="cl-home-empty-title">Nothing to show yet.</div>
-          <div class="cl-home-empty-sub">
-            Once invoices flow through, every agent and operator action
-            shows up here in real time — what was decided, where, and when.
-          </div>
-        </div>
-      </section>
-    `;
-  }
-
-  return html`
-    <section class="cl-home-activity">
-      <header class="cl-home-activity-head">
-        <h2>Agent activity</h2>
-        <span class="cl-home-activity-meta">
-          ${live ? html`<span class="cl-home-activity-pulse" aria-hidden="true"></span> Live` : 'Recent'}
-          · last ${items.length}
-        </span>
-      </header>
-      <ul class="cl-home-activity-list">
-        ${items.map((row) => html`
-          <li class=${`cl-home-activity-row cl-home-activity-tone-${row.tone || 'info'}`}
-            key=${row.id || `${row.ts}-${row.event_type}`}
-            onClick=${() => row.box_id && navigate(`/records/${encodeURIComponent(row.box_id)}`)}
-            role=${row.box_id ? 'button' : undefined}
-            tabindex=${row.box_id ? 0 : undefined}>
-            <span class=${`cl-home-activity-dot cl-home-activity-dot-${row.tone || 'info'}`} aria-hidden="true"></span>
-            <div class="cl-home-activity-body">
-              <div class="cl-home-activity-line">
-                <span class="cl-home-activity-action">${row.action}</span>
-                <span class="cl-home-activity-subject">${row.subject}</span>
-              </div>
-              <div class="cl-home-activity-meta-row">
-                <span class="cl-home-activity-time">${fmtRelative(row.ts)}</span>
-                <span class="cl-home-activity-sep">·</span>
-                <span class="cl-home-activity-actor">${row.actor_label || 'Agent'}</span>
-                ${row.surface && row.surface !== 'agent' ? html`
-                  <span class="cl-home-activity-sep">·</span>
-                  <span class="cl-home-activity-surface">via ${row.surface}</span>
-                ` : null}
-              </div>
-            </div>
-          </li>
-        `)}
-      </ul>
-    </section>
   `;
 }
 

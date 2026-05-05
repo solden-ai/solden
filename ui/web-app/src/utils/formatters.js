@@ -97,6 +97,22 @@ export function formatAgeSeconds(value) {
   return `${Math.round(s / 86400)}d`;
 }
 
+/**
+ * Relative-time string for the activity ribbon. "just now" inside 5s,
+ * else "Xs ago" / "Xm ago" / "Xh ago" / "Xd ago". Tabular-numerals on.
+ */
+export function formatRelative(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '';
+  const sec = Math.round((Date.now() - d.getTime()) / 1000);
+  if (sec < 5) return 'just now';
+  if (sec < 60) return `${sec}s ago`;
+  if (sec < 3600) return `${Math.round(sec / 60)}m ago`;
+  if (sec < 86400) return `${Math.round(sec / 3600)}h ago`;
+  return `${Math.round(sec / 86400)}d ago`;
+}
+
 export function trimText(value, maxLength = 96) {
   const text = String(value ?? '').trim();
   if (!text || text.length <= maxLength) return text;
