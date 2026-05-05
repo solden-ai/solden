@@ -34,7 +34,7 @@
           <img class="brand__lockup" src="/assets/solden-lockup-white.png" alt="Solden" />
         </a>
         <nav class="nav" aria-label="Primary">
-          <a class="nav__link" href="#capture">How it works</a>
+          <a class="nav__link" href="#flow">How it works</a>
           <a class="nav__link" href="#fits">Surfaces</a>
           <a class="nav__link" href="/security.html">Security</a>
           <a class="nav__link" href="/about.html">About</a>
@@ -55,11 +55,11 @@
           Coordinate finance work, <span class="hero__accent">while it's happening</span>.
         </h1>
         <p class="hero__sub">
-          Finance teams don't lose money because data is missing. They lose it because <strong>work gets stuck</strong>. Solden tracks every AP record across <strong>Gmail, Slack, Teams, NetSuite and SAP</strong>, so it doesn't drop a thread.
+          Finance doesn't lose money because data is missing. It loses money because <strong>work gets stuck</strong>. Solden tracks every AP record across <strong>Gmail, Slack, Teams, NetSuite, and SAP</strong>.
         </p>
         <div class="hero__ctas">
           <a class="btn btn--primary btn--lg" href="/contact.html">Talk to sales</a>
-          <a class="btn btn--secondary btn--lg" href="#capture">See how it works</a>
+          <a class="btn btn--secondary btn--lg" href="#flow">See how it works</a>
         </div>
       </div>
 
@@ -162,7 +162,7 @@
         <div class="problem__head">
           <h2 class="section-title">Work is everywhere. Ownership is nowhere.</h2>
           <p class="section-sub">
-            Existing finance systems show you status. They don't move work forward, and they don't agree on who owns what.
+            Finance systems show you status. None of them move work forward, and none of them agree on who owns what.
           </p>
         </div>
 
@@ -228,7 +228,7 @@
         <div class="solution__head">
           <h2 class="section-title">Every AP record becomes a live workflow.</h2>
           <p class="section-sub">
-            One record carries its own state, owner, timeline, and exceptions wherever it shows up. Solden writes those four primitives onto every AP item, then keeps them in sync across surfaces.
+            One record carries state, owner, timeline, and exceptions, wherever it shows up. Four primitives, kept in sync across every surface.
           </p>
         </div>
 
@@ -258,224 +258,242 @@
     <!-- Product intro ──────────────────────────────────────── -->
     <section class="product-intro" id="product">
       <div class="shell product-intro__head">
-        <h2 class="section-title">The AP workflow, end-to-end.</h2>
+        <h2 class="section-title">One record. Five stages.</h2>
         <p class="section-sub">
-          Capture, validate, route, post. Every step on one record, in one append-only audit trail. The four steps below are the same record moving through your stack.
+          Same vendor, same PO, same amount. Different surface every step. Scroll to watch the record move.
         </p>
       </div>
     </section>
 
-    <!-- 01 · Capture ────────────────────────────────────────── -->
-    <section class="showcase showcase--first" id="capture">
-      <div class="shell showcase__inner">
-        <div class="showcase__copy">
-          <span class="showcase__step">01. capture</span>
-          <h2 class="showcase__title">Invoices land where your team already lives.</h2>
-          <p class="showcase__body">
-            Gmail, Outlook, an ERP queue, PEPPOL UBL. Solden lifts line items, totals, taxes and references onto a fresh record. Structured input goes through; unstructured runs extraction with vision fallback.
-          </p>
-          <ul class="showcase__notes">
-            <li>PDF · UBL · forwarded threads · attachments</li>
-            <li>Vision fallback for scans and photos</li>
-            <li>Zero email auto-sent to vendors</li>
-          </ul>
-        </div>
-
-        <div class="showcase__mock">
-          <div class="mock">
-            <div class="mock__header">
-              <span class="mock__chrome"><i></i></span>
-              <span class="mock__title">gmail · ap@your-co.example</span>
-              <span class="mock__status">3 new</span>
+    <!-- Flow signature: pinned card morphs through 5 states ── -->
+    <section class="flow" id="flow">
+      <div class="shell flow__inner">
+        <div class="flow__sticky">
+          <div class="flow__card" data-flow-state="capture">
+            <div class="flow__chrome">
+              <span class="flow__chrome-dots"><i></i><i></i><i></i></span>
+              <span class="flow__chrome-title" data-flow-title>gmail · ap@your-co.example</span>
+              <span class="flow__chrome-status" data-flow-status>captured</span>
             </div>
-            <div class="mail">
-              <div class="mail__row mail__row--hot">
-                <span class="mail__sender">Northwind Logistics</span>
-                <span class="mail__subject">
-                  <span class="mail__subject-text">Invoice INV-4821 · €18,420.00</span>
-                  <span class="mail__attach">PDF</span>
-                </span>
-                <span class="mail__right">
-                  <span class="mail__solden">solden · captured</span>
-                </span>
-              </div>
-              <div class="mail__row">
-                <span class="mail__sender">Acme Office Supplies</span>
-                <span class="mail__subject">
-                  <span class="mail__subject-text">Stationery, March 2026</span>
-                  <span class="mail__attach">UBL</span>
-                </span>
-                <span class="mail__right">8:14</span>
-              </div>
-              <div class="mail__row">
-                <span class="mail__sender">Globex Software</span>
-                <span class="mail__subject">
-                  <span class="mail__subject-text">Re: Q1 license renewal</span>
-                </span>
-                <span class="mail__right">7:52</span>
-              </div>
-              <div class="mail__row">
-                <span class="mail__sender">Initech Cleaning Co.</span>
-                <span class="mail__subject">
-                  <span class="mail__subject-text">Apr cleaning, Invoice 0322</span>
-                  <span class="mail__attach">PDF</span>
-                </span>
-                <span class="mail__right">Yesterday</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- 02 · Validate ───────────────────────────────────────── -->
-    <section class="showcase showcase--reverse" id="validate">
-      <div class="shell showcase__inner">
-        <div class="showcase__copy">
-          <span class="showcase__step">02. validate</span>
-          <h2 class="showcase__title">3-way match, sanctions, duplicates, budget. All run before a human looks.</h2>
-          <p class="showcase__body">
-            Match tolerance is a deterministic rule, not a model guess. Vendor master, bank-detail check, sanctions screen, duplicate gate and budget check all run before the record gets routed.
-          </p>
-          <ul class="showcase__notes">
-            <li>PO, GRN, invoice with ±0.5% tolerance on amount</li>
-            <li>Sanctions + duplicate gates BLOCK on hit</li>
-            <li>Budget check NEEDS_INFO if over period</li>
-          </ul>
-        </div>
-
-        <div class="showcase__mock">
-          <div class="mock">
-            <div class="mock__header">
-              <span class="mock__chrome"><i></i></span>
-              <span class="mock__title">3-way match · PO · GRN · invoice</span>
-              <span class="mock__status mock__status--ok">matched</span>
-            </div>
-            <div class="diff">
-              <div class="diff__col">
-                <div class="diff__label">PO #4821</div>
-                <dl class="diff__list">
-                  <div class="diff__row"><dt class="diff__key">vendor</dt><dd class="diff__val">Northwind Logistics</dd></div>
-                  <div class="diff__row"><dt class="diff__key">amount</dt><dd class="diff__val">€18,420.00</dd></div>
-                  <div class="diff__row"><dt class="diff__key">date</dt><dd class="diff__val">2026-04-22</dd></div>
-                  <div class="diff__row"><dt class="diff__key">gl</dt><dd class="diff__val">5210 Logistics</dd></div>
-                </dl>
-              </div>
-              <div class="diff__col">
-                <div class="diff__label">GRN #8821</div>
-                <dl class="diff__list">
-                  <div class="diff__row"><dt class="diff__key">vendor</dt><dd class="diff__val">Northwind Logistics</dd></div>
-                  <div class="diff__row"><dt class="diff__key">amount</dt><dd class="diff__val">€18,420.00</dd></div>
-                  <div class="diff__row"><dt class="diff__key">received</dt><dd class="diff__val">2026-04-26</dd></div>
-                  <div class="diff__row"><dt class="diff__key">qty</dt><dd class="diff__val">1 / 1</dd></div>
-                </dl>
-              </div>
-              <div class="diff__col diff__col--target">
-                <div class="diff__label">invoice INV-4821</div>
-                <dl class="diff__list">
-                  <div class="diff__row"><dt class="diff__key">vendor</dt><dd class="diff__val"><span class="diff__ok">Northwind Logistics</span></dd></div>
-                  <div class="diff__row"><dt class="diff__key">amount</dt><dd class="diff__val"><span class="diff__ok">€18,420.00</span></dd></div>
-                  <div class="diff__row"><dt class="diff__key">date</dt><dd class="diff__val">2026-04-28</dd></div>
-                  <div class="diff__row"><dt class="diff__key">tax_id</dt><dd class="diff__val"><span class="diff__ok">DE-128…</span></dd></div>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 03 · Route ──────────────────────────────────────────── -->
-    <section class="showcase" id="route">
-      <div class="shell showcase__inner">
-        <div class="showcase__copy">
-          <span class="showcase__step">03. route</span>
-          <h2 class="showcase__title">Decisions happen where your team already decides.</h2>
-          <p class="showcase__body">
-            Slack and Teams for fast approvals. NetSuite SuiteApp and SAP Fiori extension for in-ERP review. Gmail sidebar shows live state and risks. Same record everywhere; the audit trail follows the record, not the surface.
-          </p>
-          <ul class="showcase__notes">
-            <li>Policy-driven routing on amount, vendor, GL</li>
-            <li>Override window with one-click undo</li>
-            <li>Approval is signed; sidebar reflects within seconds</li>
-          </ul>
-        </div>
-
-        <div class="showcase__mock">
-          <div class="mock">
-            <div class="mock__header">
-              <span class="mock__chrome"><i></i></span>
-              <span class="mock__title">slack · #finance-approvals</span>
-            </div>
-            <div class="slack">
-              <div class="slack__head">
-                <span class="slack__avatar">S</span>
-                <span class="slack__app">Solden</span>
-                <span class="slack__app-tag">APP</span>
-                <span>· just now</span>
-              </div>
-              <div class="slack__card">
-                <div class="slack__title">Invoice ready for approval</div>
-                <div class="slack__meta">Northwind Logistics · €18,420.00 · GL 5210 · PO #4821</div>
-                <div class="slack__notes">
-                  <span class="slack__notes-item">3-way match</span>
-                  <span class="slack__notes-item">vendor verified</span>
-                  <span class="slack__notes-item">no duplicate</span>
-                  <span class="slack__notes-item slack__notes-item--warn">over €15k threshold</span>
+            <div class="flow__states">
+              <!-- 01: capture -->
+              <div class="flow__state flow__state--capture is-active">
+                <div class="flow__mail-row flow__mail-row--hot">
+                  <span class="flow__mail-sender">Northwind Logistics</span>
+                  <span class="flow__mail-subject">
+                    <span class="flow__mail-subject-text">Invoice INV-4821 · €18,420.00</span>
+                    <span class="flow__mail-attach">PDF</span>
+                  </span>
+                  <span class="flow__mail-tag">solden · captured</span>
                 </div>
-                <div class="slack__actions">
-                  <button class="slack__btn slack__btn--primary" type="button" disabled>Approve</button>
-                  <button class="slack__btn" type="button" disabled>Ask</button>
-                  <button class="slack__btn" type="button" disabled>Escalate</button>
+                <div class="flow__mail-row">
+                  <span class="flow__mail-sender">Acme Office Supplies</span>
+                  <span class="flow__mail-subject"><span class="flow__mail-subject-text">Stationery, March 2026</span><span class="flow__mail-attach">UBL</span></span>
+                  <span class="flow__mail-time">8:14</span>
+                </div>
+                <div class="flow__mail-row">
+                  <span class="flow__mail-sender">Globex Software</span>
+                  <span class="flow__mail-subject"><span class="flow__mail-subject-text">Re: Q1 license renewal</span></span>
+                  <span class="flow__mail-time">7:52</span>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- 04 · Post ───────────────────────────────────────────── -->
-    <section class="showcase showcase--reverse" id="post">
-      <div class="shell showcase__inner">
-        <div class="showcase__copy">
-          <span class="showcase__step">04. post</span>
-          <h2 class="showcase__title">Bill written back to your ERP. Never to your bank.</h2>
-          <p class="showcase__body">
-            On approval, Solden writes the bill: correct GL accounts, vendor balance, FX, document references. Treasury runs the payment batch out of the ERP on its own schedule. Solden does not initiate payments.
-          </p>
-          <ul class="showcase__notes">
-            <li>NetSuite · SAP · QuickBooks · Xero · Dynamics</li>
-            <li>Idempotent retries with token auto-refresh</li>
-            <li>Append-only audit ref returned in &lt; 200ms</li>
-          </ul>
-        </div>
+              <!-- 02: validate -->
+              <div class="flow__state flow__state--validate">
+                <div class="flow__diff">
+                  <div class="flow__diff-col">
+                    <div class="flow__diff-label">PO #4821</div>
+                    <div class="flow__diff-row">
+                      <span class="flow__diff-key">vendor</span>
+                      <span class="flow__diff-val">Northwind Logistics</span>
+                    </div>
+                    <div class="flow__diff-row">
+                      <span class="flow__diff-key">amount</span>
+                      <span class="flow__diff-val">€18,420.00</span>
+                    </div>
+                    <div class="flow__diff-row">
+                      <span class="flow__diff-key">gl</span>
+                      <span class="flow__diff-val">5210 Logistics</span>
+                    </div>
+                  </div>
+                  <div class="flow__diff-col">
+                    <div class="flow__diff-label">GRN #8821</div>
+                    <div class="flow__diff-row">
+                      <span class="flow__diff-key">vendor</span>
+                      <span class="flow__diff-val">Northwind Logistics</span>
+                    </div>
+                    <div class="flow__diff-row">
+                      <span class="flow__diff-key">amount</span>
+                      <span class="flow__diff-val">€18,420.00</span>
+                    </div>
+                    <div class="flow__diff-row">
+                      <span class="flow__diff-key">qty</span>
+                      <span class="flow__diff-val">1 / 1</span>
+                    </div>
+                  </div>
+                  <div class="flow__diff-col">
+                    <div class="flow__diff-label">invoice INV-4821</div>
+                    <div class="flow__diff-row">
+                      <span class="flow__diff-key">vendor</span>
+                      <span class="flow__diff-val flow__diff-val--ok">Northwind Logistics</span>
+                    </div>
+                    <div class="flow__diff-row">
+                      <span class="flow__diff-key">amount</span>
+                      <span class="flow__diff-val flow__diff-val--ok">€18,420.00</span>
+                    </div>
+                    <div class="flow__diff-row">
+                      <span class="flow__diff-key">tax_id</span>
+                      <span class="flow__diff-val flow__diff-val--ok">DE-128…</span>
+                    </div>
+                  </div>
+                </div>
+                <span class="flow__verdict">matched, no exceptions</span>
+              </div>
 
-        <div class="showcase__mock">
-          <div class="mock">
-            <div class="mock__header">
-              <span class="mock__chrome"><i></i></span>
-              <span class="mock__title">netsuite.bill · POST</span>
-              <span class="mock__status mock__status--ok">200 OK · 142ms</span>
-            </div>
-<pre class="code"><span class="code__key">vendor</span>:       <span class="code__val--str">"Northwind Logistics"</span>
-<span class="code__key">amount</span>:       <span class="code__val--num">18420.00</span> <span class="code__val--str">EUR</span>
-<span class="code__key">gl</span>:           <span class="code__val--str">"5210 Logistics"</span>
-<span class="code__key">po_ref</span>:       <span class="code__val--str">"4821"</span>
-<span class="code__key">approved_by</span>:  <span class="code__val--str">"priya@your-co.example"</span>
-<span class="code__key">audit_ref</span>:    <span class="code__val--str">"AP-9182"</span>            <span class="code__cmt"># append-only</span>
-<span class="code__key">payment</span>:      <span class="code__val--str">null</span>                  <span class="code__cmt"># solden never triggers</span>
+              <!-- 03: route -->
+              <div class="flow__state flow__state--route">
+                <div class="flow__slack-head">
+                  <span class="flow__slack-avatar">S</span>
+                  <span class="flow__slack-app">Solden</span>
+                  <span class="flow__slack-app-tag">APP</span>
+                  <span>· #finance-approvals</span>
+                </div>
+                <div class="flow__slack-card">
+                  <div class="flow__slack-title">Invoice ready for approval</div>
+                  <div class="flow__slack-meta">Northwind Logistics · €18,420.00 · GL 5210 · PO #4821</div>
+                  <div class="flow__slack-tags">
+                    <span class="flow__slack-tag">3-way match</span>
+                    <span class="flow__slack-tag">vendor verified</span>
+                    <span class="flow__slack-tag flow__slack-tag--warn">over €15k threshold</span>
+                  </div>
+                  <div class="flow__slack-actions">
+                    <button class="flow__slack-btn flow__slack-btn--primary" type="button" disabled>Approve</button>
+                    <button class="flow__slack-btn" type="button" disabled>Ask</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 04: post -->
+              <div class="flow__state flow__state--post">
+<pre class="flow__code"><span class="flow__code-key">vendor</span>:       <span class="flow__code-str">"Northwind Logistics"</span>
+<span class="flow__code-key">amount</span>:       <span class="flow__code-num">18420.00</span> <span class="flow__code-str">EUR</span>
+<span class="flow__code-key">gl</span>:           <span class="flow__code-str">"5210 Logistics"</span>
+<span class="flow__code-key">po_ref</span>:       <span class="flow__code-str">"4821"</span>
+<span class="flow__code-key">approved_by</span>:  <span class="flow__code-str">"priya@your-co"</span>
+<span class="flow__code-key">audit_ref</span>:    <span class="flow__code-str">"AP-9182"</span>
+<span class="flow__code-key">payment</span>:      <span class="flow__code-str">null</span>             <span class="flow__code-cmt"># solden never triggers</span>
 </pre>
-            <div class="audit">
-              <div class="audit__head">audit trail · AP-9182</div>
-              <div class="audit__row"><span class="audit__time">14:02:11</span><span class="audit__verb">captured</span><span class="audit__detail">from gmail</span></div>
-              <div class="audit__row"><span class="audit__time">14:02:23</span><span class="audit__verb">validated</span><span class="audit__detail">3-way match · PO #4821</span></div>
-              <div class="audit__row"><span class="audit__time">14:02:45</span><span class="audit__verb">routed</span><span class="audit__detail">to Priya · #finance-approvals</span></div>
-              <div class="audit__row"><span class="audit__time">14:03:18</span><span class="audit__verb">approved</span><span class="audit__detail">by priya@your-co</span></div>
-              <div class="audit__row"><span class="audit__time">14:03:21</span><span class="audit__verb audit__verb--ok">posted</span><span class="audit__detail">netsuite bill #8821</span></div>
+                <div class="flow__post-receipt">200 OK · netsuite bill #8821 · 142ms</div>
+              </div>
+
+              <!-- 05: logged -->
+              <div class="flow__state flow__state--logged">
+                <div class="flow__audit-head">audit_chain · AP-9182</div>
+                <div class="flow__audit-entry">
+                  <div class="flow__audit-line">
+                    <span class="flow__audit-time">14:03:21</span>
+                    <span class="flow__audit-action">posted</span>
+                    <span>
+                      <span class="flow__audit-hash">hash 8a72f1c9</span>
+                      <span class="flow__audit-prev"> · prev d3e4a07b</span>
+                    </span>
+                  </div>
+                  <div class="flow__audit-line">
+                    <span class="flow__audit-time">14:03:18</span>
+                    <span class="flow__audit-action">approved</span>
+                    <span>
+                      <span class="flow__audit-hash">hash d3e4a07b</span>
+                      <span class="flow__audit-prev"> · prev f1bc02e7</span>
+                    </span>
+                  </div>
+                  <div class="flow__audit-line">
+                    <span class="flow__audit-time">14:02:45</span>
+                    <span class="flow__audit-action">routed</span>
+                    <span>
+                      <span class="flow__audit-hash">hash f1bc02e7</span>
+                      <span class="flow__audit-prev"> · prev c4e919a3</span>
+                    </span>
+                  </div>
+                  <div class="flow__audit-line">
+                    <span class="flow__audit-time">14:02:23</span>
+                    <span class="flow__audit-action">validated</span>
+                    <span>
+                      <span class="flow__audit-hash">hash c4e919a3</span>
+                      <span class="flow__audit-prev"> · prev e3f80a5c</span>
+                    </span>
+                  </div>
+                  <div class="flow__audit-line">
+                    <span class="flow__audit-time">14:02:11</span>
+                    <span class="flow__audit-action">captured</span>
+                    <span>
+                      <span class="flow__audit-hash">hash e3f80a5c</span>
+                      <span class="flow__audit-prev"> · genesis</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+
+        <ol class="flow__copy">
+          <li class="flow__step" data-flow-step="capture" id="capture">
+            <span class="flow__step-num">01</span>
+            <h2 class="flow__step-title">It lands where your team already lives.</h2>
+            <p class="flow__step-body">Gmail, Outlook, an ERP queue, PEPPOL UBL. Solden lifts line items, totals, taxes and references onto a fresh record. Vision fallback handles scans and photos.</p>
+            <div class="flow__step-tags">
+              <span class="flow__step-tag">PDF</span>
+              <span class="flow__step-tag">UBL</span>
+              <span class="flow__step-tag">no email to vendors</span>
+            </div>
+          </li>
+
+          <li class="flow__step" data-flow-step="validate" id="validate">
+            <span class="flow__step-num">02</span>
+            <h2 class="flow__step-title">It clears every gate before a human looks.</h2>
+            <p class="flow__step-body">3-way match against PO and GRN at 0.5% tolerance. Sanctions, duplicate, budget, and bank-detail-change gates run deterministically. The model never votes.</p>
+            <div class="flow__step-tags">
+              <span class="flow__step-tag">PO · GRN · invoice</span>
+              <span class="flow__step-tag">sanctions</span>
+              <span class="flow__step-tag">duplicate</span>
+            </div>
+          </li>
+
+          <li class="flow__step" data-flow-step="route" id="route">
+            <span class="flow__step-num">03</span>
+            <h2 class="flow__step-title">It routes to the surface your team already decides in.</h2>
+            <p class="flow__step-body">Slack and Teams for fast approvals. NetSuite SuiteApp and SAP Fiori for in-ERP review. Same record everywhere; the audit trail follows the record, not the surface.</p>
+            <div class="flow__step-tags">
+              <span class="flow__step-tag">amount band</span>
+              <span class="flow__step-tag">vendor risk</span>
+              <span class="flow__step-tag">one-click undo</span>
+            </div>
+          </li>
+
+          <li class="flow__step" data-flow-step="post" id="post">
+            <span class="flow__step-num">04</span>
+            <h2 class="flow__step-title">It writes back to your ERP. Never to your bank.</h2>
+            <p class="flow__step-body">Correct GL, vendor balance, FX, document references. Idempotent retries. Treasury runs the payment batch out of the ERP on its own schedule. Solden does not initiate payments.</p>
+            <div class="flow__step-tags">
+              <span class="flow__step-tag">NetSuite</span>
+              <span class="flow__step-tag">SAP</span>
+              <span class="flow__step-tag">QuickBooks</span>
+              <span class="flow__step-tag">Xero</span>
+            </div>
+          </li>
+
+          <li class="flow__step" data-flow-step="logged" id="logged">
+            <span class="flow__step-num">05</span>
+            <h2 class="flow__step-title">Every step is signed and chained.</h2>
+            <p class="flow__step-body">Append-only audit enforced by database triggers, not application code. Each event carries a hash linked to the prior event's hash. Tamper-evident at the schema layer.</p>
+            <div class="flow__step-tags">
+              <span class="flow__step-tag">DB triggers</span>
+              <span class="flow__step-tag">hash chain</span>
+              <span class="flow__step-tag">SOC 2</span>
+            </div>
+          </li>
+        </ol>
       </div>
     </section>
 
@@ -484,7 +502,7 @@
       <div class="shell shell--tight rules__head">
         <h2 class="section-title">Routing decisions are rules. The model never gets a vote.</h2>
         <p class="section-sub" style="margin-left:auto;margin-right:auto;text-align:center;">
-          Match tolerance, sanctions, duplicates, budget gates, 3-way logic. All deterministic. The model reads invoices and writes operator-facing prose; it doesn't decide anything routing-relevant.
+          Match tolerance, sanctions, duplicates, budget, 3-way logic. All deterministic. The model reads. The model writes operator prose. The model never votes.
         </p>
       </div>
       <div class="shell">
@@ -504,13 +522,130 @@
       </div>
     </section>
 
+    <!-- Audit signature: hash-chain visualisation ───────────── -->
+    <section class="audit-chain">
+      <div class="shell audit-chain__inner">
+        <div class="audit-chain__copy">
+          <h2 class="audit-chain__title">Tamper-evident at the schema layer.</h2>
+          <p class="audit-chain__sub">
+            Append-only audit log enforced by database triggers, not application code. Every event hashes the prior event. Strip a row and the chain breaks. Your auditor sees the gap.
+          </p>
+          <ul class="audit-chain__claims">
+            <li class="audit-chain__claim">
+              <span class="audit-chain__claim-key">guarantee</span>
+              <span class="audit-chain__claim-val">no row removable, no row backdated</span>
+            </li>
+            <li class="audit-chain__claim">
+              <span class="audit-chain__claim-key">enforced</span>
+              <span class="audit-chain__claim-val">db_trigger before_update, before_delete</span>
+            </li>
+            <li class="audit-chain__claim">
+              <span class="audit-chain__claim-key">algo</span>
+              <span class="audit-chain__claim-val">sha256(prev_hash || event)</span>
+            </li>
+            <li class="audit-chain__claim">
+              <span class="audit-chain__claim-key">retention</span>
+              <span class="audit-chain__claim-val">7 years, configurable per region</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="audit-chain__panel">
+          <header class="audit-chain__panel-head">
+            <span>audit_chain · ap_items · org_8f3</span>
+            <span class="audit-chain__panel-head-status">chain intact</span>
+          </header>
+
+          <ol class="audit-chain__list">
+            <li class="audit-chain__entry audit-chain__entry--posted">
+              <div class="audit-chain__entry-head">
+                <span class="audit-chain__entry-time">14:03:21</span>
+                <span class="audit-chain__entry-action">posted</span>
+                <span class="audit-chain__entry-actor">ERP webhook</span>
+                <span class="audit-chain__entry-id">ev_9182</span>
+              </div>
+              <div class="audit-chain__entry-hashes">
+                <span class="audit-chain__hash"><span class="audit-chain__hash-key">hash</span><span class="audit-chain__hash-val">8a72f1c9b4e052dfa3c16b9f7c8e2a04</span></span>
+                <span class="audit-chain__hash audit-chain__hash-prev"><span class="audit-chain__hash-key">prev</span><span class="audit-chain__hash-val">d3e4a07b5f1c8a39e2b07c14d960f2a8</span></span>
+              </div>
+            </li>
+
+            <li class="audit-chain__entry audit-chain__entry--approved">
+              <div class="audit-chain__entry-head">
+                <span class="audit-chain__entry-time">14:03:18</span>
+                <span class="audit-chain__entry-action">approved</span>
+                <span class="audit-chain__entry-actor">priya@your-co</span>
+                <span class="audit-chain__entry-id">ev_9181</span>
+              </div>
+              <div class="audit-chain__entry-hashes">
+                <span class="audit-chain__hash"><span class="audit-chain__hash-key">hash</span><span class="audit-chain__hash-val">d3e4a07b5f1c8a39e2b07c14d960f2a8</span></span>
+                <span class="audit-chain__hash audit-chain__hash-prev"><span class="audit-chain__hash-key">prev</span><span class="audit-chain__hash-val">f1bc02e74a8d6b29e591a8fc22b7d031</span></span>
+              </div>
+            </li>
+
+            <li class="audit-chain__entry">
+              <div class="audit-chain__entry-head">
+                <span class="audit-chain__entry-time">14:02:45</span>
+                <span class="audit-chain__entry-action">routed</span>
+                <span class="audit-chain__entry-actor">agent</span>
+                <span class="audit-chain__entry-id">ev_9180</span>
+              </div>
+              <div class="audit-chain__entry-hashes">
+                <span class="audit-chain__hash"><span class="audit-chain__hash-key">hash</span><span class="audit-chain__hash-val">f1bc02e74a8d6b29e591a8fc22b7d031</span></span>
+                <span class="audit-chain__hash audit-chain__hash-prev"><span class="audit-chain__hash-key">prev</span><span class="audit-chain__hash-val">c4e919a3b8f502c61e7a3b9d8f04a712</span></span>
+              </div>
+            </li>
+
+            <li class="audit-chain__entry">
+              <div class="audit-chain__entry-head">
+                <span class="audit-chain__entry-time">14:02:23</span>
+                <span class="audit-chain__entry-action">validated</span>
+                <span class="audit-chain__entry-actor">agent</span>
+                <span class="audit-chain__entry-id">ev_9179</span>
+              </div>
+              <div class="audit-chain__entry-hashes">
+                <span class="audit-chain__hash"><span class="audit-chain__hash-key">hash</span><span class="audit-chain__hash-val">c4e919a3b8f502c61e7a3b9d8f04a712</span></span>
+                <span class="audit-chain__hash audit-chain__hash-prev"><span class="audit-chain__hash-key">prev</span><span class="audit-chain__hash-val">7d2a89f1c3b4e0a61828d9c7e677b0ac</span></span>
+              </div>
+            </li>
+
+            <li class="audit-chain__entry">
+              <div class="audit-chain__entry-head">
+                <span class="audit-chain__entry-time">14:02:11</span>
+                <span class="audit-chain__entry-action">captured</span>
+                <span class="audit-chain__entry-actor">gmail webhook</span>
+                <span class="audit-chain__entry-id">ev_9178</span>
+              </div>
+              <div class="audit-chain__entry-hashes">
+                <span class="audit-chain__hash"><span class="audit-chain__hash-key">hash</span><span class="audit-chain__hash-val">7d2a89f1c3b4e0a61828d9c7e677b0ac</span></span>
+                <span class="audit-chain__hash audit-chain__hash-prev"><span class="audit-chain__hash-key">prev</span><span class="audit-chain__hash-val">e3f80a5cb29714df8a31c0b5af9d6e2b</span></span>
+              </div>
+            </li>
+
+            <li class="audit-chain__entry">
+              <div class="audit-chain__entry-head">
+                <span class="audit-chain__entry-time">14:01:54</span>
+                <span class="audit-chain__entry-action">received</span>
+                <span class="audit-chain__entry-actor">gmail webhook</span>
+                <span class="audit-chain__entry-id">ev_9177</span>
+              </div>
+              <div class="audit-chain__entry-hashes">
+                <span class="audit-chain__hash"><span class="audit-chain__hash-key">hash</span><span class="audit-chain__hash-val">e3f80a5cb29714df8a31c0b5af9d6e2b</span></span>
+                <span class="audit-chain__hash audit-chain__hash-prev"><span class="audit-chain__hash-key">prev</span><span class="audit-chain__hash-val">b5d29a17c4f08e63a91c2bd7e84f0531</span></span>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
     <!-- How it fits ────────────────────────────────────────── -->
     <section class="fits" id="fits">
       <div class="shell">
         <div class="fits__head">
           <h2 class="section-title">Sits beside your stack. Doesn't replace it.</h2>
           <p class="section-sub">
-            Solden doesn't compete with the systems you already pay for. It sits across them, tracking state, assigning ownership, and moving work forward.
+            Solden doesn't compete with the systems you already pay for. It sits across them. Tracks state. Assigns ownership. Moves work forward.
           </p>
         </div>
 
@@ -534,7 +669,7 @@
         <div class="surfaces__head" style="margin-top: 16px;">
           <h3 class="section-title" style="font-size: clamp(28px, 3.4vw, 38px);">Different surfaces. One record.</h3>
           <p class="section-sub">
-            The same AP record renders in every surface your team uses. The audit trail follows the record, not the surface.
+            One record renders in every surface your team uses. The audit follows the record, not the surface.
           </p>
         </div>
 
@@ -574,7 +709,7 @@
         <div class="outcomes__head">
           <h2 class="section-title">What changes immediately.</h2>
           <p class="section-sub">
-            One week in, the symptoms of the coordination gap stop showing up.
+            A week in, the symptoms of the coordination gap stop showing up.
           </p>
         </div>
         <ul class="outcomes__list">
@@ -622,24 +757,24 @@
         <div class="why__head">
           <h2 class="section-title">Finance complexity has outgrown its tools.</h2>
           <p class="section-sub">
-            More vendors, more transactions, more systems. Coordination is still manual, fragmented, invisible. Three things shifted at once.
+            More vendors, more transactions, more systems. Coordination is still manual. Three things shifted.
           </p>
         </div>
         <ol class="why__list">
           <li class="why__item">
             <span class="why__num">01</span>
-            <span><strong>AI got reliable enough.</strong> Today's models read unstructured invoices, generate operator-facing prose, and answer operator queries. Five years ago this would have been brittle; today it's production-ready.</span>
+            <span><strong>The model got reliable.</strong> It reads unstructured invoices, writes operator prose, and answers queries. Brittle five years ago, production-ready now.</span>
           </li>
           <li class="why__item">
             <span class="why__num">02</span>
-            <span><strong>ERP buyers accept overlay tools.</strong> A decade of Ramp, BILL, and Tipalti softened the ground. Procurement no longer flinches at "sits beside your ERP." They expect it.</span>
+            <span><strong>Procurement accepts overlay tools.</strong> A decade of Ramp, BILL, and Tipalti softened the ground. "Sits beside your ERP" is the expectation now.</span>
           </li>
           <li class="why__item">
             <span class="why__num">03</span>
-            <span><strong>Approvals permanently moved to Slack and Teams.</strong> Remote work pushed finance decisions out of the ERP. They're not coming back. The tooling has to follow.</span>
+            <span><strong>Approvals moved to Slack and Teams permanently.</strong> Remote work pushed finance decisions out of the ERP. They're not coming back.</span>
           </li>
         </ol>
-        <p class="why__close">The coordination gap is now the bottleneck.</p>
+        <p class="why__close">The coordination gap is the bottleneck.</p>
       </div>
     </section>
 
@@ -651,7 +786,7 @@
           <div class="category-pair__line category-pair__line--accent">Solden coordinates what's happening.</div>
         </div>
         <p class="footer-cta__sub">
-          30-minute demo. We'll route a sample invoice through your stack and show the audit trail.
+          30-minute demo. One sample invoice through your stack. The full audit trail.
         </p>
         <div class="footer-cta__ctas">
           <a class="btn btn--teal btn--lg" href="/contact.html">Talk to sales</a>

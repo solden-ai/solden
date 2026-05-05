@@ -275,6 +275,140 @@ async function notifySlack(lead) {
   });
 }
 
+// ── Live activity stream (SSE) ───────────────────────────────
+//
+// The marketing site shows an "agent activity" ribbon in the hero.
+// In production we'd subscribe to a sandbox tenant on the real
+// product (`api.clearledgr.com/api/workspace/dashboard/stream`).
+// Until that's wired, we synthesize a believable demo loop here
+// so the page feels live in production. Each connected client
+// gets a personal SSE stream; the server emits one frame every
+// 8-22 seconds.
+//
+// To swap in real data later, set DEMO_ACTIVITY=false and proxy
+// the SSE from the production stream. The client doesn't need to
+// change.
+
+const DEMO_ACTIVITY = process.env.DEMO_ACTIVITY !== 'false';
+
+const VENDOR_POOL = [
+  { name: 'Northwind Logistics',  amount: 18420.00, gl: '5210 Logistics' },
+  { name: 'Acme Office Supplies', amount:   612.40, gl: '6310 Office'    },
+  { name: 'Globex Software',      amount:  4900.00, gl: '6420 SaaS'      },
+  { name: 'Initech Cleaning Co.', amount:   780.00, gl: '6310 Office'    },
+  { name: 'Soylent Print',        amount:   244.18, gl: '6320 Marketing' },
+  { name: 'Wayland Freight',      amount:  9320.00, gl: '5210 Logistics' },
+  { name: 'Massive Dynamic',      amount: 22600.00, gl: '5410 R&D'       },
+  { name: 'Tyrell Components',    amount:  6740.00, gl: '5310 COGS'      },
+  { name: 'Stark Industries',     amount: 11800.00, gl: '5310 COGS'      },
+  { name: 'Cyberdyne Systems',    amount:  3520.00, gl: '6420 SaaS'      },
+];
+
+const APPROVERS = ['priya', 'marcus', 'amaka', 'felix', 'sara', 'jonas'];
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function fmtAmount(n) {
+  return '€' + n.toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Each invoice progresses through a small lifecycle. Rather than
+// emit independent random events, we maintain per-stream state so
+// the ribbon reads as ordered work, not noise.
+function nextDemoEvent(state) {
+  const stages = ['captured', 'validated', 'routed', 'posted', 'logged'];
+  if (!state.current) {
+    state.current = { vendor: pick(VENDOR_POOL), stage: 0, approver: pick(APPROVERS), poRef: 4800 + Math.floor(Math.random() * 200) };
+  }
+  const cur = state.current;
+  const stage = stages[cur.stage];
+  let action, subject, surface, tone;
+  switch (stage) {
+    case 'captured':
+      action = 'captured';
+      subject = `invoice from ${cur.vendor.name}, ${fmtAmount(cur.vendor.amount)}`;
+      surface = 'gmail';
+      tone = 'info';
+      break;
+    case 'validated':
+      action = 'validated';
+      subject = `3-way match, PO #${cur.poRef}, vendor verified`;
+      surface = 'agent';
+      tone = 'brand';
+      break;
+    case 'routed':
+      action = 'routed';
+      subject = `to ${cur.approver} for approval, ${cur.vendor.amount > 5000 ? 'over €5k threshold' : 'standard band'}`;
+      surface = 'slack';
+      tone = 'warning';
+      break;
+    case 'posted':
+      action = 'posted';
+      subject = `bill to NetSuite, GL ${cur.vendor.gl}, vendor balance updated`;
+      surface = 'netsuite';
+      tone = 'success';
+      break;
+    case 'logged':
+      action = 'logged';
+      subject = `audit event AP-${9000 + Math.floor(Math.random() * 999)}, append-only`;
+      surface = 'agent';
+      tone = 'info';
+      break;
+  }
+  cur.stage += 1;
+  if (cur.stage >= stages.length) state.current = null;
+  return {
+    id: 'ev_' + Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36),
+    ts: new Date().toISOString(),
+    action,
+    subject,
+    surface,
+    tone,
+  };
+}
+
+app.get('/api/activity-stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-store, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  const state = {};
+  let alive = true;
+
+  // Heartbeat every 25s so proxies don't kill the connection.
+  const heartbeat = setInterval(() => {
+    if (!alive) return;
+    try { res.write(': ping\n\n'); } catch { /* ignore */ }
+  }, 25_000);
+
+  // Initial frame after a short pause so the client's static
+  // ribbon has a moment to render before the first new row.
+  function emit() {
+    if (!alive || !DEMO_ACTIVITY) return;
+    const ev = nextDemoEvent(state);
+    try {
+      res.write(`event: activity\ndata: ${JSON.stringify(ev)}\n\n`);
+    } catch {
+      cleanup();
+      return;
+    }
+    // Next event in 8-22s, weighted toward the lower end.
+    const delay = 8_000 + Math.floor(Math.random() * 14_000);
+    setTimeout(emit, delay);
+  }
+  setTimeout(emit, 4_000 + Math.floor(Math.random() * 3_000));
+
+  function cleanup() {
+    alive = false;
+    clearInterval(heartbeat);
+    try { res.end(); } catch { /* ignore */ }
+  }
+  req.on('close', cleanup);
+  req.on('aborted', cleanup);
+});
+
 // ── Static assets ────────────────────────────────────────────
 app.use(
   express.static(STATIC_DIR, {

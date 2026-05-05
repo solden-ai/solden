@@ -18,6 +18,185 @@
     yearNodes[i].textContent = year;
   }
 
+  // ── 1b. Flow signature: pinned card morphs as the reader
+  // scrolls past copy steps on the right. IntersectionObserver
+  // fires when each step crosses the middle of the viewport. ──
+  initFlow();
+
+  // ── 1c. Live activity ribbon: subscribe to /api/activity-stream
+  // and prepend new rows. Initial 5 rows are static HTML so the
+  // page paints immediately even if SSE is slow or blocked. ──
+  initLiveRibbon();
+
+  function initFlow() {
+    var card = document.querySelector('[data-flow-state]');
+    if (!card || typeof IntersectionObserver === 'undefined') return;
+
+    var titleEl  = card.querySelector('[data-flow-title]');
+    var statusEl = card.querySelector('[data-flow-status]');
+    var states = {};
+    var stateNodes = card.querySelectorAll('.flow__state');
+    for (var i = 0; i < stateNodes.length; i++) {
+      var cls = stateNodes[i].className.match(/flow__state--(\w+)/);
+      if (cls) states[cls[1]] = stateNodes[i];
+    }
+
+    var titles = {
+      capture:  'gmail · ap@your-co.example',
+      validate: 'match · PO · GRN · invoice',
+      route:    'slack · #finance-approvals',
+      post:     'netsuite.bill · POST',
+      logged:   'audit_chain · ap_items',
+    };
+    var statuses = {
+      capture:  'captured',
+      validate: 'matched',
+      route:    'awaiting approval',
+      post:     '200 OK · 142ms',
+      logged:   'sealed',
+    };
+
+    function setActive(key) {
+      if (!states[key]) return;
+      var keys = Object.keys(states);
+      for (var j = 0; j < keys.length; j++) {
+        states[keys[j]].classList.toggle('is-active', keys[j] === key);
+      }
+      if (titleEl)  titleEl.textContent  = titles[key]  || titles.capture;
+      if (statusEl) statusEl.textContent = statuses[key] || '';
+      card.setAttribute('data-flow-state', key);
+    }
+
+    var steps = document.querySelectorAll('[data-flow-step]');
+    var observer = new IntersectionObserver(function (entries) {
+      // Pick the entry with the largest intersection ratio that's
+      // currently visible. Avoids flicker when two steps both cross
+      // the viewport during a fast scroll.
+      var best = null;
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        if (!best || e.intersectionRatio > best.intersectionRatio) best = e;
+      });
+      if (best) setActive(best.target.getAttribute('data-flow-step'));
+    }, { rootMargin: '-42% 0px -42% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] });
+
+    for (var k = 0; k < steps.length; k++) observer.observe(steps[k]);
+    setActive('capture');
+  }
+
+  function initLiveRibbon() {
+    var list = document.querySelector('.ribbon__list');
+    var meta = document.querySelector('.ribbon__head-meta');
+    if (!list || typeof EventSource === 'undefined') return;
+
+    var MAX_ROWS = 5;
+    var TONE_DOTS = {
+      brand:   'teal',
+      info:    'blue',
+      success: 'green',
+      warning: 'amber',
+      neutral: 'gray',
+    };
+    var SURFACE_LABEL = {
+      gmail:    'gmail',
+      slack:    'slack',
+      teams:    'teams',
+      netsuite: 'netsuite',
+      sap:      'sap',
+      agent:    null,  // hidden — see real workspace ribbon convention
+    };
+
+    function escape(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function relative(tsIso) {
+      var d = new Date(tsIso);
+      if (isNaN(d.getTime())) return '';
+      var sec = Math.round((Date.now() - d.getTime()) / 1000);
+      if (sec < 5) return 'just now';
+      if (sec < 60) return sec + 's ago';
+      if (sec < 3600) return Math.round(sec / 60) + 'm ago';
+      return Math.round(sec / 3600) + 'h ago';
+    }
+
+    function render(ev) {
+      var dot = TONE_DOTS[ev.tone] || 'gray';
+      var surfaceLabel = SURFACE_LABEL[ev.surface];
+      var li = document.createElement('li');
+      li.className = 'ribbon__row';
+      li.setAttribute('data-ts', ev.ts || new Date().toISOString());
+      li.innerHTML =
+        '<span class="ribbon__dot ribbon__dot--' + escape(dot) + '" aria-hidden="true"></span>' +
+        '<div class="ribbon__body">' +
+          '<div class="ribbon__line">' +
+            '<span class="ribbon__verb">' + escape(ev.action || 'event') + '</span>' +
+            '<span class="ribbon__subject">' + escape(ev.subject || '') + '</span>' +
+          '</div>' +
+          '<div class="ribbon__meta">' +
+            '<span class="ribbon__time">' + escape(relative(ev.ts)) + '</span>' +
+            '<span class="ribbon__sep">·</span>' +
+            '<span class="ribbon__actor">Agent</span>' +
+            (surfaceLabel
+              ? ('<span class="ribbon__sep">·</span><span class="ribbon__surface">via ' + escape(surfaceLabel) + '</span>')
+              : '') +
+          '</div>' +
+        '</div>';
+      // Prepend, then trim to MAX_ROWS.
+      list.insertBefore(li, list.firstChild);
+      while (list.children.length > MAX_ROWS) list.removeChild(list.lastChild);
+    }
+
+    function refreshTimes() {
+      var rows = list.querySelectorAll('.ribbon__row');
+      for (var i = 0; i < rows.length; i++) {
+        var ts = rows[i].getAttribute('data-ts');
+        if (!ts) continue;
+        var t = rows[i].querySelector('.ribbon__time');
+        if (t) t.textContent = relative(ts);
+      }
+    }
+
+    // Stamp the existing static rows with synthetic timestamps so
+    // they age properly while the live feed warms up.
+    var staticRows = list.querySelectorAll('.ribbon__row');
+    var now = Date.now();
+    var ages = [0, 12_000, 44_000, 80_000, 110_000];  // newest to oldest
+    for (var s = 0; s < staticRows.length; s++) {
+      staticRows[s].setAttribute('data-ts', new Date(now - (ages[s] || (s * 30_000))).toISOString());
+    }
+    refreshTimes();
+    setInterval(refreshTimes, 8_000);
+
+    var source;
+    try {
+      source = new EventSource('/api/activity-stream');
+    } catch (err) {
+      return;
+    }
+    source.addEventListener('activity', function (e) {
+      try {
+        var ev = JSON.parse(e.data);
+        render(ev);
+        if (meta && !meta.dataset.liveBound) {
+          meta.dataset.liveBound = '1';
+          // Keep the "Live, last 5" label as-is; the pulse dot
+          // already conveys liveness. No edit needed here.
+        }
+      } catch (err) { /* ignore bad frame */ }
+    });
+    source.onerror = function () {
+      // EventSource auto-reconnects on transient errors. Only
+      // close on terminal failures.
+      if (source.readyState === 2) source.close();
+    };
+  }
+
   // ── 2. Contact form ──
   var form = document.querySelector('form[data-contact]');
   if (!form) return;
