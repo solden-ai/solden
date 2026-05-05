@@ -112,19 +112,18 @@ app.use(express.json({ limit: '32kb' }));
 // CSP rationale:
 //   default-src 'self'          , start strict; explicit allow per directive
 //   script-src 'self'            , no inline scripts (site.js is external)
-//   style-src 'self' 'unsafe-inline' https://rsms.me
-//                                , small inline styles for hero swatches;
-//                                   Inter served from rsms.me
-//   font-src  'self' https://rsms.me data:
-//   img-src   'self' data:
+//   style-src 'self' 'unsafe-inline'
+//                                , a few inline style attrs on hero swatches
+//   font-src 'self' data:        , Geist self-hosted from /assets/fonts/
+//   img-src 'self' data:
 //   connect-src 'self'           , fetch only same-origin (POST /api/contact)
 //   form-action 'self'           , form posts only same-origin
 //   frame-ancestors 'none'       , no clickjacking
 const CSP = [
   "default-src 'self'",
   "script-src 'self'",
-  "style-src 'self' 'unsafe-inline' https://rsms.me",
-  "font-src 'self' https://rsms.me data:",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self' data:",
   "img-src 'self' data:",
   "connect-src 'self'",
   "frame-ancestors 'none'",
