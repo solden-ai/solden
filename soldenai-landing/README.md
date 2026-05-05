@@ -133,9 +133,11 @@ Brand kit lives in `ui/web-app/public/` (cropped lockups + favicon
 variants). Any change to the canonical brand assets there should be
 mirrored into `soldenai-landing/assets/`.
 
-Brand colours: navy `#0A1F44` + teal `#18BFB0`. Inter (rsms.me) at 700
-for headlines, 500/600 for body. Visual references: Linear, Vercel,
-Modal, explicitly **not** BILL/Ramp/Stacks.ai.
+Brand colours: navy `#0A1F44` + teal `#18BFB0`. **Geist Sans + Geist
+Mono**, self-hosted from `assets/fonts/` under the SIL Open Font
+License. The variable woff2 files cover weights 100 to 900 each.
+Visual references: Linear, Vercel, Modal. Explicitly **not**
+BILL/Ramp/Stacks.ai.
 
 ## Content rules
 
