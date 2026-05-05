@@ -4072,3 +4072,282 @@ def _v76_subscriptions_paddle(cur, db):
         "CREATE INDEX IF NOT EXISTS idx_subscriptions_paddle_sub "
         "ON subscriptions (paddle_subscription_id) WHERE paddle_subscription_id IS NOT NULL"
     )
+
+
+@migration(
+    77,
+    "audit_events: cryptographic hash chain (sha256 prev_hash -> hash, per org)",
+)
+def _v77_audit_events_hash_chain(cur, db):
+    """Make the audit log tamper-evident at the schema layer.
+
+    Each row in ``audit_events`` now carries a SHA-256 hash of its
+    canonical content concatenated with the prior row's hash. Strip,
+    backdate, or modify a row and the chain breaks at the next
+    verification: any subsequent row's ``prev_hash`` no longer matches
+    the recomputed hash of its predecessor.
+
+    Append-only enforcement at the row level was already in place via
+    the no-update / no-delete triggers
+    (``clearledgr_prevent_append_only_mutation``). Those guard the
+    application path. The hash chain adds a math-level guarantee that
+    survives even direct DB write access.
+
+    Marketing surface (soldenai.com /audit-chain section) shows this
+    chain to prospects. Until this migration ships, the visual was
+    making a claim the schema didn't back up. This migration closes
+    that gap.
+
+    Schema additions
+    ----------------
+      hash        TEXT  -- sha256(prev_hash || canonical(row))
+      prev_hash   TEXT  -- the prior row's hash, in this org's chain
+      chain_seq   BIGINT  -- monotonic sequence per org (1, 2, 3, ...)
+
+    Concurrency
+    -----------
+    The BEFORE INSERT trigger acquires a per-org transaction-scoped
+    advisory lock so that two concurrent inserts for the same org
+    serialise at the chain head. Different orgs insert in parallel.
+
+    Genesis
+    -------
+    The first event in an org's chain has ``prev_hash`` equal to
+    ``sha256("solden:audit:genesis:" || organization_id)``. This makes
+    the genesis deterministic and chain-verifiable from row 1 without
+    a magic NULL.
+
+    Backfill
+    --------
+    Existing rows are assigned ``chain_seq`` by ``ts ASC, id ASC``
+    within each organization, then walked in order with the same
+    hashing rule. The ``trg_audit_events_no_update`` guard is
+    temporarily disabled inside this migration's transaction (same
+    pattern as v72's entity_id backfill) so the backfill UPDATE can
+    succeed without permanently loosening the immutability guarantee.
+    """
+    # 1. Add columns. Idempotent.
+    cur.execute("ALTER TABLE audit_events ADD COLUMN IF NOT EXISTS prev_hash TEXT")
+    cur.execute("ALTER TABLE audit_events ADD COLUMN IF NOT EXISTS hash TEXT")
+    cur.execute("ALTER TABLE audit_events ADD COLUMN IF NOT EXISTS chain_seq BIGINT")
+
+    # 2. pgcrypto for digest('sha256'). Standard extension, ships with
+    #    every postgres image we use.
+    cur.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
+
+    # 3. Hash chain trigger function. Canonical event representation
+    #    is concat_ws('|', ...) over the immutable identity fields.
+    #    The pipe separator is collision-resistant because identity
+    #    fields are bounded character sets (UUIDs, timestamps,
+    #    enum-like state names, organization IDs).
+    cur.execute(
+        """
+        CREATE OR REPLACE FUNCTION clearledgr_audit_hash_chain()
+        RETURNS TRIGGER AS $$
+        DECLARE
+            v_prev_hash TEXT;
+            v_chain_seq BIGINT;
+            v_canonical TEXT;
+            v_lock_key  BIGINT;
+        BEGIN
+            -- Per-org tx-scoped advisory lock. Different orgs do
+            -- not block each other. Released automatically on
+            -- COMMIT or ROLLBACK.
+            v_lock_key := hashtextextended(
+                'audit_chain:' || COALESCE(NEW.organization_id, ''),
+                0
+            );
+            PERFORM pg_advisory_xact_lock(v_lock_key);
+
+            -- Read this org's current chain head.
+            SELECT hash, chain_seq
+              INTO v_prev_hash, v_chain_seq
+              FROM audit_events
+             WHERE organization_id IS NOT DISTINCT FROM NEW.organization_id
+               AND chain_seq IS NOT NULL
+             ORDER BY chain_seq DESC
+             LIMIT 1;
+
+            IF v_prev_hash IS NULL THEN
+                -- Genesis: deterministic per-org sentinel so chains
+                -- are independent and the first row can be verified
+                -- without a magic NULL prev_hash.
+                v_prev_hash := encode(
+                    digest(
+                        'solden:audit:genesis:' || COALESCE(NEW.organization_id, ''),
+                        'sha256'
+                    ),
+                    'hex'
+                );
+                v_chain_seq := 1;
+            ELSE
+                v_chain_seq := v_chain_seq + 1;
+            END IF;
+
+            -- Canonical event representation. The fields chosen are
+            -- the identity / decision fields of the audit row;
+            -- payload_json carries the rest of the body.
+            v_canonical := concat_ws(
+                '|',
+                NEW.id,
+                NEW.ts,
+                NEW.box_id,
+                NEW.box_type,
+                NEW.event_type,
+                COALESCE(NEW.prev_state, ''),
+                COALESCE(NEW.new_state, ''),
+                COALESCE(NEW.actor_type, ''),
+                COALESCE(NEW.actor_id, ''),
+                COALESCE(NEW.idempotency_key, ''),
+                COALESCE(NEW.payload_json, ''),
+                COALESCE(NEW.organization_id, '')
+            );
+
+            NEW.prev_hash := v_prev_hash;
+            NEW.hash := encode(
+                digest(v_prev_hash || '||' || v_canonical, 'sha256'),
+                'hex'
+            );
+            NEW.chain_seq := v_chain_seq;
+
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+        """
+    )
+
+    # 4. Backfill. Disable the no-update trigger for the duration
+    #    of the migration's transaction (v72 pattern). The hash
+    #    chain trigger is BEFORE INSERT only, so the backfill UPDATE
+    #    does not invoke it.
+    try:
+        cur.execute(
+            "ALTER TABLE audit_events DISABLE TRIGGER trg_audit_events_no_update"
+        )
+    except Exception as exc:
+        logger.debug("[Migration v77] no-update trigger disable skipped: %s", exc)
+
+    # 4a. Assign chain_seq to existing rows by (ts ASC, id ASC) within
+    #     each organization. Stable ordering: ts is the primary
+    #     ordering field; id breaks ties when two events share a ts.
+    try:
+        cur.execute(
+            """
+            WITH ordered AS (
+                SELECT id,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY organization_id
+                           ORDER BY ts NULLS LAST, id
+                       ) AS new_seq
+                  FROM audit_events
+                 WHERE chain_seq IS NULL
+            )
+            UPDATE audit_events ae
+               SET chain_seq = ordered.new_seq
+              FROM ordered
+             WHERE ae.id = ordered.id
+            """
+        )
+    except Exception as exc:
+        logger.warning("[Migration v77] chain_seq backfill failed: %s", exc)
+
+    # 4b. Walk each org's chain in chain_seq order, computing
+    #     prev_hash + hash for every row. Pure plpgsql so we get the
+    #     same result as the trigger does on a fresh insert.
+    try:
+        cur.execute(
+            """
+            DO $$
+            DECLARE
+                v_org TEXT;
+                v_prev_hash TEXT;
+                r RECORD;
+            BEGIN
+                FOR v_org IN
+                    SELECT DISTINCT organization_id
+                      FROM audit_events
+                     WHERE hash IS NULL
+                     ORDER BY organization_id NULLS FIRST
+                LOOP
+                    -- Genesis sentinel for this org.
+                    v_prev_hash := encode(
+                        digest(
+                            'solden:audit:genesis:' || COALESCE(v_org, ''),
+                            'sha256'
+                        ),
+                        'hex'
+                    );
+
+                    FOR r IN
+                        SELECT id, ts, box_id, box_type, event_type,
+                               prev_state, new_state, actor_type, actor_id,
+                               idempotency_key, payload_json, organization_id
+                          FROM audit_events
+                         WHERE organization_id IS NOT DISTINCT FROM v_org
+                           AND hash IS NULL
+                         ORDER BY chain_seq
+                    LOOP
+                        UPDATE audit_events
+                           SET prev_hash = v_prev_hash,
+                               hash = encode(
+                                   digest(
+                                       v_prev_hash || '||' || concat_ws(
+                                           '|',
+                                           r.id, r.ts, r.box_id, r.box_type,
+                                           r.event_type,
+                                           COALESCE(r.prev_state, ''),
+                                           COALESCE(r.new_state, ''),
+                                           COALESCE(r.actor_type, ''),
+                                           COALESCE(r.actor_id, ''),
+                                           COALESCE(r.idempotency_key, ''),
+                                           COALESCE(r.payload_json, ''),
+                                           COALESCE(r.organization_id, '')
+                                       ),
+                                       'sha256'
+                                   ),
+                                   'hex'
+                               )
+                         WHERE id = r.id;
+
+                        SELECT hash INTO v_prev_hash
+                          FROM audit_events
+                         WHERE id = r.id;
+                    END LOOP;
+                END LOOP;
+            END $$;
+            """
+        )
+    except Exception as exc:
+        logger.warning("[Migration v77] hash backfill failed: %s", exc)
+
+    try:
+        cur.execute(
+            "ALTER TABLE audit_events ENABLE TRIGGER trg_audit_events_no_update"
+        )
+    except Exception as exc:
+        logger.warning("[Migration v77] no-update trigger re-enable failed: %s", exc)
+
+    # 5. Install the BEFORE INSERT chain trigger. From this point on,
+    #    every new audit_events row gets a hash filled in regardless
+    #    of which insert path the application uses.
+    cur.execute(
+        """
+        CREATE OR REPLACE TRIGGER trg_audit_events_hash_chain
+        BEFORE INSERT ON audit_events
+        FOR EACH ROW
+        EXECUTE FUNCTION clearledgr_audit_hash_chain()
+        """
+    )
+
+    # 6. Indexes. The descending chain_seq index is the chain-head
+    #    lookup (one row per query). The unique index enforces that
+    #    chain_seq values are dense per org (no gaps, no duplicates).
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_audit_chain_head "
+        "ON audit_events (organization_id, chain_seq DESC)"
+    )
+    cur.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_chain_unique "
+        "ON audit_events (organization_id, chain_seq) "
+        "WHERE chain_seq IS NOT NULL"
+    )

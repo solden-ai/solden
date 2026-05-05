@@ -474,6 +474,95 @@ class _ClearledgrDBBase:
                 """
             )
 
+    def _install_audit_hash_chain_trigger(self, cur) -> None:
+        """Install the SHA-256 hash-chain trigger on ``audit_events``.
+
+        See migration v77 for the full design rationale. In short: every
+        new row gets ``hash``, ``prev_hash``, ``chain_seq`` filled by
+        this BEFORE INSERT trigger. Per-org tx-scoped advisory lock
+        serialises concurrent inserts within a chain. ``hashtextextended``
+        gives us a stable BIGINT for the lock key from the org id.
+
+        Idempotent: ``CREATE OR REPLACE FUNCTION`` and
+        ``CREATE OR REPLACE TRIGGER`` are both safe to run on every
+        boot. The function body lives here too so a brand-new database
+        has the trigger before the migration runner ever touches it.
+        """
+        cur.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
+        cur.execute(
+            """
+            CREATE OR REPLACE FUNCTION clearledgr_audit_hash_chain()
+            RETURNS TRIGGER AS $$
+            DECLARE
+                v_prev_hash TEXT;
+                v_chain_seq BIGINT;
+                v_canonical TEXT;
+                v_lock_key  BIGINT;
+            BEGIN
+                v_lock_key := hashtextextended(
+                    'audit_chain:' || COALESCE(NEW.organization_id, ''),
+                    0
+                );
+                PERFORM pg_advisory_xact_lock(v_lock_key);
+
+                SELECT hash, chain_seq
+                  INTO v_prev_hash, v_chain_seq
+                  FROM audit_events
+                 WHERE organization_id IS NOT DISTINCT FROM NEW.organization_id
+                   AND chain_seq IS NOT NULL
+                 ORDER BY chain_seq DESC
+                 LIMIT 1;
+
+                IF v_prev_hash IS NULL THEN
+                    v_prev_hash := encode(
+                        digest(
+                            'solden:audit:genesis:' || COALESCE(NEW.organization_id, ''),
+                            'sha256'
+                        ),
+                        'hex'
+                    );
+                    v_chain_seq := 1;
+                ELSE
+                    v_chain_seq := v_chain_seq + 1;
+                END IF;
+
+                v_canonical := concat_ws(
+                    '|',
+                    NEW.id,
+                    NEW.ts,
+                    NEW.box_id,
+                    NEW.box_type,
+                    NEW.event_type,
+                    COALESCE(NEW.prev_state, ''),
+                    COALESCE(NEW.new_state, ''),
+                    COALESCE(NEW.actor_type, ''),
+                    COALESCE(NEW.actor_id, ''),
+                    COALESCE(NEW.idempotency_key, ''),
+                    COALESCE(NEW.payload_json, ''),
+                    COALESCE(NEW.organization_id, '')
+                );
+
+                NEW.prev_hash := v_prev_hash;
+                NEW.hash := encode(
+                    digest(v_prev_hash || '||' || v_canonical, 'sha256'),
+                    'hex'
+                );
+                NEW.chain_seq := v_chain_seq;
+
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+            """
+        )
+        cur.execute(
+            """
+            CREATE OR REPLACE TRIGGER trg_audit_events_hash_chain
+            BEFORE INSERT ON audit_events
+            FOR EACH ROW
+            EXECUTE FUNCTION clearledgr_audit_hash_chain()
+            """
+        )
+
     def _install_ap_state_guard(self, cur) -> None:
         """Enforce valid AP item states at the DB level.
 
@@ -1296,6 +1385,15 @@ class _ClearledgrDBBase:
             self._ensure_column(cur, "audit_events", "workflow_id", "TEXT")
             self._ensure_column(cur, "audit_events", "run_id", "TEXT")
             self._ensure_column(cur, "audit_events", "decision_reason", "TEXT")
+            # v77: cryptographic hash chain. Columns must exist
+            # before _install_audit_hash_chain_trigger fires below.
+            self._ensure_column(cur, "audit_events", "prev_hash", "TEXT")
+            self._ensure_column(cur, "audit_events", "hash", "TEXT")
+            self._ensure_column(cur, "audit_events", "chain_seq", "BIGINT")
+            # Now that the chain columns exist, install the BEFORE
+            # INSERT trigger that fills them on every new audit row.
+            # Idempotent (CREATE OR REPLACE).
+            self._install_audit_hash_chain_trigger(cur)
 
             self._ensure_column(cur, "approvals", "source_channel", "TEXT")
             self._ensure_column(cur, "approvals", "source_message_ref", "TEXT")
