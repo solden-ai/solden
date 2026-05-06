@@ -687,18 +687,35 @@ class FinanceAgentRuntime:
                 updates["exception_code"] = invoice.get("exception_code")
             if invoice.get("exception_severity"):
                 updates["exception_severity"] = invoice.get("exception_severity")
+            existing_id = str(existing.get("id") or "").strip()
             if updates and hasattr(self.db, "update_ap_item"):
                 try:
-                    self.db.update_ap_item(str(existing.get("id") or "").strip(), **updates)
+                    self.db.update_ap_item(existing_id, **updates)
                 except Exception as exc:
                     logger.error(
                         "Failed to persist extraction updates for ap_item %s: %s",
-                        str(existing.get("id") or "").strip(),
+                        existing_id,
                         exc,
                     )
+            # Group 3 fix: any time the seed path mutates an existing
+            # AP item (replay, retry, second pass on the same thread),
+            # a row covering the mutation lands on the audit chain.
+            # Idempotency key dedupes on the change-set fingerprint,
+            # so a no-op replay doesn't bloat the timeline.
+            if updates and existing_id:
+                self._emit_seed_audit(
+                    ap_item_id=existing_id,
+                    event_type="agent_action:seed_ap_item_updated",
+                    reason="intake_seed_replay",
+                    invoice_key=None,
+                    invoice=invoice,
+                    initial_state=str(existing.get("state") or ""),
+                    correlation_id=correlation_id,
+                    update_keys=sorted(updates.keys()),
+                )
             if hasattr(self.db, "get_ap_item"):
                 try:
-                    item = self.db.get_ap_item(str(existing.get("id") or "").strip())
+                    item = self.db.get_ap_item(existing_id)
                 except Exception:
                     item = None
             if not item:
@@ -756,6 +773,25 @@ class FinanceAgentRuntime:
             # this AP item?") goes through the AP item's hash column,
             # not the archive row's nullable ap_item_id column.
 
+            # Group 3 fix (2026-05-06): emit an audit row covering the
+            # create so the hash chain has a link from "nothing" to
+            # "AP item exists in state X". Without this, the seed
+            # path silently brings AP items into existence outside
+            # the chain — every subsequent timeline event chains
+            # forward, but the create itself is invisible.
+            if item:
+                seeded_id = str(item.get("id") or "").strip()
+                if seeded_id:
+                    self._emit_seed_audit(
+                        ap_item_id=seeded_id,
+                        event_type="agent_action:seed_ap_item_created",
+                        reason="intake_seed",
+                        invoice_key=invoice_key,
+                        invoice=invoice,
+                        initial_state=str(payload.get("state") or ""),
+                        correlation_id=correlation_id,
+                    )
+
         if item and hasattr(self.db, "link_ap_item_source"):
             ap_item_id = str(item.get("id") or "").strip()
             if thread_id:
@@ -780,7 +816,20 @@ class FinanceAgentRuntime:
                         }
                     )
                 except Exception as exc:
-                    logger.debug("Source link (thread) failed: %s", exc)
+                    # Group 3 fix: source-link failures used to log
+                    # at debug level and continue silently. A partial
+                    # seed (item exists, source link missing) was
+                    # invisible in the timeline. Now we emit a
+                    # compensating audit row so the failure is at
+                    # least surfaced.
+                    logger.warning("Source link (thread) failed for ap_item=%s: %s", ap_item_id, exc)
+                    self._emit_source_link_failure_audit(
+                        ap_item_id=ap_item_id,
+                        source_type="gmail_thread",
+                        source_ref=thread_id,
+                        error=str(exc),
+                        correlation_id=correlation_id,
+                    )
             if message_id:
                 try:
                     self.db.link_ap_item_source(
@@ -803,7 +852,17 @@ class FinanceAgentRuntime:
                         }
                     )
                 except Exception as exc:
-                    logger.debug("Source link (message) failed: %s", exc)
+                    logger.warning(
+                        "Source link (message) failed for ap_item=%s: %s",
+                        ap_item_id, exc,
+                    )
+                    self._emit_source_link_failure_audit(
+                        ap_item_id=ap_item_id,
+                        source_type="gmail_message",
+                        source_ref=message_id,
+                        error=str(exc),
+                        correlation_id=correlation_id,
+                    )
 
         return item
 
@@ -818,12 +877,130 @@ class FinanceAgentRuntime:
             correlation_id=correlation_id,
         )
 
+    def _emit_seed_audit(
+        self,
+        *,
+        ap_item_id: str,
+        event_type: str,
+        reason: str,
+        invoice: Dict[str, Any],
+        invoice_key: Optional[str],
+        initial_state: str,
+        correlation_id: Optional[str],
+        update_keys: Optional[List[str]] = None,
+    ) -> None:
+        """Audit-emit covering an intake-seed write so the hash
+        chain documents AP item creation / replay-update. Idempotent
+        per-(ap_item_id, fingerprint) — replays don't double-write.
+        Failures are logged at warning and swallowed; the seed
+        proceeds even if the audit emit fails (matches the existing
+        ``_append_runtime_audit`` posture)."""
+        if not ap_item_id:
+            return
+        thread_id = self._invoice_thread_id(invoice)
+        message_id = self._invoice_message_id(invoice)
+        intake_source = str(invoice.get("intake_source") or "gmail").strip() or "gmail"
+        fingerprint = "create" if event_type.endswith("created") else (
+            "update:" + "|".join(update_keys or [])
+        )
+        idempotency_key = f"{event_type}:{ap_item_id}:{fingerprint}"
+        try:
+            self._append_runtime_audit(
+                ap_item_id=ap_item_id,
+                event_type=event_type,
+                reason=reason,
+                metadata={
+                    "intake_source": intake_source,
+                    "thread_id": thread_id or None,
+                    "message_id": message_id or None,
+                    "invoice_key": invoice_key,
+                    "vendor_name": (
+                        invoice.get("vendor_name") or invoice.get("vendor")
+                    ),
+                    "amount": invoice.get("amount"),
+                    "currency": invoice.get("currency"),
+                    "initial_state": initial_state or None,
+                    "update_keys": update_keys or None,
+                },
+                correlation_id=correlation_id,
+                idempotency_key=idempotency_key,
+                skill_id="ap_v1",
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "[FinanceAgentRuntime] seed audit emit failed for %s: %s",
+                ap_item_id, exc,
+            )
+
+    def _emit_source_link_failure_audit(
+        self,
+        *,
+        ap_item_id: str,
+        source_type: str,
+        source_ref: str,
+        error: str,
+        correlation_id: Optional[str],
+    ) -> None:
+        """Compensating audit row when a source link fails to land.
+        Closes the partial-seed visibility gap: item exists, source
+        link missing — used to be silent, now lands on the timeline."""
+        if not ap_item_id:
+            return
+        idempotency_key = f"agent_action:source_link_failed:{ap_item_id}:{source_type}:{source_ref}"
+        try:
+            self._append_runtime_audit(
+                ap_item_id=ap_item_id,
+                event_type="agent_action:source_link_failed",
+                reason=f"source_link_failed:{source_type}",
+                metadata={
+                    "source_type": source_type,
+                    "source_ref": source_ref,
+                    "error": error[:500] if error else None,
+                },
+                correlation_id=correlation_id,
+                idempotency_key=idempotency_key,
+                skill_id="ap_v1",
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "[FinanceAgentRuntime] source-link-failure audit emit failed for %s/%s: %s",
+                ap_item_id, source_type, exc,
+            )
+
     def _merge_item_metadata(self, item: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, Any]:
         metadata = self._parse_json_dict(item.get("metadata"))
         metadata.update(updates or {})
         item["metadata"] = metadata
         ap_item_id = str(item.get("id") or "").strip()
         if ap_item_id and hasattr(self.db, "update_ap_item"):
+            # Group 3 fix (2026-05-06): emit an audit row covering
+            # the merge so the hash chain documents which keys were
+            # rewritten. Metadata holds correlation_id, shadow_decision,
+            # autonomy_policy, processing_status, exception flags —
+            # silent rewrite of any of those was an audit gap.
+            update_keys = sorted(str(k) for k in (updates or {}).keys() if k is not None)
+            if update_keys:
+                try:
+                    self._append_runtime_audit(
+                        ap_item_id=ap_item_id,
+                        event_type="agent_action:merge_item_metadata",
+                        reason="metadata_merge",
+                        metadata={
+                            "update_keys": update_keys,
+                            "actor": self.actor_email or self.actor_id,
+                        },
+                        correlation_id=None,
+                        idempotency_key=(
+                            f"agent_action:merge_item_metadata:{ap_item_id}:"
+                            f"{'|'.join(update_keys)}"
+                        ),
+                        skill_id="ap_v1",
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(
+                        "[FinanceAgentRuntime] metadata-merge audit emit failed for %s: %s",
+                        ap_item_id, exc,
+                    )
             try:
                 self.db.update_ap_item(ap_item_id, metadata=metadata)
             except Exception as exc:
@@ -1665,6 +1842,47 @@ class FinanceAgentRuntime:
             )
         ap_item_id = str(seeded_item.get("id") or "").strip()
         if stale_runtime_failure and ap_item_id and hasattr(self.db, "update_ap_item"):
+            # Group 3 fix (2026-05-06): emit an exception_cleared
+            # audit row BEFORE silently nulling the exception fields.
+            # A "planner_failed" / "workflow_execution_failed"
+            # exception used to disappear from the AP record without
+            # any timeline entry; the chain showed nothing, so an
+            # auditor reviewing the box state couldn't tell that an
+            # exception had ever existed. Now the prior
+            # exception_code, exception_severity, and last_error
+            # land on a structured audit row first.
+            prior_exception = {
+                "exception_code": seeded_item.get("exception_code")
+                or existing_metadata.get("exception_code"),
+                "exception_severity": seeded_item.get("exception_severity")
+                or existing_metadata.get("exception_severity"),
+                "last_error": seeded_item.get("last_error"),
+                "planner_error": existing_metadata.get("planner_error"),
+                "workflow_error": existing_metadata.get("workflow_error"),
+            }
+            try:
+                self._append_runtime_audit(
+                    ap_item_id=ap_item_id,
+                    event_type="exception_cleared",
+                    reason=f"refresh:{refresh_reason or 'replay_backfill'}",
+                    metadata={
+                        "prior_exception": {
+                            k: v for k, v in prior_exception.items() if v is not None
+                        },
+                        "refresh_reason": refresh_reason or "replay_backfill",
+                    },
+                    correlation_id=resolved_correlation_id,
+                    idempotency_key=(
+                        f"exception_cleared:{ap_item_id}:"
+                        f"{refresh_reason or 'replay_backfill'}"
+                    ),
+                    skill_id="ap_v1",
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "[FinanceAgentRuntime] exception_cleared audit emit failed for %s: %s",
+                    ap_item_id, exc,
+                )
             try:
                 self.db.update_ap_item(
                     ap_item_id,
@@ -1673,7 +1891,10 @@ class FinanceAgentRuntime:
                     last_error=None,
                 )
             except Exception as exc:
-                logger.debug("Stale exception clear failed: %s", exc)
+                logger.warning(
+                    "Stale exception clear failed for %s: %s",
+                    ap_item_id, exc,
+                )
         if ap_item_id and hasattr(self.db, "update_ap_item_metadata_merge"):
             try:
                 self.db.update_ap_item_metadata_merge(ap_item_id, refresh_metadata)
