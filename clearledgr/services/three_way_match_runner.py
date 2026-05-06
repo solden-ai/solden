@@ -262,12 +262,13 @@ def run_three_way_match(
                     gr_obj = gr
                     break
 
+    runner_tol = service._get_tolerances()
     line_breakdown = _build_line_breakdown(
         invoice_lines=invoice_lines,
         po=po_obj,
         gr=gr_obj,
-        price_tolerance_pct=service.PRICE_TOLERANCE_PERCENT,
-        quantity_tolerance_pct=service.QUANTITY_TOLERANCE_PERCENT,
+        price_tolerance_pct=runner_tol["price_pct"],
+        quantity_tolerance_pct=runner_tol["quantity_pct"],
     )
 
     invoice_amount = float(item.get("amount") or 0)

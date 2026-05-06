@@ -374,3 +374,62 @@ def test_api_cross_org_404(db, client_orgA):
         f"/api/workspace/ap-items/{other['id']}/three-way-match",
     )
     assert resp.status_code == 404
+
+
+# ─── Configurable tolerances ───────────────────────────────────────
+
+
+def test_custom_tolerance_via_policy_service(db):
+    """Tightening price tolerance via PolicyService should turn a
+    previously-MATCHED 1% variance into an exception. Proves the
+    match path reads tolerances from the active policy version, not
+    the class-level constants."""
+    from clearledgr.services.policy_service import PolicyService
+
+    po_lines = [
+        {"item_number": "SKU-TOL", "description": "Widget",
+         "quantity": 10, "unit_price": 100.0},
+    ]
+    po_num = _make_po("orgA", line_items=po_lines, total=1000.0)
+    _create_gr_for_po("orgA", po_num, [10])
+    item = _make_ap_item(
+        db, item_id="AP-tol-1", po_number=po_num,
+        amount=1010.0,  # 1% over PO — within default 2% tolerance
+    )
+
+    # Default tolerances (2% price, $10 amount): the $10 absolute
+    # tolerance ties exactly with the variance, so the AND condition
+    # is false → match passes.
+    summary = run_three_way_match(
+        db, organization_id="orgA", ap_item_id=item["id"],
+    )
+    assert summary.match_status == "matched"
+
+    # Tighten price tolerance to 0.5% and amount tolerance to $1 via
+    # versioned policy. Same invoice should now flag the variance.
+    PolicyService("orgA").set_policy(
+        "match_tolerances",
+        content={
+            "ap_three_way": {
+                "price_tolerance_percent": 0.5,
+                "quantity_tolerance_percent": 5.0,
+                "amount_tolerance": 1.0,
+            },
+        },
+        actor="test:tolerance_tightening",
+        description="Tighten AP tolerances for test",
+    )
+
+    item2 = _make_ap_item(
+        db, item_id="AP-tol-2", po_number=po_num,
+        amount=1010.0,
+    )
+    summary2 = run_three_way_match(
+        db, organization_id="orgA", ap_item_id=item2["id"],
+    )
+    assert summary2.match_status == "exception"
+    assert any(
+        "price" in (e.get("type") or "").lower()
+        or "price" in (e.get("message") or "").lower()
+        for e in summary2.exceptions
+    )

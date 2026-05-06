@@ -431,7 +431,7 @@
           <li class="flow__step" data-flow-step="validate" id="validate">
             <span class="flow__step-num">02</span>
             <h2 class="flow__step-title">It clears every gate before a human looks.</h2>
-            <p class="flow__step-body">3-way match against PO and GRN at 0.5% tolerance. Sanctions, duplicate, budget, and bank-detail-change gates run deterministically. The model never votes.</p>
+            <p class="flow__step-body">Match against PO and GRN under your configured mode and tolerance. Sanctions, duplicate, budget, and bank-detail-change gates run deterministically. The model never votes.</p>
             <div class="flow__step-tags">
               <span class="flow__step-tag">PO · GRN · invoice</span>
               <span class="flow__step-tag">sanctions</span>
@@ -481,11 +481,35 @@
       <div class="shell shell--tight rules__head" data-reveal>
         <h2 class="section-title">Routing decisions are rules. The model never gets a vote.</h2>
         <p class="section-sub" style="margin-left:auto;margin-right:auto;text-align:center;">
-          Match tolerance, sanctions, duplicates, budget, 3-way logic. All deterministic. The model reads. The model writes operator prose. The model never votes.
+          Configurable match modes, tolerances, sanctions, duplicates, budget. All deterministic. The model reads. The model writes operator prose. The model never votes.
         </p>
       </div>
+
+      <div class="shell rules__modes-wrap" data-reveal>
+        <div class="rules__modes">
+          <article class="rules__mode">
+            <span class="rules__mode-key">three_way_required</span>
+            <h3 class="rules__mode-title">3-way matching required</h3>
+            <p class="rules__mode-body">PO, goods receipt, and invoice must all align. Missing GRN blocks the post and routes for review.</p>
+          </article>
+          <article class="rules__mode rules__mode--active">
+            <span class="rules__mode-key">two_way_fallback</span>
+            <h3 class="rules__mode-title">2-way fallback <span class="rules__mode-flag">default</span></h3>
+            <p class="rules__mode-body">Try 3-way first. Accept PO + invoice when GRN is the only blocker. Price, currency, and quantity variance still gate.</p>
+          </article>
+          <article class="rules__mode">
+            <span class="rules__mode-key">policy_only</span>
+            <h3 class="rules__mode-title">Approval policies only</h3>
+            <p class="rules__mode-body">Skip matching. Route every invoice through approval thresholds (amount band, vendor history, GL category).</p>
+          </article>
+        </div>
+        <p class="rules__modes-foot">Configurable per organization. Versioned: every match outcome is auditable back to the policy version it ran under.</p>
+      </div>
+
       <div class="shell" data-reveal data-reveal-delay="1">
-<pre class="rules__pre"><span class="rules__op">match</span>   PO, GRN, invoice                 <span class="rules__cmt"># tolerance 0.5% on amount</span>
+<pre class="rules__pre"><span class="rules__cmt"># two_way_fallback (default mode)</span>
+<span class="rules__op">match</span>   invoice ↔ PO                     <span class="rules__cmt"># tolerance 2% / amount floor 10</span>
+<span class="rules__op">match</span>   invoice ↔ GRN                    <span class="rules__cmt"># if present; missing GRN → 2-way accept</span>
 <span class="rules__op">gate</span>    sanctions(vendor)                <span class="rules__cmt"># BLOCK on hit</span>
 <span class="rules__op">gate</span>    duplicate(invoice_no, vendor)    <span class="rules__cmt"># BLOCK</span>
 <span class="rules__op">gate</span>    budget(gl, period)               <span class="rules__cmt"># NEEDS_INFO if over</span>

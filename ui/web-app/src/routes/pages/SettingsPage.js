@@ -76,6 +76,175 @@ const AP_GL_CATEGORIES = [
 ];
 
 
+const MATCH_MODES = [
+  {
+    key: 'three_way_required',
+    label: '3-way matching required',
+    body: 'PO + goods receipt + invoice must all align. Missing GRN blocks the invoice and routes it for review.',
+  },
+  {
+    key: 'two_way_fallback',
+    label: '2-way fallback',
+    body: 'Try 3-way first. If the only blocker is a missing GRN, accept the PO + invoice match. Other variances still block.',
+  },
+  {
+    key: 'policy_only',
+    label: 'Approval policies only',
+    body: 'Skip matching. Route every invoice through approval thresholds (amount band, vendor history, GL category).',
+  },
+];
+
+function MatchingSection({ api, toast, canManage }) {
+  const [config, setConfig] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [draft, setDraft] = useState({
+    mode: 'two_way_fallback',
+    price_tolerance_percent: 2.0,
+    quantity_tolerance_percent: 5.0,
+    amount_tolerance: 10.0,
+  });
+
+  const refresh = useCallback(() => {
+    setLoading(true);
+    api('/api/workspace/settings/match-config')
+      .then((res) => {
+        if (!res) return;
+        setConfig(res);
+        setDraft({
+          mode: res.mode || 'two_way_fallback',
+          price_tolerance_percent: Number(res.tolerances?.price_tolerance_percent ?? 2.0),
+          quantity_tolerance_percent: Number(res.tolerances?.quantity_tolerance_percent ?? 5.0),
+          amount_tolerance: Number(res.tolerances?.amount_tolerance ?? 10.0),
+        });
+      })
+      .catch(() => toast?.('Failed to load matching config', 'error'))
+      .finally(() => setLoading(false));
+  }, [api, toast]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const dirty = useMemo(() => {
+    if (!config) return false;
+    if (draft.mode !== config.mode) return true;
+    const t = config.tolerances || {};
+    return (
+      Number(t.price_tolerance_percent) !== Number(draft.price_tolerance_percent)
+      || Number(t.quantity_tolerance_percent) !== Number(draft.quantity_tolerance_percent)
+      || Number(t.amount_tolerance) !== Number(draft.amount_tolerance)
+    );
+  }, [config, draft]);
+
+  const save = useCallback(() => {
+    if (!canManage || saving) return;
+    setSaving(true);
+    api('/api/workspace/settings/match-config', {
+      method: 'PUT',
+      body: JSON.stringify({
+        mode: draft.mode,
+        tolerances: {
+          price_tolerance_percent: Number(draft.price_tolerance_percent),
+          quantity_tolerance_percent: Number(draft.quantity_tolerance_percent),
+          amount_tolerance: Number(draft.amount_tolerance),
+        },
+      }),
+    })
+      .then((res) => {
+        if (res) setConfig(res);
+        toast?.('Matching configuration saved', 'success');
+      })
+      .catch(() => toast?.('Save failed', 'error'))
+      .finally(() => setSaving(false));
+  }, [api, canManage, draft, saving, toast]);
+
+  const head = html`<div class="panel-head compact">
+    <div>
+      <h3>Matching${!canManage ? html`<span class="status-badge" style="font-size:10px;margin-left:8px">Read-only</span>` : null}</h3>
+      <p class="muted">How invoices are matched against POs and goods receipts. Mode + tolerances are versioned; every match outcome is auditable back to the policy version it ran under.</p>
+    </div>
+  </div>`;
+
+  if (loading) {
+    return html`<div>${head}<div class="muted" style="padding:16px 0">Loading…</div></div>`;
+  }
+
+  return html`<div>
+    ${head}
+    <div style="padding:8px 0 16px">
+      <label class="muted" style="font-size:12px;letter-spacing:0.04em;text-transform:uppercase">Mode</label>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        ${MATCH_MODES.map((m) => html`
+          <label
+            key=${m.key}
+            style=${`display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid ${draft.mode === m.key ? 'var(--cl-accent, #18BFB0)' : 'var(--cl-border, rgba(255,255,255,0.08))'};border-radius:10px;cursor:${canManage ? 'pointer' : 'default'};`}
+          >
+            <input
+              type="radio"
+              name="match-mode"
+              value=${m.key}
+              checked=${draft.mode === m.key}
+              disabled=${!canManage}
+              onChange=${() => setDraft({ ...draft, mode: m.key })}
+              style="margin-top:3px"
+            />
+            <div>
+              <div style="font-weight:600;font-size:14px">${m.label}</div>
+              <div class="muted" style="font-size:12px;margin-top:2px">${m.body}</div>
+            </div>
+          </label>
+        `)}
+      </div>
+    </div>
+
+    <div class="secondary-form-grid">
+      <div class="field-row">
+        <label>Price tolerance (%)</label>
+        <input
+          type="number" step="0.1" min="0" max="100"
+          value=${draft.price_tolerance_percent}
+          disabled=${!canManage}
+          onChange=${(e) => setDraft({ ...draft, price_tolerance_percent: parseFloat(e.target.value) || 0 })}
+        />
+        <div class="form-help">Allowed price variance between invoice and PO. Default: 2%.</div>
+      </div>
+      <div class="field-row">
+        <label>Quantity tolerance (%)</label>
+        <input
+          type="number" step="0.5" min="0" max="100"
+          value=${draft.quantity_tolerance_percent}
+          disabled=${!canManage}
+          onChange=${(e) => setDraft({ ...draft, quantity_tolerance_percent: parseFloat(e.target.value) || 0 })}
+        />
+        <div class="form-help">Allowed quantity variance per line. Default: 5%.</div>
+      </div>
+      <div class="field-row">
+        <label>Amount floor</label>
+        <input
+          type="number" step="1" min="0"
+          value=${draft.amount_tolerance}
+          disabled=${!canManage}
+          onChange=${(e) => setDraft({ ...draft, amount_tolerance: parseFloat(e.target.value) || 0 })}
+        />
+        <div class="form-help">Absolute amount tolerance applied alongside the percentage. Default: 10.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;gap:12px;flex-wrap:wrap">
+      <div class="muted" style="font-size:12px">
+        ${config ? html`Mode v${config.mode_version_number} · Tolerances v${config.tolerances_version_number}` : ''}
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-outline btn-sm" onClick=${refresh} disabled=${saving}>Reload</button>
+        <button
+          class="btn-primary btn-sm"
+          onClick=${save}
+          disabled=${!canManage || !dirty || saving}
+        >${saving ? 'Saving…' : 'Save changes'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function InviteRow({ invite, onRevoke, canManage }) {
   return html`<div class="secondary-row">
     <div class="secondary-row-copy">
@@ -122,6 +291,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
   const erpRef = useRef(null);
   const glMappingRef = useRef(null);
   const policyRef = useRef(null);
+  const matchingRef = useRef(null);
   const approvalRef = useRef(null);
   const vendorPolicyRef = useRef(null);
   const autonomyRef = useRef(null);
@@ -496,6 +666,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         <button class=${`segmented-button btn-sm${activeSection === 'erp' ? ' is-active' : ''}`} onClick=${() => scrollToSection(erpRef, 'erp')}>ERP Connection</button>
         <button class=${`segmented-button btn-sm${activeSection === 'gl' ? ' is-active' : ''}`} onClick=${() => scrollToSection(glMappingRef, 'gl')}>GL Mapping</button>
         <button class=${`segmented-button btn-sm${activeSection === 'policy' ? ' is-active' : ''}`} onClick=${() => scrollToSection(policyRef, 'policy')}>AP Policy</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'matching' ? ' is-active' : ''}`} onClick=${() => scrollToSection(matchingRef, 'matching')}>Matching</button>
         <button class=${`segmented-button btn-sm${activeSection === 'approval' ? ' is-active' : ''}`} onClick=${() => scrollToSection(approvalRef, 'approval')}>Approval Routing</button>
         <button class=${`segmented-button btn-sm${activeSection === 'vendor' ? ' is-active' : ''}`} onClick=${() => scrollToSection(vendorPolicyRef, 'vendor')}>Vendor Onboarding</button>
         <button class=${`segmented-button btn-sm${activeSection === 'autonomy' ? ' is-active' : ''}`} onClick=${() => scrollToSection(autonomyRef, 'autonomy')}>Autonomy</button>
@@ -817,15 +988,6 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
             <div class="form-help">Invoices below this amount with passed 3-way match auto-approve. Default: £0 (all require approval).</div>
           </div>
           <div class="field-row">
-            <label>Match tolerance</label>
-            <input
-              type="number" step="0.5" min="0" max="10" placeholder="2"
-              value=${bootstrap?.organization?.settings?.match_tolerance_pct || ''}
-              onChange=${(e) => api(`/settings/${encodeURIComponent(orgId)}`, { method: 'PUT', body: JSON.stringify({ match_tolerance_pct: parseFloat(e.target.value) || 2 }) }).then(() => toast('Tolerance saved', 'success')).catch(() => toast('Save failed', 'error'))}
-            />
-            <div class="form-help">% delta between invoice and GRN before exception is raised. Default: 2%.</div>
-          </div>
-          <div class="field-row">
             <label>Duplicate detection window</label>
             <input
               type="number" step="10" min="30" max="365" placeholder="90"
@@ -844,6 +1006,15 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
             <div class="form-help">No autonomous payment above this amount without CFO approval. Default: £10,000.</div>
           </div>
         </div>
+      </div>
+
+      <!-- §16.3 Matching mode + tolerances -->
+      <div class="panel" ref=${matchingRef}>
+        <${MatchingSection}
+          api=${api}
+          toast=${toast}
+          canManage=${canManageCompany}
+        />
       </div>
 
       <!-- §16.4 Vendor Onboarding Policy -->

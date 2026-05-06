@@ -65,6 +65,20 @@ POLICY_KINDS: Set[str] = {
     # Box state. Default content has every target disabled — opt-in
     # per customer.
     "annotation_targets",
+    # AP matching mode. Selects which match algorithm the
+    # coordination engine runs for incoming invoices:
+    #   - three_way_required: PO + GRN + invoice; missing GRN blocks
+    #   - two_way_fallback:   try 3-way; if only GRN is missing, fall
+    #                          back to 2-way (PO + invoice). Default.
+    #   - policy_only:        skip matching entirely; route via
+    #                          approval_thresholds.
+    "match_mode",
+}
+
+VALID_MATCH_MODES: Set[str] = {
+    "three_way_required",
+    "two_way_fallback",
+    "policy_only",
 }
 
 
@@ -471,6 +485,13 @@ def _default_content(kind: str) -> Dict[str, Any]:
                 "date_window_days": 3,
             },
         }
+    if kind == "match_mode":
+        # Default: 2-way fallback. Most permissive sensible default —
+        # runs 3-way when GRN is present, falls back to 2-way (PO
+        # only) when GRN is missing, and degrades to approval-policy
+        # routing when no PO at all. Existing orgs that haven't
+        # opted in get this on first lazy-migration read.
+        return {"mode": "two_way_fallback"}
     if kind == "annotation_targets":
         # All targets disabled by default — customers opt in per
         # surface. Activating a target is a policy edit (creates a
@@ -519,6 +540,13 @@ def _slice_settings_for_kind(kind: str, settings: Dict[str, Any]) -> Dict[str, A
         if isinstance(existing, dict) and existing:
             return existing
         return _default_content("match_tolerances")
+    if kind == "match_mode":
+        raw = settings.get("match_mode")
+        if isinstance(raw, dict) and raw.get("mode") in VALID_MATCH_MODES:
+            return {"mode": raw["mode"]}
+        if isinstance(raw, str) and raw in VALID_MATCH_MODES:
+            return {"mode": raw}
+        return _default_content("match_mode")
     if kind == "annotation_targets":
         existing = settings.get("annotation_targets") or {}
         if isinstance(existing, dict) and existing:
@@ -545,6 +573,10 @@ def _merge_kind_into_settings(
         settings["vendor_master_gate"] = bool(content.get("vendor_master_gate") or False)
     elif kind == "match_tolerances":
         settings["match_tolerances"] = dict(content or {})
+    elif kind == "match_mode":
+        mode = (content or {}).get("mode") if isinstance(content, dict) else None
+        if mode in VALID_MATCH_MODES:
+            settings["match_mode"] = {"mode": mode}
     elif kind == "annotation_targets":
         settings["annotation_targets"] = dict(content or {})
 

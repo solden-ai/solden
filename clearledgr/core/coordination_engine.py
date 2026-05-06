@@ -989,30 +989,141 @@ class CoordinationEngine:
             ctx["grn_result"] = None
             return {"ok": True, "grn_found": False}
 
+    def _resolve_match_mode(self) -> str:
+        """Read the active ``match_mode`` policy for this engine's
+        org. Falls back to ``two_way_fallback`` when the policy
+        lookup fails or the value is unrecognised.
+        """
+        try:
+            from clearledgr.services.policy_service import (
+                PolicyService,
+                VALID_MATCH_MODES,
+            )
+            version = PolicyService(self.organization_id).get_active("match_mode")
+            mode = (version.content or {}).get("mode")
+            if mode in VALID_MATCH_MODES:
+                return mode
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(
+                "[CoordinationEngine] match_mode lookup failed, defaulting to two_way_fallback — %s",
+                exc,
+            )
+        return "two_way_fallback"
+
+    @staticmethod
+    def _match_status_value(result: Any) -> str:
+        if hasattr(result, "status"):
+            status = getattr(result, "status")
+            return getattr(status, "value", None) or str(status)
+        if isinstance(result, dict):
+            return str(result.get("status") or "")
+        return ""
+
+    @staticmethod
+    def _only_no_gr_exception(result: Any) -> bool:
+        """True when the match's only blocker is a missing goods
+        receipt — that's the case where 2-way fallback is meaningful.
+        Any other exception (price variance, currency mismatch,
+        over-invoice) means 2-way wouldn't fix it either."""
+        exceptions = getattr(result, "exceptions", None)
+        if exceptions is None and isinstance(result, dict):
+            exceptions = result.get("exceptions")
+        if not exceptions:
+            return False
+        return all(
+            (e.get("type") or "").lower() in ("no_gr", "no goods receipt")
+            for e in exceptions
+        )
+
     async def _handle_match(self, action: Action, plan: Plan) -> dict:
-        """§3: Execute deterministic 3-way match algorithm. Never calls Claude."""
+        """§3: Run the org's configured match algorithm.
+
+        Mode dispatch (set by the ``match_mode`` policy):
+          * ``three_way_required`` — PO + GRN + invoice; missing GRN
+            blocks (exception flow runs).
+          * ``two_way_fallback`` (default) — try 3-way; if the only
+            blocker is a missing GRN, fall through to 2-way (PO +
+            invoice). All other 3-way exceptions still block.
+          * ``policy_only`` — skip matching entirely; the AP item
+            routes via approval thresholds.
+
+        Never calls Claude — this is pure determinism per §3.
+        """
         ctx = self._ensure_ctx(plan)
         extracted = ctx.get("extracted_fields", {})
         po = ctx.get("po_result")
+        mode = self._resolve_match_mode()
+
+        # policy_only: matching is skipped entirely. Approval-policy
+        # routing happens downstream in APDecisionService against
+        # amount bands + vendor history.
+        if mode == "policy_only":
+            ctx["match_result"] = {"status": "skipped_by_policy", "mode": mode}
+            if plan.box_id:
+                self.db.update_ap_item(
+                    plan.box_id, match_status="skipped_by_policy",
+                )
+            return {
+                "ok": True,
+                "match_status": "skipped_by_policy",
+                "match_passed": True,
+            }
+
+        # No PO surfaced from the ERP lookup. In three_way_required
+        # mode this is a hard block; in two_way_fallback we let it
+        # through to approval-policy routing the same as before.
         if not po:
-            ctx["match_result"] = {"status": "no_po"}
+            ctx["match_result"] = {"status": "no_po", "mode": mode}
+            if mode == "three_way_required":
+                if plan.box_id:
+                    self.db.update_ap_item(plan.box_id, match_status="exception")
+                await self._run_exception_flow(plan, ctx, ctx["match_result"])
+                return {
+                    "ok": True,
+                    "match_status": "no_po",
+                    "match_passed": False,
+                    "_stop_plan": True,
+                }
             return {"ok": True, "match_status": "no_po"}
+
         try:
             from clearledgr.services.purchase_orders import get_purchase_order_service
-            service = get_purchase_order_service()
+            service = get_purchase_order_service(self.organization_id)
             po_number = extracted.get("po_reference") or extracted.get("po_number", "")
+            invoice_id = ctx.get("box_id", "")
+            invoice_amount = float(extracted.get("amount") or 0)
+            invoice_vendor = extracted.get("vendor_name", "")
+            invoice_lines = extracted.get("line_items")
+            invoice_currency = str(extracted.get("currency") or "")
+
             result = service.match_invoice_to_po(
-                invoice_id=ctx.get("box_id", ""),
-                invoice_amount=float(extracted.get("amount") or 0),
-                invoice_vendor=extracted.get("vendor_name", ""),
+                invoice_id=invoice_id,
+                invoice_amount=invoice_amount,
+                invoice_vendor=invoice_vendor,
                 invoice_po_number=po_number,
-                invoice_lines=extracted.get("line_items"),
-                invoice_currency=str(extracted.get("currency") or ""),
+                invoice_lines=invoice_lines,
+                invoice_currency=invoice_currency,
             )
+            status = self._match_status_value(result)
+            match_passed = status.upper() in ("MATCHED", "MATCH")
+
+            # 2-way fallback: 3-way's price / currency / quantity
+            # checks all passed and the only blocker is a missing
+            # GRN. In ``two_way_fallback`` mode that counts as a
+            # successful match (PO + invoice, GRN-optional). The
+            # NO_GR exception remains on the persisted match record
+            # so audit can see the match ran without GRN evidence,
+            # but the AP item routes as matched. Any other exception
+            # (price variance, currency, over-invoice) still blocks.
+            if (
+                not match_passed
+                and mode == "two_way_fallback"
+                and self._only_no_gr_exception(result)
+            ):
+                match_passed = True
+                status = "MATCHED_TWO_WAY"
+
             ctx["match_result"] = result
-            status = result.status if hasattr(result, "status") else (result.get("status") if isinstance(result, dict) else "unknown")
-            match_passed = str(status).upper() in ("MATCHED", "MATCH")
-            # Update Box with match result
             if plan.box_id:
                 self.db.update_ap_item(
                     plan.box_id,
@@ -1023,10 +1134,15 @@ class CoordinationEngine:
                 # §9.3: Match failed — run exception flow inline, then stop plan.
                 # Don't continue to apply_label(Matched) / send_approval.
                 await self._run_exception_flow(plan, ctx, result)
-                return {"ok": True, "match_status": status, "match_passed": False, "_stop_plan": True}
+                return {
+                    "ok": True,
+                    "match_status": status,
+                    "match_passed": False,
+                    "_stop_plan": True,
+                }
             return {"ok": True, "match_status": status, "match_passed": True}
         except Exception as exc:
-            logger.debug("[CoordinationEngine] three_way_match non-fatal: %s", exc)
+            logger.debug("[CoordinationEngine] match dispatch non-fatal: %s", exc)
             ctx["match_result"] = None
             return {"ok": True, "match_status": "error"}
 

@@ -1427,6 +1427,76 @@ body:not(.theme-dark) .btn--secondary:hover {
 .rules__cmt { color: var(--text-on-dark-dim); }
 .rules__arrow { color: var(--text-on-dark-muted); }
 
+.rules__modes-wrap { max-width: 960px; margin: 0 auto 32px; text-align: left; }
+
+.rules__modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.rules__mode {
+  padding: 20px 22px;
+  background: var(--surface-card-bg);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--surface-radius);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rules__mode--active {
+  border-color: rgba(24, 191, 176, 0.4);
+  box-shadow: 0 0 0 1px rgba(24, 191, 176, 0.15) inset;
+}
+
+.rules__mode-key {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--teal);
+}
+
+.rules__mode-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-on-dark);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rules__mode-flag {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(24, 191, 176, 0.12);
+  color: var(--teal);
+}
+
+.rules__mode-body {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-on-dark-soft);
+  margin: 0;
+}
+
+.rules__modes-foot {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-on-dark-dim);
+  margin: 18px auto 0;
+  max-width: 720px;
+}
+
+@media (max-width: 760px) {
+  .rules__modes { grid-template-columns: 1fr; }
+}
+
 /* ── Audit signature (hash chain) ──────────────────────── */
 
 .audit-chain {

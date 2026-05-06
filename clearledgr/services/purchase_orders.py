@@ -507,7 +507,10 @@ class PurchaseOrderService:
     object itself; it holds no state.
     """
 
-    # Default tolerances — thesis §6.6 informs these:
+    # Default tolerances — thesis §6.6 informs these. These are
+    # fallbacks: ``_get_tolerances()`` reads the active
+    # ``match_tolerances`` policy version first and falls back to
+    # these constants when no policy is configured.
     PRICE_TOLERANCE_PERCENT = 2.0  # 2% price variance allowed
     QUANTITY_TOLERANCE_PERCENT = 5.0  # 5% quantity variance allowed
     AMOUNT_TOLERANCE = 10.0  # $10 absolute tolerance
@@ -521,6 +524,42 @@ class PurchaseOrderService:
         self.organization_id = organization_id
         from clearledgr.core.database import get_db
         self._db = get_db()
+
+    def _get_tolerances(self) -> Dict[str, float]:
+        """Read the active ``match_tolerances`` policy for this org
+        and return the three values used by the AP match path.
+
+        Fetched once per match invocation so a single match pays one
+        ``PolicyService.get_active`` lookup, not three. Falls back to
+        the class-level defaults when the policy hasn't been
+        configured or the lookup fails — preserves historical
+        behaviour for orgs that haven't set custom tolerances yet.
+        """
+        section: Dict[str, Any] = {}
+        try:
+            from clearledgr.services.policy_service import PolicyService
+            version = PolicyService(self.organization_id).get_active("match_tolerances")
+            content = version.content or {}
+            engine_section = content.get("ap_three_way")
+            if isinstance(engine_section, dict):
+                section = engine_section
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(
+                "PurchaseOrderService: tolerance lookup failed, using defaults — %s",
+                exc,
+            )
+
+        def _f(key: str, default: float) -> float:
+            try:
+                return float(section.get(key, default))
+            except (TypeError, ValueError):
+                return default
+
+        return {
+            "price_pct": _f("price_tolerance_percent", self.PRICE_TOLERANCE_PERCENT),
+            "quantity_pct": _f("quantity_tolerance_percent", self.QUANTITY_TOLERANCE_PERCENT),
+            "amount": _f("amount_tolerance", self.AMOUNT_TOLERANCE),
+        }
 
     # ------------------------------------------------------------------
     # PURCHASE ORDER MANAGEMENT
@@ -691,6 +730,7 @@ class PurchaseOrderService:
             invoice_id=invoice_id,
             invoice_amount=invoice_amount,
         )
+        tol = self._get_tolerances()
 
         # Step 1: locate the PO. Direct hit by number first; fall back
         # to fuzzy vendor/amount match only when the invoice didn't
@@ -699,7 +739,9 @@ class PurchaseOrderService:
         if invoice_po_number:
             po = self.get_po_by_number(invoice_po_number)
         if not po:
-            po = self._find_po_by_vendor_amount(invoice_vendor, invoice_amount)
+            po = self._find_po_by_vendor_amount(
+                invoice_vendor, invoice_amount, tol=tol,
+            )
 
         if not po:
             match.status = MatchStatus.EXCEPTION
@@ -787,8 +829,8 @@ class PurchaseOrderService:
             else 0
         )
         if (
-            price_variance_pct > self.PRICE_TOLERANCE_PERCENT
-            and abs(match.price_variance) > self.AMOUNT_TOLERANCE
+            price_variance_pct > tol["price_pct"]
+            and abs(match.price_variance) > tol["amount"]
         ):
             match.exceptions.append({
                 "type": MatchExceptionType.PRICE_MISMATCH.value,
@@ -812,7 +854,7 @@ class PurchaseOrderService:
                         match.quantity_variance += qty_diff
                         if po_line.quantity > 0 and (
                             qty_diff / po_line.quantity * 100
-                            > self.QUANTITY_TOLERANCE_PERCENT
+                            > tol["quantity_pct"]
                         ):
                             match.exceptions.append({
                                 "type": MatchExceptionType.OVER_INVOICE.value,
@@ -842,8 +884,16 @@ class PurchaseOrderService:
         self,
         vendor_name: str,
         amount: float,
+        tol: Optional[Dict[str, float]] = None,
     ) -> Optional[PurchaseOrder]:
-        """Find an open PO by vendor name + amount within tolerance."""
+        """Find an open PO by vendor name + amount within tolerance.
+
+        ``tol`` is the dict returned by ``_get_tolerances()``; passed
+        in so the caller's single policy lookup is reused. When
+        omitted (legacy / direct callers) we fetch our own.
+        """
+        if tol is None:
+            tol = self._get_tolerances()
         candidates = self._db.list_purchase_orders_for_vendor(
             self.organization_id,
             vendor_name,
@@ -854,11 +904,11 @@ class PurchaseOrderService:
             po = _po_from_dict(row)
             if not po:
                 continue
-            if abs(po.total_amount - amount) <= self.AMOUNT_TOLERANCE:
+            if abs(po.total_amount - amount) <= tol["amount"]:
                 return po
             if po.total_amount > 0:
                 variance_pct = abs(po.total_amount - amount) / po.total_amount * 100
-                if variance_pct <= self.PRICE_TOLERANCE_PERCENT:
+                if variance_pct <= tol["price_pct"]:
                     return po
         return None
 
@@ -995,6 +1045,7 @@ class PurchaseOrderService:
             invoice_id=invoice_id,
             invoice_amount=invoice_amount,
         )
+        tol = self._get_tolerances()
 
         # Pull GRs for the vendor by walking the vendor's POs. GR rows
         # don't carry a vendor-name index right now, so this round-trip
@@ -1059,8 +1110,8 @@ class PurchaseOrderService:
             match.price_variance = invoice_amount - match.gr_amount
             variance_pct = abs(match.price_variance) / match.gr_amount * 100
             if (
-                variance_pct > self.PRICE_TOLERANCE_PERCENT
-                and abs(match.price_variance) > self.AMOUNT_TOLERANCE
+                variance_pct > tol["price_pct"]
+                and abs(match.price_variance) > tol["amount"]
             ):
                 match.exceptions.append({
                     "type": MatchExceptionType.PRICE_MISMATCH.value,

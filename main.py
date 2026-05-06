@@ -95,6 +95,7 @@ from clearledgr.api.erp_connection_ops import (
 )
 from clearledgr.api.erp_webhooks import router as erp_webhooks_router
 from clearledgr.api.fraud_controls import router as fraud_controls_router
+from clearledgr.api.match_config import router as match_config_router
 from clearledgr.api.gdpr import router as gdpr_router
 from clearledgr.api.gmail_extension import router as gmail_extension_router
 # gmail_schedule_router removed: the /api/gmail/schedule-send endpoint
@@ -1400,6 +1401,7 @@ if not STRICT_PROFILE_ACTIVE:
 # (payment ceiling, velocity limits, first-payment dormancy). See
 # DESIGN_THESIS.md §8.
 app.include_router(fraud_controls_router)
+app.include_router(match_config_router)
 
 # IBAN Change Verification API — Phase 2.1.b. Three-factor CFO-gated
 # workflow that lifts the IBAN change freeze. See DESIGN_THESIS.md §8.
