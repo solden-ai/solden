@@ -59,6 +59,15 @@ class Plan:
     If a run is interrupted (async wait or crash), the remaining
     actions are serialized to ``pending_plan`` on the Box for
     resumption.
+
+    ``correlation_id`` is the source-event id (``AgentEvent.id`` or
+    its idempotency key) carried forward from intake. The
+    coordination engine derives deterministic
+    ``idempotency_key`` values from it so Celery retries / Redis
+    Stream redeliveries don't double-fire timeline rows for the
+    same step. When the planner doesn't supply one (legacy paths,
+    direct construction in tests), the engine falls back to a
+    plan-stable token (event_type + created_at).
     """
 
     event_type: str
@@ -68,6 +77,7 @@ class Plan:
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
+    correlation_id: Optional[str] = None
 
     def remaining_from(self, step: int) -> "Plan":
         """Return a new Plan with only the actions from step onwards."""
@@ -77,6 +87,7 @@ class Plan:
             box_id=self.box_id,
             organization_id=self.organization_id,
             created_at=self.created_at,
+            correlation_id=self.correlation_id,
         )
 
     @property
@@ -95,6 +106,7 @@ class Plan:
             "box_id": self.box_id,
             "organization_id": self.organization_id,
             "created_at": self.created_at,
+            "correlation_id": self.correlation_id,
         })
 
     @classmethod
@@ -107,6 +119,7 @@ class Plan:
             box_id=d.get("box_id"),
             organization_id=d.get("organization_id", "default"),
             created_at=d.get("created_at", ""),
+            correlation_id=d.get("correlation_id"),
         )
 
 

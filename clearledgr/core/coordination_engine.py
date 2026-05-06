@@ -288,7 +288,7 @@ class CoordinationEngine:
             # (ERP post, vendor email, Slack message) runs without
             # a timeline row first.
             try:
-                timeline_id = self._pre_write(box_id, action, step)
+                timeline_id = self._pre_write(box_id, action, step, plan=plan)
             except _Rule1PreWriteFailed as rule1_exc:
                 if box_id:
                     self._move_to_exception(
@@ -319,7 +319,10 @@ class CoordinationEngine:
                 stop_reason = str(
                     governance_verdict.get("stop_reason") or "governance_blocked"
                 )
-                self._post_write(box_id, action, step, timeline_id, "failed", stop_reason)
+                self._post_write(
+                    box_id, action, step, timeline_id, "failed", stop_reason,
+                    plan=plan,
+                )
                 self._record_governance_block_audit(box_id, action, governance_verdict)
                 if box_id:
                     self._move_to_exception(box_id, action.name, stop_reason)
@@ -335,7 +338,10 @@ class CoordinationEngine:
 
             # --- Step 5: Handle the result ---
             if result.get("_abort"):
-                self._post_write(box_id, action, step, timeline_id, "failed", result.get("error", ""))
+                self._post_write(
+                    box_id, action, step, timeline_id, "failed",
+                    result.get("error", ""), plan=plan,
+                )
                 if box_id:
                     self._move_to_exception(box_id, action.name, result.get("error", ""))
                 return CoordinationResult(
@@ -346,7 +352,10 @@ class CoordinationEngine:
 
             # Action that signals plan should stop early (e.g. classification = not invoice)
             if result.get("_stop_plan"):
-                self._post_write(box_id, action, step, timeline_id, "completed", "plan stopped")
+                self._post_write(
+                    box_id, action, step, timeline_id, "completed",
+                    "plan stopped", plan=plan,
+                )
                 steps_completed += 1
                 break
 
@@ -357,11 +366,20 @@ class CoordinationEngine:
                 _summary = result["waiting_condition"].get("context", {}).get("error", "")
                 if _summary:
                     # This came from a dependency failure, not a deliberate set_waiting
-                    self._post_write(box_id, action, step, timeline_id, "paused", _summary)
+                    self._post_write(
+                        box_id, action, step, timeline_id, "paused",
+                        _summary, plan=plan,
+                    )
                 else:
-                    self._post_write(box_id, action, step, timeline_id, "completed", "set waiting condition")
+                    self._post_write(
+                        box_id, action, step, timeline_id, "completed",
+                        "set waiting condition", plan=plan,
+                    )
             else:
-                self._post_write(box_id, action, step, timeline_id, "completed", "")
+                self._post_write(
+                    box_id, action, step, timeline_id, "completed", "",
+                    plan=plan,
+                )
             steps_completed += 1
 
             # Update box_id if the action created one
@@ -372,16 +390,28 @@ class CoordinationEngine:
             # --- Step 6: Check for async wait ---
             if result.get("waiting_condition"):
                 remaining = plan.remaining_from(step + 1)
-                if box_id and not remaining.is_empty:
-                    self.db.update_ap_item(box_id, pending_plan=remaining.to_json())
                 if box_id:
-                    wf = self._get_workflow()
-                    wf.set_waiting_condition(
-                        box_id,
-                        result["waiting_condition"].get("type", "unknown"),
-                        expected_by=result["waiting_condition"].get("expected_by"),
-                        context=result["waiting_condition"].get("context"),
-                    )
+                    # Group 2 fix (2026-05-06): persist pending_plan
+                    # AND waiting_condition in a single ``update_ap_item``
+                    # so the two halves are atomic. Previously two
+                    # separate writes left a window where a process
+                    # crash between them produced split-brain state:
+                    # plan saved, no wait → orphaned plan (resumer
+                    # never wakes); wait saved, no plan → frozen
+                    # box (operator sees a wait banner but the
+                    # remaining work is lost).
+                    waiting_payload = {
+                        "type": result["waiting_condition"].get("type", "unknown"),
+                        "expected_by": result["waiting_condition"].get("expected_by"),
+                        "context": result["waiting_condition"].get("context") or {},
+                        "set_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                    update_kwargs: Dict[str, Any] = {
+                        "waiting_condition": waiting_payload,
+                    }
+                    if not remaining.is_empty:
+                        update_kwargs["pending_plan"] = remaining.to_json()
+                    self.db.update_ap_item(box_id, **update_kwargs)
                 # §11: Record total_to_approval SLA when hitting approval wait
                 if _is_invoice_plan and result["waiting_condition"].get("type") == "approval_response":
                     try:
@@ -417,7 +447,35 @@ class CoordinationEngine:
     # Timeline writes (Rule 1)
     # ------------------------------------------------------------------
 
-    def _pre_write(self, box_id: Optional[str], action: Action, step: int) -> str:
+    def _plan_idempotency_key(
+        self, plan: Optional[Plan], action: Action, step: int, phase: str,
+    ) -> Optional[str]:
+        """Build a deterministic idempotency key for a (plan, step,
+        action) audit row. Same plan replayed (Celery retry / Redis
+        redelivery) → same key → audit insert short-circuits to the
+        existing row instead of double-writing.
+
+        Falls back to a plan-stable token (event_type + created_at)
+        when the planner didn't set a correlation_id — covers
+        legacy paths and direct test construction. Returns None
+        when the plan is missing entirely (callers shouldn't dedupe
+        what they can't identify).
+        """
+        if plan is None:
+            return None
+        correlation = (
+            (plan.correlation_id or "").strip()
+            or f"{plan.event_type}:{plan.created_at}"
+        )
+        return f"plan:{correlation}:{step}:{action.name}:{phase}"
+
+    def _pre_write(
+        self,
+        box_id: Optional[str],
+        action: Action,
+        step: int,
+        plan: Optional[Plan] = None,
+    ) -> str:
         """§5.1 Rule 1: Write timeline entry BEFORE execution.
 
         Uses the audit_events table (via append_audit_event) as the
@@ -434,11 +492,16 @@ class CoordinationEngine:
         traded correctness for liveness on the ERP-posting path.
         Wrong trade: an undocumented ERP write is a worse failure
         than a delayed one.
+
+        ``plan`` is optional for backward compatibility with the
+        exception-flow path that pre-dates plan-aware audit; when
+        provided, the idempotency_key dedupes Celery retries.
         """
         timeline_id = f"TL-{uuid.uuid4().hex[:12]}"
         if not box_id or not hasattr(self.db, "append_audit_event"):
             return timeline_id
 
+        idempotency_key = self._plan_idempotency_key(plan, action, step, "pre")
         payload = {
             "id": timeline_id,
             "ap_item_id": box_id,
@@ -446,12 +509,14 @@ class CoordinationEngine:
             "actor_type": "agent",
             "actor_id": "coordination_engine",
             "organization_id": self.organization_id,
+            "idempotency_key": idempotency_key,
             "payload_json": {
                 "action": action.name,
                 "description": action.description,
                 "status": "executing",
                 "step": step,
                 "layer": action.layer,
+                "correlation_id": (plan.correlation_id if plan else None),
             },
         }
 
@@ -481,11 +546,29 @@ class CoordinationEngine:
             original=last_exc,
         )
 
-    def _post_write(self, box_id: Optional[str], action: Action, step: int,
-                    timeline_id: str, status: str, result_summary: str) -> None:
-        """Update pre-execution entry with result."""
+    def _post_write(
+        self,
+        box_id: Optional[str],
+        action: Action,
+        step: int,
+        timeline_id: str,
+        status: str,
+        result_summary: str,
+        plan: Optional[Plan] = None,
+    ) -> None:
+        """Update pre-execution entry with result.
+
+        ``plan`` is optional; when provided, the post-row gets a
+        deterministic idempotency_key so Celery retries dedupe.
+        Status is part of the key so a retry that finishes with
+        ``failed`` doesn't clobber a prior ``completed`` row (each
+        terminal status occupies its own key).
+        """
         if not box_id or not hasattr(self.db, "append_audit_event"):
             return
+        idempotency_key = self._plan_idempotency_key(
+            plan, action, step, f"post:{status}",
+        )
         try:
             self.db.append_audit_event({
                 "id": f"{timeline_id}-result",
@@ -494,12 +577,14 @@ class CoordinationEngine:
                 "actor_type": "agent",
                 "actor_id": "coordination_engine",
                 "organization_id": self.organization_id,
+                "idempotency_key": idempotency_key,
                 "payload_json": {
                     "action": action.name,
                     "status": status,
                     "result_summary": result_summary[:200] if result_summary else "",
                     "step": step,
                     "parent_timeline_id": timeline_id,
+                    "correlation_id": (plan.correlation_id if plan else None),
                 },
             })
         except Exception as exc:
@@ -777,15 +862,21 @@ class CoordinationEngine:
         ]
 
         for step, action in enumerate(exception_actions):
-            # Rule 1: pre-execution timeline write
-            timeline_id = self._pre_write(box_id, action, step + 100)  # offset to distinguish from main plan
+            # Rule 1: pre-execution timeline write. Pass the original
+            # plan so the exception-flow rows share its correlation_id
+            # — Celery retries of the parent plan re-enter the
+            # exception flow with the same identity and dedupe.
+            timeline_id = self._pre_write(box_id, action, step + 100, plan=plan)
 
             # Execute with retry and timeout (§5.2)
             result = await self._execute_with_retry(action, plan, step + 100)
 
             # Post-execution timeline update
             status = "completed" if not result.get("_abort") else "failed"
-            self._post_write(box_id, action, step + 100, timeline_id, status, "")
+            self._post_write(
+                box_id, action, step + 100, timeline_id, status, "",
+                plan=plan,
+            )
 
     def _move_to_exception(self, box_id: str, action_name: str, error: str) -> None:
         """Move Box to exception stage on persistent failure.
@@ -1447,6 +1538,28 @@ class CoordinationEngine:
         item = self.db.get_ap_item(plan.box_id)
         if not item:
             return {"_abort": True, "error": "AP item not found"}
+
+        # Group 2 idempotency guard (2026-05-06): the AP item's
+        # ``erp_reference`` is the source of truth for "did this bill
+        # already post." On Celery retry / Redis Stream redelivery
+        # the plan re-runs from the start; without this guard a
+        # second post_bill would create a duplicate ERP record.
+        # Audit-row dedupe (idempotency_key on _pre_write/_post_write)
+        # stops the timeline from double-writing, but doesn't stop
+        # the side effect itself — that's what this check does.
+        existing_ref = str(item.get("erp_reference") or "").strip()
+        if existing_ref:
+            logger.info(
+                "[CoordinationEngine] post_bill: skipping — erp_reference already set "
+                "for box=%s ref=%s (replay-safe).",
+                plan.box_id, existing_ref,
+            )
+            return {
+                "ok": True,
+                "erp_reference": existing_ref,
+                "noop": "already_posted",
+            }
+
         try:
             from clearledgr.services.invoice_workflow import InvoiceData
             invoice = InvoiceData(

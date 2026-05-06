@@ -109,6 +109,14 @@ class DeterministicPlanningEngine:
 
         plan = handler(event, box_state)
         plan.organization_id = event.organization_id
+        # Carry the event id forward so the coordinator can derive
+        # deterministic idempotency keys for the audit timeline.
+        # Celery retries / Redis Stream redeliveries that produce a
+        # second plan from the same event share the same
+        # correlation_id and dedupe on per-step audit inserts.
+        plan.correlation_id = (
+            (event.idempotency_key or "").strip() or event.id
+        )
         logger.info(
             "[PlanningEngine] %s → %d-step plan for org=%s",
             event.type.value, plan.step_count, event.organization_id,
