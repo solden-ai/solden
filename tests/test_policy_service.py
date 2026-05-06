@@ -86,6 +86,7 @@ def test_merge_round_trips_for_every_kind():
             },
             "bank_reconciliation": {"amount_tolerance": 0.01, "date_window_days": 3},
         },
+        "match_mode": {"mode": "two_way_fallback"},
         "annotation_targets": {
             "gmail_label": {"enabled": True},
             "netsuite_custom_field": {"enabled": False, "field_id": "custbody_clearledgr_state"},

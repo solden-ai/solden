@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
+from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -101,9 +103,16 @@ class FinanceAgentRuntime:
         actor_email: Optional[str] = None,
         db: Any = None,
     ) -> None:
-        if not organization_id:
-            logger.warning("FinanceAgentRuntime created without organization_id, falling back to 'default'")
-        self.organization_id = str(organization_id or "default")
+        # Per-tenant isolation is the core invariant of the finance
+        # product. A silent fallback to "default" leaks one customer's
+        # invoices into another's audit chain. Reject loudly instead.
+        normalized_org = str(organization_id or "").strip()
+        if not normalized_org:
+            raise ValueError(
+                "organization_id is required for FinanceAgentRuntime; "
+                "pass 'default' explicitly for the platform runtime"
+            )
+        self.organization_id = normalized_org
         self.actor_id = str(actor_id or "system")
         self.actor_email = str(actor_email or actor_id or "system")
         self.db = db or get_db()
@@ -141,6 +150,35 @@ class FinanceAgentRuntime:
     @property
     def supported_intents(self) -> frozenset[str]:
         return frozenset(self._intent_skill_map.keys())
+
+    def _resolve_payload_org(self, payload: Dict[str, Any], context: str) -> str:
+        """Resolve the org_id for an AP write from an invoice payload.
+
+        Returns the org_id to write under. Raises ``ValueError`` when
+        the payload's ``organization_id`` differs from the runtime's
+        own org and the runtime is not the platform ("default") one.
+
+        Cross-tenant write hazard: a corrupted upstream payload (or
+        a malicious one) could carry a different ``organization_id``
+        than the runtime is bound to. Without this guard, that value
+        would flow through to ``db.create_ap_item`` and write into
+        another tenant's table. The platform runtime ("default") is
+        the only legitimate cross-tenant dispatcher and is exempt.
+        """
+        payload_org = str((payload or {}).get("organization_id") or "").strip()
+        if not payload_org:
+            return self.organization_id
+        if payload_org == self.organization_id:
+            return payload_org
+        if self.organization_id == "default":
+            # Platform runtime dispatching into a real tenant. Trust
+            # the payload but normalize.
+            return payload_org
+        raise ValueError(
+            f"cross_tenant_write_blocked in {context}: "
+            f"payload organization_id={payload_org!r} differs from "
+            f"runtime organization_id={self.organization_id!r}"
+        )
 
     def list_skills(self) -> List[Dict[str, Any]]:
         rows: List[Dict[str, Any]] = []
@@ -479,10 +517,9 @@ class FinanceAgentRuntime:
         if not isinstance(invoice, dict) or not hasattr(self.db, "create_ap_item"):
             return None
 
-        _raw_inv_org = invoice.get("organization_id") or self.organization_id
-        if not _raw_inv_org:
-            logger.warning("organization_id missing in _ensure_ap_item invoice payload, falling back to 'default'")
-        organization_id = str(_raw_inv_org or "default").strip() or "default"
+        organization_id = self._resolve_payload_org(
+            invoice, context="_seed_ap_item_for_invoice_processing"
+        )
         thread_id = self._invoice_thread_id(invoice)
         message_id = self._invoice_message_id(invoice)
         invoice_number = str(invoice.get("invoice_number") or "").strip() or None
@@ -1508,10 +1545,9 @@ class FinanceAgentRuntime:
             or str(invoice.get("correlation_id") or "").strip()
             or None
         )
-        _raw_org = invoice.get("organization_id") or self.organization_id
-        if not _raw_org:
-            logger.warning("organization_id missing in execute_ap_invoice_processing invoice payload, falling back to 'default'")
-        invoice_org = str(_raw_org or "default").strip() or "default"
+        invoice_org = self._resolve_payload_org(
+            invoice, context="execute_ap_invoice_processing"
+        )
         attachment_list = attachments if isinstance(attachments, list) else []
         attachment_url = ""
         attachment_names: List[str] = []
@@ -1763,21 +1799,68 @@ class FinanceAgentRuntime:
         )
 
 
-_PLATFORM_RUNTIME_CACHE: Dict[str, FinanceAgentRuntime] = {}
+# Bounded LRU cache for per-org platform runtimes. Three failure modes
+# the bound + lock protect against:
+#   1. Unbounded growth from malformed/attacker-supplied org_ids that
+#      never repeat. Without a cap, every distinct value wedges a
+#      runtime in memory permanently (each holds a `db`, skill
+#      registry, agent loop).
+#   2. First-touch race: two threads request the same uncached org,
+#      both pass the None check, both construct, second clobbers the
+#      first leaving any in-flight work on the orphaned instance.
+#   3. Stale `db`: the runtime captured `get_db()` at construction;
+#      if the pool is reset (RDS failover, test teardown,
+#      reset_service_singletons) the cached runtime keeps a dead
+#      handle. We refresh on every cache hit.
+_PLATFORM_RUNTIME_CACHE: "OrderedDict[str, FinanceAgentRuntime]" = OrderedDict()
+_PLATFORM_RUNTIME_CACHE_LOCK = threading.Lock()
+_PLATFORM_RUNTIME_CACHE_MAX = 512
 
 
 def get_platform_finance_runtime(organization_id: str = "default") -> FinanceAgentRuntime:
-    """Process-level singleton runtime used by startup/background AP flows."""
-    org_id = str(organization_id or "default").strip() or "default"
-    existing = _PLATFORM_RUNTIME_CACHE.get(org_id)
-    if existing is not None:
-        return existing
+    """Process-level singleton runtime used by startup/background AP flows.
 
-    runtime = FinanceAgentRuntime(
-        organization_id=org_id,
-        actor_id="system",
-        actor_email="system@clearledgr.local",
-        db=get_db(),
-    )
-    _PLATFORM_RUNTIME_CACHE[org_id] = runtime
-    return runtime
+    Reject empty / None ``organization_id`` rather than silently
+    routing to the platform runtime — the platform runtime is for
+    intentional system-level callers; "default" must be passed
+    explicitly. This closes the cross-tenant fallback hazard where a
+    caller with an empty org would silently land on the platform
+    runtime and get cross-tenant dispatch privileges.
+    """
+    org_id = str(organization_id or "").strip()
+    if not org_id:
+        raise ValueError(
+            "organization_id is required for get_platform_finance_runtime; "
+            "pass 'default' explicitly for the platform runtime"
+        )
+
+    with _PLATFORM_RUNTIME_CACHE_LOCK:
+        existing = _PLATFORM_RUNTIME_CACHE.get(org_id)
+        if existing is not None:
+            # Refresh the DB handle in case the pool was reset since
+            # this runtime was cached. ``get_db()`` is idempotent —
+            # returns the live singleton.
+            existing.db = get_db()
+            # LRU bump: move to end so eviction targets the oldest.
+            _PLATFORM_RUNTIME_CACHE.move_to_end(org_id)
+            return existing
+
+        runtime = FinanceAgentRuntime(
+            organization_id=org_id,
+            actor_id="system",
+            actor_email="system@clearledgr.local",
+            db=get_db(),
+        )
+        _PLATFORM_RUNTIME_CACHE[org_id] = runtime
+        # Bounded LRU: evict the oldest entry when we exceed the cap.
+        while len(_PLATFORM_RUNTIME_CACHE) > _PLATFORM_RUNTIME_CACHE_MAX:
+            _PLATFORM_RUNTIME_CACHE.popitem(last=False)
+        return runtime
+
+
+def _reset_platform_finance_runtime_cache() -> None:
+    """Test helper. Drops every cached runtime so the next
+    ``get_platform_finance_runtime`` call constructs fresh.
+    Production code should not call this."""
+    with _PLATFORM_RUNTIME_CACHE_LOCK:
+        _PLATFORM_RUNTIME_CACHE.clear()

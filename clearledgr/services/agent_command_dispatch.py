@@ -20,16 +20,22 @@ def resolve_org_id_for_user(
     *,
     admin_roles: set[str] | None = None,
 ) -> str:
+    """Resolve the org_id an authenticated user is acting under.
+
+    Per-tenant isolation invariant: a user without an
+    ``organization_id`` cannot act on tenant data. Reject loudly
+    rather than silently routing to "default" — the silent fallback
+    let any tokenless caller drift onto the platform tenant.
+    """
     allowed_admin_roles = admin_roles or _ORG_ADMIN_ROLES
-    _raw_org = requested_org_id or getattr(user, "organization_id", None)
-    if not _raw_org:
-        logger.warning("resolve_org_id_for_user: no organization_id on user or request, falling back to 'default'")
-    org_id = str(_raw_org or "default")
+    user_org_raw = getattr(user, "organization_id", None)
+    user_org = str(user_org_raw or "").strip()
+    if not user_org:
+        raise HTTPException(status_code=403, detail="missing_user_organization_id")
+
+    requested = str(requested_org_id or "").strip()
+    org_id = requested or user_org
     role = str(getattr(user, "role", "") or "").strip().lower()
-    _raw_user_org = getattr(user, "organization_id", None)
-    if not _raw_user_org:
-        logger.warning("resolve_org_id_for_user: user has no organization_id, falling back to 'default'")
-    user_org = str(_raw_user_org or "default")
     if role not in allowed_admin_roles and org_id != user_org:
         raise HTTPException(status_code=403, detail="org_mismatch")
     return org_id
@@ -84,10 +90,14 @@ def build_channel_runtime(
 ) -> Any:
     from clearledgr.services.finance_agent_runtime import FinanceAgentRuntime
 
-    if not organization_id:
-        logger.warning("build_channel_runtime called without organization_id, falling back to 'default'")
+    normalized_org = str(organization_id or "").strip()
+    if not normalized_org:
+        raise ValueError(
+            "build_channel_runtime requires organization_id; "
+            "pass 'default' explicitly for the platform runtime"
+        )
     return FinanceAgentRuntime(
-        organization_id=str(organization_id or "default"),
+        organization_id=normalized_org,
         actor_id=str(actor_id or fallback_actor),
         actor_email=str(actor_email or actor_id or fallback_actor),
         db=db or get_db(),
