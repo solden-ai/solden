@@ -35,6 +35,19 @@ logger = logging.getLogger(__name__)
 _RETRY_DELAYS = [5, 30, 120]  # seconds
 _MAX_RETRIES = 3
 
+# Governance gating (group 1, 2026-05-06): every risky autonomous
+# financial write on the event-driven path runs through the same
+# doctrine + autonomy gate the synchronous skill path uses. Maps
+# the engine's planner-action vocabulary to the governance module's
+# action token set.
+_GOVERNANCE_GATED_ACTIONS: Dict[str, str] = {
+    "post_bill": "post_to_erp",
+    "schedule_payment": "post_to_erp",
+    "reverse_erp_post": "retry_recoverable_failures",
+    "freeze_vendor_payments": "post_to_erp",
+}
+
+
 # §11: Action → SLA step mapping for latency tracking
 _ACTION_TO_SLA_STEP = {
     "classify_email":             "classification",
@@ -286,6 +299,34 @@ class CoordinationEngine:
                     status="failed", steps_completed=steps_completed,
                     steps_total=plan.step_count, box_id=box_id,
                     error=f"rule1_pre_write_failed:{rule1_exc.original}",
+                    last_action=action.name,
+                )
+
+            # --- Step 3a: Governance gate (group 1, 2026-05-06) ---
+            # Risky financial writes (post_bill / schedule_payment /
+            # reverse_erp_post / freeze_vendor_payments) run through
+            # the doctrine + autonomy gate before firing. The
+            # synchronous skill path already does this via
+            # ``FinanceAgentLoopService.run_skill_request``; this
+            # closes the symmetric gap on the event-driven path so
+            # the marketing claim "agent acts within governance
+            # gates" is enforced everywhere autonomy fires.
+            governance_verdict = self._evaluate_governance_for_action(action, plan)
+            if (
+                governance_verdict is not None
+                and not governance_verdict.get("should_execute", True)
+            ):
+                stop_reason = str(
+                    governance_verdict.get("stop_reason") or "governance_blocked"
+                )
+                self._post_write(box_id, action, step, timeline_id, "failed", stop_reason)
+                self._record_governance_block_audit(box_id, action, governance_verdict)
+                if box_id:
+                    self._move_to_exception(box_id, action.name, stop_reason)
+                return CoordinationResult(
+                    status="failed", steps_completed=steps_completed,
+                    steps_total=plan.step_count, box_id=box_id,
+                    error=f"governance_blocked:{stop_reason}",
                     last_action=action.name,
                 )
 
@@ -551,6 +592,160 @@ class CoordinationEngine:
                 return {"_abort": True, "error": str(exc)}
 
         return {"_abort": True, "error": "max retries exhausted"}
+
+    def _evaluate_governance_for_action(
+        self, action: Action, plan: Plan,
+    ) -> Optional[Dict[str, Any]]:
+        """Run the doctrine + autonomy gate for risky financial writes
+        on the event-driven path. Returns the deliberation verdict or
+        ``None`` if the action isn't gated.
+
+        Closes the gap the Group 1 audit flagged: the synchronous
+        skill path (``FinanceAgentLoopService.run_skill_request``)
+        already runs ``build_deliberation`` before each skill, but
+        the event-driven path (Celery → planner → engine) skipped
+        governance entirely. Result: every webhook-triggered
+        ``post_bill`` / ``schedule_payment`` / ``reverse_erp_post`` /
+        ``freeze_vendor_payments`` was firing without the autonomy
+        gate the deck and trust story claim.
+
+        Why it's safe to be sync: the skill path also calls
+        ``build_deliberation`` synchronously inside an async method.
+        Under load this is a known event-loop blocker (Group 4 will
+        wrap it with ``asyncio.to_thread``); for now we mirror the
+        existing skill-path behavior for consistency.
+
+        Fail-closed semantics: if governance evaluation raises, we
+        propagate. Matches the skill path (which has no try/except
+        around ``build_deliberation`` in ``observe()``). A broken
+        gate stops the action from running, which is the right
+        default for a financial write.
+        """
+        governance_token = _GOVERNANCE_GATED_ACTIONS.get(action.name)
+        if governance_token is None:
+            return None
+        if not plan.box_id:
+            # No Box to gate against — let the handler decide. The
+            # only actions that fire without a box are intake
+            # actions (create_box etc.), none of which are in the
+            # gated set.
+            return None
+
+        from clearledgr.services.finance_agent_runtime import (
+            get_platform_finance_runtime,
+        )
+        from clearledgr.services.finance_agent_governance import (
+            build_deliberation,
+        )
+        from clearledgr.services.agent_memory import get_agent_memory_service
+        from clearledgr.core.finance_contracts import (
+            ActionExecution,
+            SkillRequest,
+        )
+
+        runtime = get_platform_finance_runtime(self.organization_id)
+        memory = get_agent_memory_service(self.organization_id, db=self.db)
+
+        # Synthesize the request + action shape ``build_deliberation``
+        # expects. The event-driven path is autonomous by definition
+        # (no human-in-the-loop on this code path; Slack approvals
+        # land via the skill path, not here).
+        synthetic_request = SkillRequest.from_intent(
+            org_id=self.organization_id,
+            task_type=str(action.name),
+            skill_id="ap_v1",
+            entity_id=str(plan.box_id),
+            correlation_id="",
+            payload={
+                "execution_context": "autonomous",
+                "source_channel": "agent_runtime",
+            },
+        )
+        synthetic_action = ActionExecution(
+            entity_id=str(plan.box_id),
+            action=str(governance_token),
+            preview=False,
+            idempotency_key=f"{plan.box_id}:{action.name}",
+            reason="event_driven_path",
+        )
+
+        ap_item: Dict[str, Any] = {}
+        try:
+            raw = self.db.get_ap_item(plan.box_id) if hasattr(self.db, "get_ap_item") else None
+            ap_item = raw if isinstance(raw, dict) else {}
+        except Exception as exc:
+            logger.warning(
+                "[CoordinationEngine] governance: ap_item fetch failed for box=%s: %s",
+                plan.box_id, exc,
+            )
+
+        profile = memory.ensure_profile(skill_id="ap_v1")
+        belief: Dict[str, Any] = {}
+        if ap_item.get("id"):
+            try:
+                belief = memory.build_belief_state(
+                    ap_item_id=str(ap_item["id"]),
+                    skill_id="ap_v1",
+                    ap_item=ap_item,
+                ) or {}
+            except Exception as exc:
+                logger.debug(
+                    "[CoordinationEngine] governance: belief build failed for box=%s: %s",
+                    plan.box_id, exc,
+                )
+
+        return build_deliberation(
+            runtime=runtime,
+            request=synthetic_request,
+            action=synthetic_action,
+            ap_item=ap_item,
+            belief=belief,
+            recall=[],
+            profile=profile,
+        )
+
+    def _record_governance_block_audit(
+        self, box_id: str, action: Action, verdict: Dict[str, Any],
+    ) -> None:
+        """Persist a structured ``agent_action_blocked_by_governance``
+        audit row when the gate refuses an event-driven action. The
+        verdict, doctrine reason codes, and skip-the-action signal
+        all land on the timeline so post-hoc you can reconstruct
+        why the agent stopped."""
+        if not box_id:
+            return
+        try:
+            doctrine = verdict.get("doctrine") if isinstance(verdict, dict) else {}
+            reason_codes = list((doctrine or {}).get("reason_codes") or [])
+            stop_reason = str(verdict.get("stop_reason") or "governance_blocked")
+            self.db.append_audit_event({
+                "ap_item_id": box_id,
+                "event_type": "agent_action_blocked_by_governance",
+                "from_state": "",
+                "to_state": "",
+                "actor_type": "system",
+                "actor_id": "agent_runtime",
+                "idempotency_key": f"governance_block:{box_id}:{action.name}",
+                "metadata": {
+                    "action": action.name,
+                    "stop_reason": stop_reason,
+                    "reason_codes": reason_codes,
+                    "doctrine_checks": list((doctrine or {}).get("checks") or []),
+                    "governance_verdict": {
+                        "should_execute": bool(verdict.get("should_execute")),
+                        "verdict": "vetoed",
+                        "stop_reason": stop_reason,
+                    },
+                    "agent_confidence": verdict.get("confidence"),
+                },
+                "organization_id": self.organization_id,
+                "source": "coordination_engine.governance",
+            })
+        except Exception as exc:
+            logger.warning(
+                "[CoordinationEngine] failed to append governance-block audit for box=%s: %s",
+                box_id, exc,
+            )
 
     async def _run_exception_flow(self, plan: Plan, ctx: dict, match_result: Any) -> None:
         """§9.3: Execute the exception flow when 3-way match fails.

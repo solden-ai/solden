@@ -262,18 +262,36 @@ def evaluate_doctrine(
 
     risky_action = normalized_action in _RISKY_ACTIONS
     promotion_block = bool(autonomous_requested and risky_action and missing_required_gates)
+    # Audit-recording fix (group 1c, 2026-05-06): record the actual
+    # gate state regardless of autonomous_requested. Previously the
+    # status was silently "pass" on non-autonomous calls even when
+    # promotion gates were unmet — that lied in the audit row. Now
+    # we record "observe" when gates failed but the action wasn't
+    # autonomous (so block logic is unchanged but the audit reflects
+    # reality). Block status still requires autonomous_requested.
+    promotion_status = (
+        "fail" if promotion_block
+        else "observe" if (risky_action and missing_required_gates)
+        else "pass"
+    )
     checks.append(
         {
             "check": "promotion_gates",
-            "status": "fail" if promotion_block else ("observe" if autonomous_requested and missing_required_gates else "pass"),
+            "status": promotion_status,
             "missing_gates": missing_required_gates,
         }
     )
     if promotion_block:
         reason_codes.extend([f"missing_gate:{gate}" for gate in missing_required_gates])
 
-    autonomy_block = bool(autonomous_requested and risky_action and not quality_snapshot.get("autonomous_allowed"))
-    checks.append({"check": "autonomy_policy", "status": "fail" if autonomy_block else "pass"})
+    autonomy_unmet = bool(risky_action and not quality_snapshot.get("autonomous_allowed"))
+    autonomy_block = bool(autonomous_requested and autonomy_unmet)
+    autonomy_status = (
+        "fail" if autonomy_block
+        else "observe" if autonomy_unmet
+        else "pass"
+    )
+    checks.append({"check": "autonomy_policy", "status": autonomy_status})
     if autonomy_block:
         reason_codes.append("autonomy_not_earned")
 
@@ -282,12 +300,17 @@ def evaluate_doctrine(
         or belief_data.get("next_action_type")
         or ""
     ).strip().lower()
-    belief_block = bool(
-        autonomous_requested
-        and risky_action
+    belief_misaligned = bool(
+        risky_action
         and belief_next_action in {"human_field_review", "await_vendor_info", "operator_recovery"}
     )
-    checks.append({"check": "belief_alignment", "status": "fail" if belief_block else "pass"})
+    belief_block = bool(autonomous_requested and belief_misaligned)
+    belief_status = (
+        "fail" if belief_block
+        else "observe" if belief_misaligned
+        else "pass"
+    )
+    checks.append({"check": "belief_alignment", "status": belief_status})
     if belief_block:
         reason_codes.append(f"belief_requires:{belief_next_action}")
 
