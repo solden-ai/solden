@@ -34,10 +34,14 @@ async def execute_ap_invoice_processing(
         or str(invoice.get("correlation_id") or "").strip()
         or None
     )
-    _raw_org = invoice.get("organization_id") or getattr(runtime, "organization_id", None)
-    if not _raw_org:
-        logger.warning("organization_id missing in execute_ap_invoice_processing, falling back to 'default'")
-    invoice_org = str(_raw_org or "default").strip() or "default"
+    # Cross-tenant payload trust: the runtime is org-scoped at
+    # construction; an invoice payload carrying a different
+    # organization_id must not be silently honored on a real-tenant
+    # runtime. Delegate to the runtime's helper (same rule that
+    # _seed_ap_item_for_invoice_processing uses).
+    invoice_org = runtime._resolve_payload_org(
+        invoice, context="execute_ap_invoice_processing(module)"
+    )
     attachment_list = attachments if isinstance(attachments, list) else []
     attachment_url = ""
     attachment_names: List[str] = []

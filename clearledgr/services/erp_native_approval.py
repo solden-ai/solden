@@ -62,9 +62,15 @@ async def route_for_approval(ap_item: Dict[str, Any]) -> Dict[str, Any]:
     Returns ``{"ok": True, "channel": ..., "ts": ...}`` on success.
     """
     ap_item_id = str(ap_item.get("id") or "").strip()
-    organization_id = str(ap_item.get("organization_id") or "default").strip() or "default"
+    organization_id = str(ap_item.get("organization_id") or "").strip()
     if not ap_item_id:
         return {"ok": False, "reason": "missing_ap_item_id"}
+    if not organization_id:
+        # The ap_item came from db.get_ap_item where org is NOT NULL,
+        # or from a caller-constructed dict. Either way an empty org
+        # here means the upstream is broken; refuse rather than route
+        # the Slack approval through the platform tenant.
+        return {"ok": False, "reason": "missing_organization_id"}
 
     db = get_db()
     if hasattr(db, "get_slack_thread"):
@@ -161,7 +167,16 @@ async def handle_slack_decision(
     item = db.get_ap_item(ap_item_id) if hasattr(db, "get_ap_item") else None
     if not item:
         return {"ok": False, "reason": "ap_item_not_found", "ap_item_id": ap_item_id}
-    organization_id = str(item.get("organization_id") or "default").strip() or "default"
+    organization_id = str(item.get("organization_id") or "").strip()
+    if not organization_id:
+        # ap_items.organization_id is NOT NULL; an empty value here
+        # means the row is corrupted. Refuse so the action doesn't
+        # land under the platform tenant by accident.
+        return {
+            "ok": False,
+            "reason": "missing_organization_id",
+            "ap_item_id": ap_item_id,
+        }
     decision_norm = str(decision or "").strip().lower()
 
     if decision_norm == "approve":

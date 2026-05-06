@@ -50,7 +50,15 @@ def evaluate_erp_connector_readiness(
     """
 
     resolved_db = db or get_db()
-    org_id = str(organization_id or "default").strip() or "default"
+    if organization_id is None:
+        # API entry point: a None / unset org reflects an authentication
+        # bug upstream, not a platform-mode call. Raise so the caller
+        # sees the misconfiguration instead of getting silent
+        # platform-tenant readiness data back.
+        raise ValueError("evaluate_erp_connector_readiness organization_id is required")
+    org_id = str(organization_id).strip()
+    if not org_id:
+        raise ValueError("evaluate_erp_connector_readiness organization_id cannot be empty")
     scope = _normalized_scope(connector_scope)
     strategy = get_erp_connector_strategy()
     ga_readiness = get_ga_readiness(org_id, db=resolved_db)

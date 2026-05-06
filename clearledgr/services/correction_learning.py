@@ -114,8 +114,16 @@ class CorrectionLearningService:
     _RULES_TTL_SECONDS: int = 300  # refresh in-memory cache every 5 minutes
     _REFRESH_INTERVAL: int = 300   # full refresh interval in seconds (5 minutes)
 
-    def __init__(self, organization_id: str = "default"):
-        self.organization_id = organization_id
+    def __init__(self, organization_id: Optional[str] = "default"):
+        if organization_id is None:
+            organization_id = "default"
+        normalized = str(organization_id).strip()
+        if not normalized:
+            raise ValueError(
+                "CorrectionLearningService organization_id cannot be empty; "
+                "pass 'default' explicitly for platform mode"
+            )
+        self.organization_id = normalized
         self.db = get_db()
 
         # In-memory cache backed by DB
@@ -1774,9 +1782,18 @@ def get_correction_learning(organization_id: str = "default") -> CorrectionLearn
     return CorrectionLearningService(organization_id=organization_id)
 
 
-def get_correction_learning_service(organization_id: str = "default") -> CorrectionLearningService:
+def get_correction_learning_service(
+    organization_id: Optional[str] = "default",
+) -> CorrectionLearningService:
     """Get a cached correction learning service instance."""
-    normalized_org = str(organization_id or "default").strip() or "default"
+    if organization_id is None:
+        organization_id = "default"
+    normalized_org = str(organization_id).strip()
+    if not normalized_org:
+        raise ValueError(
+            "get_correction_learning_service organization_id cannot be empty; "
+            "pass 'default' explicitly for platform mode"
+        )
     service = _correction_learning_services.get(normalized_org)
     current_db = get_db()
     if (

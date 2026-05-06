@@ -33,11 +33,22 @@ class FinanceLearningService:
 
     def __init__(
         self,
-        organization_id: str = "default",
+        organization_id: Optional[str] = "default",
         *,
         db: Optional[ClearledgrDB] = None,
     ) -> None:
-        self.organization_id = str(organization_id or "default").strip() or "default"
+        # None / unset → platform mode ("default"). Empty string is a
+        # programming error and must raise to prevent cross-tenant
+        # learning data from landing in the platform store.
+        if organization_id is None:
+            organization_id = "default"
+        normalized = str(organization_id).strip()
+        if not normalized:
+            raise ValueError(
+                "FinanceLearningService organization_id cannot be empty; "
+                "pass 'default' explicitly for platform mode"
+            )
+        self.organization_id = normalized
         self.db = db
         self.enabled = bool(self.db is not None and hasattr(self.db, "connect"))
         self._correction_learning = None
@@ -929,13 +940,21 @@ class FinanceLearningService:
 
 
 def get_finance_learning_service(
-    organization_id: str = "default",
+    organization_id: Optional[str] = "default",
     *,
     db: Optional[ClearledgrDB] = None,
 ) -> FinanceLearningService:
-    key = (str(organization_id or "default").strip() or "default", id(db) if db is not None else 0)
+    if organization_id is None:
+        organization_id = "default"
+    org_key = str(organization_id).strip()
+    if not org_key:
+        raise ValueError(
+            "get_finance_learning_service organization_id cannot be empty; "
+            "pass 'default' explicitly for platform mode"
+        )
+    key = (org_key, id(db) if db is not None else 0)
     service = _finance_learning_services.get(key)
     if service is None:
-        service = FinanceLearningService(key[0], db=db)
+        service = FinanceLearningService(org_key, db=db)
         _finance_learning_services[key] = service
     return service

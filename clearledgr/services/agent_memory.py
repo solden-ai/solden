@@ -63,11 +63,24 @@ class AgentMemoryService:
 
     def __init__(
         self,
-        organization_id: str = "default",
+        organization_id: Optional[str] = "default",
         *,
         db: Optional[ClearledgrDB] = None,
     ) -> None:
-        self.organization_id = str(organization_id or "default").strip() or "default"
+        # Treat None as the platform-mode sentinel ("default") so callers
+        # that pass nothing or None still get the system service. An
+        # empty / whitespace string is a programming error (real-tenant
+        # call with missing org metadata) and must raise to prevent
+        # cross-tenant data leak into the platform memory store.
+        if organization_id is None:
+            organization_id = "default"
+        normalized = str(organization_id).strip()
+        if not normalized:
+            raise ValueError(
+                "AgentMemoryService organization_id cannot be empty; "
+                "pass 'default' explicitly for platform mode"
+            )
+        self.organization_id = normalized
         self.db = db or get_db()
         self.enabled = hasattr(self.db, "connect")
         if self.enabled:
@@ -1575,15 +1588,23 @@ class AgentMemoryService:
 
 
 def get_agent_memory_service(
-    organization_id: str = "default",
+    organization_id: Optional[str] = "default",
     *,
     db: Optional[ClearledgrDB] = None,
 ) -> AgentMemoryService:
     if db is None:
         db = get_db()
-    key = (str(organization_id or "default").strip() or "default", id(db))
+    if organization_id is None:
+        organization_id = "default"
+    org_key = str(organization_id).strip()
+    if not org_key:
+        raise ValueError(
+            "get_agent_memory_service organization_id cannot be empty; "
+            "pass 'default' explicitly for platform mode"
+        )
+    key = (org_key, id(db))
     service = _agent_memory_services.get(key)
     if service is None:
-        service = AgentMemoryService(key[0], db=db)
+        service = AgentMemoryService(org_key, db=db)
         _agent_memory_services[key] = service
     return service

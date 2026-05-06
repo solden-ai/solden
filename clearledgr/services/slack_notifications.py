@@ -256,7 +256,18 @@ async def _post_slack_dm(
 ) -> bool:
     """Send a Slack DM to a specific user by email (§6.8 intelligent routing)."""
     try:
-        runtime = resolve_slack_runtime(organization_id or "default")
+        # Slack workspace is per-tenant. Without a real organization_id
+        # we'd silently route the DM through the platform "default"
+        # workspace and leak tenant data. Refuse instead — caller
+        # treats it as a delivery failure (the existing return-False
+        # contract).
+        if not organization_id or not str(organization_id).strip():
+            logger.warning(
+                "send_dm_to_user refused: organization_id missing for user=%s",
+                user_email,
+            )
+            return False
+        runtime = resolve_slack_runtime(organization_id)
         if not runtime or not runtime.get("token"):
             return False
 
@@ -412,10 +423,18 @@ async def send_with_retry(
     try:
         from clearledgr.core.database import get_db
         db = get_db()
-        if not organization_id:
-            logger.warning("organization_id missing in send_with_retry enqueue (ap_item=%s), falling back to 'default'", ap_item_id)
+        if not organization_id or not str(organization_id).strip():
+            # The retry queue is per-tenant. Without an org_id the
+            # retry would land on the platform tenant's queue and
+            # never be picked up by the right worker. Skip enqueueing
+            # rather than misroute.
+            logger.warning(
+                "send_with_retry skipped enqueue: organization_id missing (ap_item=%s)",
+                ap_item_id,
+            )
+            return False
         db.enqueue_notification(
-            organization_id=organization_id or "default",
+            organization_id=organization_id,
             channel="slack",
             payload={
                 "blocks": blocks,
@@ -1245,7 +1264,15 @@ async def send_invoice_exception_notification(
         context_text = match_detail or reasoning or ""
         if parent_ts and parent_channel and context_text:
             try:
-                runtime = resolve_slack_runtime(organization_id or "default")
+                if not organization_id or not str(organization_id).strip():
+                    # Threaded context reply: skip rather than route
+                    # through the platform workspace and leak tenant
+                    # data into a different tenant's Slack.
+                    logger.warning(
+                        "Skipping threaded context reply: organization_id missing"
+                    )
+                    return sent
+                runtime = resolve_slack_runtime(organization_id)
                 if runtime and runtime.get("token"):
                     headers = {"Authorization": f"Bearer {runtime['token']}", "Content-Type": "application/json"}
                     client = get_http_client()
