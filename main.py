@@ -588,6 +588,26 @@ STRICT_PROFILE_ALLOWED_EXTENSION_PATHS = {
     "/extension/ap-items/by-sap-invoice",
 }
 
+# ┌────────────────────────────────────────────────────────────────┐
+# │ STRICT-PROFILE ALLOWLIST — READ BEFORE ADDING NEW ENDPOINTS    │
+# │                                                                 │
+# │ When STRICT_PROFILE_ACTIVE=True (production default), the       │
+# │ startup pass _apply_runtime_surface_profile() walks every       │
+# │ mounted route and SILENTLY DROPS any path not on one of the     │
+# │ STRICT_PROFILE_ALLOWED_* sets below. A freshly added endpoint   │
+# │ that passes tests will 404 in prod until its path is added      │
+# │ here. (Caught with /api/workspace/settings/match-config in      │
+# │ commit 7fb5d68 — silently 404'd from b805591 to 7fb5d68.)       │
+# │                                                                 │
+# │ Workflow when adding any new /api/workspace/<x>:                │
+# │   1. Add the full path string to                                │
+# │      STRICT_PROFILE_ALLOWED_WORKSPACE_PATHS below.              │
+# │   2. Verify by importing main and checking                      │
+# │      app.routes contains the new path.                          │
+# │                                                                 │
+# │ For other prefixes (/api/ops, /api/ap, /api/auth, /extension,   │
+# │ etc.) use the matching STRICT_PROFILE_ALLOWED_* set.            │
+# └────────────────────────────────────────────────────────────────┘
 STRICT_PROFILE_ALLOWED_WORKSPACE_PATHS = {
     "/api/workspace/audit/chain-status",
     "/api/workspace/audit/export",
