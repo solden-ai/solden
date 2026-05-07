@@ -348,6 +348,33 @@ def fire_pending_timers() -> dict:
 
 
 @app.task
+def reap_orphan_approval_dispatches_tick() -> dict:
+    """Dedicated Celery beat task for the approval-dispatch outbox reaper.
+
+    The outbox state machine in
+    ``InvoiceWorkflowService._send_for_approval`` flips a row to
+    ``orphan`` when Slack delivery succeeded but the post-delivery DB
+    writes failed. The CRITICAL log line at the failure site carries
+    the slack_ts so a human could reconcile manually; this task closes
+    the loop by re-running the post-delivery writes against the
+    cached slack_ts.
+
+    Cadence is 60s (vs 30s for the override-window reaper) because
+    orphans are expected to be very rare (Slack succeeded but a
+    transient DB blip swallowed the next write); we don't need
+    sub-minute recovery latency for the operator-noticeable case.
+    """
+    import asyncio
+    try:
+        from clearledgr.services.agent_background import reap_orphan_approval_dispatches
+        count = asyncio.run(reap_orphan_approval_dispatches())
+        return {"status": "ok", "recovered": count}
+    except Exception as exc:  # noqa: BLE001
+        logger.error("[reap_orphan_approval_dispatches_tick] failed: %s", exc)
+        return {"status": "error", "error": str(exc)}
+
+
+@app.task
 def reap_override_windows_tick() -> dict:
     """Dedicated Celery beat task for the override-window reaper.
 

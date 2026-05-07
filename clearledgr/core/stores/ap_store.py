@@ -1028,6 +1028,66 @@ class APStore:
             "thread_id": item.get("slack_thread_id"),
         }
 
+    def list_orphan_approval_dispatches(
+        self,
+        *,
+        min_age_seconds: int = 60,
+        limit: int = 500,
+    ) -> List[Dict[str, Any]]:
+        """Return AP items whose ``approval_dispatch`` outbox is in
+        the ``orphan`` state and has been there for longer than
+        ``min_age_seconds``. Cross-tenant by design (the reaper
+        processes orphans regardless of org); per-row ``organization_id``
+        is in the result.
+
+        Orphan state = Slack message was delivered but the post-
+        delivery DB writes (save_slack_thread, state transition,
+        outbox flip to ``dispatched``) failed mid-flight. The
+        ``min_age_seconds`` filter is a guard against racing with a
+        still-running in-flight dispatch — the original process may
+        be milliseconds away from completing the recovery itself.
+
+        ``metadata`` is stored as TEXT containing JSON; the cast to
+        ``jsonb`` runs once per row scanned. For low-volume reaper
+        cadence (every ~30s) the cost is fine; if orphan rates ever
+        warrant it, a partial index on the cast expression closes
+        the gap without changing the column type.
+        """
+        self.initialize()
+        safe_limit = max(1, min(int(limit or 500), 5000))
+        sql = (
+            """
+            SELECT id, organization_id, thread_id, metadata,
+                   ((metadata::jsonb)->'approval_dispatch'->>'completed_at')::timestamptz AS dispatch_completed_at
+            FROM ap_items
+            WHERE metadata IS NOT NULL
+              AND metadata <> ''
+              AND (metadata::jsonb)->'approval_dispatch'->>'status' = 'orphan'
+              AND ((metadata::jsonb)->'approval_dispatch'->>'completed_at')::timestamptz
+                  < (now() AT TIME ZONE 'utc') - make_interval(secs => %s)
+            ORDER BY dispatch_completed_at ASC
+            LIMIT %s
+            """
+        )
+        try:
+            with self.connect() as conn:
+                cur = conn.cursor()
+                cur.execute(sql, (int(min_age_seconds), safe_limit))
+                rows = cur.fetchall()
+        except Exception as exc:
+            logger.warning(
+                "[OrphanDispatchReaper] list_orphan_approval_dispatches query "
+                "failed: %s", exc,
+            )
+            return []
+        result: List[Dict[str, Any]] = []
+        for r in rows or []:
+            if r is None:
+                continue
+            row_dict = dict(r) if not isinstance(r, dict) else r
+            result.append(row_dict)
+        return result
+
     def save_slack_thread(
         self,
         gmail_id: str,

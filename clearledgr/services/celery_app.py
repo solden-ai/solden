@@ -93,6 +93,19 @@ app.config_from_object(
                 "task": "clearledgr.services.celery_tasks.reap_override_windows_tick",
                 "schedule": 30.0,
             },
+            # Orphan approval-dispatch reaper. Pairs with the outbox
+            # state machine in InvoiceWorkflowService._send_for_approval:
+            # a row enters "orphan" when Slack delivered but the
+            # post-delivery DB writes failed; the reaper re-runs those
+            # writes against the cached slack_ts so the box gets
+            # unstuck without operator intervention. 60s cadence —
+            # orphans are expected rare and are logged at CRITICAL
+            # the moment they happen, so sub-minute recovery isn't
+            # the goal.
+            "reap-orphan-approval-dispatches": {
+                "task": "clearledgr.services.celery_tasks.reap_orphan_approval_dispatches_tick",
+                "schedule": 60.0,
+            },
             # §12.1: Reclaim stale events from dead workers
             "reclaim-stale-events": {
                 "task": "clearledgr.services.celery_tasks.reclaim_stale_events",

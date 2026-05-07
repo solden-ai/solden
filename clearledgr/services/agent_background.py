@@ -245,6 +245,163 @@ async def reap_expired_override_windows() -> int:
     return reaped
 
 
+async def reap_orphan_approval_dispatches(*, min_age_seconds: int = 60) -> int:
+    """Auto-recover ``orphan`` approval-dispatch outbox rows.
+
+    An orphan row means ``_send_for_approval`` delivered the Slack
+    message but the post-delivery DB writes (save_slack_thread, state
+    transition, outbox flip to ``dispatched``) failed. The CRITICAL
+    log line at the failure site carried the slack_ts breadcrumb so
+    a human could reconcile manually; this reaper closes the loop by
+    re-running the post-delivery writes against the cached slack_ts.
+
+    Recovery is idempotent on every step:
+
+      * ``save_slack_thread`` is an upsert by gmail_id — re-running
+        with the same channel/ts no-ops.
+      * ``_transition_invoice_state`` to ``needs_approval`` is a no-op
+        when the box is already in that state, and a clean transition
+        from ``validated`` otherwise.
+      * Flipping the outbox to ``dispatched`` is the durability
+        marker; subsequent reaper runs short-circuit because the
+        query filters on ``status = 'orphan'``.
+
+    Concurrency: each box recovery runs under the per-box advisory
+    lock so two reaper processes can't race on the same orphan. If
+    the lock is held by an active dispatch (someone else is mid-
+    recovery or even mid-original-call), this reaper skips and tries
+    again next tick.
+
+    Returns the number of orphans successfully recovered. Failures
+    log at warning and leave the row at ``orphan`` for the next
+    sweep.
+    """
+    try:
+        from clearledgr.core.database import get_db
+        from clearledgr.core.box_lock import acquire_box_lock, release_box_lock
+    except Exception as exc:
+        logger.warning("[OrphanDispatchReaper] Imports failed: %s", exc)
+        return 0
+
+    try:
+        db = get_db()
+    except Exception as exc:
+        logger.warning("[OrphanDispatchReaper] DB unavailable: %s", exc)
+        return 0
+
+    try:
+        orphans = db.list_orphan_approval_dispatches(
+            min_age_seconds=min_age_seconds, limit=200,
+        )
+    except Exception as exc:
+        logger.warning(
+            "[OrphanDispatchReaper] list_orphan_approval_dispatches failed: %s", exc,
+        )
+        return 0
+
+    reaped = 0
+    for row in orphans or []:
+        ap_item_id = row.get("id")
+        organization_id = row.get("organization_id")
+        gmail_id = row.get("thread_id")
+        if not (ap_item_id and organization_id and gmail_id):
+            continue
+
+        # Parse the dispatch payload out of the metadata blob.
+        metadata = row.get("metadata") or {}
+        if isinstance(metadata, str):
+            try:
+                import json as _json
+                metadata = _json.loads(metadata) if metadata.strip() else {}
+            except Exception:
+                metadata = {}
+        dispatch = (metadata or {}).get("approval_dispatch") or {}
+        if not isinstance(dispatch, dict):
+            continue
+        if dispatch.get("status") != "orphan":
+            continue
+        slack_channel = dispatch.get("channel")
+        slack_ts = dispatch.get("thread_ts")
+        dispatch_id = dispatch.get("dispatch_id") or ""
+        if not (slack_channel and slack_ts):
+            logger.warning(
+                "[OrphanDispatchReaper] orphan ap_item=%s missing channel/ts; "
+                "cannot auto-recover (operator must reconcile manually). "
+                "dispatch_id=%s",
+                ap_item_id, dispatch_id,
+            )
+            continue
+
+        lock_conn, lock_status = acquire_box_lock(db, organization_id, ap_item_id)
+        if lock_status == "held":
+            # Another worker is mid-recovery (or mid-original-dispatch);
+            # leave it alone.
+            continue
+        try:
+            try:
+                # Re-run the canonical post-delivery writes. All idempotent.
+                db.save_slack_thread(
+                    gmail_id=gmail_id,
+                    channel_id=slack_channel,
+                    thread_ts=slack_ts,
+                    invoice_id=gmail_id,
+                    organization_id=organization_id,
+                )
+                # State transition: tolerate already-needs_approval.
+                try:
+                    db.update_invoice_status(
+                        gmail_id=gmail_id,
+                        status="needs_approval",
+                    )
+                except Exception as state_exc:
+                    # If the state machine refuses (e.g. already past
+                    # needs_approval into approved/posted), the recovery
+                    # is moot for the state side; log and continue with
+                    # the outbox flip.
+                    logger.debug(
+                        "[OrphanDispatchReaper] state update for ap_item=%s "
+                        "skipped (likely already advanced): %s",
+                        ap_item_id, state_exc,
+                    )
+
+                # Flip the outbox to dispatched.
+                from datetime import datetime, timezone as _tz
+                new_meta = {**(metadata or {})}
+                new_meta["approval_dispatch"] = {
+                    **dispatch,
+                    "status": "dispatched",
+                    "completed_at": datetime.now(_tz.utc).isoformat(),
+                    "error": None,
+                    "recovered_by": "orphan_dispatch_reaper",
+                }
+                if hasattr(db, "update_ap_item_metadata_merge"):
+                    db.update_ap_item_metadata_merge(
+                        ap_item_id, {"approval_dispatch": new_meta["approval_dispatch"]},
+                    )
+                else:
+                    db.update_ap_item(ap_item_id, metadata=new_meta)
+                reaped += 1
+                logger.info(
+                    "[OrphanDispatchReaper] recovered orphan ap_item=%s "
+                    "dispatch_id=%s slack_channel=%s slack_ts=%s",
+                    ap_item_id, dispatch_id, slack_channel, slack_ts,
+                )
+            except Exception as recover_exc:
+                logger.warning(
+                    "[OrphanDispatchReaper] recovery failed for ap_item=%s "
+                    "dispatch_id=%s err=%s (will retry next sweep)",
+                    ap_item_id, dispatch_id, recover_exc,
+                )
+        finally:
+            release_box_lock(db, lock_conn, organization_id, ap_item_id)
+
+    if reaped:
+        logger.info(
+            "[OrphanDispatchReaper] Recovered %d orphan approval dispatches", reaped,
+        )
+    return reaped
+
+
 _OVERRIDE_WINDOW_REAPER_INTERVAL_SECONDS = int(
     os.getenv("OVERRIDE_WINDOW_REAPER_INTERVAL_SECONDS", "60")
 )

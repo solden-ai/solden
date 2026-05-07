@@ -370,3 +370,151 @@ async def test_happy_path_writes_pending_then_dispatched_outbox():
     assert db.thread_writes, "slack_thread row must be persisted on success"
     assert db.thread_writes[-1]["channel_id"] == "C-CHOSEN"
     assert db.thread_writes[-1]["thread_ts"] == "1700000000.000444"
+
+
+# ────────────────────────────────────────────────────────────────────
+# Reaper tests
+# ────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_reaper_recovers_orphan_by_replaying_post_delivery_writes(monkeypatch):
+    """An orphan row carries the slack channel + ts; the reaper re-runs
+    save_slack_thread + state transition, then flips the outbox to
+    ``dispatched``. On the next sweep the row is no longer in the
+    orphan list (status filter), so recovery is a one-shot.
+    """
+    from clearledgr.services.agent_background import reap_orphan_approval_dispatches
+
+    orphan_row = {
+        "id": "ap-orphan-1",
+        "organization_id": "org_orphan",
+        "thread_id": "gmail-orphan-1",
+        "metadata": {
+            "approval_dispatch": {
+                "dispatch_id": "disp-orphan",
+                "status": "orphan",
+                "channel": "C-LIVE",
+                "thread_ts": "1700000000.999000",
+                "started_at": "2026-05-07T09:00:00+00:00",
+                "completed_at": "2026-05-07T09:00:01+00:00",
+                "error": "post_delivery_state_transition_failed: psycopg.OperationalError",
+            },
+        },
+    }
+
+    captured: Dict[str, Any] = {
+        "save_slack_thread_calls": [],
+        "update_invoice_status_calls": [],
+        "metadata_merge_calls": [],
+    }
+
+    class _ReaperFakeDB:
+        # No _pg_pool → acquire_box_lock returns no_infra; reaper proceeds unguarded.
+        def list_orphan_approval_dispatches(self, *, min_age_seconds=60, limit=200):
+            return [orphan_row]
+
+        def save_slack_thread(self, **kwargs):
+            captured["save_slack_thread_calls"].append(kwargs)
+            return kwargs.get("thread_ts", "")
+
+        def update_invoice_status(self, *, gmail_id, **kwargs):
+            captured["update_invoice_status_calls"].append({"gmail_id": gmail_id, **kwargs})
+            return True
+
+        def update_ap_item_metadata_merge(self, ap_item_id, patch):
+            captured["metadata_merge_calls"].append({"ap_item_id": ap_item_id, **patch})
+            return True
+
+        def update_ap_item(self, ap_item_id, **kwargs):
+            captured["metadata_merge_calls"].append({"ap_item_id": ap_item_id, **kwargs})
+            return True
+
+    fake_db = _ReaperFakeDB()
+    monkeypatch.setattr(
+        "clearledgr.core.database.get_db", lambda: fake_db,
+    )
+
+    recovered = await reap_orphan_approval_dispatches()
+
+    assert recovered == 1
+    # save_slack_thread was re-run with the cached channel + ts (idempotent).
+    assert captured["save_slack_thread_calls"], "save_slack_thread must be re-run"
+    last_thread = captured["save_slack_thread_calls"][-1]
+    assert last_thread["channel_id"] == "C-LIVE"
+    assert last_thread["thread_ts"] == "1700000000.999000"
+    # State transition to needs_approval was attempted.
+    state_targets = [c.get("status") for c in captured["update_invoice_status_calls"]]
+    assert "needs_approval" in state_targets
+    # Outbox flipped to dispatched with the recovered_by breadcrumb.
+    merges = captured["metadata_merge_calls"]
+    assert merges, "outbox must be flipped via metadata write"
+    last_merge = merges[-1]
+    flipped_dispatch = last_merge.get("approval_dispatch") or {}
+    assert flipped_dispatch.get("status") == "dispatched"
+    assert flipped_dispatch.get("recovered_by") == "orphan_dispatch_reaper"
+    # The cached identifiers are preserved on the dispatched row so an
+    # auditor can trace the recovery back to the original delivery.
+    assert flipped_dispatch.get("channel") == "C-LIVE"
+    assert flipped_dispatch.get("thread_ts") == "1700000000.999000"
+    assert flipped_dispatch.get("dispatch_id") == "disp-orphan"
+
+
+@pytest.mark.asyncio
+async def test_reaper_skips_orphan_rows_missing_channel_or_ts(monkeypatch):
+    """A malformed orphan row (missing channel or thread_ts) cannot
+    be auto-recovered — there's no Slack message to reconcile against.
+    The reaper logs a warning and skips it; subsequent sweeps will
+    see the same row and emit the same warning, surfacing the issue
+    in observability instead of silently dropping it."""
+    from clearledgr.services.agent_background import reap_orphan_approval_dispatches
+
+    bad_orphan = {
+        "id": "ap-orphan-2",
+        "organization_id": "org_orphan",
+        "thread_id": "gmail-orphan-2",
+        "metadata": {
+            "approval_dispatch": {
+                "dispatch_id": "disp-no-ts",
+                "status": "orphan",
+                "channel": None,
+                "thread_ts": None,
+                "completed_at": "2026-05-07T09:00:01+00:00",
+                "error": "weird state",
+            },
+        },
+    }
+
+    captured: Dict[str, Any] = {"writes": 0}
+
+    class _ReaperFakeDB:
+        def list_orphan_approval_dispatches(self, *, min_age_seconds=60, limit=200):
+            return [bad_orphan]
+
+        def save_slack_thread(self, **kwargs):
+            captured["writes"] += 1
+            return ""
+
+        def update_invoice_status(self, *, gmail_id, **kwargs):
+            captured["writes"] += 1
+            return True
+
+        def update_ap_item_metadata_merge(self, ap_item_id, patch):
+            captured["writes"] += 1
+            return True
+
+        def update_ap_item(self, ap_item_id, **kwargs):
+            captured["writes"] += 1
+            return True
+
+    fake_db = _ReaperFakeDB()
+    monkeypatch.setattr(
+        "clearledgr.core.database.get_db", lambda: fake_db,
+    )
+
+    recovered = await reap_orphan_approval_dispatches()
+
+    assert recovered == 0, "recovery without slack_ts must not be claimed as success"
+    assert captured["writes"] == 0, (
+        "reaper must NOT write anything when the orphan row lacks channel/ts"
+    )
