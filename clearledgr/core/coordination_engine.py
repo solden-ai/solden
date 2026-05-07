@@ -449,7 +449,22 @@ class CoordinationEngine:
     async def _execute_body(self, plan: Plan) -> CoordinationResult:
         """Internal: the original ``execute()`` body, callable
         with the per-box lock already held (or with no lock when
-        the plan has no box)."""
+        the plan has no box).
+
+        Group 4 hygiene (2026-05-06): resets ``self._ctx`` at the
+        top so prior-plan state (extracted_fields, vendor_profile,
+        match_result, body, attachments) doesn't leak into the
+        next plan when an engine instance is reused. The original
+        ``__init__`` initialises ``_ctx`` once; without this reset
+        a plan run after a previous one would observe stale ctx
+        keys and mis-route. Resume paths that already populated
+        ``_ctx`` (via ``_handle_resume_plan`` recursing into
+        ``_execute_body``) are preserved by skipping the reset
+        when the plan looks resumed (event_type "resumed" or
+        "resumer").
+        """
+        if plan.event_type not in ("resumed", "resumer"):
+            self._ctx = {}
         box_id = plan.box_id
         steps_completed = 0
 
@@ -466,7 +481,7 @@ class CoordinationEngine:
             # (ERP post, vendor email, Slack message) runs without
             # a timeline row first.
             try:
-                timeline_id = self._pre_write(box_id, action, step, plan=plan)
+                timeline_id = await self._pre_write(box_id, action, step, plan=plan)
             except _Rule1PreWriteFailed as rule1_exc:
                 if box_id:
                     self._move_to_exception(
@@ -497,7 +512,7 @@ class CoordinationEngine:
                 stop_reason = str(
                     governance_verdict.get("stop_reason") or "governance_blocked"
                 )
-                self._post_write(
+                await self._post_write(
                     box_id, action, step, timeline_id, "failed", stop_reason,
                     plan=plan,
                 )
@@ -512,11 +527,34 @@ class CoordinationEngine:
                 )
 
             # --- Step 4: Execute the action ---
-            result = await self._execute_with_retry(action, plan, step)
+            try:
+                result = await self._execute_with_retry(action, plan, step)
+            except asyncio.CancelledError:
+                # Group 4 cancellation cleanup (2026-05-06): outer
+                # task cancelled mid-action. Best-effort post_write
+                # so the timeline records "cancelled" instead of
+                # leaving the pre-write row dangling forever as
+                # ``executing``. ``asyncio.shield`` lets the audit
+                # write complete even though the parent is being
+                # cancelled; we still re-raise so the cancellation
+                # propagates to the caller.
+                try:
+                    await asyncio.shield(self._post_write(
+                        box_id, action, step, timeline_id,
+                        "cancelled", "task cancelled mid-execution",
+                        plan=plan,
+                    ))
+                except Exception as cancel_post_exc:  # noqa: BLE001
+                    logger.warning(
+                        "[CoordinationEngine] cancelled-state post_write best-effort "
+                        "failed for %s: %s",
+                        action.name, cancel_post_exc,
+                    )
+                raise
 
             # --- Step 5: Handle the result ---
             if result.get("_abort"):
-                self._post_write(
+                await self._post_write(
                     box_id, action, step, timeline_id, "failed",
                     result.get("error", ""), plan=plan,
                 )
@@ -530,7 +568,7 @@ class CoordinationEngine:
 
             # Action that signals plan should stop early (e.g. classification = not invoice)
             if result.get("_stop_plan"):
-                self._post_write(
+                await self._post_write(
                     box_id, action, step, timeline_id, "completed",
                     "plan stopped", plan=plan,
                 )
@@ -544,17 +582,17 @@ class CoordinationEngine:
                 _summary = result["waiting_condition"].get("context", {}).get("error", "")
                 if _summary:
                     # This came from a dependency failure, not a deliberate set_waiting
-                    self._post_write(
+                    await self._post_write(
                         box_id, action, step, timeline_id, "paused",
                         _summary, plan=plan,
                     )
                 else:
-                    self._post_write(
+                    await self._post_write(
                         box_id, action, step, timeline_id, "completed",
                         "set waiting condition", plan=plan,
                     )
             else:
-                self._post_write(
+                await self._post_write(
                     box_id, action, step, timeline_id, "completed", "",
                     plan=plan,
                 )
@@ -647,7 +685,7 @@ class CoordinationEngine:
         )
         return f"plan:{correlation}:{step}:{action.name}:{phase}"
 
-    def _pre_write(
+    async def _pre_write(
         self,
         box_id: Optional[str],
         action: Action,
@@ -666,10 +704,13 @@ class CoordinationEngine:
         execution loop catches it and aborts the action before any
         side effect runs.
 
-        Earlier code logged "fail loud, continue anyway" — that
-        traded correctness for liveness on the ERP-posting path.
-        Wrong trade: an undocumented ERP write is a worse failure
-        than a delayed one.
+        Async hygiene (group 4, 2026-05-06): the sync DB call runs on
+        a worker thread via ``asyncio.to_thread`` so a slow audit
+        insert (transient DB blip, pool contention) doesn't block
+        the event loop. The retry backoff uses ``await asyncio.sleep``
+        for the same reason — previously this was ``time.sleep``
+        inside an ``async def`` and stalled every other coroutine
+        on the worker for up to 1s under DB pressure.
 
         ``plan`` is optional for backward compatibility with the
         exception-flow path that pre-dates plan-aware audit; when
@@ -698,19 +739,20 @@ class CoordinationEngine:
             },
         }
 
-        import time as _time
         last_exc: Optional[Exception] = None
         for attempt in range(3):
             try:
-                self.db.append_audit_event(payload)
+                await asyncio.to_thread(self.db.append_audit_event, payload)
                 return timeline_id
             except Exception as exc:  # noqa: BLE001
                 last_exc = exc
                 if attempt < 2:
                     # Brief backoff — 50ms, 200ms. The common failure
                     # modes (transient DB blip, connection-pool wait)
-                    # resolve inside a few hundred ms.
-                    _time.sleep(0.05 * (4 ** attempt))
+                    # resolve inside a few hundred ms. ``asyncio.sleep``
+                    # yields the loop so other coroutines run during
+                    # the wait.
+                    await asyncio.sleep(0.05 * (4 ** attempt))
 
         logger.error(
             "[CoordinationEngine] Rule 1 pre-write failed after 3 attempts for "
@@ -724,7 +766,7 @@ class CoordinationEngine:
             original=last_exc,
         )
 
-    def _post_write(
+    async def _post_write(
         self,
         box_id: Optional[str],
         action: Action,
@@ -741,30 +783,35 @@ class CoordinationEngine:
         Status is part of the key so a retry that finishes with
         ``failed`` doesn't clobber a prior ``completed`` row (each
         terminal status occupies its own key).
+
+        Async hygiene (group 4): the sync DB call runs on a worker
+        thread via ``asyncio.to_thread`` so the timeline write
+        doesn't block the event loop.
         """
         if not box_id or not hasattr(self.db, "append_audit_event"):
             return
         idempotency_key = self._plan_idempotency_key(
             plan, action, step, f"post:{status}",
         )
+        payload = {
+            "id": f"{timeline_id}-result",
+            "ap_item_id": box_id,
+            "event_type": f"agent_action:{action.name}:{status}",
+            "actor_type": "agent",
+            "actor_id": "coordination_engine",
+            "organization_id": self.organization_id,
+            "idempotency_key": idempotency_key,
+            "payload_json": {
+                "action": action.name,
+                "status": status,
+                "result_summary": result_summary[:200] if result_summary else "",
+                "step": step,
+                "parent_timeline_id": timeline_id,
+                "correlation_id": (plan.correlation_id if plan else None),
+            },
+        }
         try:
-            self.db.append_audit_event({
-                "id": f"{timeline_id}-result",
-                "ap_item_id": box_id,
-                "event_type": f"agent_action:{action.name}:{status}",
-                "actor_type": "agent",
-                "actor_id": "coordination_engine",
-                "organization_id": self.organization_id,
-                "idempotency_key": idempotency_key,
-                "payload_json": {
-                    "action": action.name,
-                    "status": status,
-                    "result_summary": result_summary[:200] if result_summary else "",
-                    "step": step,
-                    "parent_timeline_id": timeline_id,
-                    "correlation_id": (plan.correlation_id if plan else None),
-                },
-            })
+            await asyncio.to_thread(self.db.append_audit_event, payload)
         except Exception as exc:
             logger.warning(
                 "[CoordinationEngine] post-write timeline failed for %s: %s",
@@ -1044,14 +1091,14 @@ class CoordinationEngine:
             # plan so the exception-flow rows share its correlation_id
             # — Celery retries of the parent plan re-enter the
             # exception flow with the same identity and dedupe.
-            timeline_id = self._pre_write(box_id, action, step + 100, plan=plan)
+            timeline_id = await self._pre_write(box_id, action, step + 100, plan=plan)
 
             # Execute with retry and timeout (§5.2)
             result = await self._execute_with_retry(action, plan, step + 100)
 
             # Post-execution timeline update
             status = "completed" if not result.get("_abort") else "failed"
-            self._post_write(
+            await self._post_write(
                 box_id, action, step + 100, timeline_id, status, "",
                 plan=plan,
             )

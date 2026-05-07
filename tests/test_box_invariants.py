@@ -11,6 +11,7 @@ the guarantee.
 """
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import MagicMock
 
 import pytest
@@ -146,7 +147,7 @@ class TestRule1PreWriteFailsClosed:
         from clearledgr.core.plan import Action
         action = Action(name="classify_email", layer="LLM", params={}, description="test")
 
-        timeline_id = engine._pre_write("ap-123", action, step=0)
+        timeline_id = asyncio.run(engine._pre_write("ap-123", action, step=0))
         assert timeline_id.startswith("TL-")
         assert engine.db.append_audit_event.call_count == 1
 
@@ -164,7 +165,7 @@ class TestRule1PreWriteFailsClosed:
         from clearledgr.core.plan import Action
         action = Action(name="classify_email", layer="LLM", params={}, description="test")
 
-        timeline_id = engine._pre_write("ap-123", action, step=0)
+        timeline_id = asyncio.run(engine._pre_write("ap-123", action, step=0))
         assert timeline_id.startswith("TL-")
         assert calls["n"] == 3
 
@@ -175,7 +176,7 @@ class TestRule1PreWriteFailsClosed:
         action = Action(name="post_bill", layer="DET", params={}, description="test")
 
         with pytest.raises(_Rule1PreWriteFailed) as exc_info:
-            engine._pre_write("ap-123", action, step=0)
+            asyncio.run(engine._pre_write("ap-123", action, step=0))
 
         assert exc_info.value.action_name == "post_bill"
         assert exc_info.value.box_id == "ap-123"
@@ -190,7 +191,7 @@ class TestRule1PreWriteFailsClosed:
         from clearledgr.core.plan import Action
         action = Action(name="fetch_attachment", layer="DET", params={}, description="test")
 
-        timeline_id = engine._pre_write(None, action, step=0)
+        timeline_id = asyncio.run(engine._pre_write(None, action, step=0))
         assert timeline_id.startswith("TL-")
         assert engine.db.append_audit_event.call_count == 0
 

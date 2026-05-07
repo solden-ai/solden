@@ -148,9 +148,9 @@ class TestAuditIdempotency:
         )
         action = plan.actions[0]
 
-        engine._pre_write(item["id"], action, step=0, plan=plan)
-        engine._pre_write(item["id"], action, step=0, plan=plan)
-        engine._pre_write(item["id"], action, step=0, plan=plan)
+        asyncio.run(engine._pre_write(item["id"], action, step=0, plan=plan))
+        asyncio.run(engine._pre_write(item["id"], action, step=0, plan=plan))
+        asyncio.run(engine._pre_write(item["id"], action, step=0, plan=plan))
 
         events = db.list_ap_audit_events(item["id"], limit=20)
         executing = [
@@ -177,14 +177,14 @@ class TestAuditIdempotency:
         )
         action = plan.actions[0]
 
-        engine._post_write(
+        asyncio.run(engine._post_write(
             item["id"], action, step=0, timeline_id="TL-x",
             status="completed", result_summary="ok", plan=plan,
-        )
-        engine._post_write(
+        ))
+        asyncio.run(engine._post_write(
             item["id"], action, step=0, timeline_id="TL-x",
             status="completed", result_summary="ok", plan=plan,
-        )
+        ))
 
         events = db.list_ap_audit_events(item["id"], limit=20)
         completed = [
@@ -207,11 +207,13 @@ class TestAuditIdempotency:
         )
         action = plan.actions[0]
 
-        timeline_id = engine._pre_write(item["id"], action, step=0, plan=plan)
-        engine._post_write(
+        timeline_id = asyncio.run(
+            engine._pre_write(item["id"], action, step=0, plan=plan)
+        )
+        asyncio.run(engine._post_write(
             item["id"], action, step=0, timeline_id=timeline_id,
             status="completed", result_summary="", plan=plan,
-        )
+        ))
 
         events = db.list_ap_audit_events(item["id"], limit=20)
         types = {e.get("event_type") for e in events}
@@ -229,8 +231,8 @@ class TestAuditIdempotency:
 
         # Two pre-writes without plan: idempotency_key is None
         # (audit treats NULL as distinct), so both insert.
-        engine._pre_write(item["id"], action, step=0)
-        engine._pre_write(item["id"], action, step=0)
+        asyncio.run(engine._pre_write(item["id"], action, step=0))
+        asyncio.run(engine._pre_write(item["id"], action, step=0))
 
         events = db.list_ap_audit_events(item["id"], limit=20)
         executing = [
