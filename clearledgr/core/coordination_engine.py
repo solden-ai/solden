@@ -271,139 +271,37 @@ class CoordinationEngine:
     # ------------------------------------------------------------------
 
     def _box_lock_keys(self, box_id: str) -> Tuple[int, int]:
-        """Two-int4 key for ``pg_try_advisory_lock(int, int)``. The
-        first int hashes ``organization_id`` and the second hashes
-        ``box_id``, so different orgs never collide and same-org-
-        same-box collides as desired.
-
-        Postgres advisory-lock keys are signed int4. blake2b gives
-        us a stable hash; we then reduce to int4 range with sign
-        conversion so the keys fit the two-arg overload.
+        """Thin instance wrapper around ``box_lock.box_lock_keys`` —
+        retained so existing call sites that pass through ``self`` keep
+        working. The key derivation lives in ``clearledgr.core.box_lock``
+        so the runtime engine and ``InvoiceWorkflowService`` share one
+        implementation.
         """
-        org_bytes = (self.organization_id or "").encode("utf-8")
-        box_bytes = (box_id or "").encode("utf-8")
-        org_hash = int.from_bytes(
-            hashlib.blake2b(org_bytes, digest_size=4).digest(), "big",
-        )
-        box_hash = int.from_bytes(
-            hashlib.blake2b(box_bytes, digest_size=4).digest(), "big",
-        )
-        # Convert from unsigned 32-bit to signed 32-bit so the keys
-        # fit the int4 advisory-lock signature.
-        if org_hash >= 2**31:
-            org_hash -= 2**32
-        if box_hash >= 2**31:
-            box_hash -= 2**32
-        return (org_hash, box_hash)
+        from clearledgr.core.box_lock import box_lock_keys
+        return box_lock_keys(self.organization_id or "", box_id)
 
     def _acquire_box_lock(
         self, box_id: str,
     ) -> Tuple[Optional[Any], str]:
         """Try to acquire the per-box advisory lock.
 
-        Returns ``(connection, status)``:
-
-        * ``(conn, "acquired")`` — lock held by this engine on ``conn``;
-          caller MUST call ``_release_box_lock`` to free it. The
-          connection is checked out of the pool for the lock's
-          lifetime; other engine DB calls use independent pool
-          connections, so the lock-conn doesn't bottleneck normal
-          work.
-        * ``(None, "held")`` — another engine has the lock; abort.
-        * ``(None, "no_infra")`` — pool unavailable (test mock, sqlite
-          shim); fail-open and run unguarded. The financial-write
-          backstop in ``_handle_post_bill`` (erp_reference dedupe)
-          catches the highest-stakes duplicate-write hazard even
-          without the lock.
+        Delegates to :func:`clearledgr.core.box_lock.acquire_box_lock`
+        which both this engine and the legacy ``InvoiceWorkflowService``
+        approval-dispatch outbox call. The (conn, status) contract is
+        unchanged: ``acquired`` / ``held`` / ``no_infra``. See
+        ``clearledgr.core.box_lock`` for the full semantics.
         """
-        if not box_id:
-            return (None, "no_infra")
-        pool = getattr(self.db, "_pg_pool", None)
-        if pool is None:
-            return (None, "no_infra")
-
-        conn = None
-        try:
-            for _attempt in range(3):
-                candidate = pool.getconn()
-                if not candidate.closed:
-                    conn = candidate
-                    break
-                try:
-                    pool.putconn(candidate)
-                except Exception:
-                    try:
-                        candidate.close()
-                    except Exception:
-                        pass
-            if conn is None:
-                logger.warning(
-                    "[CoordinationEngine] could not obtain lock connection for box=%s",
-                    box_id,
-                )
-                return (None, "no_infra")
-
-            keys = self._box_lock_keys(box_id)
-            with conn.cursor() as cur:
-                cur.execute("SELECT pg_try_advisory_lock(%s, %s)", keys)
-                row = cur.fetchone()
-                acquired = bool(row and (
-                    row[0] if isinstance(row, (list, tuple)) else next(iter(row.values()))
-                ))
-            conn.commit()
-            if acquired:
-                return (conn, "acquired")
-            # Lock held; return the conn to the pool.
-            try:
-                pool.putconn(conn)
-            except Exception:
-                try:
-                    conn.close()
-                except Exception:
-                    pass
-            return (None, "held")
-        except Exception as exc:
-            logger.warning(
-                "[CoordinationEngine] advisory lock acquisition failed for box=%s: %s",
-                box_id, exc,
-            )
-            if conn is not None:
-                try:
-                    pool.putconn(conn)
-                except Exception:
-                    try:
-                        conn.close()
-                    except Exception:
-                        pass
-            return (None, "no_infra")
+        from clearledgr.core.box_lock import acquire_box_lock
+        return acquire_box_lock(self.db, self.organization_id or "", box_id)
 
     def _release_box_lock(self, conn: Any, box_id: str) -> None:
         """Release a per-box advisory lock previously acquired via
         ``_acquire_box_lock``. Always returns the connection to the
-        pool, even if the unlock RPC fails."""
-        if conn is None:
-            return
-        pool = getattr(self.db, "_pg_pool", None)
-        keys = self._box_lock_keys(box_id) if box_id else None
-        try:
-            if keys is not None:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT pg_advisory_unlock(%s, %s)", keys)
-                conn.commit()
-        except Exception as exc:
-            logger.warning(
-                "[CoordinationEngine] advisory unlock failed for box=%s: %s",
-                box_id, exc,
-            )
-        finally:
-            if pool is not None:
-                try:
-                    pool.putconn(conn)
-                except Exception:
-                    try:
-                        conn.close()
-                    except Exception:
-                        pass
+        pool, even if the unlock RPC fails. Delegates to
+        :func:`clearledgr.core.box_lock.release_box_lock`.
+        """
+        from clearledgr.core.box_lock import release_box_lock
+        release_box_lock(self.db, conn, self.organization_id or "", box_id)
 
     async def execute(self, plan: Plan) -> CoordinationResult:
         """§5.1: The execution loop.

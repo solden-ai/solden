@@ -179,6 +179,66 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
 
     _FRAUD_FLAG_CAS_ATTEMPTS = 5
 
+    # ── Approval-dispatch outbox ────────────────────────────────────
+    #
+    # ``_send_for_approval`` writes a small outbox row on the AP item's
+    # metadata before calling Slack and flips it to "dispatched" only
+    # after the post-delivery DB writes succeed. Crash-recovery + a
+    # per-box advisory lock together turn the previously fail-safe-by-
+    # accident wide try/except into an explicit state machine:
+    #
+    #   pending  — intent recorded, Slack call may or may not have run
+    #   dispatched — Slack delivered AND state transition committed
+    #   failed   — Slack delivery itself errored (no message in flight)
+    #   orphan   — Slack delivered but post-delivery DB write failed;
+    #              operator must reconcile (logged at CRITICAL with
+    #              the slack_ts so the breadcrumb is grep-able)
+    #
+    # Idempotent re-entry: a second call after status=dispatched
+    # returns the cached thread_ts without touching Slack.
+
+    def _read_approval_dispatch(
+        self, ap_item_id: Optional[str],
+    ) -> Dict[str, Any]:
+        """Return the current ``approval_dispatch`` outbox blob for an
+        AP item, or ``{}`` if none is recorded.
+        """
+        if not ap_item_id:
+            return {}
+        try:
+            row = self.db.get_ap_item(ap_item_id)
+        except Exception:
+            return {}
+        if not row:
+            return {}
+        meta_raw = row.get("metadata") or {}
+        if isinstance(meta_raw, str):
+            try:
+                meta_raw = json.loads(meta_raw) if meta_raw.strip() else {}
+            except Exception:
+                meta_raw = {}
+        dispatch = (meta_raw or {}).get("approval_dispatch") or {}
+        return dispatch if isinstance(dispatch, dict) else {}
+
+    def _write_approval_dispatch(
+        self, ap_item_id: Optional[str], payload: Dict[str, Any],
+    ) -> None:
+        """Merge a dispatch payload into ``ap_item.metadata.approval_dispatch``.
+        Best-effort: a failure to write the outbox row is logged but
+        does not unwind the dispatch — the caller has either a Slack
+        message-in-hand (success path) or a reconcilable state (orphan
+        path) regardless.
+        """
+        if not ap_item_id:
+            return
+        try:
+            self._update_ap_item_metadata(ap_item_id, {"approval_dispatch": payload})
+        except Exception as exc:
+            logger.warning(
+                "[ApprovalDispatch] outbox write failed for ap_item=%s: %s",
+                ap_item_id, exc,
+            )
+
     def add_fraud_flag(self, ap_item_id: str, flag_type: str) -> None:
         """Add a fraud flag to the Box.
 
@@ -1736,298 +1796,455 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
             context_payload["approval_assignee_labels"] = approval_labels
         approval_requested_at = datetime.now(timezone.utc).isoformat()
 
-        current_state = self._canonical_invoice_state(await asyncio.to_thread(self.db.get_invoice_status, invoice.gmail_id))
-        if current_state == "received":
-            self._transition_invoice_state(
-                gmail_id=invoice.gmail_id,
-                target_state="validated",
-                correlation_id=correlation_id,
-            )
-
-        existing_thread = await asyncio.to_thread(
-            self.db.get_slack_thread, invoice.gmail_id,
-        )
-        if existing_thread:
-            # Ensure status is pending, but avoid duplicate Slack messages
-            self._transition_invoice_state(
-                gmail_id=invoice.gmail_id,
-                target_state="needs_approval",
-                slack_thread_id=existing_thread.get("thread_id") or existing_thread.get("thread_ts"),
-                correlation_id=correlation_id,
-            )
-            self._record_approval_snapshot(
-                ap_item_id=ap_item_id,
-                gmail_id=invoice.gmail_id,
-                channel_id=existing_thread.get("channel_id"),
-                message_ts=existing_thread.get("thread_ts"),
-                source_channel="slack",
-                source_message_ref=invoice.gmail_id,
-                status="pending",
-                decision_payload={
-                    "budget": budget_summary,
-                    "budget_impact": budget_checks,
-                    "validation_gate": context_payload.get("validation_gate"),
-                    "approval_context": context_payload.get("approval_context"),
-                },
-            )
-            teams_status = self._send_teams_budget_card(invoice, budget_summary, context_payload)
-            if isinstance(teams_status, dict):
-                teams_state = str(teams_status.get("status") or "unknown")
-                self._update_ap_item_metadata(
-                    ap_item_id,
-                    {
-                        "teams": {
-                            "state": teams_state,
-                            "channel": teams_status.get("channel_id"),
-                            "message_id": teams_status.get("message_id"),
-                            "reason": teams_status.get("reason"),
-                        }
-                    },
-                )
-                if teams_state == "sent":
-                    self._record_approval_snapshot(
-                        ap_item_id=ap_item_id,
-                        gmail_id=invoice.gmail_id,
-                        channel_id=str(teams_status.get("channel_id") or "teams"),
-                        message_ts=str(teams_status.get("message_id") or invoice.gmail_id),
-                        source_channel="teams",
-                        source_message_ref=invoice.gmail_id,
-                        status="pending",
-                        decision_payload={
-                            "budget": budget_summary,
-                            "budget_impact": budget_checks,
-                            "validation_gate": context_payload.get("validation_gate"),
-                            "approval_context": context_payload.get("approval_context"),
-                        },
-                    )
-            self._update_ap_item_metadata(
-                ap_item_id,
-                {
-                    "approval_requested_at": approval_requested_at,
-                    "approval_sent_to": approval_labels,
-                    "approval_delivery_targets": approval_delivery_targets,
-                    "approval_channel": str(existing_thread.get("channel_id") or approval_channel).strip() or approval_channel,
-                    "approval_next_action": "wait_for_approval",
-                },
-            )
-            # §6: Set waiting condition — agent is paused until approval_received
-            if ap_item_id:
-                self.set_waiting_condition(
-                    ap_item_id, "approval_response",
-                    expected_by=(datetime.now(timezone.utc) + timedelta(hours=4)).isoformat(),
-                    context={"channel": existing_thread.get("channel_id"), "approvers": approval_labels},
-                )
-
+        # ── Outbox short-circuit (idempotent re-entry, pre-lock) ────
+        # If a previous call already completed dispatch (Slack delivered
+        # AND post-delivery DB writes committed), short-circuit with
+        # the cached thread_ts. No Slack call, no work. Two readers
+        # racing both see status=dispatched and both return the same
+        # cached response — that's the entire point.
+        existing_dispatch = self._read_approval_dispatch(ap_item_id)
+        if existing_dispatch.get("status") == "dispatched":
             return {
                 "status": "pending_approval",
                 "invoice_id": invoice.gmail_id,
-                "slack_channel": existing_thread.get("channel_id"),
-                "slack_ts": existing_thread.get("thread_ts"),
+                "slack_channel": existing_dispatch.get("channel"),
+                "slack_ts": existing_dispatch.get("thread_ts"),
                 "existing": True,
                 "budget": budget_summary,
-                "teams": teams_status,
+                "teams": existing_dispatch.get("teams") or {},
+                "dispatch_id": existing_dispatch.get("dispatch_id"),
             }
 
-        # Update status to pending
-        self._transition_invoice_state(
-            gmail_id=invoice.gmail_id,
-            target_state="needs_approval",
-            correlation_id=correlation_id,
+        # ── Per-box advisory lock ───────────────────────────────────
+        # Serialises concurrent dispatches for the same AP item across
+        # processes. Without this, two intake events firing
+        # _send_for_approval simultaneously would each see the outbox
+        # in a non-dispatched state, both write a fresh dispatch_id,
+        # and both call Slack — duplicate message. Same primitive the
+        # CoordinationEngine uses for plan execution.
+        from clearledgr.core.box_lock import acquire_box_lock, release_box_lock
+        lock_box_id = ap_item_id or invoice.gmail_id or ""
+        lock_conn, lock_status = acquire_box_lock(
+            self.db, self.organization_id, lock_box_id,
         )
+        if lock_status == "held":
+            # Another worker is mid-dispatch; let it finish.
+            return {
+                "status": "dispatch_in_flight",
+                "invoice_id": invoice.gmail_id,
+                "reason": "another worker holds the per-box dispatch lock",
+            }
+        # ``no_infra`` (test mock, transient pool blip): proceed unguarded.
+        # The post-lock outbox re-check + the existing-thread fallback
+        # still cap the duplicate-work window in the no-infra branch.
 
-        # §5.3 @Mentions: agent posts timeline entry with @approver so
-        # the mention system sends them a Slack DM with the exception detail
-        if approval_mentions and ap_item_id:
-            mention_text = ", ".join(f"@{m}" for m in approval_mentions[:3])
-            exception_reason = (context_payload.get("ap_reasoning") or "Requires human review.")[:200]
-            mention_body = (
-                f"{mention_text} — {invoice.vendor_name} {invoice.currency} {invoice.amount:,.2f} "
-                f"(INV {invoice.invoice_number or 'N/A'}). {exception_reason} "
-                f"Match detail in sidebar. One click to override or reject."
+        try:
+            # Re-check outbox under the lock — between the pre-lock
+            # read and the lock acquisition, another worker may have
+            # completed dispatch.
+            existing_dispatch = self._read_approval_dispatch(ap_item_id)
+            if existing_dispatch.get("status") == "dispatched":
+                return {
+                    "status": "pending_approval",
+                    "invoice_id": invoice.gmail_id,
+                    "slack_channel": existing_dispatch.get("channel"),
+                    "slack_ts": existing_dispatch.get("thread_ts"),
+                    "existing": True,
+                    "budget": budget_summary,
+                    "teams": existing_dispatch.get("teams") or {},
+                    "dispatch_id": existing_dispatch.get("dispatch_id"),
+                }
+
+            # ── Pre-dispatch state transitions ──────────────────────
+            current_state = self._canonical_invoice_state(
+                await asyncio.to_thread(self.db.get_invoice_status, invoice.gmail_id)
             )
-            try:
-                await asyncio.to_thread(
-                    self.db.append_ap_item_timeline_entry,
-                    ap_item_id,
-                    {
-                        "event_type": "agent_mention",
-                        "summary": mention_body,
-                        "actor": "agent",
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
+            if current_state == "received":
+                self._transition_invoice_state(
+                    gmail_id=invoice.gmail_id,
+                    target_state="validated",
+                    correlation_id=correlation_id,
+                )
+
+            # ── Existing-thread short-circuit (legacy compat) ───────
+            # Legacy code paths recorded the slack_thread row but not
+            # the outbox. Honour those rows so pre-outbox in-flight
+            # items don't re-fire Slack.
+            existing_thread = await asyncio.to_thread(
+                self.db.get_slack_thread, invoice.gmail_id,
+            )
+            if existing_thread:
+                self._transition_invoice_state(
+                    gmail_id=invoice.gmail_id,
+                    target_state="needs_approval",
+                    slack_thread_id=existing_thread.get("thread_id") or existing_thread.get("thread_ts"),
+                    correlation_id=correlation_id,
+                )
+                self._record_approval_snapshot(
+                    ap_item_id=ap_item_id,
+                    gmail_id=invoice.gmail_id,
+                    channel_id=existing_thread.get("channel_id"),
+                    message_ts=existing_thread.get("thread_ts"),
+                    source_channel="slack",
+                    source_message_ref=invoice.gmail_id,
+                    status="pending",
+                    decision_payload={
+                        "budget": budget_summary,
+                        "budget_impact": budget_checks,
+                        "validation_gate": context_payload.get("validation_gate"),
+                        "approval_context": context_payload.get("approval_context"),
                     },
                 )
-                # Dispatch DM notifications for the mentioned users
-                item = await asyncio.to_thread(self.db.get_ap_item, ap_item_id) or {}
-                from clearledgr.api.ap_items_action_routes import _dispatch_mention_notifications
-                _dispatch_mention_notifications(
-                    body=mention_body,
-                    ap_item_id=ap_item_id,
-                    item=item,
-                    actor_id="agent",
+                teams_status = self._send_teams_budget_card(invoice, budget_summary, context_payload)
+                if isinstance(teams_status, dict):
+                    teams_state = str(teams_status.get("status") or "unknown")
+                    self._update_ap_item_metadata(
+                        ap_item_id,
+                        {
+                            "teams": {
+                                "state": teams_state,
+                                "channel": teams_status.get("channel_id"),
+                                "message_id": teams_status.get("message_id"),
+                                "reason": teams_status.get("reason"),
+                            }
+                        },
+                    )
+                    if teams_state == "sent":
+                        self._record_approval_snapshot(
+                            ap_item_id=ap_item_id,
+                            gmail_id=invoice.gmail_id,
+                            channel_id=str(teams_status.get("channel_id") or "teams"),
+                            message_ts=str(teams_status.get("message_id") or invoice.gmail_id),
+                            source_channel="teams",
+                            source_message_ref=invoice.gmail_id,
+                            status="pending",
+                            decision_payload={
+                                "budget": budget_summary,
+                                "budget_impact": budget_checks,
+                                "validation_gate": context_payload.get("validation_gate"),
+                                "approval_context": context_payload.get("approval_context"),
+                            },
+                        )
+                self._update_ap_item_metadata(
+                    ap_item_id,
+                    {
+                        "approval_requested_at": approval_requested_at,
+                        "approval_sent_to": approval_labels,
+                        "approval_delivery_targets": approval_delivery_targets,
+                        "approval_channel": str(existing_thread.get("channel_id") or approval_channel).strip() or approval_channel,
+                        "approval_next_action": "wait_for_approval",
+                    },
                 )
-            except Exception:
-                pass  # Non-fatal
+                if ap_item_id:
+                    self.set_waiting_condition(
+                        ap_item_id, "approval_response",
+                        expected_by=(datetime.now(timezone.utc) + timedelta(hours=4)).isoformat(),
+                        context={"channel": existing_thread.get("channel_id"), "approvers": approval_labels},
+                    )
 
-        # Create approval chain record for audit and multi-step tracking
-        chain_id = None
-        try:
-            from types import SimpleNamespace
-            chain_id = f"chain-{uuid.uuid4().hex[:12]}"
-            chain = SimpleNamespace(
-                chain_id=chain_id,
-                organization_id=self.organization_id,
-                invoice_id=invoice.gmail_id,
-                vendor_name=invoice.vendor_name,
-                amount=invoice.amount,
-                gl_code=None,
-                department=None,
-                status="pending",
-                current_step=0,
-                requester_id="ap_agent",
-                requester_name="Clearledgr AP Agent",
-                created_at=datetime.now(timezone.utc),
-                completed_at=None,
-                steps=[SimpleNamespace(
-                    step_id=f"step-{uuid.uuid4().hex[:12]}",
-                    level="L1",
-                    approvers=approval_authorization_targets,
-                    approval_type=str(approval_target.get("approval_type") or "any"),
-                    status="pending",
-                    approved_by=None,
-                    approved_at=None,
-                    rejection_reason=None,
-                    comments="",
-                )],
+                return {
+                    "status": "pending_approval",
+                    "invoice_id": invoice.gmail_id,
+                    "slack_channel": existing_thread.get("channel_id"),
+                    "slack_ts": existing_thread.get("thread_ts"),
+                    "existing": True,
+                    "budget": budget_summary,
+                    "teams": teams_status,
+                }
+
+            # ── Update status to needs_approval ─────────────────────
+            self._transition_invoice_state(
+                gmail_id=invoice.gmail_id,
+                target_state="needs_approval",
+                correlation_id=correlation_id,
             )
-            await asyncio.to_thread(self.db.db_create_approval_chain, chain)
-            self._update_ap_item_metadata(
-                ap_item_id,
-                {
-                    "approval_chain_id": chain_id,
-                    "approval_requested_at": approval_requested_at,
-                    "approval_sent_to": approval_labels,
-                    "approval_delivery_targets": approval_delivery_targets,
-                    "approval_channel": approval_channel,
-                    "approval_next_action": "wait_for_approval",
-                },
-            )
-        except Exception as chain_exc:
-            logger.debug("Approval chain creation failed (non-fatal): %s", chain_exc)
+
+            # ── @mentions notification (best-effort, non-fatal) ─────
+            if approval_mentions and ap_item_id:
+                mention_text = ", ".join(f"@{m}" for m in approval_mentions[:3])
+                exception_reason = (context_payload.get("ap_reasoning") or "Requires human review.")[:200]
+                mention_body = (
+                    f"{mention_text} — {invoice.vendor_name} {invoice.currency} {invoice.amount:,.2f} "
+                    f"(INV {invoice.invoice_number or 'N/A'}). {exception_reason} "
+                    f"Match detail in sidebar. One click to override or reject."
+                )
+                try:
+                    await asyncio.to_thread(
+                        self.db.append_ap_item_timeline_entry,
+                        ap_item_id,
+                        {
+                            "event_type": "agent_mention",
+                            "summary": mention_body,
+                            "actor": "agent",
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                        },
+                    )
+                    item = await asyncio.to_thread(self.db.get_ap_item, ap_item_id) or {}
+                    from clearledgr.api.ap_items_action_routes import _dispatch_mention_notifications
+                    _dispatch_mention_notifications(
+                        body=mention_body,
+                        ap_item_id=ap_item_id,
+                        item=item,
+                        actor_id="agent",
+                    )
+                except Exception:
+                    pass  # Non-fatal
+
+            # ── Approval chain record (best-effort, non-fatal) ──────
             chain_id = None
+            try:
+                from types import SimpleNamespace
+                chain_id = f"chain-{uuid.uuid4().hex[:12]}"
+                chain = SimpleNamespace(
+                    chain_id=chain_id,
+                    organization_id=self.organization_id,
+                    invoice_id=invoice.gmail_id,
+                    vendor_name=invoice.vendor_name,
+                    amount=invoice.amount,
+                    gl_code=None,
+                    department=None,
+                    status="pending",
+                    current_step=0,
+                    requester_id="ap_agent",
+                    requester_name="Clearledgr AP Agent",
+                    created_at=datetime.now(timezone.utc),
+                    completed_at=None,
+                    steps=[SimpleNamespace(
+                        step_id=f"step-{uuid.uuid4().hex[:12]}",
+                        level="L1",
+                        approvers=approval_authorization_targets,
+                        approval_type=str(approval_target.get("approval_type") or "any"),
+                        status="pending",
+                        approved_by=None,
+                        approved_at=None,
+                        rejection_reason=None,
+                        comments="",
+                    )],
+                )
+                await asyncio.to_thread(self.db.db_create_approval_chain, chain)
+                self._update_ap_item_metadata(
+                    ap_item_id,
+                    {
+                        "approval_chain_id": chain_id,
+                        "approval_requested_at": approval_requested_at,
+                        "approval_sent_to": approval_labels,
+                        "approval_delivery_targets": approval_delivery_targets,
+                        "approval_channel": approval_channel,
+                        "approval_next_action": "wait_for_approval",
+                    },
+                )
+            except Exception as chain_exc:
+                logger.debug("Approval chain creation failed (non-fatal): %s", chain_exc)
+                chain_id = None
 
-        # Build approval message
-        blocks = self._build_approval_blocks(invoice, context_payload)
-
-        try:
+            blocks = self._build_approval_blocks(invoice, context_payload)
             mention_suffix = f" · {' '.join(approval_mentions)}" if approval_mentions else ""
-            # §6.8 intelligent routing: DM for low-amount personal approvals,
-            # DM + channel copy for above-threshold, channel for everything
-            # else. Delivery falls back to channel if DM can't resolve the
-            # approver's Slack user.
             from clearledgr.services.slack_notifications import deliver_approval_with_routing
             from types import SimpleNamespace
-            # Pick the first authorization target (email) as the DM recipient.
-            # Fall back to None → channel delivery.
             primary_approver_email: Optional[str] = None
             for candidate in approval_authorization_targets:
                 candidate_str = str(candidate or "").strip()
                 if "@" in candidate_str:
                     primary_approver_email = candidate_str
                     break
-            routing_result = await deliver_approval_with_routing(
-                blocks=blocks,
-                text=f"Invoice approval needed: {invoice.vendor_name} - ${invoice.amount:,.2f}{mention_suffix}",
-                approval_channel=approval_channel,
-                approver_email=primary_approver_email,
-                amount=float(invoice.amount or 0),
-                message_type="personal_approval",
-                organization_id=self.organization_id,
-            )
-            if not routing_result:
-                raise RuntimeError("slack_delivery_failed")
-            # Normalize to a SimpleNamespace so the existing downstream
-            # code (message.channel / message.ts) keeps working unchanged.
-            message = SimpleNamespace(
-                channel=routing_result.get("channel") or approval_channel,
-                ts=routing_result.get("ts") or "",
-                routing_rule=routing_result.get("routing_rule"),
-                dm_sent=routing_result.get("dm_sent", False),
-            )
-            
-            # Save Slack thread reference
-            thread_id = await asyncio.to_thread(
-                self.db.save_slack_thread,
-                invoice_id=invoice.gmail_id,
-                channel_id=message.channel,
-                thread_ts=message.ts,
-                gmail_id=invoice.gmail_id,
-                organization_id=self.organization_id,
-            )
-            
-            # Update invoice with thread reference
-            self._transition_invoice_state(
-                gmail_id=invoice.gmail_id,
-                target_state="needs_approval",
-                slack_thread_id=thread_id,
-                correlation_id=correlation_id,
-            )
-            self._record_approval_snapshot(
-                ap_item_id=ap_item_id,
-                gmail_id=invoice.gmail_id,
-                channel_id=message.channel,
-                message_ts=message.ts,
-                source_channel="slack",
-                source_message_ref=invoice.gmail_id,
-                status="pending",
-                decision_payload={
-                    "budget": budget_summary,
-                    "budget_impact": budget_checks,
-                    "validation_gate": context_payload.get("validation_gate"),
-                    "approval_context": context_payload.get("approval_context"),
-                },
-            )
-            self._update_ap_item_metadata(
-                ap_item_id,
-                {
-                    "approval_requested_at": approval_requested_at,
-                    "approval_sent_to": approval_labels,
-                    "approval_delivery_targets": approval_delivery_targets,
-                    "approval_channel": message.channel,
-                    "approval_next_action": "wait_for_approval",
-                },
-            )
-            teams_status = self._send_teams_budget_card(invoice, budget_summary, context_payload)
-            if isinstance(teams_status, dict):
-                teams_state = str(teams_status.get("status") or "unknown")
+
+            # ── SECTION A: pre-write outbox + Slack delivery ────────
+            # Outbox row is recorded BEFORE the Slack call so a crash
+            # between this write and the delivery leaves a recoverable
+            # ``pending`` row a future operator can audit. Failure of
+            # the Slack call itself flips the outbox to ``failed`` and
+            # returns; no orphan, no DB write past this point.
+            dispatch_id = f"disp-{uuid.uuid4().hex[:12]}"
+            dispatch_started_at = datetime.now(timezone.utc).isoformat()
+            self._write_approval_dispatch(ap_item_id, {
+                "dispatch_id": dispatch_id,
+                "status": "pending",
+                "channel": approval_channel,
+                "thread_ts": None,
+                "started_at": dispatch_started_at,
+                "completed_at": None,
+                "error": None,
+            })
+            try:
+                routing_result = await deliver_approval_with_routing(
+                    blocks=blocks,
+                    text=f"Invoice approval needed: {invoice.vendor_name} - ${invoice.amount:,.2f}{mention_suffix}",
+                    approval_channel=approval_channel,
+                    approver_email=primary_approver_email,
+                    amount=float(invoice.amount or 0),
+                    message_type="personal_approval",
+                    organization_id=self.organization_id,
+                )
+                if not routing_result:
+                    raise RuntimeError("slack_delivery_returned_no_result")
+                message = SimpleNamespace(
+                    channel=routing_result.get("channel") or approval_channel,
+                    ts=routing_result.get("ts") or "",
+                    routing_rule=routing_result.get("routing_rule"),
+                    dm_sent=routing_result.get("dm_sent", False),
+                )
+            except Exception as slack_exc:
+                logger.error(
+                    "[ApprovalDispatch] Slack delivery failed for ap_item=%s "
+                    "dispatch_id=%s err=%s",
+                    ap_item_id, dispatch_id, slack_exc,
+                )
+                self._write_approval_dispatch(ap_item_id, {
+                    "dispatch_id": dispatch_id,
+                    "status": "failed",
+                    "channel": approval_channel,
+                    "thread_ts": None,
+                    "started_at": dispatch_started_at,
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "error": str(slack_exc),
+                })
+                return {
+                    "status": "error",
+                    "invoice_id": invoice.gmail_id,
+                    "error": str(slack_exc),
+                    "step": "slack_delivery",
+                    "dispatch_id": dispatch_id,
+                }
+
+            # ── SECTION B: critical post-delivery DB writes ─────────
+            # Slack message is now live. The next three writes
+            # (save_slack_thread, state transition, outbox flip) are
+            # all load-bearing — without them we have an orphan Slack
+            # message no one can correlate back to an AP item. If any
+            # fail we log CRITICAL with the slack_ts so the operator
+            # has a grep-able breadcrumb for manual reconciliation.
+            try:
+                thread_id = await asyncio.to_thread(
+                    self.db.save_slack_thread,
+                    invoice_id=invoice.gmail_id,
+                    channel_id=message.channel,
+                    thread_ts=message.ts,
+                    gmail_id=invoice.gmail_id,
+                    organization_id=self.organization_id,
+                )
+                self._transition_invoice_state(
+                    gmail_id=invoice.gmail_id,
+                    target_state="needs_approval",
+                    slack_thread_id=thread_id,
+                    correlation_id=correlation_id,
+                )
+                self._write_approval_dispatch(ap_item_id, {
+                    "dispatch_id": dispatch_id,
+                    "status": "dispatched",
+                    "channel": message.channel,
+                    "thread_ts": message.ts,
+                    "started_at": dispatch_started_at,
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "error": None,
+                })
+            except Exception as post_exc:
+                logger.critical(
+                    "[ApprovalDispatch] State transition FAILED after Slack "
+                    "delivery — operator must reconcile. ap_item=%s "
+                    "slack_channel=%s slack_ts=%s dispatch_id=%s err=%s",
+                    ap_item_id, message.channel, message.ts, dispatch_id, post_exc,
+                )
+                self._write_approval_dispatch(ap_item_id, {
+                    "dispatch_id": dispatch_id,
+                    "status": "orphan",
+                    "channel": message.channel,
+                    "thread_ts": message.ts,
+                    "started_at": dispatch_started_at,
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "error": f"post_delivery_state_transition_failed: {post_exc}",
+                })
+                return {
+                    "status": "error_orphan_dispatch",
+                    "invoice_id": invoice.gmail_id,
+                    "error": str(post_exc),
+                    "step": "post_delivery_state_transition",
+                    "slack_channel": message.channel,
+                    "slack_ts": message.ts,
+                    "dispatch_id": dispatch_id,
+                }
+
+            # ── SECTION C: best-effort post-dispatch work ──────────
+            # Each step has its own narrow try/except: a failure here
+            # does NOT unwind the dispatch (Slack message is live and
+            # the outbox is dispatched). Failures are logged at warning
+            # so they show up in observability without crashing the
+            # caller's intake flow.
+            try:
+                self._record_approval_snapshot(
+                    ap_item_id=ap_item_id,
+                    gmail_id=invoice.gmail_id,
+                    channel_id=message.channel,
+                    message_ts=message.ts,
+                    source_channel="slack",
+                    source_message_ref=invoice.gmail_id,
+                    status="pending",
+                    decision_payload={
+                        "budget": budget_summary,
+                        "budget_impact": budget_checks,
+                        "validation_gate": context_payload.get("validation_gate"),
+                        "approval_context": context_payload.get("approval_context"),
+                    },
+                )
+            except Exception as snap_exc:
+                logger.warning(
+                    "[ApprovalDispatch] approval snapshot record failed: %s", snap_exc,
+                )
+
+            try:
                 self._update_ap_item_metadata(
                     ap_item_id,
                     {
-                        "teams": {
-                            "state": teams_state,
-                            "channel": teams_status.get("channel_id"),
-                            "message_id": teams_status.get("message_id"),
-                            "reason": teams_status.get("reason"),
-                        }
+                        "approval_requested_at": approval_requested_at,
+                        "approval_sent_to": approval_labels,
+                        "approval_delivery_targets": approval_delivery_targets,
+                        "approval_channel": message.channel,
+                        "approval_next_action": "wait_for_approval",
                     },
                 )
-                if teams_state == "sent":
-                    self._record_approval_snapshot(
-                        ap_item_id=ap_item_id,
-                        gmail_id=invoice.gmail_id,
-                        channel_id=str(teams_status.get("channel_id") or "teams"),
-                        message_ts=str(teams_status.get("message_id") or invoice.gmail_id),
-                        source_channel="teams",
-                        source_message_ref=invoice.gmail_id,
-                        status="pending",
-                        decision_payload={
-                            "budget": budget_summary,
-                            "budget_impact": budget_checks,
-                            "validation_gate": context_payload.get("validation_gate"),
-                            "approval_context": context_payload.get("approval_context"),
+            except Exception as meta_exc:
+                logger.warning(
+                    "[ApprovalDispatch] approval metadata update failed: %s", meta_exc,
+                )
+
+            teams_status: Dict[str, Any] = {}
+            try:
+                teams_status = self._send_teams_budget_card(invoice, budget_summary, context_payload) or {}
+                if isinstance(teams_status, dict):
+                    teams_state = str(teams_status.get("status") or "unknown")
+                    self._update_ap_item_metadata(
+                        ap_item_id,
+                        {
+                            "teams": {
+                                "state": teams_state,
+                                "channel": teams_status.get("channel_id"),
+                                "message_id": teams_status.get("message_id"),
+                                "reason": teams_status.get("reason"),
+                            }
                         },
                     )
-            
-            logger.info(f"Sent approval request to Slack: {message.ts}")
+                    if teams_state == "sent":
+                        self._record_approval_snapshot(
+                            ap_item_id=ap_item_id,
+                            gmail_id=invoice.gmail_id,
+                            channel_id=str(teams_status.get("channel_id") or "teams"),
+                            message_ts=str(teams_status.get("message_id") or invoice.gmail_id),
+                            source_channel="teams",
+                            source_message_ref=invoice.gmail_id,
+                            status="pending",
+                            decision_payload={
+                                "budget": budget_summary,
+                                "budget_impact": budget_checks,
+                                "validation_gate": context_payload.get("validation_gate"),
+                                "approval_context": context_payload.get("approval_context"),
+                            },
+                        )
+            except Exception as teams_exc:
+                logger.warning(
+                    "[ApprovalDispatch] teams card delivery failed: %s", teams_exc,
+                )
+                teams_status = {"status": "error", "reason": str(teams_exc)}
+
+            logger.info("[ApprovalDispatch] Sent approval request to Slack: ts=%s dispatch_id=%s", message.ts, dispatch_id)
 
             # H4: Audit approval request dispatch (PLAN.md §4.7)
             if ap_item_id:
@@ -2049,21 +2266,29 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
                                 "slack_ts": message.ts,
                                 "vendor": invoice.vendor_name,
                                 "amount": invoice.amount,
+                                "dispatch_id": dispatch_id,
                             },
                             "organization_id": self.organization_id,
                             "source": "invoice_workflow",
                         },
                     )
-                except Exception:
-                    pass  # Non-fatal
+                except Exception as audit_exc:
+                    logger.warning(
+                        "[ApprovalDispatch] audit event append failed: %s", audit_exc,
+                    )
 
             # §6: Set waiting condition — agent is paused until approval_received
             if ap_item_id:
-                self.set_waiting_condition(
-                    ap_item_id, "approval_response",
-                    expected_by=(datetime.now(timezone.utc) + timedelta(hours=4)).isoformat(),
-                    context={"channel": message.channel, "message_ts": message.ts, "approvers": approval_labels},
-                )
+                try:
+                    self.set_waiting_condition(
+                        ap_item_id, "approval_response",
+                        expected_by=(datetime.now(timezone.utc) + timedelta(hours=4)).isoformat(),
+                        context={"channel": message.channel, "message_ts": message.ts, "approvers": approval_labels},
+                    )
+                except Exception as wait_exc:
+                    logger.warning(
+                        "[ApprovalDispatch] waiting condition set failed: %s", wait_exc,
+                    )
 
             return {
                 "status": "pending_approval",
@@ -2072,15 +2297,13 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
                 "slack_ts": message.ts,
                 "budget": budget_summary,
                 "teams": teams_status,
+                "dispatch_id": dispatch_id,
             }
-            
-        except Exception as e:
-            logger.error(f"Failed to send Slack approval: {e}")
-            return {
-                "status": "error",
-                "invoice_id": invoice.gmail_id,
-                "error": str(e),
-            }
+        finally:
+            if lock_conn is not None:
+                release_box_lock(
+                    self.db, lock_conn, self.organization_id, lock_box_id,
+                )
 
     def _send_teams_budget_card(
         self,
