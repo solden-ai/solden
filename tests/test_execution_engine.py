@@ -35,7 +35,11 @@ class TestHandlerRegistry:
             "lookup_vendor_master", "lookup_po", "lookup_grn", "run_three_way_match",
             "post_bill", "pre_post_validate", "schedule_payment", "reverse_erp_post",
             "create_box", "update_box_fields", "move_box_stage", "post_timeline_entry",
-            "link_vendor_to_box", "set_waiting_condition", "clear_waiting_condition", "set_pending_plan",
+            "link_vendor_to_box", "set_waiting_condition", "clear_waiting_condition",
+            # Group 8 (2026-05-07): "set_pending_plan" removed from
+            # spec — pending_plan persistence happens atomically
+            # inside _execute_body when an action returns
+            # waiting_condition (Group 2 atomic write).
             "send_slack_approval", "send_slack_exception", "send_slack_override_window",
             "send_slack_digest",
             "send_teams_approval", "post_gmail_notification",

@@ -427,7 +427,24 @@ async def attempt_self_recovery(
         for token in ("timeout", "temporar", "unavailable", "recoverable", "retry")
     )
 
-    if current_state in {"failed_post", "ready_to_post"} or status in {"failed_post"} or transient_failure:
+    # Group 8 fix (2026-05-07): the trigger condition used to include
+    # ``current_state in {"failed_post", "ready_to_post"}`` — but
+    # ``ready_to_post`` is a perfectly normal pre-post state, not a
+    # failure. A successful skill response on a box in
+    # ``ready_to_post`` would fire ``resume_workflow``, kicking the
+    # workflow forward outside the planner machinery and racing with
+    # whatever follow-on the engine had queued.
+    #
+    # Now: only run resume_workflow on an actual failure signal —
+    # the box is already in ``failed_post``, the response status
+    # carries ``failed_post``, OR the response/last_error mention
+    # transient-failure tokens. A 200-OK response on a healthy box
+    # never triggers recovery.
+    response_indicates_failure = (
+        status in {"failed_post", "error", "failed"}
+        or transient_failure
+    )
+    if (current_state == "failed_post" or response_indicates_failure):
         try:
             from clearledgr.services.invoice_workflow import get_invoice_workflow
 

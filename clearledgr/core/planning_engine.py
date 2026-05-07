@@ -72,11 +72,19 @@ class DeterministicPlanningEngine:
         self._db = db
 
     def _get_db(self) -> Any:
+        # Group 8 fix (2026-05-07): no longer cache the resolved
+        # singleton on ``self._db``. The previous behavior captured
+        # whatever ``get_db()`` returned on first call and held it
+        # for the engine's lifetime — so a pool reset (RDS failover,
+        # test teardown, ``reset_service_singletons`` autouse
+        # fixture) left this engine pointing at a dead handle.
+        # ``get_db()`` is itself idempotent + cheap (returns the
+        # current process-wide singleton); calling it per-resolve
+        # picks up any reset transparently.
         if self._db is not None:
             return self._db
         from clearledgr.core.database import get_db
-        self._db = get_db()
-        return self._db
+        return get_db()
 
     def plan(self, event: AgentEvent, box_state: Optional[Dict[str, Any]] = None) -> Plan:
         """Produce a Plan from event + Box state. No LLM calls."""

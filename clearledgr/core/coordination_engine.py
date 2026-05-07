@@ -174,7 +174,12 @@ class CoordinationEngine:
             "link_vendor_to_box": self._handle_link_vendor,
             "set_waiting_condition": self._handle_set_waiting,
             "clear_waiting_condition": self._handle_clear_waiting,
-            "set_pending_plan": self._handle_set_pending_plan,
+            # Group 8 cleanup (2026-05-07): "set_pending_plan" handler
+            # removed. No planner emits this action — pending_plan is
+            # persisted automatically inside ``_execute_body`` when an
+            # action returns ``waiting_condition`` (atomic with the
+            # waiting_condition write per Group 2). Re-add only if a
+            # new planner branch needs an explicit pause-now action.
 
             # §3 Communication Actions. ``send_vendor_email`` and
             # ``draft_vendor_response`` were dropped per the 2026-05-02
@@ -215,7 +220,10 @@ class CoordinationEngine:
             "initiate_iban_verification": self._handle_iban_verify,
             "evaluate_grn_result": self._handle_evaluate_grn,
             "unsnooze": self._handle_unsnooze,
-            "apply_label_matched": self._handle_apply_label,  # alias
+            # Group 8 cleanup (2026-05-07): "apply_label_matched"
+            # alias removed. Was registered as an alias for
+            # _handle_apply_label but no planner emits the alias name.
+            # Real callers use "apply_label" with a ``label`` param.
             # §12.2: ERP connectivity recheck + resume
             "check_erp_connectivity": self._handle_check_erp_connectivity,
             "evaluate_erp_recheck": self._handle_evaluate_erp_recheck,
@@ -1107,6 +1115,19 @@ class CoordinationEngine:
                 plan=plan,
             )
 
+            # Group 8 fix (2026-05-07): if this step aborts, skip
+            # the rest of the flow. Previously the loop continued
+            # unconditionally — so when ``move_box_stage(needs_info)``
+            # failed (e.g. box already in a terminal state where the
+            # transition is illegal), the cascade still fired
+            # ``send_slack_exception``. Operators saw a "this box
+            # needs info" Slack card for a box whose state never
+            # actually moved. Now: abort emits a single timeline
+            # row + the box-exception path catches it via
+            # ``_move_to_exception``; no misleading downstream cards.
+            if result.get("_abort"):
+                break
+
     def _move_to_exception(self, box_id: str, action_name: str, error: str) -> None:
         """Move Box to exception stage on persistent failure.
 
@@ -1817,7 +1838,32 @@ class CoordinationEngine:
             )
             result = await wf._post_to_erp(invoice)
             if result.get("status") in ("posted", "success", "posted_to_erp"):
-                return {"ok": True, "erp_reference": result.get("reference_id")}
+                erp_ref = result.get("reference_id")
+                # Group 8 backstop (2026-05-07): the workflow's
+                # ``_post_to_erp`` is supposed to persist
+                # ``erp_reference`` via its own state-transition
+                # path, but if that ever returns success without
+                # writing the column (refactor regression, partial
+                # commit, transaction rollback after the ERP call
+                # succeeded), the next action — typically
+                # ``send_slack_override_window`` — reads the AP
+                # row and silently no-ops because it sees an empty
+                # ``erp_reference``. Belt-and-suspenders: write the
+                # ref ourselves. ``update_ap_item`` is idempotent
+                # (re-writing the same value is a no-op), so this
+                # is safe even when the workflow already persisted.
+                if erp_ref and plan.box_id:
+                    try:
+                        await asyncio.to_thread(
+                            self.db.update_ap_item,
+                            plan.box_id, erp_reference=erp_ref,
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "[CoordinationEngine] post_bill erp_reference backstop write failed for box=%s: %s",
+                            plan.box_id, exc,
+                        )
+                return {"ok": True, "erp_reference": erp_ref}
             return {"_abort": True, "error": result.get("reason", "ERP post failed")}
         except Exception as exc:
             return {"_abort": True, "error": str(exc)}
@@ -2784,14 +2830,10 @@ class CoordinationEngine:
                 logger.debug("[CoordinationEngine] link_vendor: %s", exc)
         return {"ok": True}
 
-    async def _handle_set_pending_plan(self, action: Action, plan: Plan) -> dict:
-        """§3: Persist the current plan to the Box state for resumption."""
-        if plan.box_id:
-            remaining = plan.remaining_from(0)  # Caller should pass step index
-            await asyncio.to_thread(
-                self.db.update_ap_item, plan.box_id, pending_plan=remaining.to_json(),
-            )
-        return {"ok": True}
+    # Group 8 cleanup (2026-05-07): _handle_set_pending_plan removed
+    # along with its dispatcher entry. Pending-plan persistence is
+    # handled atomically inside _execute_body when an action returns
+    # waiting_condition (Group 2 atomic wait+plan write).
 
     async def _handle_send_slack_exception(self, action: Action, plan: Plan) -> dict:
         """§3: Post an exception notification to the AP Slack channel."""
@@ -3022,14 +3064,53 @@ class CoordinationEngine:
 
 _TRANSIENT_ERRORS = {"timeout", "rate_limit", "429", "502", "503", "504", "temporary"}
 _DEPENDENCY_ERRORS = {
-    "connection", "unavailable", "offline", "dns", "refused",
+    "unavailable", "offline", "dns", "refused",
     "unreachable", "not responding", "cannot connect", "erp_unavailable",
 }
 _LLM_ERRORS = {"anthropic", "claude", "llm", "safety", "malformed"}
 
 
 def _classify_failure(exc: Exception) -> str:
-    """§5.2: Classify failure as transient, persistent, dependency, or llm."""
+    """§5.2: Classify failure as transient, persistent, dependency, or llm.
+
+    Group 8 fix (2026-05-07): substring matching on the lowercased
+    exception message used to misclassify Postgres ``OperationalError``
+    ("connection closed", "connection refused") as dependency, which
+    triggered a 15-minute pause-and-resume on what's actually a
+    pool-reconnect-and-retry case. Now type-based checks fire first
+    for the well-known exception classes (psycopg, anthropic, httpx),
+    falling through to substring matching only as a last resort.
+    The substring set also drops "connection" since that token
+    overlapped DB pool errors and ERP outages indistinguishably.
+    """
+    # Type-based classification — preferred, unambiguous.
+    try:
+        import psycopg
+        if isinstance(exc, (psycopg.OperationalError, psycopg.InterfaceError)):
+            # DB pool blip / connection closed → transient. The pool
+            # discards bad conns on putconn; the next call gets a
+            # fresh one. Don't confuse with "ERP unreachable" which
+            # would warrant a 15-min recheck wait.
+            return "transient"
+    except Exception:  # noqa: BLE001
+        pass
+
+    try:
+        import httpx
+        if isinstance(exc, (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout)):
+            return "dependency"
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Anthropic SDK exceptions are LLM-classified.
+    exc_module = getattr(type(exc), "__module__", "") or ""
+    if exc_module.startswith("anthropic"):
+        return "llm"
+
+    # Substring fallback — unchanged outcomes for backward compat
+    # except that "connection" no longer routes to dependency
+    # (psycopg.OperationalError above takes that branch first; any
+    # remaining "connection" string is treated as persistent).
     msg = str(exc).lower()
     if any(t in msg for t in _TRANSIENT_ERRORS):
         return "transient"
