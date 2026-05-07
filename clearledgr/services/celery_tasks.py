@@ -348,6 +348,43 @@ def fire_pending_timers() -> dict:
 
 
 @app.task
+def reap_override_windows_tick() -> dict:
+    """Dedicated Celery beat task for the override-window reaper.
+
+    Group 6 (2026-05-07): the override reaper was historically
+    bundled into ``fire_pending_timers`` alongside snooze reap +
+    ERP retry drain + queue-depth checks. That made operational
+    debugging fuzzy: a Datadog alert on
+    ``fire_pending_timers.duration`` could be triggered by any of
+    five different reapers. Splitting the override reaper into its
+    own task means:
+
+      * Per-task metrics (duration, count, error rate) attribute
+        cleanly to the override-window subsystem.
+      * Tighter cadence (30s vs 60s) reduces max time-from-expiry-
+        to-reap. Override windows are 15 minutes by default and
+        can shrink to 15-min minimum on medium-confidence posts;
+        a 30s sweep keeps the tail latency under a minute.
+      * Failures isolate: if the reaper raises, only override
+        reaping is affected — snooze, ERP retry, queue depth all
+        continue on their own task.
+
+    Runs alongside the FastAPI ``_override_window_reaper_loop`` for
+    redundancy: if the FastAPI process dies, Celery beat still
+    sweeps; if Celery beat dies, FastAPI still sweeps. Both call
+    the same idempotent reaper so concurrent execution is safe.
+    """
+    import asyncio
+    try:
+        from clearledgr.services.agent_background import reap_expired_override_windows
+        count = asyncio.run(reap_expired_override_windows())
+        return {"status": "ok", "reaped": count}
+    except Exception as exc:  # noqa: BLE001
+        logger.error("[reap_override_windows_tick] failed: %s", exc)
+        return {"status": "error", "error": str(exc)}
+
+
+@app.task
 def reclaim_stale_events() -> dict:
     """§12.1: Reclaim events from dead workers.
 

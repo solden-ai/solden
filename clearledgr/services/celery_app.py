@@ -83,6 +83,16 @@ app.config_from_object(
                 "task": "clearledgr.services.celery_tasks.fire_pending_timers",
                 "schedule": 60.0,  # Every 60 seconds (vs old 15-min polling)
             },
+            # Group 6 (2026-05-07): dedicated override-window reaper.
+            # Split out from fire_pending_timers so the metrics
+            # attribute cleanly and a failure in one reaper doesn't
+            # mask another. 30s cadence keeps tail latency from
+            # window-expiry to box-unstuck under a minute even when
+            # the FastAPI background loop is unavailable.
+            "reap-override-windows": {
+                "task": "clearledgr.services.celery_tasks.reap_override_windows_tick",
+                "schedule": 30.0,
+            },
             # §12.1: Reclaim stale events from dead workers
             "reclaim-stale-events": {
                 "task": "clearledgr.services.celery_tasks.reclaim_stale_events",
