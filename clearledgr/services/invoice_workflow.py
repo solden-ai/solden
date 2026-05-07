@@ -570,9 +570,12 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
     ):
         """Assemble vendor context and call APDecisionService. Never raises.
 
-        Returns an APDecision object.  If the API key is absent or Claude fails,
-        the service's built-in fallback reproduces the existing rule-based routing
-        so the workflow is never blocked.
+        Returns an APDecision object. APDecisionService is the
+        deterministic 10-step policy cascade (rules decide; the LLM
+        does not get a vote on routing). If the cascade itself fails
+        for any reason the legacy fallback path inside the service
+        reproduces the rule-based routing so the workflow is never
+        blocked.
         """
         from clearledgr.services.ap_decision import APDecisionService
 
@@ -741,7 +744,7 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
                 existing_risks = getattr(invoice, "reasoning_risks", None) or []
                 invoice.reasoning_risks = existing_risks + vendor_risk["flags"]
 
-            # §8.1: Build Box Summary for compact Claude context
+            # §8.1: Build Box Summary for compact LLM-explanation context
             _box_summary_text = ""
             try:
                 _ap_id = self._lookup_ap_item_id(
@@ -1164,9 +1167,9 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
                 self.organization_id,
             )
 
-        # --- AP reasoning layer: Claude decides with vendor context ---
+        # --- AP reasoning layer: rule cascade decides with vendor context ---
         # If a pre-computed decision was provided (e.g. from the agent planning loop),
-        # skip the internal Claude call to avoid a double Sonnet invocation.
+        # skip the internal AP-decision call to avoid a double evaluation.
         if ap_decision is None:
             _decision_start = _time.monotonic()
             ap_decision = await self._get_ap_decision(invoice, validation_gate)
@@ -1275,7 +1278,7 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
             },
         }
 
-        # Persist Claude's reasoning into ap_item metadata so the Gmail sidebar
+        # Persist the AP decision's reasoning into ap_item metadata so the Gmail sidebar
         # card can show it proactively (without requiring the "Why?" button click).
         # Use invoice_id directly — it was returned by save_invoice_status() above,
         # so we know the row exists. _lookup_ap_item_id would silently return None here.
@@ -1327,8 +1330,8 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
                     "[InvoiceWorkflow] recovery plan generation skipped: %s", plan_exc,
                 )
 
-        # Deterministic gate is a hard guardrail that overrides Claude.
-        # If it fires, route to human — but use Claude's reasoning as context.
+        # Deterministic gate is a hard guardrail that overrides the AP-decision recommendation.
+        # If it fires, route to human — but use the AP-decision's reasoning as context.
         if not validation_gate.get("passed", True):
             self._record_validation_gate_failure(
                 invoice,
@@ -1386,7 +1389,7 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
                 result.setdefault("reason_codes", validation_gate.get("reason_codes") or [])
             return result
 
-        # Claude says needs_info: transition to needs_info state with the exact question.
+        # AP decision says needs_info: transition to needs_info state with the exact question.
         if ap_decision.recommendation == "needs_info" and ap_decision.info_needed:
             logger.info(
                 "AP decision needs_info for %s: %s",
@@ -1439,7 +1442,7 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
         except Exception as e:
             logger.warning(f"Failed to get GL suggestion from learning: {e}")
         
-        # Route based on Claude's recommendation (gate already passed above).
+        # Route based on the AP decision's recommendation (gate already passed above).
         if ap_decision.recommendation == "approve":
             logger.info(
                 "AP decision approve for %s (confidence=%.2f fallback=%s)",
@@ -1681,10 +1684,19 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
             except Exception as e:
                 logger.warning(f"Failed to record auto-approval for learning: {e}")
 
-            # VENDOR INTELLIGENCE: Update vendor profile from this outcome
+            # ``agent_rec`` is read once, before either of the two
+            # try blocks below, so a failure in the first one (vendor
+            # profile outcome write) does NOT leave ``agent_rec``
+            # unbound for the second (adaptive threshold record).
+            # That latent NameError used to be masked by the bare
+            # ``except Exception`` on the second block — same shape
+            # as the C2 bug fixed in d0c0e69.
+            agent_rec = (invoice.vendor_intelligence or {}).get("ap_decision")
+
+            # VENDOR INTELLIGENCE: Update vendor profile from this outcome.
+            # ``ap_item_id`` was already resolved at the top of this
+            # method; reuse it instead of a redundant DB roundtrip.
             try:
-                ap_item_id = self._lookup_ap_item_id(invoice.gmail_id)
-                agent_rec = (invoice.vendor_intelligence or {}).get("ap_decision")
                 if hasattr(self.db, "update_vendor_profile_from_outcome") and ap_item_id:
                     await asyncio.to_thread(
                         self.db.update_vendor_profile_from_outcome,

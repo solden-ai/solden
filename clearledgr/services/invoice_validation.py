@@ -1508,7 +1508,7 @@ class InvoiceValidationMixin:
         if invoice.currency and invoice.vendor_name:
             try:
                 vendor_profile = (
-                    self.db.get_vendor_profile(invoice.vendor_name, self.organization_id)
+                    self.db.get_vendor_profile(self.organization_id, invoice.vendor_name)
                     if hasattr(self.db, "get_vendor_profile") else None
                 )
                 if vendor_profile:
@@ -2505,6 +2505,14 @@ class InvoiceValidationMixin:
         # ---------------------------------------------------------------
         _record_rule_verdict("confidence_gate", _baseline_confidence_gate, severity="warning")
         _baseline_fraud_controls = len(reasons)
+        # ``_exc_fraud_controls`` tracks the FIRST exception caught by
+        # any of the inner sub-check try/excepts (first_payment_hold,
+        # velocity, prompt_injection, vendor_risk). If any sub-check
+        # raised and was swallowed, the umbrella verdict is promoted
+        # to ``skip`` instead of silently recording ``pass`` because
+        # no reason was added. Same shape as the M2 plumbing for the
+        # other 11 rule blocks.
+        _exc_fraud_controls: Optional[BaseException] = None
         # 6) Fraud-control primitives (DESIGN_THESIS.md §8 — architectural,
         #    not configurational). Every check here uses severity="error"
         #    so it is unambiguously blocking. Numeric parameters come from
@@ -2673,6 +2681,8 @@ class InvoiceValidationMixin:
                     "[Gate] First payment hold evaluation raised: %s",
                     first_payment_exc,
                 )
+                if _exc_fraud_controls is None:
+                    _exc_fraud_controls = first_payment_exc
 
             # 6c) Vendor velocity — block if vendor has submitted more than
             # the configured max invoices in the last 7 days.
@@ -2723,6 +2733,8 @@ class InvoiceValidationMixin:
                 logger.warning(
                     "[Gate] Velocity evaluation raised: %s", velocity_exc
                 )
+                if _exc_fraud_controls is None:
+                    _exc_fraud_controls = velocity_exc
 
             # 6d) Prompt injection detection across untrusted invoice fields.
             try:
@@ -2782,6 +2794,8 @@ class InvoiceValidationMixin:
                 logger.warning(
                     "[Gate] Injection detection raised: %s", injection_exc
                 )
+                if _exc_fraud_controls is None:
+                    _exc_fraud_controls = injection_exc
 
             # 6e) Vendor risk score gating — §3: "the agent's autonomy
             # thresholds adjust accordingly" for high-risk vendors.
@@ -2820,12 +2834,17 @@ class InvoiceValidationMixin:
                         _ap_id = getattr(self, "_current_ap_item_id", None) or (invoice.gmail_id if hasattr(invoice, "gmail_id") else None)
                         if _ap_id and hasattr(self, "add_fraud_flag"):
                             self.add_fraud_flag(_ap_id, f"vendor_high_risk:{risk_result.score}")
-                    except Exception:
-                        pass
+                    except Exception as flag_exc:
+                        logger.debug(
+                            "[Gate] add_fraud_flag failed for ap_item=%s (non-fatal): %s",
+                            _ap_id, flag_exc,
+                        )
             except Exception as risk_exc:
                 logger.warning(
                     "[Gate] Vendor risk evaluation raised: %s", risk_exc
                 )
+                if _exc_fraud_controls is None:
+                    _exc_fraud_controls = risk_exc
 
         # Gate "passed" is governed by severity, not raw reason-code count.
         # - severity="error":  definitive failure; blocks auto-approval.
@@ -2854,7 +2873,10 @@ class InvoiceValidationMixin:
         # per section), so by the time we reach the gate-assembly block
         # every rule that ran has a verdict in ``rule_results`` —
         # passes included, not just failures.
-        _record_rule_verdict("fraud_controls", _baseline_fraud_controls, severity="error")
+        _record_rule_verdict(
+            "fraud_controls", _baseline_fraud_controls,
+            severity="error", exc=_exc_fraud_controls,
+        )
 
         gate = {
             "passed": len(blocking_reasons) == 0,
