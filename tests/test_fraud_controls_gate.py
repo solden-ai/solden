@@ -912,3 +912,95 @@ class TestEndToEndCeilingWithPhase11Enforcement:
         assert payload.get("pre_override_recommendation") == "approve"
         assert payload.get("enforced_recommendation") == "escalate"
         assert "payment_ceiling_exceeded" in (payload.get("gate_reason_codes") or [])
+
+
+class TestFraudFlagCASRace:
+    """Phase 1.2a — concurrent flag additions must not lose a flag.
+
+    Before the M3 CAS fix, ``add_fraud_flag`` did a plain
+    read-modify-write: two concurrent calls reading the same
+    ``fraud_flags`` list would each append, and the second write
+    would overwrite the first. The fix loops with the existing
+    ``_expected_updated_at`` optimistic-lock so a stale write is
+    retried with the freshest state.
+    """
+
+    def test_add_fraud_flag_retries_on_optimistic_lock_failure(self, tmp_path):
+        """First update returns False (lock check failed → another writer
+        beat us). The second attempt re-reads, re-applies, and succeeds."""
+        from clearledgr.services.invoice_workflow import InvoiceWorkflowService
+
+        svc = InvoiceWorkflowService(organization_id="org_cas")
+
+        # Simulated DB: get_ap_item returns successively newer rows; the
+        # first update_ap_item call returns False, the second returns True.
+        rows = [
+            {"id": "ap-1", "fraud_flags": [{"flag_type": "existing"}], "updated_at": "t0"},
+            {"id": "ap-1", "fraud_flags": [{"flag_type": "existing"}, {"flag_type": "from_other_writer"}], "updated_at": "t1"},
+        ]
+        get_calls = []
+        update_calls = []
+
+        class _FakeDB:
+            def get_ap_item(self_inner, ap_item_id):
+                get_calls.append(ap_item_id)
+                return rows[min(len(get_calls) - 1, len(rows) - 1)]
+
+            def update_ap_item(self_inner, ap_item_id, **kwargs):
+                update_calls.append(kwargs)
+                # First attempt → optimistic-lock check fails (False).
+                # Second attempt → succeeds (True).
+                return len(update_calls) >= 2
+
+        svc.db = _FakeDB()
+        svc.add_fraud_flag("ap-1", "new_flag")
+
+        assert len(get_calls) == 2, "Expected one re-read after lock failure"
+        assert len(update_calls) == 2, "Expected one retry after lock failure"
+        # Second update merges with the freshest fraud_flags list.
+        final_flags = update_calls[1]["fraud_flags"]
+        flag_types = [f.get("flag_type") for f in final_flags]
+        assert "existing" in flag_types
+        assert "from_other_writer" in flag_types, "Concurrent writer's flag must survive"
+        assert "new_flag" in flag_types, "Our flag must land in the final list"
+        # Optimistic-lock token must be passed on each attempt.
+        assert update_calls[0]["_expected_updated_at"] == "t0"
+        assert update_calls[1]["_expected_updated_at"] == "t1"
+
+    def test_resolve_fraud_flag_retries_on_optimistic_lock_failure(self, tmp_path):
+        """Resolution under contention re-reads the freshest flags list
+        before applying the resolved_at/resolved_by stamp."""
+        from clearledgr.services.invoice_workflow import InvoiceWorkflowService
+
+        svc = InvoiceWorkflowService(organization_id="org_cas_resolve")
+
+        rows = [
+            {"id": "ap-2", "fraud_flags": [{"flag_type": "to_resolve"}], "updated_at": "t0"},
+            {"id": "ap-2", "fraud_flags": [
+                {"flag_type": "to_resolve"},
+                {"flag_type": "added_by_other"},
+            ], "updated_at": "t1"},
+        ]
+        update_calls = []
+        get_calls = []
+
+        class _FakeDB:
+            def get_ap_item(self_inner, ap_item_id):
+                get_calls.append(ap_item_id)
+                return rows[min(len(get_calls) - 1, len(rows) - 1)]
+
+            def update_ap_item(self_inner, ap_item_id, **kwargs):
+                update_calls.append(kwargs)
+                return len(update_calls) >= 2
+
+        svc.db = _FakeDB()
+        svc.resolve_fraud_flag("ap-2", "to_resolve", resolved_by="auditor@example.com")
+
+        assert len(update_calls) == 2
+        final_flags = update_calls[1]["fraud_flags"]
+        # The resolved flag must carry resolved_at + resolved_by; the
+        # concurrently-added flag must remain in the list.
+        resolved = next(f for f in final_flags if f["flag_type"] == "to_resolve")
+        assert resolved.get("resolved_at")
+        assert resolved.get("resolved_by") == "auditor@example.com"
+        assert any(f["flag_type"] == "added_by_other" for f in final_flags)

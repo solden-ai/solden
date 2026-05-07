@@ -43,6 +43,21 @@ class APDecision:
     gate_override: bool = False    # True if enforce_gate_constraint overrode
     original_recommendation: Optional[str] = None  # original rec, if overridden
 
+    def __post_init__(self) -> None:
+        # Defence-in-depth boundary check: any rule path that produces a
+        # recommendation outside ``_VALID_RECOMMENDATIONS`` is a bug
+        # (the C1 ternary tautology in _rule_match_to_decision was one
+        # such path — both arms returned 'needs_info', masking what was
+        # supposed to be 'escalate'). Catching it here surfaces the
+        # mistake on the first call instead of silently emitting an
+        # invalid recommendation downstream where it gets coerced or
+        # ignored.
+        if self.recommendation not in _VALID_RECOMMENDATIONS:
+            raise ValueError(
+                f"APDecision.recommendation must be one of "
+                f"{sorted(_VALID_RECOMMENDATIONS)}; got {self.recommendation!r}"
+            )
+
 
 _VALID_WHEN_GATE_FAILED = frozenset({"escalate", "needs_info", "reject"})
 

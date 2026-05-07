@@ -177,30 +177,72 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
         """Clear the pending plan when execution completes."""
         self.db.update_ap_item(ap_item_id, pending_plan=None)
 
+    _FRAUD_FLAG_CAS_ATTEMPTS = 5
+
     def add_fraud_flag(self, ap_item_id: str, flag_type: str) -> None:
-        """Add a fraud flag to the Box."""
-        item = self.db.get_ap_item(ap_item_id)
-        flags = (item or {}).get("fraud_flags") or []
-        if isinstance(flags, str):
-            flags = json.loads(flags) if flags else []
-        flags.append({
-            "flag_type": flag_type,
-            "detected_at": datetime.now(timezone.utc).isoformat(),
-        })
-        self.db.update_ap_item(ap_item_id, fraud_flags=flags)
+        """Add a fraud flag to the Box.
+
+        Uses ``update_ap_item``'s ``_expected_updated_at`` optimistic-lock
+        check to fix the read-modify-write race between concurrent
+        flag additions: without it, two intake pipelines flagging the
+        same box at the same instant would each read the same prior
+        list, append separately, and one of the two flags would be
+        silently lost on the second write.
+        """
+        for _attempt in range(self._FRAUD_FLAG_CAS_ATTEMPTS):
+            item = self.db.get_ap_item(ap_item_id)
+            if not item:
+                return
+            flags = item.get("fraud_flags") or []
+            if isinstance(flags, str):
+                flags = json.loads(flags) if flags else []
+            flags.append({
+                "flag_type": flag_type,
+                "detected_at": datetime.now(timezone.utc).isoformat(),
+            })
+            ok = self.db.update_ap_item(
+                ap_item_id,
+                fraud_flags=flags,
+                _expected_updated_at=item.get("updated_at"),
+            )
+            if ok:
+                return
+        logger.warning(
+            "[InvoiceWorkflow] add_fraud_flag exhausted CAS retries for "
+            "ap_item=%s flag=%s; flag may be lost under contention",
+            ap_item_id, flag_type,
+        )
 
     def resolve_fraud_flag(self, ap_item_id: str, flag_type: str, resolved_by: str) -> None:
-        """Mark a fraud flag as resolved."""
-        item = self.db.get_ap_item(ap_item_id)
-        flags = (item or {}).get("fraud_flags") or []
-        if isinstance(flags, str):
-            flags = json.loads(flags) if flags else []
-        for flag in flags:
-            if flag.get("flag_type") == flag_type and not flag.get("resolved_at"):
-                flag["resolved_at"] = datetime.now(timezone.utc).isoformat()
-                flag["resolved_by"] = resolved_by
-                break
-        self.db.update_ap_item(ap_item_id, fraud_flags=flags)
+        """Mark a fraud flag as resolved.
+
+        Same CAS pattern as ``add_fraud_flag`` so resolving and adding
+        a flag concurrently can't lose the resolution timestamp.
+        """
+        for _attempt in range(self._FRAUD_FLAG_CAS_ATTEMPTS):
+            item = self.db.get_ap_item(ap_item_id)
+            if not item:
+                return
+            flags = item.get("fraud_flags") or []
+            if isinstance(flags, str):
+                flags = json.loads(flags) if flags else []
+            for flag in flags:
+                if flag.get("flag_type") == flag_type and not flag.get("resolved_at"):
+                    flag["resolved_at"] = datetime.now(timezone.utc).isoformat()
+                    flag["resolved_by"] = resolved_by
+                    break
+            ok = self.db.update_ap_item(
+                ap_item_id,
+                fraud_flags=flags,
+                _expected_updated_at=item.get("updated_at"),
+            )
+            if ok:
+                return
+        logger.warning(
+            "[InvoiceWorkflow] resolve_fraud_flag exhausted CAS retries for "
+            "ap_item=%s flag=%s; resolution may be lost under contention",
+            ap_item_id, flag_type,
+        )
 
     @property
     def slack_channel(self) -> str:
