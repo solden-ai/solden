@@ -66,14 +66,36 @@ export function useBootstrapRefresh() {
   return useContext(BootstrapContext).refresh;
 }
 
+// The bootstrap payload exposes the caller's organization in three
+// places depending on whether the API serialised the org as a nested
+// object, a top-level field, or only on the user record. We accept
+// any of them.
+//
+// Returning ``null`` when none is present is intentional: the
+// pre-fix shape coerced to the literal string ``'default'``, which
+// any downstream caller would then send to the API as
+// ``?organization_id=default``. That mirrors the M4 backend
+// landmine — a degraded bootstrap (network error, partial response,
+// session without an org) would silently scope every fetch to a
+// shared bucket. Returning null forces backends and tests to
+// reject the request explicitly. The api/client.js wrapper renders
+// the failure as a session error rather than papering over it.
 export function useOrgId() {
   const bootstrap = useBootstrap();
-  return (
+  const candidate = (
     bootstrap?.organization?.id ||
     bootstrap?.organization_id ||
     bootstrap?.current_user?.organization_id ||
-    'default'
+    null
   );
+  if (!candidate && bootstrap) {
+    // Bootstrap fetched, but no org — that's a hard error condition
+    // (session without org). Log so it surfaces in the browser
+    // console rather than coercing silently.
+    // eslint-disable-next-line no-console
+    console.error('[bootstrap] session has no organization_id', bootstrap);
+  }
+  return candidate;
 }
 
 export function useUserEmail() {
