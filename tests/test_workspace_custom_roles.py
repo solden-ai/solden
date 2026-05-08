@@ -209,6 +209,7 @@ def test_update_custom_role_preserves_id(db):
     )
     updated = db.update_custom_role(
         row["id"],
+        "default",
         permissions=[PERMISSION_APPROVE_INVOICES, PERMISSION_VIEW_AUDIT_LOG],
         description="updated",
     )
@@ -223,7 +224,23 @@ def test_update_with_empty_permissions_raises(db):
         permissions=[PERMISSION_VIEW_AUDIT_LOG],
     )
     with pytest.raises(ValueError):
-        db.update_custom_role(row["id"], permissions=[])
+        db.update_custom_role(row["id"], "default", permissions=[])
+
+
+def test_update_custom_role_blocks_cross_tenant(db):
+    """M3 fail-closed: an update against the wrong org returns None."""
+    row = db.create_custom_role(
+        organization_id="default", name="X",
+        permissions=[PERMISSION_VIEW_AUDIT_LOG],
+    )
+    # Same role id, wrong org → None (no-op, no SQL UPDATE touches the row).
+    assert db.update_custom_role(
+        row["id"], "other-tenant",
+        permissions=[PERMISSION_APPROVE_INVOICES],
+    ) is None
+    # Original row unchanged.
+    untouched = db.get_custom_role(row["id"], "default")
+    assert sorted(untouched["permissions"]) == [PERMISSION_VIEW_AUDIT_LOG]
 
 
 def test_delete_custom_role(db):
@@ -231,9 +248,20 @@ def test_delete_custom_role(db):
         organization_id="default", name="X",
         permissions=[PERMISSION_VIEW_AUDIT_LOG],
     )
-    assert db.delete_custom_role(row["id"]) is True
-    assert db.get_custom_role(row["id"]) is None
-    assert db.delete_custom_role(row["id"]) is False  # already gone
+    assert db.delete_custom_role(row["id"], "default") is True
+    assert db.get_custom_role(row["id"], "default") is None
+    assert db.delete_custom_role(row["id"], "default") is False  # already gone
+
+
+def test_delete_custom_role_blocks_cross_tenant(db):
+    """M3 fail-closed: a delete from the wrong org is a no-op."""
+    row = db.create_custom_role(
+        organization_id="default", name="X",
+        permissions=[PERMISSION_VIEW_AUDIT_LOG],
+    )
+    assert db.delete_custom_role(row["id"], "other-tenant") is False
+    # Row still exists in default.
+    assert db.get_custom_role(row["id"], "default") is not None
 
 
 def test_resolve_custom_role_permissions(db):
@@ -241,14 +269,16 @@ def test_resolve_custom_role_permissions(db):
         organization_id="default", name="X",
         permissions=[PERMISSION_APPROVE_INVOICES, PERMISSION_VIEW_AUDIT_LOG],
     )
-    perms = db.resolve_custom_role_permissions(row["id"])
+    perms = db.resolve_custom_role_permissions(row["id"], "default")
     assert PERMISSION_APPROVE_INVOICES in perms
+    # Wrong org → empty (cross-tenant fail-closed).
+    assert db.resolve_custom_role_permissions(row["id"], "other-tenant") == frozenset()
     # Unknown ids return frozenset() — never raise
-    assert db.resolve_custom_role_permissions("cr_nonexistent") == frozenset()
-    assert db.resolve_custom_role_permissions(None) == frozenset()
+    assert db.resolve_custom_role_permissions("cr_nonexistent", "default") == frozenset()
+    assert db.resolve_custom_role_permissions(None, "default") == frozenset()
     # Standard role tokens (not "cr_") collapse to frozenset() so the
     # resolver can be called uniformly.
-    assert db.resolve_custom_role_permissions("owner") == frozenset()
+    assert db.resolve_custom_role_permissions("owner", "default") == frozenset()
 
 
 # ---------------------------------------------------------------------------
@@ -390,7 +420,7 @@ def test_delete_custom_role_endpoint(db, client_factory):
     )
     assert resp.status_code == 200
     assert resp.json()["status"] == "deleted"
-    assert db.get_custom_role(row["id"]) is None
+    assert db.get_custom_role(row["id"], "default") is None
 
     events = db.search_audit_events(
         organization_id="default", event_types=["custom_role_deleted"],

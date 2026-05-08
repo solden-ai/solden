@@ -62,13 +62,14 @@ class DisputeService:
     ) -> bool:
         """Mark that the vendor has been contacted about this dispute."""
         now = datetime.now(timezone.utc).isoformat()
-        dispute = self.db.get_dispute(dispute_id)
+        dispute = self.db.get_dispute(dispute_id, self.organization_id)
         if not dispute:
             return False
 
         count = (dispute.get("followup_count") or 0) + 1
         return self.db.update_dispute(
             dispute_id,
+            self.organization_id,
             status="vendor_contacted",
             vendor_contacted_at=now,
             followup_thread_id=followup_thread_id,
@@ -82,6 +83,7 @@ class DisputeService:
         now = datetime.now(timezone.utc).isoformat()
         return self.db.update_dispute(
             dispute_id,
+            self.organization_id,
             status="response_received",
             response_received_at=now,
         )
@@ -95,6 +97,7 @@ class DisputeService:
         now = datetime.now(timezone.utc).isoformat()
         return self.db.update_dispute(
             dispute_id,
+            self.organization_id,
             status="resolved",
             resolution=resolution,
             resolved_at=now,
@@ -107,6 +110,7 @@ class DisputeService:
         now = datetime.now(timezone.utc).isoformat()
         return self.db.update_dispute(
             dispute_id,
+            self.organization_id,
             status="escalated",
             escalated_at=now,
         )
@@ -118,6 +122,7 @@ class DisputeService:
         now = datetime.now(timezone.utc).isoformat()
         return self.db.update_dispute(
             dispute_id,
+            self.organization_id,
             status="closed",
             resolution=resolution,
             resolved_at=now,

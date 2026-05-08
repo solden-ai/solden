@@ -75,12 +75,28 @@ class WebhookStore:
 
         return rows
 
-    def get_webhook_subscription(self, subscription_id: str) -> Optional[Dict[str, Any]]:
+    def get_webhook_subscription(
+        self, subscription_id: str, organization_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Fetch a subscription by id, scoped to an organization.
+
+        ``organization_id`` is required. Pre-fix this method matched
+        purely by ``id`` — a caller from tenant A holding a known
+        webhook id from tenant B could read tenant B's row (including
+        the HMAC signing secret used for outbound delivery). Existing
+        API-layer guards in ``workspace_shell`` already cross-checked
+        the row's org against the caller's session, but defense in
+        depth says the store should fail closed regardless of whether
+        any caller forgot to do so.
+        """
         self.initialize()
-        sql = "SELECT * FROM webhook_subscriptions WHERE id = %s"
+        sql = (
+            "SELECT * FROM webhook_subscriptions "
+            "WHERE id = %s AND organization_id = %s"
+        )
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (subscription_id,))
+            cur.execute(sql, (subscription_id, organization_id))
             row = cur.fetchone()
 
         if not row:
@@ -94,8 +110,11 @@ class WebhookStore:
         return result
 
     def update_webhook_subscription(
-        self, subscription_id: str, **kwargs,
+        self, subscription_id: str, organization_id: str, **kwargs,
     ) -> bool:
+        """Update a subscription in place. Requires ``organization_id``
+        so the SQL UPDATE can never touch a row in a different tenant
+        even if a caller passes an id from another org."""
         self.initialize()
         allowed = {"url", "event_types", "secret", "is_active", "description"}
         updates = {k: v for k, v in kwargs.items() if k in allowed}
@@ -110,9 +129,10 @@ class WebhookStore:
         updates["updated_at"] = datetime.now(timezone.utc).isoformat()
         set_clause = ", ".join(f"{k} = %s" for k in updates)
         sql = (
-            f"UPDATE webhook_subscriptions SET {set_clause} WHERE id = %s"
+            f"UPDATE webhook_subscriptions SET {set_clause} "
+            f"WHERE id = %s AND organization_id = %s"
         )
-        params = list(updates.values()) + [subscription_id]
+        params = list(updates.values()) + [subscription_id, organization_id]
 
         with self.connect() as conn:
             cur = conn.cursor()
@@ -120,12 +140,18 @@ class WebhookStore:
             conn.commit()
             return cur.rowcount > 0
 
-    def delete_webhook_subscription(self, subscription_id: str) -> bool:
+    def delete_webhook_subscription(
+        self, subscription_id: str, organization_id: str
+    ) -> bool:
+        """Delete a subscription. Requires ``organization_id``."""
         self.initialize()
-        sql = "DELETE FROM webhook_subscriptions WHERE id = %s"
+        sql = (
+            "DELETE FROM webhook_subscriptions "
+            "WHERE id = %s AND organization_id = %s"
+        )
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (subscription_id,))
+            cur.execute(sql, (subscription_id, organization_id))
             conn.commit()
             return cur.rowcount > 0
 

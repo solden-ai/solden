@@ -104,7 +104,7 @@ def client_factory():
 
 def test_resolver_falls_back_to_org_role_when_no_row(db, two_entities):
     eu, _us = two_entities
-    rr = resolve_role(db, user_id="alice", org_role=ROLE_AP_MANAGER, entity_id=eu)
+    rr = resolve_role(db, user_id="alice", org_role=ROLE_AP_MANAGER, organization_id="default", entity_id=eu)
     assert rr.scope == "org"
     assert rr.role == ROLE_AP_MANAGER
     assert PERMISSION_APPROVE_INVOICES in rr.permissions
@@ -119,7 +119,7 @@ def test_resolver_uses_entity_row_when_present(db, two_entities):
     )
     # Org role would normally let her approve; the entity row downgrades
     # her in EU.
-    rr = resolve_role(db, user_id="alice", org_role=ROLE_AP_MANAGER, entity_id=eu)
+    rr = resolve_role(db, user_id="alice", org_role=ROLE_AP_MANAGER, organization_id="default", entity_id=eu)
     assert rr.scope == "entity"
     assert rr.role == ROLE_READ_ONLY
     assert PERMISSION_APPROVE_INVOICES not in rr.permissions
@@ -132,7 +132,7 @@ def test_resolver_applies_approval_ceiling(db, two_entities):
         user_id="alice", entity_id=eu, organization_id="default",
         role=ROLE_AP_CLERK, approval_ceiling=Decimal("50000.00"),
     )
-    rr = resolve_role(db, user_id="alice", org_role=ROLE_AP_CLERK, entity_id=eu)
+    rr = resolve_role(db, user_id="alice", org_role=ROLE_AP_CLERK, organization_id="default", entity_id=eu)
     assert rr.approval_ceiling == Decimal("50000.00")
     assert rr.can_approve(Decimal("49999.99")) is True
     assert rr.can_approve(Decimal("50000.00")) is True
@@ -145,7 +145,7 @@ def test_resolver_no_ceiling_means_unbounded(db, two_entities):
         user_id="alice", entity_id=eu, organization_id="default",
         role=ROLE_AP_MANAGER, approval_ceiling=None,
     )
-    rr = resolve_role(db, user_id="alice", org_role=ROLE_AP_MANAGER, entity_id=eu)
+    rr = resolve_role(db, user_id="alice", org_role=ROLE_AP_MANAGER, organization_id="default", entity_id=eu)
     assert rr.can_approve(Decimal("999999.99")) is True
 
 
@@ -155,7 +155,7 @@ def test_resolver_no_approve_permission_blocks_regardless_of_ceiling(db, two_ent
         user_id="alice", entity_id=eu, organization_id="default",
         role=ROLE_READ_ONLY, approval_ceiling=Decimal("999999.00"),
     )
-    rr = resolve_role(db, user_id="alice", org_role=ROLE_AP_MANAGER, entity_id=eu)
+    rr = resolve_role(db, user_id="alice", org_role=ROLE_AP_MANAGER, organization_id="default", entity_id=eu)
     # Read-only can't approve regardless of the ceiling
     assert rr.can_approve(Decimal("100.00")) is False
 
@@ -168,11 +168,11 @@ def test_can_approve_helper_short_form(db, two_entities):
     )
     assert can_approve(
         db, user_id="alice", org_role=ROLE_AP_CLERK,
-        entity_id=eu, amount=Decimal("999"),
+        organization_id="default", entity_id=eu, amount=Decimal("999"),
     ) is True
     assert can_approve(
         db, user_id="alice", org_role=ROLE_AP_CLERK,
-        entity_id=eu, amount=Decimal("1001"),
+        organization_id="default", entity_id=eu, amount=Decimal("1001"),
     ) is False
 
 
@@ -186,11 +186,24 @@ def test_resolver_handles_custom_role(db, two_entities):
         user_id="alice", entity_id=eu, organization_id="default",
         role=custom["id"],
     )
-    rr = resolve_role(db, user_id="alice", org_role=ROLE_READ_ONLY, entity_id=eu)
+    rr = resolve_role(
+        db, user_id="alice", org_role=ROLE_READ_ONLY,
+        organization_id="default", entity_id=eu,
+    )
     assert rr.role == custom["id"]
     assert rr.permissions == frozenset({
         PERMISSION_VIEW_AUDIT_LOG, PERMISSION_APPROVE_INVOICES,
     })
+    # Cross-tenant resolution returns empty perms (M3 fail-closed):
+    rr_other = resolve_role(
+        db, user_id="alice", org_role=ROLE_READ_ONLY,
+        organization_id="other-tenant", entity_id=eu,
+    )
+    assert rr_other.role == custom["id"]
+    assert rr_other.permissions == frozenset(), (
+        "Resolving a custom role from a different tenant must collapse "
+        "to empty perms — the role row lives in 'default', not 'other-tenant'."
+    )
 
 
 def test_resolver_unknown_custom_id_collapses_to_empty(db, two_entities):
@@ -201,7 +214,7 @@ def test_resolver_unknown_custom_id_collapses_to_empty(db, two_entities):
         user_id="alice", entity_id=eu, organization_id="default",
         role="cr_nonexistent_id",
     )
-    rr = resolve_role(db, user_id="alice", org_role=ROLE_AP_MANAGER, entity_id=eu)
+    rr = resolve_role(db, user_id="alice", org_role=ROLE_AP_MANAGER, organization_id="default", entity_id=eu)
     assert rr.role == "cr_nonexistent_id"
     assert rr.permissions == frozenset()
 

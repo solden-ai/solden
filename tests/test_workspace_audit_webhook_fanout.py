@@ -299,7 +299,7 @@ def test_deliver_skips_inactive_subscription(db):
         event_types=["state_transition"],
         secret="s",
     )
-    db.delete_webhook_subscription(sub["id"])  # marks is_active=False per existing infra
+    db.delete_webhook_subscription(sub["id"], "default")  # marks is_active=False per existing infra
     event = _seed_event(db, event_type="state_transition")
 
     from clearledgr.services.celery_tasks import deliver_audit_webhook

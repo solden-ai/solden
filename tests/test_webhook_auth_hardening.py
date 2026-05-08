@@ -434,6 +434,53 @@ def test_erp_oauth_routes_never_accept_org_from_url_or_body():
     )
 
 
+def test_byid_store_mutations_require_organization_id():
+    """M3: every by-id mutation/lookup on the three stores audited
+    (webhook_store, dispute_store, custom_roles_store) must require
+    ``organization_id`` so the SQL ``WHERE`` clause fails closed on
+    cross-tenant ids regardless of caller diligence.
+
+    Pre-fix any caller from tenant A holding a known id from tenant B
+    could read or mutate tenant B's row — we relied on API-layer
+    ``_resolve_org_id`` checks alone, which is not defence in depth.
+
+    This test inspects the store sources directly so a future regression
+    that drops the ``organization_id`` parameter from a method signature
+    fails the test immediately.
+    """
+    import inspect
+    from clearledgr.core.stores import (
+        webhook_store as _webhook_store,
+        dispute_store as _dispute_store,
+        custom_roles_store as _custom_roles_store,
+    )
+
+    methods_that_must_have_org = [
+        (_webhook_store.WebhookStore, "get_webhook_subscription"),
+        (_webhook_store.WebhookStore, "update_webhook_subscription"),
+        (_webhook_store.WebhookStore, "delete_webhook_subscription"),
+        (_dispute_store.DisputeStore, "get_dispute"),
+        (_dispute_store.DisputeStore, "update_dispute"),
+        (_dispute_store.DisputeStore, "get_disputes_for_item"),
+        (_custom_roles_store.CustomRolesStore, "get_custom_role"),
+        (_custom_roles_store.CustomRolesStore, "update_custom_role"),
+        (_custom_roles_store.CustomRolesStore, "delete_custom_role"),
+        (_custom_roles_store.CustomRolesStore, "resolve_custom_role_permissions"),
+    ]
+    missing = []
+    for cls, name in methods_that_must_have_org:
+        sig = inspect.signature(getattr(cls, name))
+        if "organization_id" not in sig.parameters:
+            missing.append(f"{cls.__name__}.{name}")
+    assert not missing, (
+        "Cross-tenant by-id mutations: the following store methods are "
+        "missing the required ``organization_id`` parameter — a caller "
+        "holding a known id from another tenant could read/mutate that "
+        "tenant's row at the SQL level. Methods:\n  - "
+        + "\n  - ".join(missing)
+    )
+
+
 def test_vendor_profile_callers_use_canonical_arg_order():
     """The B1 anti-pattern at the data layer: callers passing
     ``(vendor_name, organization_id)`` to a function whose signature

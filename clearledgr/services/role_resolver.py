@@ -79,6 +79,7 @@ def resolve_role(
     *,
     user_id: str,
     org_role: str,
+    organization_id: str,
     entity_id: Optional[str] = None,
 ) -> ResolvedRole:
     """Resolve the effective role for one (user, entity) pair.
@@ -118,7 +119,7 @@ def resolve_role(
                     ceiling = Decimal(str(ceiling))
                 except (InvalidOperation, ValueError):
                     ceiling = None
-            perms = _resolve_permissions_for_role(db, entity_role)
+            perms = _resolve_permissions_for_role(db, entity_role, organization_id)
             return ResolvedRole(
                 role=entity_role,
                 permissions=perms,
@@ -130,7 +131,7 @@ def resolve_role(
     fallback_role = (org_role or "").strip().lower()
     return ResolvedRole(
         role=fallback_role,
-        permissions=_resolve_permissions_for_role(db, fallback_role),
+        permissions=_resolve_permissions_for_role(db, fallback_role, organization_id),
         approval_ceiling=None,
         scope="org",
     )
@@ -141,6 +142,7 @@ def can_approve(
     *,
     user_id: str,
     org_role: str,
+    organization_id: str,
     entity_id: Optional[str],
     amount: Optional[Decimal],
 ) -> bool:
@@ -151,26 +153,35 @@ def can_approve(
         resolve_role(db, ...).can_approve(amount)
     """
     return resolve_role(
-        db, user_id=user_id, org_role=org_role, entity_id=entity_id,
+        db,
+        user_id=user_id,
+        org_role=org_role,
+        organization_id=organization_id,
+        entity_id=entity_id,
     ).can_approve(amount)
 
 
 # ─── helpers ────────────────────────────────────────────────────────
 
 
-def _resolve_permissions_for_role(db, role_token: str) -> FrozenSet[str]:
-    """Map a role token to its permission set.
+def _resolve_permissions_for_role(
+    db, role_token: str, organization_id: str,
+) -> FrozenSet[str]:
+    """Map a role token to its permission set, scoped to an organization.
 
-    Custom role tokens (``cr_*``) read from ``custom_roles``. Standard
-    tokens (``owner``, ``cfo`` ...) read from the canonical
-    ``ROLE_PERMISSIONS`` map. Unknown tokens collapse to ``frozenset()``.
+    Custom role tokens (``cr_*``) read from ``custom_roles`` constrained
+    to ``organization_id`` so a stale assignment carrying a role id
+    from a different tenant cannot inherit that tenant's permission
+    bundle. Standard tokens (``owner``, ``cfo`` ...) read from the
+    canonical ``ROLE_PERMISSIONS`` map. Unknown tokens collapse to
+    ``frozenset()``.
     """
     if not role_token:
         return frozenset()
     if role_token.startswith("cr_"):
         if hasattr(db, "resolve_custom_role_permissions"):
             try:
-                return db.resolve_custom_role_permissions(role_token)
+                return db.resolve_custom_role_permissions(role_token, organization_id)
             except Exception as exc:
                 logger.warning(
                     "[resolve_role] custom-role lookup failed for %s: %s",

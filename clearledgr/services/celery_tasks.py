@@ -871,13 +871,24 @@ def deliver_audit_webhook(
 
     db = get_db()
     event = db.get_ap_audit_event(audit_event_id)
-    sub = db.get_webhook_subscription(webhook_subscription_id) if hasattr(db, "get_webhook_subscription") else None
-    if not event or not sub:
+    if not event:
+        return {"status": "skipped", "reason": "event_or_sub_not_found"}
+
+    organization_id = str(event.get("organization_id") or "")
+    # The store now requires organization_id on the by-id lookup
+    # (M3 fix). Deriving the scope from the audit event itself means
+    # a webhook subscription from a different tenant — even if its id
+    # somehow leaked into a celery message — will not be readable
+    # here.
+    sub = (
+        db.get_webhook_subscription(webhook_subscription_id, organization_id)
+        if hasattr(db, "get_webhook_subscription") and organization_id
+        else None
+    )
+    if not sub:
         return {"status": "skipped", "reason": "event_or_sub_not_found"}
     if sub.get("is_active") in (False, 0):
         return {"status": "skipped", "reason": "subscription_inactive"}
-
-    organization_id = str(event.get("organization_id") or "")
     event_type = str(event.get("event_type") or "")
     url = str(sub.get("url") or "")
     secret = str(sub.get("secret") or "")

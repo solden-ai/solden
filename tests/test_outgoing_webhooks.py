@@ -87,19 +87,28 @@ class TestWebhookStore:
 
     def test_get_by_id(self, db):
         sub = db.create_webhook_subscription("default", "https://a.com/h", ["*"])
-        found = db.get_webhook_subscription(sub["id"])
+        found = db.get_webhook_subscription(sub["id"], "default")
         assert found is not None
         assert found["url"] == "https://a.com/h"
+        # M3 fail-closed: same id from a different org is invisible.
+        assert db.get_webhook_subscription(sub["id"], "other-tenant") is None
 
     def test_delete(self, db):
         sub = db.create_webhook_subscription("default", "https://b.com/h", ["*"])
-        assert db.delete_webhook_subscription(sub["id"]) is True
-        assert db.get_webhook_subscription(sub["id"]) is None
+        # Cross-tenant delete is a no-op.
+        assert db.delete_webhook_subscription(sub["id"], "other-tenant") is False
+        assert db.get_webhook_subscription(sub["id"], "default") is not None
+        # Same-tenant delete works once.
+        assert db.delete_webhook_subscription(sub["id"], "default") is True
+        assert db.get_webhook_subscription(sub["id"], "default") is None
 
     def test_update(self, db):
         sub = db.create_webhook_subscription("default", "https://c.com/h", ["invoice.approved"])
-        db.update_webhook_subscription(sub["id"], is_active=False)
-        updated = db.get_webhook_subscription(sub["id"])
+        # Cross-tenant update is a no-op.
+        assert db.update_webhook_subscription(sub["id"], "other-tenant", is_active=False) is False
+        # Same-tenant update sticks.
+        db.update_webhook_subscription(sub["id"], "default", is_active=False)
+        updated = db.get_webhook_subscription(sub["id"], "default")
         assert updated["is_active"] is False
 
     def test_get_active_for_event(self, db):
@@ -115,7 +124,7 @@ class TestWebhookStore:
 
     def test_inactive_excluded(self, db):
         sub = db.create_webhook_subscription("default", "https://e.com/h", ["*"])
-        db.update_webhook_subscription(sub["id"], is_active=False)
+        db.update_webhook_subscription(sub["id"], "default", is_active=False)
         assert db.get_active_webhooks_for_event("default", "invoice.approved") == []
 
 
@@ -414,21 +423,25 @@ class TestWebhookCrossOrgIsolation:
         # And no row was written against either org.
         assert db.list_webhook_subscriptions("other-org") == []
 
-    def test_delete_other_orgs_webhook_returns_403(self, client, db):
+    def test_delete_other_orgs_webhook_returns_404(self, client, db):
         # Seed a webhook owned by 'other-org'.
         other_sub = db.create_webhook_subscription(
             organization_id="other-org",
             url="https://other-org.example/hook",
             event_types=["*"],
         )
-        # Caller (in 'default') tries to delete by ID — the handler
-        # looks up the sub first, then applies _resolve_org_id which
-        # must fail for a foreign org.
+        # Caller (in 'default') tries to delete by ID. Post-M3 the
+        # store's lookup is scoped to the caller's org at the SQL
+        # level, so a foreign id is invisible. Return 404 (same as
+        # missing) so we don't leak existence of webhooks in other
+        # tenants — which a 403 response would.
         resp = client.delete(f"/api/workspace/webhooks/{other_sub['id']}")
-        assert resp.status_code == 403, (
-            f"cross-org DELETE must return 403, got {resp.status_code}: {resp.json()}"
+        assert resp.status_code == 404, (
+            f"cross-org DELETE must return 404 (existence-hiding), "
+            f"got {resp.status_code}: {resp.json()}"
         )
-        # The foreign webhook is still intact.
-        still_there = db.get_webhook_subscription(other_sub["id"])
+        # The foreign webhook is still intact when looked up with
+        # the correct org.
+        still_there = db.get_webhook_subscription(other_sub["id"], "other-org")
         assert still_there is not None
         assert still_there["organization_id"] == "other-org"

@@ -54,12 +54,24 @@ class CustomRolesStore:
             row.pop("permissions_json", None)
         return rows
 
-    def get_custom_role(self, role_id: str) -> Optional[Dict[str, Any]]:
-        """Return a single role by id, or None."""
+    def get_custom_role(
+        self, role_id: str, organization_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Return a single role by id, scoped to an organization, or None.
+
+        ``organization_id`` is required. Pre-fix this method matched
+        purely by ``id`` — any caller holding a known role id could
+        read or grant the permission bundle of a role belonging to
+        another tenant. The SQL now fails closed regardless of caller
+        diligence.
+        """
         self.initialize()
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute("SELECT * FROM custom_roles WHERE id = %s", (role_id,))
+            cur.execute(
+                "SELECT * FROM custom_roles WHERE id = %s AND organization_id = %s",
+                (role_id, organization_id),
+            )
             row = cur.fetchone()
         if not row:
             return None
@@ -166,19 +178,23 @@ class CustomRolesStore:
     def update_custom_role(
         self,
         role_id: str,
+        organization_id: str,
         *,
         name: Optional[str] = None,
         description: Optional[str] = None,
         permissions: Optional[List[str]] = None,
     ) -> Optional[Dict[str, Any]]:
-        """Update a role in place. Returns the new row or None if
-        the id doesn't exist. Permissions list, if supplied, must
-        contain at least one valid entry — empty after normalization
-        raises ``ValueError`` so we never persist a permissionless
-        role that silently denies everything to its assignees.
+        """Update a role in place, scoped to an organization.
+
+        Returns the new row or None if the id doesn't exist within
+        the supplied organization. Permissions list, if supplied,
+        must contain at least one valid entry — empty after
+        normalization raises ``ValueError`` so we never persist a
+        permissionless role that silently denies everything to its
+        assignees.
         """
         self.initialize()
-        existing = self.get_custom_role(role_id)
+        existing = self.get_custom_role(role_id, organization_id)
         if not existing:
             return None
 
@@ -202,12 +218,13 @@ class CustomRolesStore:
         updates["updated_at"] = datetime.now(timezone.utc).isoformat()
 
         set_clause = ", ".join(f"{k} = %s" for k in updates)
-        params = list(updates.values()) + [role_id]
+        params = list(updates.values()) + [role_id, organization_id]
         try:
             with self.connect() as conn:
                 cur = conn.cursor()
                 cur.execute(
-                    f"UPDATE custom_roles SET {set_clause} WHERE id = %s",
+                    f"UPDATE custom_roles SET {set_clause} "
+                    f"WHERE id = %s AND organization_id = %s",
                     tuple(params),
                 )
                 conn.commit()
@@ -218,14 +235,18 @@ class CustomRolesStore:
                 ) from exc
             raise
 
-        return self.get_custom_role(role_id)
+        return self.get_custom_role(role_id, organization_id)
 
-    def delete_custom_role(self, role_id: str) -> bool:
-        """Delete a role. Returns True if a row was actually deleted."""
+    def delete_custom_role(self, role_id: str, organization_id: str) -> bool:
+        """Delete a role within an organization. Returns True if a row
+        was actually deleted."""
         self.initialize()
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute("DELETE FROM custom_roles WHERE id = %s", (role_id,))
+            cur.execute(
+                "DELETE FROM custom_roles WHERE id = %s AND organization_id = %s",
+                (role_id, organization_id),
+            )
             conn.commit()
             return (cur.rowcount or 0) > 0
 
@@ -257,17 +278,22 @@ class CustomRolesStore:
         return []
 
     def resolve_custom_role_permissions(
-        self, role_id: Optional[str]
+        self, role_id: Optional[str], organization_id: str,
     ) -> FrozenSet[str]:
-        """Resolve a custom role id to its permission set.
+        """Resolve a custom role id to its permission set, scoped to
+        an organization.
 
         Used by ``has_permission(custom_role_permissions=...)``. Bad /
         deleted ids return the empty set so a stale assignment can
-        never accidentally grant permissions.
+        never accidentally grant permissions. Pre-fix this function
+        looked up purely by ``role_id`` — a stale assignment carrying
+        a role id from a different tenant would silently inherit that
+        tenant's permission bundle. Now the lookup fails closed unless
+        the role belongs to the caller's org.
         """
         if not role_id or not str(role_id).startswith("cr_"):
             return frozenset()
-        row = self.get_custom_role(role_id)
+        row = self.get_custom_role(role_id, organization_id)
         if not row:
             return frozenset()
         return frozenset(row.get("permissions") or [])

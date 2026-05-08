@@ -63,7 +63,9 @@ class TestDisputeStore:
         assert dispute["id"].startswith("dsp_")
         assert dispute["status"] == "open"
 
-        found = db.get_dispute(dispute["id"])
+        found = db.get_dispute(dispute["id"], "default")
+        # Cross-tenant fail-closed: the same id from a different org → None.
+        assert db.get_dispute(dispute["id"], "other-tenant") is None
         assert found is not None
         assert found["dispute_type"] == "missing_po"
 
@@ -79,7 +81,7 @@ class TestDisputeStore:
     def test_list_by_status(self, db):
         _create_ap_item(db, "ap-4")
         d = db.create_dispute("ap-4", "default", "missing_info")
-        db.update_dispute(d["id"], status="resolved", resolved_at=datetime.now(timezone.utc).isoformat())
+        db.update_dispute(d["id"], "default", status="resolved", resolved_at=datetime.now(timezone.utc).isoformat())
 
         open_disputes = db.list_disputes("default", status="open")
         assert len(open_disputes) == 0
@@ -92,19 +94,19 @@ class TestDisputeStore:
         db.create_dispute("ap-5", "default", "missing_po")
         db.create_dispute("ap-5", "default", "wrong_amount")
 
-        disputes = db.get_disputes_for_item("ap-5")
+        disputes = db.get_disputes_for_item("ap-5", "default")
         assert len(disputes) == 2
 
     def test_update(self, db):
         _create_ap_item(db, "ap-6")
         d = db.create_dispute("ap-6", "default", "other")
-        db.update_dispute(d["id"], status="vendor_contacted", vendor_contacted_at="2026-04-04T10:00:00Z")
+        db.update_dispute(d["id"], "default", status="vendor_contacted", vendor_contacted_at="2026-04-04T10:00:00Z")
 
-        updated = db.get_dispute(d["id"])
+        updated = db.get_dispute(d["id"], "default")
         assert updated["status"] == "vendor_contacted"
 
     def test_get_nonexistent(self, db):
-        assert db.get_dispute("dsp_nonexistent") is None
+        assert db.get_dispute("dsp_nonexistent", "default") is None
 
 
 # ---------------------------------------------------------------------------
@@ -123,18 +125,18 @@ class TestDisputeService:
 
         # Contact vendor
         svc.mark_vendor_contacted(dispute["id"], followup_thread_id="thread-123")
-        d = db.get_dispute(dispute["id"])
+        d = db.get_dispute(dispute["id"], "default")
         assert d["status"] == "vendor_contacted"
         assert d["followup_count"] == 1
 
         # Response received
         svc.mark_response_received(dispute["id"])
-        d = db.get_dispute(dispute["id"])
+        d = db.get_dispute(dispute["id"], "default")
         assert d["status"] == "response_received"
 
         # Resolve
         svc.resolve_dispute(dispute["id"], "Vendor provided PO #12345")
-        d = db.get_dispute(dispute["id"])
+        d = db.get_dispute(dispute["id"], "default")
         assert d["status"] == "resolved"
         assert d["resolution"] == "Vendor provided PO #12345"
 
@@ -144,7 +146,7 @@ class TestDisputeService:
         dispute = svc.open_dispute("esc-1", "vendor_mismatch")
         svc.escalate_dispute(dispute["id"])
 
-        d = db.get_dispute(dispute["id"])
+        d = db.get_dispute(dispute["id"], "default")
         assert d["status"] == "escalated"
         assert d["escalated_at"] is not None
 
@@ -154,7 +156,7 @@ class TestDisputeService:
         dispute = svc.open_dispute("cls-1", "duplicate")
         svc.close_dispute(dispute["id"], "Duplicate dispute — merged with DSP-001")
 
-        d = db.get_dispute(dispute["id"])
+        d = db.get_dispute(dispute["id"], "default")
         assert d["status"] == "closed"
 
     def test_list_open(self, db):

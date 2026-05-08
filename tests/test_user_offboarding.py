@@ -152,7 +152,7 @@ def test_offboard_user_does_not_touch_org_webhooks(db):
         actor_email="owner@example.test",
         revoke_google_token_remotely=False,
     )
-    sub_after = db.get_webhook_subscription(sub["id"])
+    sub_after = db.get_webhook_subscription(sub["id"], "default")
     assert sub_after and sub_after["is_active"] is True
 
 

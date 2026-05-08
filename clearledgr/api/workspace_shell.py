@@ -2597,8 +2597,8 @@ def list_webhook_deliveries(
     _require_admin(user)
     org_id = _resolve_org_id(user, organization_id)
     db = get_db()
-    sub = db.get_webhook_subscription(webhook_id) if hasattr(db, "get_webhook_subscription") else None
-    if not sub or str(sub.get("organization_id") or "") != org_id:
+    sub = db.get_webhook_subscription(webhook_id, org_id) if hasattr(db, "get_webhook_subscription") else None
+    if not sub:
         raise HTTPException(status_code=404, detail="webhook_not_found")
 
     rows = db.list_webhook_deliveries(
@@ -2985,16 +2985,13 @@ def delete_webhook(
 ):
     """Delete a webhook subscription."""
     db = get_db()
-    sub = db.get_webhook_subscription(webhook_id)
+    org_id = _resolve_org_id(user, None)
+    sub = db.get_webhook_subscription(webhook_id, org_id)
     if not sub:
         from fastapi.responses import JSONResponse
         return JSONResponse(status_code=404, content={"error": "Webhook not found"})
 
-    # Verify org access
-    org_id = sub.get("organization_id", "default")
-    _resolve_org_id(user, org_id)
-
-    db.delete_webhook_subscription(webhook_id)
+    db.delete_webhook_subscription(webhook_id, org_id)
     return {"status": "deleted", "id": webhook_id}
 
 
@@ -3005,7 +3002,8 @@ async def test_webhook(
 ):
     """Send a test event to a webhook."""
     db = get_db()
-    sub = db.get_webhook_subscription(webhook_id)
+    org_id = _resolve_org_id(user, None)
+    sub = db.get_webhook_subscription(webhook_id, org_id)
     if not sub:
         from fastapi.responses import JSONResponse
         return JSONResponse(status_code=404, content={"error": "Webhook not found"})
@@ -3378,13 +3376,14 @@ def resolve_dispute(
         return JSONResponse(status_code=400, content={"error": "resolution is required"})
 
     db = get_db()
-    dispute = db.get_dispute(dispute_id)
+    org_id = _resolve_org_id(user, None)
+    dispute = db.get_dispute(dispute_id, org_id)
     if not dispute:
         from fastapi.responses import JSONResponse
         return JSONResponse(status_code=404, content={"error": "Dispute not found"})
 
     from clearledgr.services.dispute_service import get_dispute_service
-    svc = get_dispute_service(dispute["organization_id"])
+    svc = get_dispute_service(org_id)
     svc.resolve_dispute(dispute_id, resolution)
     return {"status": "resolved", "id": dispute_id}
 
@@ -3396,13 +3395,14 @@ def escalate_dispute(
 ):
     """Escalate a dispute."""
     db = get_db()
-    dispute = db.get_dispute(dispute_id)
+    org_id = _resolve_org_id(user, None)
+    dispute = db.get_dispute(dispute_id, org_id)
     if not dispute:
         from fastapi.responses import JSONResponse
         return JSONResponse(status_code=404, content={"error": "Dispute not found"})
 
     from clearledgr.services.dispute_service import get_dispute_service
-    svc = get_dispute_service(dispute["organization_id"])
+    svc = get_dispute_service(org_id)
     svc.escalate_dispute(dispute_id)
     return {"status": "escalated", "id": dispute_id}
 
@@ -4670,18 +4670,17 @@ def update_custom_role(
     org_id = _resolve_org_id(user, organization_id)
     db = get_db()
 
-    existing = db.get_custom_role(role_id)
+    existing = db.get_custom_role(role_id, org_id)
     if not existing:
-        raise HTTPException(status_code=404, detail="custom_role_not_found")
-    if str(existing.get("organization_id") or "") != org_id:
-        # Cross-tenant — same status code as missing so we don't leak
-        # the existence of roles in other tenants.
+        # Same status code as missing so we don't leak the existence
+        # of roles in other tenants.
         raise HTTPException(status_code=404, detail="custom_role_not_found")
 
     before_perms = sorted(existing.get("permissions") or [])
     try:
         updated = db.update_custom_role(
             role_id,
+            org_id,
             name=body.name,
             permissions=body.permissions,
             description=body.description,
@@ -4730,13 +4729,11 @@ def delete_custom_role(
     org_id = _resolve_org_id(user, organization_id)
     db = get_db()
 
-    existing = db.get_custom_role(role_id)
+    existing = db.get_custom_role(role_id, org_id)
     if not existing:
         raise HTTPException(status_code=404, detail="custom_role_not_found")
-    if str(existing.get("organization_id") or "") != org_id:
-        raise HTTPException(status_code=404, detail="custom_role_not_found")
 
-    deleted = db.delete_custom_role(role_id)
+    deleted = db.delete_custom_role(role_id, org_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="custom_role_not_found")
 
@@ -4770,11 +4767,15 @@ class EntityRolesPutRequest(BaseModel):
     assignments: List[EntityRoleAssignment]
 
 
-def _resolve_role_token(role_token: str, db) -> bool:
-    """Validate a role token: standard taxonomy OR existing custom role id.
+def _resolve_role_token(role_token: str, db, organization_id: str) -> bool:
+    """Validate a role token: standard taxonomy OR existing custom role
+    id within the supplied organization.
 
     Returns ``True`` if the token is acceptable. Used at the API
     boundary so a malformed admin request 422s before persistence.
+    Pre-fix this looked up ``cr_*`` tokens unscoped — an admin from
+    tenant A could assign a custom role belonging to tenant B simply
+    by knowing its id. Now the lookup is org-scoped at the SQL level.
     """
     token = (role_token or "").strip().lower()
     if not token:
@@ -4783,7 +4784,7 @@ def _resolve_role_token(role_token: str, db) -> bool:
         return True
     if token.startswith("cr_"):
         try:
-            row = db.get_custom_role(token)
+            row = db.get_custom_role(token, organization_id)
         except Exception:
             return False
         return bool(row)
@@ -4899,7 +4900,7 @@ def replace_entity_roles_for_user(
 
     # Validate every role token before any DB write.
     for a in body.assignments:
-        if not _resolve_role_token(a.role, db):
+        if not _resolve_role_token(a.role, db, org_id):
             raise HTTPException(
                 status_code=422,
                 detail={
@@ -4993,7 +4994,11 @@ def get_effective_permissions_for_user(
             target_role = ""
 
     resolved = _role_resolver.resolve_role(
-        db, user_id=user_id, org_role=target_role, entity_id=entity_id,
+        db,
+        user_id=user_id,
+        org_role=target_role,
+        organization_id=org_id,
+        entity_id=entity_id,
     )
     return {
         "user_id": user_id,

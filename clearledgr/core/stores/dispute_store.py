@@ -63,23 +63,38 @@ class DisputeStore:
             "opened_at": now,
         }
 
-    def get_dispute(self, dispute_id: str) -> Optional[Dict[str, Any]]:
+    def get_dispute(
+        self, dispute_id: str, organization_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Fetch a dispute by id, scoped to an organization.
+
+        ``organization_id`` is required. Pre-fix this method matched
+        purely by ``id`` — a caller from tenant A holding a known
+        dispute id from tenant B could read tenant B's row, including
+        the vendor's email and free-text dispute description. The
+        store now fails closed at the SQL level so cross-tenant reads
+        return None even if every API-layer guard slipped.
+        """
         self.initialize()
-        sql = "SELECT * FROM disputes WHERE id = %s"
+        sql = "SELECT * FROM disputes WHERE id = %s AND organization_id = %s"
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (dispute_id,))
+            cur.execute(sql, (dispute_id, organization_id))
             row = cur.fetchone()
         return dict(row) if row else None
 
-    def get_disputes_for_item(self, ap_item_id: str) -> List[Dict[str, Any]]:
+    def get_disputes_for_item(
+        self, ap_item_id: str, organization_id: str
+    ) -> List[Dict[str, Any]]:
+        """List disputes for an AP item, scoped to an organization."""
         self.initialize()
         sql = (
-            "SELECT * FROM disputes WHERE ap_item_id = %s ORDER BY opened_at DESC"
+            "SELECT * FROM disputes WHERE ap_item_id = %s AND organization_id = %s "
+            "ORDER BY opened_at DESC"
         )
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (ap_item_id,))
+            cur.execute(sql, (ap_item_id, organization_id))
             return [dict(r) for r in cur.fetchall()]
 
     def list_disputes(
@@ -107,7 +122,15 @@ class DisputeStore:
             cur.execute(sql, params)
             return [dict(r) for r in cur.fetchall()]
 
-    def update_dispute(self, dispute_id: str, **kwargs) -> bool:
+    def update_dispute(
+        self, dispute_id: str, organization_id: str, **kwargs,
+    ) -> bool:
+        """Update a dispute in place, scoped to an organization.
+
+        ``organization_id`` is required so the SQL UPDATE cannot touch
+        a row in a different tenant even if a caller passes a known id
+        from another org.
+        """
         self.initialize()
         allowed = {
             "status", "description", "resolution", "vendor_contacted_at",
@@ -121,9 +144,10 @@ class DisputeStore:
         updates["updated_at"] = datetime.now(timezone.utc).isoformat()
         set_clause = ", ".join(f"{k} = %s" for k in updates)
         sql = (
-            f"UPDATE disputes SET {set_clause} WHERE id = %s"
+            f"UPDATE disputes SET {set_clause} "
+            f"WHERE id = %s AND organization_id = %s"
         )
-        params = list(updates.values()) + [dispute_id]
+        params = list(updates.values()) + [dispute_id, organization_id]
 
         with self.connect() as conn:
             cur = conn.cursor()
