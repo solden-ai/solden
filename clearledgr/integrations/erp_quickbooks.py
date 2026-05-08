@@ -168,6 +168,7 @@ async def post_bill_to_quickbooks(
     gl_map: Optional[Dict[str, str]] = None,
     field_mappings: Optional[Dict[str, str]] = None,
     custom_fields: Optional[Dict[str, str]] = None,
+    idempotency_key: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Post vendor bill to QuickBooks Online.
@@ -179,6 +180,12 @@ async def post_bill_to_quickbooks(
     the resolved {erp_field_id: value} dict — for QBO custom fields
     this becomes the ``CustomField`` array on the Bill body so they
     show up on customer-defined templates.
+
+    ``idempotency_key`` is forwarded to Intuit as the ``requestid``
+    query parameter — QBO uses it to dedupe duplicate POSTs on retry.
+    Caller should pass a stable key derived from the AP item id (the
+    contract enforced by ``InvoicePostingMixin._post_to_erp``). Max
+    50 chars per Intuit's spec; longer keys are truncated.
     """
     from clearledgr.integrations.erp_router import get_account_code
 
@@ -319,6 +326,9 @@ async def post_bill_to_quickbooks(
         pass
 
     url = f"https://quickbooks.api.intuit.com/v3/company/{connection.realm_id}/bill"
+    if idempotency_key:
+        # Intuit's requestid is capped at 50 chars; trim conservatively.
+        url = f"{url}?requestid={str(idempotency_key)[:50]}"
 
     try:
         client = get_http_client()
@@ -880,10 +890,25 @@ async def apply_credit_note_to_quickbooks(
 
     vendor_credit_id = str((vendor_credit or {}).get("credit_note_id") or "").strip()
     expense_account = get_account_code("quickbooks", "expenses", gl_map)
+    # Intuit's requestid query param is the canonical idempotency
+    # mechanism — without it, a transient timeout + retry creates a
+    # second VendorCredit + BillPayment in the customer's QBO. Two
+    # distinct keys (one per leg) so a partial-success retry resumes
+    # cleanly rather than mis-targeting a single key across legs.
+    _idem_key = str(idempotency_key or "")[:50] if idempotency_key else ""
+    _credit_idem = (
+        f"?requestid={_idem_key}:credit" if _idem_key else ""
+    )
+    _payment_idem = (
+        f"?requestid={_idem_key}:payment" if _idem_key else ""
+    )
     try:
         client = get_http_client()
         if not vendor_credit_id:
-            credit_url = f"https://quickbooks.api.intuit.com/v3/company/{connection.realm_id}/vendorcredit"
+            credit_url = (
+                f"https://quickbooks.api.intuit.com/v3/company/"
+                f"{connection.realm_id}/vendorcredit{_credit_idem}"
+            )
             credit_payload = {
                 "VendorRef": {"value": bill["vendor_id"]},
                 "APAccountRef": {"value": bill["ap_account_id"]},
@@ -916,7 +941,10 @@ async def apply_credit_note_to_quickbooks(
             if not vendor_credit_id:
                 return {"status": "error", "erp": "quickbooks", "reason": "no_vendor_credit_returned"}
 
-        payment_url = f"https://quickbooks.api.intuit.com/v3/company/{connection.realm_id}/billpayment"
+        payment_url = (
+            f"https://quickbooks.api.intuit.com/v3/company/"
+            f"{connection.realm_id}/billpayment{_payment_idem}"
+        )
         payment_payload = {
             "VendorRef": {"value": bill["vendor_id"]},
             "TotalAmt": round(float(application.amount or 0.0), 2),
@@ -1044,6 +1072,9 @@ async def apply_settlement_to_quickbooks(
         payment_payload["PrivateNote"] = str(application.source_reference)[:4000]
 
     url = f"https://quickbooks.api.intuit.com/v3/company/{connection.realm_id}/billpayment"
+    if idempotency_key:
+        # Intuit's requestid is the canonical retry-dedupe mechanism.
+        url = f"{url}?requestid={str(idempotency_key)[:50]}"
     try:
         client = get_http_client()
         response = await client.post(

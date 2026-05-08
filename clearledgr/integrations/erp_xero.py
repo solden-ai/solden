@@ -173,6 +173,7 @@ async def post_bill_to_xero(
     gl_map: Optional[Dict[str, str]] = None,
     field_mappings: Optional[Dict[str, str]] = None,
     custom_fields: Optional[Dict[str, str]] = None,
+    idempotency_key: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Post vendor bill to Xero.
@@ -186,6 +187,12 @@ async def post_bill_to_xero(
     Xero's reports group on customer-defined dimensions. Workflow
     custom fields (``custom_fields``) appear on each line as
     ``Description`` suffixes — Xero has no per-bill custom-fields API.
+
+    ``idempotency_key`` is forwarded to Xero as the ``Idempotency-Key``
+    header (capped at 128 chars per Xero's spec) via ``_xero_headers``.
+    Caller should pass a stable key derived from the AP item id so a
+    transient timeout + retry doesn't create a duplicate ACCPAY
+    invoice in the customer's Xero org.
     """
     from clearledgr.integrations.erp_router import get_account_code
 
@@ -347,11 +354,7 @@ async def post_bill_to_xero(
         response = await client.post(
             url,
             json={"Invoices": [xero_bill]},
-            headers={
-                "Authorization": f"Bearer {connection.access_token}",
-                "Content-Type": "application/json",
-                "xero-tenant-id": connection.tenant_id,
-            },
+            headers=_xero_headers(connection, idempotency_key=idempotency_key),
             timeout=30,
         )
 

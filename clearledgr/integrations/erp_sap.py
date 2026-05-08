@@ -243,6 +243,7 @@ async def post_bill_to_sap(
     gl_map: Optional[Dict[str, str]] = None,
     field_mappings: Optional[Dict[str, str]] = None,
     custom_fields: Optional[Dict[str, str]] = None,
+    idempotency_key: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Post a vendor bill to SAP — flavor-aware dispatcher.
 

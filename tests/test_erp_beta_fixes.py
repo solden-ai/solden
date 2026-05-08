@@ -332,12 +332,19 @@ def test_quickbooks_credit_application_uses_native_vendor_credit_and_bill_paymen
     assert result["credit_note_reference"] == "vc-qb-1"
     assert result["ap_item_id"] == "ap-credit-qb-1"
     first_post = mock_client.post.await_args_list[0]
-    assert first_post.args[0].endswith("/vendorcredit")
+    # URL is path + idempotency requestid query param.
+    assert "/vendorcredit" in first_post.args[0]
+    assert "requestid=" in first_post.args[0], (
+        f"vendor credit must carry requestid for QBO dedup, got {first_post.args[0]!r}"
+    )
     assert first_post.kwargs["json"]["VendorRef"]["value"] == "vendor-qb-1"
     assert first_post.kwargs["json"]["APAccountRef"]["value"] == "33"
     assert first_post.kwargs["json"]["DocNumber"] == "VC-QB-100"
     second_post = mock_client.post.await_args_list[1]
-    assert second_post.args[0].endswith("/billpayment")
+    assert "/billpayment" in second_post.args[0]
+    assert "requestid=" in second_post.args[0], (
+        f"bill payment must carry requestid for QBO dedup, got {second_post.args[0]!r}"
+    )
     linked_txns = second_post.kwargs["json"]["Line"][0]["LinkedTxn"]
     assert linked_txns[0]["TxnId"] == "bill-qb-1"
     assert linked_txns[0]["TxnType"] == "Bill"
@@ -389,7 +396,10 @@ def test_quickbooks_settlement_uses_native_bill_payment_api():
     assert result["erp_reference"] == "bp-qb-2"
     assert result["ap_item_id"] == "ap-settlement-qb-1"
     post_args = mock_client.post.await_args
-    assert post_args.args[0].endswith("/billpayment")
+    assert "/billpayment" in post_args.args[0]
+    assert "requestid=" in post_args.args[0], (
+        f"settlement must carry requestid for QBO dedup, got {post_args.args[0]!r}"
+    )
     payment_payload = post_args.kwargs["json"]
     assert payment_payload["VendorRef"]["value"] == "vendor-qb-2"
     assert payment_payload["PayType"] == "Check"
@@ -1118,3 +1128,115 @@ def test_redirect_path_allows_valid_path():
     from clearledgr.api.auth import _sanitize_redirect_path
     assert _sanitize_redirect_path("/dashboard") == "/dashboard"
     assert _sanitize_redirect_path("/") == "/"
+
+
+# ---------------------------------------------------------------------------
+# Bill-posting idempotency end-to-end (audit pass 1)
+# ---------------------------------------------------------------------------
+
+
+def test_post_bill_to_quickbooks_appends_requestid_query_param_for_idempotency():
+    """Pre-fix, ``post_bill_to_quickbooks`` accepted no idempotency
+    parameter, so a transient timeout + retry created a duplicate
+    Bill in QBO. Now the function accepts ``idempotency_key`` and
+    forwards it to Intuit's ``requestid`` query parameter (max 50
+    chars), which QBO uses to dedupe.
+    """
+    from clearledgr.integrations.erp_quickbooks import post_bill_to_quickbooks
+
+    success_response = MagicMock()
+    success_response.status_code = 200
+    success_response.raise_for_status = MagicMock()
+    success_response.json.return_value = {"Bill": {"Id": "qb-bill-1", "DocNumber": "INV-001", "SyncToken": "0"}}
+
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=success_response)
+
+    conn = ERPConnection(
+        type="quickbooks", access_token="tok", realm_id="123",
+        client_id="cid", client_secret="csec",
+    )
+    bill = _make_bill()
+
+    with patch("clearledgr.integrations.erp_quickbooks.get_http_client", return_value=mock_client):
+        result = asyncio.run(post_bill_to_quickbooks(
+            conn, bill, idempotency_key="auto:ap-99:erp_post",
+        ))
+
+    assert result["status"] == "success"
+    # The URL passed to client.post must carry ?requestid=auto:ap-99:erp_post
+    call_args = mock_client.post.call_args
+    url = call_args.args[0] if call_args.args else call_args.kwargs.get("url", "")
+    assert "requestid=auto:ap-99:erp_post" in url, (
+        f"expected requestid query param on QB URL, got {url!r}"
+    )
+
+
+def test_post_bill_to_xero_sends_idempotency_key_header():
+    """Xero adapter must forward ``idempotency_key`` via the
+    ``Idempotency-Key`` header (Xero's native dedupe mechanism).
+    Pre-fix, the function ignored the kwarg entirely.
+    """
+    from clearledgr.integrations.erp_xero import post_bill_to_xero
+
+    success_response = MagicMock()
+    success_response.status_code = 200
+    success_response.raise_for_status = MagicMock()
+    success_response.json.return_value = {
+        "Invoices": [
+            {"InvoiceID": "xero-inv-1", "InvoiceNumber": "INV-001", "Status": "AUTHORISED"}
+        ],
+    }
+
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=success_response)
+
+    conn = ERPConnection(
+        type="xero", access_token="tok", tenant_id="ten-1",
+        client_id="cid", client_secret="csec",
+    )
+    bill = _make_bill()
+
+    with patch("clearledgr.integrations.erp_xero.get_http_client", return_value=mock_client):
+        result = asyncio.run(post_bill_to_xero(
+            conn, bill, idempotency_key="auto:ap-77:erp_post",
+        ))
+
+    assert result["status"] == "success"
+    call_args = mock_client.post.call_args
+    headers = call_args.kwargs.get("headers", {})
+    assert headers.get("Idempotency-Key") == "auto:ap-77:erp_post", (
+        f"Xero adapter must send Idempotency-Key header; got headers={headers!r}"
+    )
+
+
+def test_post_bill_router_threads_idempotency_key_to_quickbooks(db):
+    """The router-level ``post_bill`` accepts ``idempotency_key`` and
+    must forward it to the per-ERP adapter. Pre-fix, the router accepted
+    the kwarg at the entry but dropped it before the adapter call —
+    every adapter call posted without dedupe.
+    """
+    db.ensure_organization("default")
+
+    captured_kwargs: dict = {}
+
+    async def mock_qb(conn, bill, **kwargs):
+        captured_kwargs.update(kwargs)
+        return {"status": "success", "erp": "quickbooks", "bill_id": "rb-1"}
+
+    bill = _make_bill()
+
+    with patch("clearledgr.integrations.erp_router.get_erp_connection") as mock_get_conn, \
+         patch("clearledgr.integrations.erp_router.post_bill_to_quickbooks", side_effect=mock_qb):
+        mock_get_conn.return_value = ERPConnection(
+            type="quickbooks", access_token="tok", realm_id="123",
+            client_id="cid", client_secret="csec",
+        )
+        result = asyncio.run(post_bill(
+            "default", bill, idempotency_key="auto:ap-router-1:erp_post",
+        ))
+
+    assert result["status"] == "success"
+    assert captured_kwargs.get("idempotency_key") == "auto:ap-router-1:erp_post", (
+        f"router must thread idempotency_key to adapter; got {captured_kwargs!r}"
+    )

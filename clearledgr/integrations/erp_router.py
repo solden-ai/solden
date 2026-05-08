@@ -1168,10 +1168,16 @@ async def post_bill(
         ap_item_id=ap_item_id,
     )
 
+    # Idempotency-key plumbing: every adapter accepts the key now and
+    # forwards it to the ERP's native dedupe mechanism (Intuit
+    # ``requestid``, Xero ``Idempotency-Key`` header, NetSuite/SAP
+    # client-side find-bill pre-check). Without this a transient
+    # timeout + retry creates a duplicate bill in the customer's ERP.
     if connection.type == "quickbooks":
         result = await post_bill_to_quickbooks(
             connection, bill, gl_map=gl_map,
             field_mappings=field_mappings, custom_fields=custom_fields,
+            idempotency_key=idempotency_key,
         )
         if isinstance(result, dict) and result.get("needs_reauth"):
             new_token = await refresh_with_dedupe(
@@ -1183,11 +1189,13 @@ async def post_bill(
                 result = await post_bill_to_quickbooks(
                     connection, bill, gl_map=gl_map,
                     field_mappings=field_mappings, custom_fields=custom_fields,
+                    idempotency_key=idempotency_key,
                 )
     elif connection.type == "xero":
         result = await post_bill_to_xero(
             connection, bill, gl_map=gl_map,
             field_mappings=field_mappings, custom_fields=custom_fields,
+            idempotency_key=idempotency_key,
         )
         if isinstance(result, dict) and result.get("needs_reauth"):
             new_token = await refresh_with_dedupe(
@@ -1199,11 +1207,13 @@ async def post_bill(
                 result = await post_bill_to_xero(
                     connection, bill, gl_map=gl_map,
                     field_mappings=field_mappings, custom_fields=custom_fields,
+                    idempotency_key=idempotency_key,
                 )
     elif connection.type == "netsuite":
         result = await post_bill_to_netsuite(
             connection, bill, gl_map=gl_map,
             field_mappings=field_mappings, custom_fields=custom_fields,
+            idempotency_key=idempotency_key,
         )
         if isinstance(result, dict) and result.get("needs_reauth"):
             # H7: NetSuite uses OAuth 1.0a — no token refresh, but retry once
@@ -1212,11 +1222,13 @@ async def post_bill(
             result = await post_bill_to_netsuite(
                 connection, bill, gl_map=gl_map,
                 field_mappings=field_mappings, custom_fields=custom_fields,
+                idempotency_key=idempotency_key,
             )
     elif connection.type == "sap":
         result = await post_bill_to_sap(
             connection, bill, gl_map=gl_map,
             field_mappings=field_mappings, custom_fields=custom_fields,
+            idempotency_key=idempotency_key,
         )
         if isinstance(result, dict) and result.get("needs_reauth"):
             # H9: SAP B1 session may have expired — retry forces a fresh Login.
@@ -1224,9 +1236,10 @@ async def post_bill(
             result = await post_bill_to_sap(
                 connection, bill, gl_map=gl_map,
                 field_mappings=field_mappings, custom_fields=custom_fields,
+                idempotency_key=idempotency_key,
             )
     else:
-        result = {"status": "error", "reason": f"Unknown ERP type: {connection.type}"}
+        result = {"status": "error", "erp": connection.type, "reason": f"Unknown ERP type: {connection.type}"}
 
     if isinstance(result, dict) and idempotency_key and not result.get("idempotency_key"):
         result = {**result, "idempotency_key": idempotency_key}
