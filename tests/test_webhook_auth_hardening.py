@@ -367,3 +367,68 @@ def test_gmail_register_token_refuses_unprovisioned_email():
         "Both /gmail/register-token and /gmail/exchange-code must guard "
         "against unprovisioned domains; only one site has the check."
     )
+
+
+def test_erp_oauth_routes_never_accept_org_from_url_or_body():
+    """Pre-fix the ERP OAuth surface accepted ``organization_id`` from
+    the URL (authorize/disconnect/status/refresh callbacks) and from
+    request bodies (NetSuite/SAP connect). Any user from tenant A
+    could attach freshly-issued QuickBooks/Xero tokens — or
+    NetSuite/SAP credentials — to tenant B's connection record by
+    passing the target org. This is a direct cross-tenant credential
+    attack.
+
+    Fix: org is derived from ``Depends(get_current_user)`` everywhere;
+    OAuth state is bound to ``user_id`` and re-checked at callback so a
+    leaked state cannot be redeemed by a different session.
+    """
+    from clearledgr.api import erp_oauth
+
+    src_path = erp_oauth.__file__
+    with open(src_path, "r") as f:
+        src = f.read()
+
+    # The buggy patterns must NOT reappear:
+    forbidden_patterns = [
+        "organization_id: str = Query(...)",
+        'organization_id: str = Query(default="default")',
+        "organization_id: str = Query(default=\"default\")",
+    ]
+    for pat in forbidden_patterns:
+        assert pat not in src, (
+            f"Forbidden pattern still present in erp_oauth.py: {pat!r}. "
+            "ERP OAuth routes must derive organization_id from the "
+            "authenticated session, never from the URL."
+        )
+
+    # The fail-closed helper must be present.
+    assert "_require_session_org" in src, (
+        "_require_session_org helper missing — disconnect/status/refresh/"
+        "netsuite/sap routes must derive org from the authenticated user."
+    )
+
+    # Pydantic body models must NOT declare organization_id as a field
+    # any more. (The audit-flagged pre-fix shape was ``organization_id: str``
+    # on NetSuiteConnectRequest and SAPConnectRequest.)
+    forbidden_field = "organization_id: str"
+    netsuite_block = src.split("class NetSuiteConnectRequest", 1)[1].split("class ", 1)[0]
+    assert forbidden_field not in netsuite_block, (
+        "NetSuiteConnectRequest still declares 'organization_id: str' — "
+        "an authenticated user could attach NetSuite credentials to a "
+        "different tenant by setting this field."
+    )
+    sap_block = src.split("class SAPConnectRequest", 1)[1].split("class ", 1)[0]
+    assert forbidden_field not in sap_block, (
+        "SAPConnectRequest still declares 'organization_id: str' — "
+        "same cross-tenant credential attack as NetSuite."
+    )
+
+    # Callbacks must verify state-org and state-user against the session.
+    assert "oauth_state_org_mismatch" in src, (
+        "OAuth callbacks must reject when state's organization_id does "
+        "not match the authenticated user's org — leaked-state replay."
+    )
+    assert "oauth_state_user_mismatch" in src, (
+        "OAuth callbacks must reject when state's user_id does not "
+        "match the authenticated session — leaked-state cross-user replay."
+    )

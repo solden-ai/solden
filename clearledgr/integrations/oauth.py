@@ -65,12 +65,23 @@ def get_xero_config() -> OAuthConfig:
 _oauth_states: Dict[str, Dict[str, Any]] = {}
 
 
-def create_oauth_state(organization_id: str, erp_type: str) -> str:
-    """Create a secure state parameter for OAuth."""
+def create_oauth_state(
+    organization_id: str,
+    erp_type: str,
+    *,
+    user_id: Optional[str] = None,
+) -> str:
+    """Create a secure state parameter for OAuth.
+
+    ``user_id`` binds the state to the authenticated user who initiated
+    the flow. The callback re-checks it against ``get_current_user`` so
+    that a stolen state value cannot be redeemed by a different session.
+    """
     state = secrets.token_urlsafe(32)
     _oauth_states[state] = {
         "organization_id": organization_id,
         "erp_type": erp_type,
+        "user_id": user_id,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     return state
@@ -93,10 +104,14 @@ def validate_oauth_state(state: str) -> Optional[Dict[str, Any]]:
 
 # ==================== AUTHORIZATION URLS ====================
 
-def get_quickbooks_auth_url(organization_id: str) -> str:
+def get_quickbooks_auth_url(
+    organization_id: str,
+    *,
+    user_id: Optional[str] = None,
+) -> str:
     """Generate QuickBooks authorization URL."""
     config = get_quickbooks_config()
-    state = create_oauth_state(organization_id, "quickbooks")
+    state = create_oauth_state(organization_id, "quickbooks", user_id=user_id)
     
     params = {
         "client_id": config.client_id,
@@ -110,10 +125,14 @@ def get_quickbooks_auth_url(organization_id: str) -> str:
     return f"{config.authorize_url}?{param_string}"
 
 
-def get_xero_auth_url(organization_id: str) -> str:
+def get_xero_auth_url(
+    organization_id: str,
+    *,
+    user_id: Optional[str] = None,
+) -> str:
     """Generate Xero authorization URL."""
     config = get_xero_config()
-    state = create_oauth_state(organization_id, "xero")
+    state = create_oauth_state(organization_id, "xero", user_id=user_id)
     
     params = {
         "client_id": config.client_id,
