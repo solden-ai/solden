@@ -394,10 +394,18 @@ async def refresh_with_dedupe(
         # Cross-process gate: try to claim the Redis lock. If a different
         # worker pod is refreshing the same org's token, we wait for them
         # to land new tokens in the DB rather than hammering the OAuth
-        # endpoint with a now-burned RT.
+        # endpoint with a now-burned RT. The Redis client we use is
+        # ``rate_limit._redis_client`` which is sync; calling its
+        # ``set`` / ``eval`` directly from this async context blocks
+        # the event loop on every TCP round-trip — and this code runs
+        # during 401-reauth storms, exactly when we can't afford to
+        # stall the worker. Wrap each call in ``asyncio.to_thread``.
+        import asyncio as _asyncio_for_redis
         redis_client = _redis_for_refresh_lock()
         redis_key = f"clearledgr:erp_refresh_lock:{organization_id}:{erp_type}"
-        redis_token = _try_acquire_redis_lock(redis_client, redis_key)
+        redis_token = await _asyncio_for_redis.to_thread(
+            _try_acquire_redis_lock, redis_client, redis_key,
+        )
 
         if redis_client is not None and redis_token is None:
             # Another pod owns the lock. Poll the DB for their result.
@@ -418,7 +426,9 @@ async def refresh_with_dedupe(
         try:
             return await refresh_fn(connection)
         finally:
-            _release_redis_lock(redis_client, redis_key, redis_token or "")
+            await _asyncio_for_redis.to_thread(
+                _release_redis_lock, redis_client, redis_key, redis_token or "",
+            )
 
 
 def get_erp_connection(
@@ -522,6 +532,16 @@ def _enforce_erp_rate_limit(organization_id: str, erp_type: str) -> Optional[Dic
                 "erp": erp_type,
                 "retry_after": getattr(exc, "retry_after", 5),
             }
+        # Pre-fix this branch returned ``None`` (treat as allowed) with
+        # no log line — a genuine bug in the rate limiter (Redis down,
+        # config error, programming bug) was indistinguishable from
+        # "rate limit not breached" and silently swallowed. Now we
+        # log so an outage in the limiter doesn't disappear into a
+        # generic "ERP write proceeded" trace.
+        logger.warning(
+            "[rate_limit] check failed (allowing through) org=%s erp=%s: %s",
+            organization_id, erp_type, exc,
+        )
         return None  # Non-rate-limit error — proceed
 
 
@@ -1114,8 +1134,19 @@ async def post_bill(
                     "reference_id": meta.get("erp_reference"),
                     "idempotency_key": idempotency_key,
                 }
-        except Exception:
-            pass  # Non-fatal — proceed with post
+        except Exception as h10_exc:
+            # Pre-fix this was ``pass`` with no log line at all — a
+            # transient DB hiccup or a bug in
+            # ``get_ap_audit_event_by_key`` silently disengaged the
+            # H10 idempotency safety net and the bill posted twice.
+            # Now we log with org/ap_item/key breadcrumbs so the
+            # outage is visible in observability instead of being
+            # buried.
+            logger.warning(
+                "[post_bill] H10 idempotency lookup failed (proceeding) "
+                "org=%s ap=%s key=%s: %s",
+                organization_id, ap_item_id, idempotency_key, h10_exc,
+            )
 
     # §12.3: Pre-post validation — check before any ERP write
     if ap_item_id:
@@ -1998,10 +2029,16 @@ async def verify_bill_posted(
     """Verify a bill actually exists in the ERP after posting.
 
     Reuses the ``find_bill_*`` functions built for pre-flight checks.
-    Returns ``{"verified": bool, "bill": ..., "erp_type": str, "reason": str}``.
+    Returns ``{"verified": bool, "indeterminate": bool, "bill": ...,
+    "erp_type": str, "reason": str}``.
 
-    Non-fatal by design — callers should default to ``verified=True`` on error
-    so the pipeline is never blocked by a verification failure.
+    Pre-fix this returned ``verified=True`` on rate-limit / lookup
+    error / no-finder branches — making the verifier statistically
+    useless under exactly the conditions (overloaded ERP, transient
+    outage, missing finder) where verification is most needed. Now
+    those branches return ``verified=False, indeterminate=True`` so
+    the caller can route to a delayed re-check or operator alert
+    instead of treating an unverified post as confirmed.
     """
     org_id = str(organization_id or "").strip() or "default"
     inv_num = str(invoice_number or "").strip()
@@ -2010,23 +2047,56 @@ async def verify_bill_posted(
 
     connection = get_erp_connection(org_id)
     if not connection:
-        return {"verified": True, "bill": None, "erp_type": None, "reason": "no_erp_connection"}
+        # No connection at all is a definitive verified=False (we
+        # CAN'T post here, so nothing to verify). Distinct from
+        # indeterminate.
+        return {"verified": False, "bill": None, "erp_type": None, "reason": "no_erp_connection"}
 
-    # §11.1: Rate-limit check — treat as non-fatal, return verified=True so pipeline isn't blocked
+    # §11.1: Rate-limit means we can't tell — fail-soft as
+    # ``indeterminate`` so the caller queues a re-check instead of
+    # claiming confirmation.
     _rate_limited = _enforce_erp_rate_limit(org_id, connection.type)
     if _rate_limited:
-        return {"verified": True, "bill": None, "erp_type": connection.type, "reason": "rate_limited"}
+        return {
+            "verified": False,
+            "indeterminate": True,
+            "bill": None,
+            "erp_type": connection.type,
+            "reason": "rate_limited",
+        }
 
     erp_type = str(connection.type or "").strip().lower()
     finder = _BILL_FINDERS.get(erp_type)
     if not finder:
-        return {"verified": True, "bill": None, "erp_type": erp_type, "reason": "no_finder_for_erp"}
+        # No finder for this ERP type means we have no mechanism to
+        # verify; surface as indeterminate so the caller treats it as
+        # "queue manual reconciliation" rather than "confirmed".
+        return {
+            "verified": False,
+            "indeterminate": True,
+            "bill": None,
+            "erp_type": erp_type,
+            "reason": "no_finder_for_erp",
+        }
 
     try:
         bill = await finder(connection, inv_num)
     except Exception as exc:
-        logger.warning("Post-posting verification lookup failed: %s", exc)
-        return {"verified": True, "bill": None, "erp_type": erp_type, "reason": f"lookup_error:{exc}"}
+        # Lookup error is also indeterminate — we don't know if the
+        # bill is there. Carry the org / invoice breadcrumbs so an
+        # operator can manually reconcile.
+        logger.warning(
+            "[verify_bill_posted] lookup failed (indeterminate) "
+            "org=%s invoice=%s erp=%s: %s",
+            org_id, inv_num, erp_type, exc,
+        )
+        return {
+            "verified": False,
+            "indeterminate": True,
+            "bill": None,
+            "erp_type": erp_type,
+            "reason": f"lookup_error:{type(exc).__name__}",
+        }
 
     if not bill:
         return {"verified": False, "bill": None, "erp_type": erp_type, "reason": "bill_not_found_in_erp"}

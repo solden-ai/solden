@@ -1283,6 +1283,41 @@ def test_post_bill_to_sap_b1_validates_currency_length():
     assert "currency" in result["missing_fields"]
 
 
+def test_verify_bill_posted_returns_indeterminate_on_finder_exception(db):
+    """Pre-fix, ``verify_bill_posted`` returned ``verified=True`` on
+    finder lookup error / rate-limit / no-finder branches — making
+    the verifier statistically useless under exactly the conditions
+    where verification matters most. Now those branches return
+    ``verified=False, indeterminate=True`` so the caller can route
+    to manual reconciliation rather than treating an unverified
+    post as confirmed.
+    """
+    from clearledgr.integrations.erp_router import verify_bill_posted
+
+    db.ensure_organization("default")
+
+    # finder raises → indeterminate
+    async def exploding_finder(connection, invoice_number):
+        raise RuntimeError("ERP API down")
+
+    with patch("clearledgr.integrations.erp_router.get_erp_connection") as mock_get_conn, \
+         patch.dict(
+             "clearledgr.integrations.erp_router._BILL_FINDERS",
+             {"quickbooks": exploding_finder},
+         ):
+        mock_get_conn.return_value = ERPConnection(
+            type="quickbooks", access_token="tok", realm_id="123",
+            client_id="cid", client_secret="csec",
+        )
+        result = asyncio.run(verify_bill_posted(
+            "default", "INV-001", expected_amount=500.0,
+        ))
+
+    assert result["verified"] is False
+    assert result.get("indeterminate") is True
+    assert result["reason"].startswith("lookup_error:")
+
+
 def test_decision_action_lock_fails_closed_on_persist_exception():
     """Pre-fix, when ``append_audit_event`` raised AND the re-check
     also raised, ``_acquire_decision_action_lock`` returned ``True``
