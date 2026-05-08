@@ -137,21 +137,50 @@ def _dispatch_event(event) -> dict:
 
 
 def _load_box_state(event, db) -> dict:
-    """Load existing Box state for the event (if any)."""
+    """Load existing Box state for the event (if any).
+
+    Org-scoped at the data layer. Pre-fix the box_id path called
+    ``db.get_ap_item(box_id)`` purely by primary key — if a Celery
+    message somehow carried an ``organization_id`` of tenant A and a
+    ``box_id`` from tenant B (poisoned event, message replay across
+    tenants, or a queue-routing bug), the planner would receive
+    tenant B's row as the box state and the coordination engine
+    would then execute the event under tenant A's runtime against
+    tenant B's data. The thread_id path was already scoped via
+    ``get_ap_item_by_thread(organization_id, thread_id)``; the
+    box_id path now mirrors it via a post-fetch organization_id
+    check that fails closed (returns empty box state) on mismatch.
+    """
     payload = event.payload or {}
     box_id = payload.get("box_id") or payload.get("ap_item_id")
+    event_org = str(getattr(event, "organization_id", "") or "").strip()
     if box_id:
         try:
             item = db.get_ap_item(box_id)
             if item:
-                return dict(item)
+                row_org = str(item.get("organization_id") or "").strip()
+                if event_org and row_org and row_org == event_org:
+                    return dict(item)
+                # Mismatch (or missing org on either side) → log and
+                # fall through. Returning the foreign row would be a
+                # cross-tenant box-state leak; surfacing the
+                # mismatch explicitly is better than silently
+                # treating the event as having no prior box state,
+                # because that hides the queue-routing bug.
+                if row_org and event_org and row_org != event_org:
+                    logger.error(
+                        "[CeleryTask] cross-tenant box-state mismatch: "
+                        "event.org=%s box_id=%s row.org=%s — refusing to "
+                        "load foreign box state",
+                        event_org, box_id, row_org,
+                    )
         except Exception:
             pass
-    # Try by thread_id / message_id
+    # Try by thread_id / message_id (already org-scoped at the SQL layer).
     thread_id = payload.get("thread_id") or payload.get("message_id")
-    if thread_id:
+    if thread_id and event_org:
         try:
-            item = db.get_ap_item_by_thread(event.organization_id, thread_id)
+            item = db.get_ap_item_by_thread(event_org, thread_id)
             if item:
                 return dict(item)
         except Exception:

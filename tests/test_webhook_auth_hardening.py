@@ -511,6 +511,80 @@ def test_create_paths_fail_closed_on_missing_organization_id():
     )
 
 
+def test_slack_runtime_per_org_fallback_off_by_default():
+    """Tier 2: ``resolve_slack_runtime`` had
+    ``SLACK_ALLOW_SHARED_FALLBACK`` defaulting to ``"true"``. A
+    freshly-onboarded tenant whose Slack installation hadn't
+    completed silently ran on the platform-wide bot token — every
+    message looked like the platform was speaking on behalf of the
+    tenant, and incoming Slack interactions sent to the platform bot
+    landed without a clear ``team_id``→``organization_id`` mapping.
+    Effectively every un-installed tenant shared a Slack identity.
+
+    Plus the same M4 ``or "default"`` coercion on the
+    ``organization_id`` field — a missing org silently bound the
+    runtime to the literal "default" tenant.
+
+    The default is now ``"false"``: per_org mode requires an
+    org-specific installation, missing → ``connected=False``. The
+    coercion is gone — a missing org returns ``None``.
+    """
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parent.parent
+    src = (repo_root / "clearledgr" / "services" / "slack_api.py").read_text()
+    body = src.split("def resolve_slack_runtime", 1)[1].split("\ndef ", 1)[0]
+
+    assert 'SLACK_ALLOW_SHARED_FALLBACK", "true"' not in body, (
+        "resolve_slack_runtime still defaults SLACK_ALLOW_SHARED_FALLBACK "
+        "to 'true' — that's the cross-tenant landmine the audit flagged. "
+        "Operators must opt in explicitly via the env var."
+    )
+    assert 'SLACK_ALLOW_SHARED_FALLBACK", "false"' in body, (
+        "resolve_slack_runtime must default SLACK_ALLOW_SHARED_FALLBACK "
+        "to 'false' so per_org mode fails closed without an explicit "
+        "org installation."
+    )
+    assert 'organization_id or "default"' not in body, (
+        "resolve_slack_runtime still coerces missing org to 'default' "
+        "— same M4 landmine. Should return organization_id=None."
+    )
+
+
+def test_celery_load_box_state_blocks_cross_tenant_box_id():
+    """Tier 2: ``celery_tasks._load_box_state`` fetched
+    ``db.get_ap_item(box_id)`` purely by primary key when the event
+    payload carried a ``box_id`` / ``ap_item_id``. A poisoned event
+    or queue-routing bug carrying ``organization_id=tenant_A`` plus
+    ``box_id`` from ``tenant_B`` would have the planner receive
+    tenant B's row as the box state and the coordination engine
+    execute the event under tenant A's runtime against tenant B's
+    data. The thread_id path was already org-scoped; the box_id
+    path now has a post-fetch organization_id check that fails
+    closed on mismatch (returns empty box state and logs the
+    mismatch as an error so the queue-routing bug surfaces).
+    """
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parent.parent
+    src = (repo_root / "clearledgr" / "services" / "celery_tasks.py").read_text()
+    body = src.split("def _load_box_state", 1)[1].split("\ndef ", 1)[0]
+
+    # Must compare row's org against event's org before returning.
+    assert "row_org == event_org" in body, (
+        "_load_box_state must compare the row's organization_id "
+        "against the event's organization_id before returning the "
+        "row — pre-fix it returned by box_id alone, a cross-tenant "
+        "box-state leak."
+    )
+    # Must surface the mismatch as an explicit error.
+    assert "cross-tenant box-state mismatch" in body, (
+        "_load_box_state must log cross-tenant mismatches as errors "
+        "rather than silently treating the event as having no prior "
+        "box state — silence hides the queue-routing bug."
+    )
+
+
 def test_ap_items_action_routes_no_query_org_no_default_fallback():
     """Tier 1B: ``ap_items_action_routes.py`` accepted
     ``organization_id`` from the URL on every mutating route, then

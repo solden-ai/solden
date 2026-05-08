@@ -762,8 +762,33 @@ def resolve_slack_runtime(organization_id: Optional[str] = None) -> Dict[str, An
     Resolve Slack token/channel runtime based on org integration mode.
 
     Modes:
-    - shared: use env token + env/default channel
-    - per_org: use org installation token; fallback to shared when explicitly enabled
+    - shared: use env token + env/default channel (single-tenant deploy)
+    - per_org: use the org installation token; **never** fall back to
+      the shared platform bot token unless the operator has set
+      ``SLACK_ALLOW_SHARED_FALLBACK=true`` AND the deploy is
+      explicitly single-tenant.
+
+    Pre-fix the shared-token fallback was enabled by default (``true``)
+    — a freshly-onboarded tenant whose Slack installation hadn't
+    completed silently ran on the platform-wide bot token. That meant:
+      * messages posted via the platform bot looked like the platform
+        was speaking on behalf of that tenant,
+      * incoming Slack interactions sent to the platform bot were
+        ambiguous about which tenant they belonged to (the
+        ``team_id``→``organization_id`` mapping landed only on
+        explicit installations), and
+      * any tenant without an install effectively shared a Slack
+        identity with every other un-installed tenant.
+
+    The default is now ``false``. ``per_org`` mode requires an
+    org-specific installation; missing → ``connected=False``,
+    ``source="missing_org_installation"`` — fail closed. Operators
+    running a single-tenant deploy can opt back into the shared
+    fallback by setting ``SLACK_ALLOW_SHARED_FALLBACK=true``
+    explicitly. There's also no ``"default"`` coercion on
+    ``organization_id``: a missing org returns
+    ``organization_id=None`` so downstream callers cannot bind a
+    Slack runtime to the literal ``"default"`` tenant by accident.
     """
     shared_token = os.getenv("SLACK_BOT_TOKEN", "").strip()
     shared_token_configured = not _is_placeholder_slack_token(shared_token)
@@ -774,25 +799,32 @@ def resolve_slack_runtime(organization_id: Optional[str] = None) -> Dict[str, An
     )
     shared_secret = os.getenv("SLACK_SIGNING_SECRET", "").strip()
     default_mode = os.getenv("SLACK_INTEGRATION_MODE", "shared").strip().lower() or "shared"
+    # Default OFF — explicit opt-in only. See docstring for the
+    # cross-tenant rationale.
     allow_shared_fallback = str(
-        os.getenv("SLACK_ALLOW_SHARED_FALLBACK", "true")
-    ).strip().lower() not in {"0", "false", "no", "off"}
+        os.getenv("SLACK_ALLOW_SHARED_FALLBACK", "false")
+    ).strip().lower() in {"1", "true", "yes", "on"}
 
-    if not organization_id:
-        logger.warning("resolve_slack_runtime called without organization_id, falling back to 'default'")
     runtime: Dict[str, Any] = {
-        "organization_id": organization_id or "default",
+        "organization_id": organization_id or None,
         "mode": default_mode,
-        "bot_token": shared_token if shared_token_configured else None,
+        "bot_token": shared_token if (shared_token_configured and default_mode == "shared") else None,
         "signing_secret": shared_secret or None,
         "approval_channel": shared_channel,
-        "connected": shared_token_configured,
-        "source": "shared_env" if shared_token_configured else "shared_env_unconfigured",
+        "connected": shared_token_configured and default_mode == "shared",
+        "source": (
+            "shared_env"
+            if (shared_token_configured and default_mode == "shared")
+            else "shared_env_unconfigured"
+        ),
         "team_id": None,
         "team_name": None,
     }
 
     if not organization_id:
+        # No org context → no per-org installation lookup. The runtime
+        # carries the shared-mode defaults (which are themselves only
+        # connected if SLACK_INTEGRATION_MODE=shared).
         return runtime
 
     try:
@@ -828,9 +860,22 @@ def resolve_slack_runtime(organization_id: Optional[str] = None) -> Dict[str, An
                     }
                 )
             elif allow_shared_fallback and shared_token_configured:
+                # Operator-acknowledged single-tenant fallback. Logged
+                # so the deploy mode is auditable.
+                logger.warning(
+                    "[slack] per_org installation missing for org=%s; "
+                    "falling back to shared platform token "
+                    "(SLACK_ALLOW_SHARED_FALLBACK=true)",
+                    organization_id,
+                )
                 runtime.update({"bot_token": shared_token, "connected": True, "source": "shared_fallback"})
             else:
                 runtime.update({"bot_token": None, "connected": False, "source": "missing_org_installation"})
+        elif mode == "shared":
+            # Shared mode with an org context — keep the shared-mode
+            # token (already set above when default_mode==shared).
+            if shared_token_configured:
+                runtime.update({"bot_token": shared_token, "connected": True, "source": "shared_env"})
     except Exception:
         # Keep runtime non-fatal and preserve shared defaults.
         pass
