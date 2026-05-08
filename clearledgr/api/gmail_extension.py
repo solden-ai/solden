@@ -1906,13 +1906,20 @@ async def get_invoice_status(
     Returns: new, pending_approval, approved, posted, rejected
     """
     from clearledgr.core.database import get_db
-    
+
     db = get_db()
-    status = db.get_invoice_status(gmail_id)
-    
+    user_org = str(getattr(user, "organization_id", "") or "").strip()
+    if not user_org:
+        raise HTTPException(status_code=403, detail="user_missing_organization_id")
+    # M5: scope the lookup to the caller's org at the SQL level.
+    # Pre-fix any user holding a thread_id that happened to collide
+    # with another tenant's record could probe its existence (a 403
+    # response confirmed the foreign row existed, vs. a 404 for an
+    # unknown id). The org-scoped form returns 404 in both cases.
+    status = db.get_invoice_status(gmail_id, organization_id=user_org)
+
     if not status:
         raise HTTPException(status_code=404, detail="Invoice not found")
-    _assert_user_org_access(user, str(status.get("organization_id") or "default"))
     return status
 
 

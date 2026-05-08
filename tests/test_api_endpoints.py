@@ -2498,10 +2498,13 @@ class TestExtensionEndpoints:
                 "email": "new-user@clearledgr.com",
             },
         )
-        # Auto-provisioning: unknown users are created on first extension login
-        assert response.status_code == 200
-        assert response.json().get("success") is True
-        assert response.json().get("email") == "new-user@clearledgr.com"
+        # Post unprovisioned-email guard: unknown users on unmapped
+        # domains are refused with 403 instead of being silently
+        # auto-provisioned into a "default" tenant. The test name
+        # ("requires_provisioned_user") matches the new behavior;
+        # the assertion was stale from before the guard landed.
+        assert response.status_code == 403
+        assert response.json().get("detail") == "unprovisioned_email"
 
     def test_sensitive_extension_endpoints_require_auth(self):
         app.dependency_overrides.pop(gmail_extension_module.get_current_user, None)

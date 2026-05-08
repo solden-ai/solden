@@ -511,6 +511,67 @@ def test_create_paths_fail_closed_on_missing_organization_id():
     )
 
 
+def test_get_invoice_status_endpoint_scopes_lookup_to_session_org():
+    """M5: ``ap_store.get_invoice_status`` matches by ``thread_id``
+    only. If two tenants ever share a thread_id (rare with Gmail
+    UUIDs but possible with deterministic test ids or shared upstream
+    systems) the unscoped form returns whichever row sorts last by
+    ``created_at`` — at minimum a cross-tenant existence leak even
+    though row contents are protected by the API-layer
+    ``_assert_user_org_access`` check.
+
+    The store now accepts an optional ``organization_id`` kwarg that
+    scopes the SQL. The externally-exposed Gmail extension endpoint
+    (``/api/gmail-extension/invoice-status/{gmail_id}``) MUST pass the
+    caller's org so a foreign thread_id is invisible at the SQL level
+    and returns 404 in both the foreign-row and unknown-id case.
+
+    This test pins:
+      1. the store has the new optional ``organization_id`` parameter,
+      2. the endpoint passes ``user.organization_id`` to it,
+      3. the post-fetch ``_assert_user_org_access(... or "default")``
+         shape — which used a literal 'default' coercion — is gone.
+    """
+    import inspect
+    from pathlib import Path
+    from clearledgr.core.stores.ap_store import APStore
+
+    sig = inspect.signature(APStore.get_invoice_status)
+    assert "organization_id" in sig.parameters, (
+        "ap_store.get_invoice_status must accept an optional "
+        "organization_id parameter so externally-exposed callers can "
+        "scope the SQL lookup."
+    )
+
+    repo_root = Path(__file__).resolve().parent.parent
+    ext_path = repo_root / "clearledgr" / "api" / "gmail_extension.py"
+    src = ext_path.read_text()
+
+    # Locate the /invoice-status endpoint body.
+    marker = '"/invoice-status/{gmail_id}"'
+    assert marker in src, "could not locate /invoice-status endpoint in source"
+    after = src.split(marker, 1)[1]
+    # Snip to the next decorator so we only inspect this handler.
+    next_route = after.find("\n@router.")
+    body = after[: next_route if next_route > 0 else 4000]
+
+    assert "organization_id=user_org" in body or "organization_id=str(getattr(user" in body, (
+        "/invoice-status endpoint must pass the caller's org to "
+        "get_invoice_status so the SQL lookup is scoped at the data "
+        "layer, not just at the post-fetch _assert_user_org_access "
+        "check."
+    )
+
+    # The pre-fix shape post-fetched the row, then called
+    # _assert_user_org_access with ``or "default"``. The post-fix
+    # endpoint should not have that coercion any more.
+    assert 'or "default"' not in body, (
+        "/invoice-status endpoint still contains the post-fetch "
+        "``or \"default\"`` coercion — that path leaked existence of "
+        "rows in other tenants via the 403/404 distinction."
+    )
+
+
 def test_byid_store_mutations_require_organization_id():
     """M3: every by-id mutation/lookup on the three stores audited
     (webhook_store, dispute_store, custom_roles_store) must require

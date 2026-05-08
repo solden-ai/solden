@@ -899,15 +899,44 @@ class APStore:
     # update_invoice_status, get_invoice_status).  These bridge to the
     # canonical ap_items table using thread_id = gmail_id.
 
-    def get_invoice_status(self, gmail_id: str) -> Optional[Dict[str, Any]]:
-        """Look up an AP item by its Gmail thread/message ID."""
+    def get_invoice_status(
+        self, gmail_id: str, organization_id: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Look up an AP item by its Gmail thread/message ID.
+
+        When ``organization_id`` is provided the SQL is scoped to that
+        tenant — the safe shape, and the one every externally-exposed
+        caller MUST pass. If two tenants ever share a ``thread_id``
+        value (rare with Gmail UUIDs but possible with deterministic
+        test ids or shared upstream systems) the unscoped form returns
+        whichever row sorts last by ``created_at`` — a cross-tenant
+        existence leak even though the row contents are protected by
+        the API-layer ``_assert_user_org_access`` check.
+
+        ``organization_id=None`` is preserved for service-internal
+        callers that already hold a stable ``self.organization_id``
+        and have established ownership another way (e.g. they were
+        invoked with an org-scoped session). Each such caller is on
+        the M5 follow-up list to pass org explicitly.
+        """
         self.initialize()
-        sql = (
-            "SELECT * FROM ap_items WHERE thread_id = %s ORDER BY created_at DESC LIMIT 1"
-        )
+        if organization_id:
+            sql = (
+                "SELECT * FROM ap_items "
+                "WHERE thread_id = %s AND organization_id = %s "
+                "ORDER BY created_at DESC LIMIT 1"
+            )
+            params: tuple = (gmail_id, organization_id)
+        else:
+            sql = (
+                "SELECT * FROM ap_items "
+                "WHERE thread_id = %s "
+                "ORDER BY created_at DESC LIMIT 1"
+            )
+            params = (gmail_id,)
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (gmail_id,))
+            cur.execute(sql, params)
             row = cur.fetchone()
         return dict(row) if row else None
 
