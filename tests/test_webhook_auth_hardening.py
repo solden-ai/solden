@@ -511,6 +511,65 @@ def test_create_paths_fail_closed_on_missing_organization_id():
     )
 
 
+def test_ap_items_action_routes_no_query_org_no_default_fallback():
+    """Tier 1B: ``ap_items_action_routes.py`` accepted
+    ``organization_id`` from the URL on every mutating route, then
+    threaded it through ``or "default"`` fallback chains down to
+    FinanceAgentRuntime construction. A user from Tenant A could
+    reverse, snooze, classify, or bulk-mutate Tenant B's AP items by
+    passing ``?organization_id=Tenant_B`` if any one of the
+    ``or "default"`` fallbacks latched onto the literal "default"
+    tenant.
+
+    Worse: the ``/{ap_item_id}/classify`` route called
+    ``verify_org_access(user, organization_id)`` with the arguments
+    swapped — the deps helper signature is
+    ``(claimed_org_id, user)``. With a TokenData as ``claimed_org_id``
+    and a string as ``user``, the assertion silently passed every
+    time. That was the same B1 anti-pattern at a different layer.
+
+    This test pins:
+      1. no ``Query(default="default")`` parameters anywhere in the
+         file,
+      2. no ``or "default"`` coercions in executable code,
+      3. the ``_session_org`` helper exists and fails closed when
+         the session has no organization_id.
+    """
+    from pathlib import Path
+    import re
+
+    repo_root = Path(__file__).resolve().parent.parent
+    src = (repo_root / "clearledgr" / "api" / "ap_items_action_routes.py").read_text()
+
+    assert 'Query(default="default")' not in src, (
+        "ap_items_action_routes.py still has Query(default=\"default\") "
+        "parameters. Org must be derived from the authenticated session, "
+        "not from the URL."
+    )
+
+    or_default = re.compile(r"""or\s+["']default["']""")
+    # Strip docstrings so their prose mentions of "or 'default'" don't
+    # false-positive — re.DOTALL lets the inner ``.`` match newlines.
+    body_only = re.sub(r'"""(.*?)"""', "", src, flags=re.DOTALL)
+    matches = or_default.findall(body_only)
+    assert not matches, (
+        f"ap_items_action_routes.py still contains executable "
+        f"``or 'default'`` fallbacks ({len(matches)} occurrences). "
+        f"Cross-tenant landmine: any payload that loses its org "
+        f"silently writes to a shared bucket."
+    )
+
+    assert "def _session_org" in src, (
+        "ap_items_action_routes.py must define _session_org(user) "
+        "that fails closed when the session has no organization_id."
+    )
+    helper_body = src.split("def _session_org", 1)[1].split("\ndef ", 1)[0]
+    assert "user_missing_organization_id" in helper_body, (
+        "_session_org must raise 403 user_missing_organization_id "
+        "when the session has no org."
+    )
+
+
 def test_ops_assert_org_access_has_no_role_bypass_and_no_default_fallback():
     """Tier 1B: ``ops.py:_assert_org_access`` pre-fix returned early
     when ``user.role`` was ``admin`` or ``owner`` — but those are
