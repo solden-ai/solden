@@ -2889,10 +2889,16 @@ class APStore:
         self.initialize()
         now = datetime.now(timezone.utc).isoformat()
         job_id = str(payload.get("id") or f"ARJ-{uuid.uuid4().hex}")
-        _arj_org_id = payload.get("organization_id")
+        _arj_org_id = str(payload.get("organization_id") or "").strip()
         if not _arj_org_id:
-            logger.warning("organization_id missing in create_agent_retry_job payload (job_id=%s), falling back to 'default'", job_id)
-        _arj_org_id = str(_arj_org_id or "default")
+            # Pre-fix the missing-org branch wrote the row under a
+            # literal "default" tenant — the retry loop then resumed
+            # the workflow under that org's session, which is a
+            # cross-tenant landmine. Fail closed.
+            raise ValueError(
+                "create_agent_retry_job requires a non-empty organization_id; "
+                f"payload (job_id={job_id}) had no org"
+            )
         idem_key = payload.get("idempotency_key")
         if idem_key:
             existing = self.get_agent_retry_job_by_key(str(idem_key))

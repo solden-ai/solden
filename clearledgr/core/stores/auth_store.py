@@ -152,8 +152,15 @@ class AuthStore:
         )
         encrypted_access = self._encrypt_secret(access_token)
         encrypted_refresh = self._encrypt_secret(refresh_token or "")
-        if not organization_id:
-            logger.warning("organization_id missing in save_google_auth_code, falling back to 'default'")
+        org_id = str(organization_id or "").strip()
+        if not org_id:
+            # Pre-fix the missing-org branch fell back to a literal
+            # "default" tenant. An auth code redeemed against
+            # "default" produces a session whose ``org`` claim is
+            # "default" — that's a cross-tenant landmine. Fail closed.
+            raise ValueError(
+                "save_google_auth_code requires a non-empty organization_id"
+            )
         with self.connect() as conn:
             cur = conn.cursor()
             cur.execute(
@@ -162,7 +169,7 @@ class AuthStore:
                     str(auth_code),
                     encrypted_access,
                     encrypted_refresh,
-                    str(organization_id or "default"),
+                    org_id,
                     str(expires_at),
                     now,
                 ),

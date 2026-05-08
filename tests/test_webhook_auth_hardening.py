@@ -434,6 +434,83 @@ def test_erp_oauth_routes_never_accept_org_from_url_or_body():
     )
 
 
+def test_create_paths_fail_closed_on_missing_organization_id():
+    """M4: three create-paths used to log a warning then silently fall
+    back to a literal ``"default"`` tenant when the caller forgot to
+    pass ``organization_id``:
+
+    - ``payment_store.create_payment``
+    - ``auth_store.save_google_auth_code``
+    - ``ap_store.create_agent_retry_job``
+
+    The fallback was a cross-tenant landmine: any payload that lost
+    its org along the way silently wrote into a shared bucket. A
+    ``"default"``-bound auth code redeemed against the auth surface
+    produced a session in the wrong tenant; a ``"default"``-bound
+    retry job resumed an AP workflow under the wrong tenant.
+
+    Each store now raises ``ValueError`` when org is missing/empty.
+    This test pins that contract by inspecting the source so a future
+    regression that re-introduces the literal ``"default"`` fallback
+    on these three call paths fails the test immediately.
+    """
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parent.parent
+    cases = [
+        (
+            repo_root / "clearledgr" / "core" / "stores" / "payment_store.py",
+            "create_payment",
+        ),
+        (
+            repo_root / "clearledgr" / "core" / "stores" / "auth_store.py",
+            "save_google_auth_code",
+        ),
+        (
+            repo_root / "clearledgr" / "core" / "stores" / "ap_store.py",
+            "create_agent_retry_job",
+        ),
+    ]
+    import re
+
+    # The buggy fallback shape was specifically ``... or "default"``
+    # (or ``or 'default'``) used to coerce a missing org. Comments and
+    # docstrings legitimately mention the word "default" — match on
+    # the executable ``or`` coercion only.
+    or_default = re.compile(r"""or\s+["']default["']""")
+
+    for path, fn_name in cases:
+        text = path.read_text()
+        marker = f"def {fn_name}"
+        assert marker in text, f"could not find {fn_name} in {path}"
+        body = text.split(marker, 1)[1].split("\n    def ", 1)[0]
+        assert not or_default.search(body), (
+            f"{fn_name} in {path.name} still contains an "
+            f"``or 'default'`` fallback. Cross-tenant landmine: any "
+            f"payload that loses its org silently writes to a shared "
+            f"bucket."
+        )
+        assert "raise ValueError" in body or "raise HTTPException" in body, (
+            f"{fn_name} in {path.name} must fail closed on a missing "
+            f"organization_id (raise ValueError / HTTPException), not "
+            f"silently coerce to a default tenant."
+        )
+
+    # The HTTP-layer wrapper must also fail closed.
+    auth_path = repo_root / "clearledgr" / "api" / "auth.py"
+    auth_src = auth_path.read_text()
+    issue_body = auth_src.split("def _issue_google_auth_code", 1)[1].split("\ndef ", 1)[0]
+    assert not or_default.search(issue_body), (
+        "_issue_google_auth_code in api/auth.py still contains an "
+        "``or 'default'`` fallback. An auth code redeemed under "
+        "'default' produces a session in the wrong tenant."
+    )
+    assert "raise HTTPException" in issue_body, (
+        "_issue_google_auth_code must raise HTTPException on a missing "
+        "organization_id, not silently coerce."
+    )
+
+
 def test_byid_store_mutations_require_organization_id():
     """M3: every by-id mutation/lookup on the three stores audited
     (webhook_store, dispute_store, custom_roles_store) must require

@@ -83,10 +83,16 @@ class PaymentStore:
                 return existing
 
         payment_id = payload.get("id") or f"PAY-{uuid.uuid4().hex[:12]}"
-        _pay_org_id = payload.get("organization_id")
+        _pay_org_id = str(payload.get("organization_id") or "").strip()
         if not _pay_org_id:
-            logger.warning("organization_id missing in create_payment payload (payment_id=%s), falling back to 'default'", payment_id)
-        _pay_org_id = str(_pay_org_id or "default")
+            # Pre-fix this fell back to a literal "default" tenant,
+            # which is a cross-tenant landmine: any payload that
+            # loses its org along the way silently writes to a shared
+            # bucket. Fail closed instead.
+            raise ValueError(
+                "create_payment requires a non-empty organization_id; "
+                f"payload (payment_id={payment_id}) had no org"
+            )
 
         sql = """
             INSERT INTO payments

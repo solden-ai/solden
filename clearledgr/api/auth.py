@@ -173,13 +173,22 @@ def _issue_google_auth_code(*, access_token: str, refresh_token: str, organizati
         pass
     auth_code = secrets.token_urlsafe(32)
     expires_at = now + timedelta(seconds=_google_auth_code_ttl_seconds())
-    if not organization_id:
-        logger.warning("_issue_google_auth_code called without organization_id, falling back to 'default'")
+    org_id = str(organization_id or "").strip()
+    if not org_id:
+        # An auth code issued against a missing org would land in
+        # ``save_google_auth_code`` and silently bind to the literal
+        # "default" tenant — anyone redeeming it gets a session in
+        # the wrong place. Both call sites pass ``user.organization_id``,
+        # so an empty value here is a hard error condition, not a
+        # benign default.
+        raise HTTPException(
+            status_code=500, detail="auth_session_missing_organization_id"
+        )
     db.save_google_auth_code(
         auth_code=auth_code,
         access_token=access_token,
         refresh_token=refresh_token,
-        organization_id=str(organization_id or "default"),
+        organization_id=org_id,
         expires_at=expires_at.isoformat(),
     )
     return auth_code
