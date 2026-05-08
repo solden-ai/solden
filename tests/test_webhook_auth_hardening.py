@@ -432,3 +432,57 @@ def test_erp_oauth_routes_never_accept_org_from_url_or_body():
         "OAuth callbacks must reject when state's user_id does not "
         "match the authenticated session — leaked-state cross-user replay."
     )
+
+
+def test_vendor_profile_callers_use_canonical_arg_order():
+    """The B1 anti-pattern at the data layer: callers passing
+    ``(vendor_name, organization_id)`` to a function whose signature
+    is ``(organization_id, vendor_name)``. Under Postgres, a crafted
+    ``vendor_name`` matching a target tenant's org_id will match the
+    target tenant's row.
+
+    Pre-fix: ``vendor_store.py:2212`` and ``vendor_onboarding.py:436/448``
+    had the arguments swapped. This test scans every caller of
+    ``get_vendor_profile`` / ``upsert_vendor_profile`` to ensure the
+    canonical ``(organization_id, vendor_name)`` order is used.
+    """
+    import re
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parent.parent
+    targets = [
+        repo_root / "clearledgr" / "core" / "stores" / "vendor_store.py",
+        repo_root / "clearledgr" / "api" / "vendor_onboarding.py",
+        repo_root / "clearledgr" / "api" / "payment_confirmations.py",
+        repo_root / "clearledgr" / "api" / "vendor_portal.py",
+        repo_root / "clearledgr" / "api" / "threshold_policy.py",
+        repo_root / "clearledgr" / "api" / "gmail_extension.py",
+        repo_root / "clearledgr" / "integrations" / "erp_router.py",
+        repo_root / "clearledgr" / "workflows" / "gmail_activities.py",
+    ]
+    # Match a positional call with two simple args: ``func(arg1, arg2)``
+    # where neither arg is a kwarg. We then require arg1 to look like
+    # an org identifier (contains ``org``) — every legitimate caller
+    # passes ``organization_id`` / ``org_id`` / ``user.organization_id``
+    # first.
+    pattern = re.compile(
+        r"\.(?:get_vendor_profile|upsert_vendor_profile)\(\s*([^,()]+?)\s*,"
+    )
+    org_like = re.compile(r"organization_id|org_id|\.organization_id")
+
+    bad_sites = []
+    for path in targets:
+        if not path.exists():
+            continue
+        text = path.read_text()
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            for m in pattern.finditer(line):
+                first_arg = m.group(1).strip()
+                if "vendor" in first_arg.lower() and not org_like.search(first_arg):
+                    bad_sites.append(f"{path.relative_to(repo_root)}:{lineno}: {line.strip()}")
+
+    assert not bad_sites, (
+        "Found vendor-profile call sites with arguments in the wrong order. "
+        "Canonical signature is (organization_id, vendor_name). Sites:\n"
+        + "\n".join(bad_sites)
+    )

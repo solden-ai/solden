@@ -2208,8 +2208,18 @@ class VendorStore:
     def get_vendor_for_entity(
         self, organization_id: str, vendor_name: str, entity_id: str
     ) -> Dict[str, Any]:
-        """§3: Returns merged vendor profile — parent-level KYC + entity-level overrides."""
-        profile = self.get_vendor_profile(vendor_name, organization_id)
+        """§3: Returns merged vendor profile — parent-level KYC + entity-level overrides.
+
+        Pre-fix this called ``get_vendor_profile(vendor_name, organization_id)``
+        with the arguments swapped — the same B1 anti-pattern we caught in
+        the System B audit. Under SQLite that quietly returned None for
+        every lookup; under Postgres an attacker who could control the
+        ``vendor_name`` value could pass a target tenant's org_id and
+        the WHERE clause would match a row in that tenant. The arguments
+        are now in the canonical ``(organization_id, vendor_name)`` order
+        used by every other VendorStore call site.
+        """
+        profile = self.get_vendor_profile(organization_id, vendor_name)
         if not profile:
             return {}
         override = self.get_vendor_entity_override(profile.get("id", ""), entity_id)

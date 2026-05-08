@@ -432,8 +432,12 @@ async def import_vendors_csv(
             skipped.append({"row": row, "reason": "missing vendor_name"})
             continue
 
-        # Check if vendor already exists with active onboarding
-        existing = db.get_vendor_profile(vendor_name, organization_id) if hasattr(db, "get_vendor_profile") else None
+        # Check if vendor already exists with active onboarding.
+        # Canonical order is (organization_id, vendor_name); pre-fix
+        # this site had them swapped, which under Postgres lets a
+        # crafted vendor_name value match a different tenant's row
+        # (the same B1 anti-pattern caught in vendor_store).
+        existing = db.get_vendor_profile(organization_id, vendor_name) if hasattr(db, "get_vendor_profile") else None
         if existing:
             skipped.append({"row": row, "reason": "vendor_already_exists"})
             continue
@@ -443,9 +447,10 @@ async def import_vendors_csv(
         # (micro-deposit) before invoices can be processed. No direct import
         # to onboarded status.
         try:
-            # Create vendor profile with CSV data (KYC fields pre-populated)
+            # Create vendor profile with CSV data (KYC fields pre-populated).
+            # Same canonical-order fix as the get_vendor_profile call above.
             if hasattr(db, "upsert_vendor_profile"):
-                db.upsert_vendor_profile(vendor_name, organization_id, **{
+                db.upsert_vendor_profile(organization_id, vendor_name, **{
                     k: v for k, v in mapped.items() if k != "vendor_name"
                 })
 
