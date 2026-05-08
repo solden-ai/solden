@@ -181,3 +181,48 @@ def test_erp_webhook_secret_lookup_distinguishes_db_error_from_not_configured():
         f"expected ≥5 _WebhookSecretLookupFailed mentions (def + 4 routes), "
         f"got {qbo_count}"
     )
+
+
+def test_gmail_register_token_refuses_unprovisioned_email():
+    """Pre-fix the Gmail extension's /register-token endpoint
+    auto-provisioned ANY new email into ``org_id="default"`` when
+    the email's domain didn't map to any org. Combined with a
+    backend JWT mint (``create_access_token``), an attacker with a
+    personal Gmail + valid Google OAuth token received a Solden
+    session in the literal "default" org — cross-tenant write
+    access if any tenant happened to have id="default" (or via
+    test fixtures).
+
+    Now both ``/gmail/register-token`` and ``/gmail/exchange-code``
+    refuse with HTTP 403 ``unprovisioned_email`` when the email's
+    domain has no mapped org. Auto-provisioning still works for
+    domain-matched emails (legitimate org bootstrap path).
+    """
+    from clearledgr.api import gmail_extension
+
+    src_path = gmail_extension.__file__
+    with open(src_path, "r") as f:
+        src = f.read()
+
+    # The buggy bootstrap fallback log message must NOT exist any
+    # more. (The phrase ``resolved_org_id = ... or "default"`` on
+    # post-provision lines is a separate concern — those read from
+    # an existing user row that has data-corruption signals; the
+    # auto-provision path is what the audit flagged.)
+    assert 'using default' not in src, (
+        "'using default' fallback log message present — the unmappable-"
+        "domain auto-provision path is still creating users in the "
+        "default org. That's the cross-tenant landmine the audit flagged."
+    )
+
+    # The fail-closed guard must be present.
+    assert "unprovisioned_email" in src, (
+        "Gmail extension must reject unprovisioned emails with "
+        "HTTP 403 unprovisioned_email — auto-provisioning into "
+        "'default' is the cross-tenant attack."
+    )
+    # Both endpoints must have the guard (register-token + exchange-code).
+    assert src.count("unprovisioned_email") >= 2, (
+        "Both /gmail/register-token and /gmail/exchange-code must guard "
+        "against unprovisioned domains; only one site has the check."
+    )

@@ -936,20 +936,46 @@ async def register_gmail_token(request: RegisterGmailTokenRequest):
 
     user = get_user_by_email(profile_email.lower())
     if user is None:
-        # Auto-provision: create user from Google identity on first extension login
+        # Auto-provision: create user from Google identity on first
+        # extension login — but ONLY when the email's domain maps to
+        # an existing org. Pre-fix unmappable domains fell through to
+        # ``org_id="default"``, which is a cross-tenant landmine: any
+        # attacker with a personal Gmail + a valid Google OAuth token
+        # could hit this route and receive a backend JWT in the
+        # "default" org (or whatever org happens to be named that).
+        # Now we refuse with 403 ``unprovisioned_email`` when the
+        # domain has no mapped org. The user can still be added via
+        # the invite flow under ``/auth/users/invite``.
         from clearledgr.core.auth import create_user_from_google
         email_domain = profile_email.split("@")[1].lower() if "@" in profile_email else ""
         _bootstrap_db = get_db()
         _domain_org = _bootstrap_db.get_organization_by_domain(email_domain) if email_domain else None
-        org_id = str((_domain_org or {}).get("id") or "default").strip() or "default"
         if not _domain_org:
-            logger.warning("No org found for domain %s during extension bootstrap — using default", email_domain)
+            logger.warning(
+                "[register-token] refusing unprovisioned email — no org for "
+                "domain. email=%s domain=%s",
+                profile_email, email_domain,
+            )
+            raise HTTPException(status_code=403, detail="unprovisioned_email")
+        org_id = str(_domain_org.get("id") or "").strip()
+        if not org_id:
+            # Defensive: a domain-mapped org without an id is a data-
+            # corruption signal, not a bootstrap path.
+            logger.error(
+                "[register-token] domain org missing id — refusing. domain=%s",
+                email_domain,
+            )
+            raise HTTPException(status_code=500, detail="org_missing_id")
         user = create_user_from_google(
             email=profile_email.lower(),
             google_id=profile_email.lower(),
             organization_id=org_id,
         )
-        logger.info("Auto-provisioned extension user: %s org=%s", profile_email, org_id)
+        logger.info(
+            "[register-token] auto-provisioned extension user via domain match: "
+            "email=%s org=%s",
+            profile_email, org_id,
+        )
 
     resolved_org_id = str(getattr(user, "organization_id", None) or "default").strip() or "default"
     requested_org = str(request.organization_id or "").strip()
@@ -1052,21 +1078,39 @@ async def exchange_gmail_code(request: ExchangeCodeRequest):
     if not profile_email:
         raise HTTPException(status_code=400, detail="could_not_determine_email")
 
-    # Provision user if needed
+    # Provision user if needed — same fail-closed-on-unknown-domain
+    # rule as ``register_gmail_token`` above. Pre-fix unmappable
+    # domains landed in the literal "default" org (cross-tenant
+    # landmine). Now we refuse with 403 ``unprovisioned_email`` for
+    # bootstrap requests whose email domain has no mapped org.
     user = get_user_by_email(profile_email.lower())
     if user is None:
         email_domain = profile_email.split("@")[1].lower() if "@" in profile_email else ""
         _bootstrap_db = get_db()
         _domain_org = _bootstrap_db.get_organization_by_domain(email_domain) if email_domain else None
-        org_id = str((_domain_org or {}).get("id") or "default").strip() or "default"
         if not _domain_org:
-            logger.warning("No org found for domain %s during extension bootstrap — using default", email_domain)
+            logger.warning(
+                "[exchange-code] refusing unprovisioned email — no org for "
+                "domain. email=%s domain=%s",
+                profile_email, email_domain,
+            )
+            raise HTTPException(status_code=403, detail="unprovisioned_email")
+        org_id = str(_domain_org.get("id") or "").strip()
+        if not org_id:
+            logger.error(
+                "[exchange-code] domain org missing id — refusing. domain=%s",
+                email_domain,
+            )
+            raise HTTPException(status_code=500, detail="org_missing_id")
         user = create_user_from_google(
             email=profile_email.lower(),
             google_id=profile_email.lower(),
             organization_id=org_id,
         )
-        logger.info("Auto-provisioned user via code exchange: %s", profile_email)
+        logger.info(
+            "[exchange-code] auto-provisioned via domain match: email=%s org=%s",
+            profile_email, org_id,
+        )
 
     user_id = str(getattr(user, "id", "") or "").strip() or profile_email
     resolved_org_id = str(getattr(user, "organization_id", None) or "default").strip()
