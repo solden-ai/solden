@@ -28,19 +28,47 @@ def assert_user_org_access(user: Any, organization_id: str) -> None:
     There is no super-admin concept in the product. If one is ever
     needed (platform operator tooling), it belongs on a separate,
     internal-only route — not a role check on the tenant-facing API.
+
+    Pre-fix this function coerced both sides to ``"default"`` before
+    comparing — a session whose ``organization_id`` was the legacy
+    ``"default"`` literal could bypass the check by passing an empty
+    body org. We now require both values to be non-empty before
+    comparing; missing org on either side is a 403.
     """
-    org_id = str(organization_id or "default").strip() or "default"
+    requested = str(organization_id or "").strip()
     user_org = str(getattr(user, "organization_id", "") or "").strip()
-    if user_org != org_id:
+    if not requested or not user_org or user_org != requested:
         raise HTTPException(status_code=403, detail="org_mismatch")
 
 
 def resolve_org_id_for_user(user: Any, requested_org: Optional[str]) -> str:
+    """Resolve the org for a Gmail extension request.
+
+    Contract:
+      * If the request omits ``organization_id`` (None / "" / the
+        legacy ``"default"`` placeholder), use the user's session
+        org.
+      * If the request supplies ``organization_id``, it MUST match
+        the user's session org — otherwise 403.
+      * If the user's session has no org at all, fail closed with
+        403. Pre-fix this returned the literal ``"default"`` string,
+        which silently routed the request to a shared bucket.
+    """
     requested = str(requested_org or "").strip()
-    if requested and requested != "default":
-        assert_user_org_access(user, requested)
-        return requested
-    return str(getattr(user, "organization_id", None) or "default")
+    user_org = str(getattr(user, "organization_id", "") or "").strip()
+    if not user_org:
+        raise HTTPException(
+            status_code=403, detail="user_missing_organization_id"
+        )
+    # Treat the legacy ``"default"`` placeholder as "no org supplied"
+    # for backward-compat with extension clients that still pass it
+    # — but only as a sentinel, never as an actual tenant id. The
+    # session org takes precedence.
+    if not requested or requested == "default":
+        return user_org
+    if requested != user_org:
+        raise HTTPException(status_code=403, detail="org_mismatch")
+    return user_org
 
 
 def authenticated_actor(user: Any, fallback: str = "extension") -> str:

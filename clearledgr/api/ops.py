@@ -136,11 +136,49 @@ def _runtime_health_snapshot() -> Dict[str, Any]:
     return snapshot
 
 
-def _assert_org_access(user: TokenData, organization_id: str) -> None:
-    if user.role in _OPS_ADMIN_ROLES:
-        return
-    if str(organization_id or "default") != str(user.organization_id):
+def _assert_org_access(user: TokenData, organization_id: str) -> str:
+    """Assert the caller's session org matches ``organization_id``
+    and return the canonical org id (the user's session org).
+
+    Pre-fix this returned early when ``user.role`` was ``admin`` or
+    ``owner`` — but those are TENANT-LEVEL roles, not platform-ops
+    roles. An admin of Tenant A could pass
+    ``?organization_id=Tenant_B`` to any ``/api/ops/*`` route and
+    read Tenant B's tenant-health, box-health, KPI digests, etc.
+    Same anti-pattern ``gmail_extension_common.assert_user_org_access``
+    explicitly warns against in its docstring.
+
+    There is no super-admin role on the tenant-facing API. If
+    platform operator tooling is ever needed, it belongs on a
+    separate, internal-only router behind a different auth check —
+    not a role bypass on tenant routes.
+
+    The 13 ops routes that fan in here all declare the query
+    parameter with ``Query("default")`` as the default — that's
+    the legacy "no explicit org supplied" placeholder. We treat
+    a missing or ``"default"`` requested-org as "use my session
+    org" and return that; any other value MUST match the session.
+    A session without an org fails closed with 403.
+
+    Returning the canonical org also means the function doubles as
+    ``_resolve_org_id`` — callers do
+    ``org_id = _assert_org_access(user, organization_id)`` and
+    thread the verified value to the DB layer instead of the raw
+    URL parameter.
+    """
+    user_org = str(getattr(user, "organization_id", "") or "").strip()
+    if not user_org:
+        raise HTTPException(
+            status_code=403, detail="user_missing_organization_id"
+        )
+    requested = str(organization_id or "").strip()
+    # Empty / legacy "default" → use the session org. Any other
+    # value must match exactly.
+    if not requested or requested == "default":
+        return user_org
+    if requested != user_org:
         raise HTTPException(status_code=403, detail="org_mismatch")
+    return user_org
 
 
 def _require_admin(user: TokenData) -> None:
@@ -274,7 +312,7 @@ async def get_tenant_health(
     organization_id: str = Query("default"),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    _assert_org_access(user, organization_id)
+    organization_id = _assert_org_access(user, organization_id)
     db = get_db()
     metrics = db.get_operational_metrics(
         organization_id,
@@ -295,7 +333,7 @@ async def get_box_health(
     Complements /tenant-health (aggregates) by listing the individual
     AP Boxes plus time-in-stage buckets and exception clusters.
     """
-    _assert_org_access(user, organization_id)
+    organization_id = _assert_org_access(user, organization_id)
     db = get_db()
     health = db.get_box_health(
         organization_id,
@@ -320,7 +358,7 @@ async def get_llm_cost_summary(
     against the Anthropic bill. Without this endpoint a runaway
     tenant is invisible until the monthly bill arrives.
     """
-    _assert_org_access(user, organization_id)
+    organization_id = _assert_org_access(user, organization_id)
     db = get_db()
     now = datetime.now(timezone.utc)
     cutoff = (now - timedelta(days=window_days)).isoformat()
@@ -444,7 +482,7 @@ async def get_ap_kpis(
     organization_id: str = Query("default"),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    _assert_org_access(user, organization_id)
+    organization_id = _assert_org_access(user, organization_id)
     db = get_db()
     kpis = db.get_ap_kpis(
         organization_id,
@@ -459,7 +497,7 @@ async def get_ap_kpi_digest(
     surface: str = Query("all"),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    _assert_org_access(user, organization_id)
+    organization_id = _assert_org_access(user, organization_id)
     db = get_db()
     kpis = db.get_ap_kpis(
         organization_id,
@@ -484,7 +522,7 @@ async def get_ap_aggregation(
     vendor_limit: int = Query(10, ge=1, le=50),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    _assert_org_access(user, organization_id)
+    organization_id = _assert_org_access(user, organization_id)
     db = get_db()
     metrics = db.get_ap_aggregation_metrics(
         organization_id=organization_id,
@@ -499,7 +537,7 @@ async def get_erp_routing_strategy(
     organization_id: str = Query("default"),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    _assert_org_access(user, organization_id)
+    organization_id = _assert_org_access(user, organization_id)
     strategy = get_erp_connector_strategy()
     connection = get_erp_connection(organization_id)
     erp_type = str((connection.type if connection else "unconfigured") or "unconfigured")
@@ -659,7 +697,7 @@ async def get_extraction_quality(
 
     Required by PLAN.md §8.2 (extraction correction rate metric).
     """
-    _assert_org_access(user, organization_id)
+    organization_id = _assert_org_access(user, organization_id)
     db = get_db()
 
     from datetime import timedelta
@@ -1031,7 +1069,7 @@ async def get_ap_decision_health(
     rule-based routing was used instead. An override_rate_pct > 0 means humans
     disagreed with Claude's recommendation.
     """
-    _assert_org_access(user, organization_id)
+    organization_id = _assert_org_access(user, organization_id)
     db = get_db()
     import json as _json
     from datetime import timedelta
@@ -1138,7 +1176,7 @@ async def get_monitoring_thresholds(
     - ``AP_ALERT_CORRECTION_RATE_PCT``    (default 10)
     - ``AP_ALERT_DUPLICATE_POST_COUNT``   (default 1)
     """
-    _assert_org_access(user, organization_id)
+    organization_id = _assert_org_access(user, organization_id)
     db = get_db()
     return _evaluate_monitoring_thresholds(organization_id, window_hours, db)
 
@@ -1157,7 +1195,7 @@ async def check_and_alert_thresholds(
     ``#ap-ops-alerts``).  Designed to be called from a cron job or the durable
     retry worker loop.
     """
-    _assert_org_access(user, organization_id)
+    organization_id = _assert_org_access(user, organization_id)
     db = get_db()
     result = _evaluate_monitoring_thresholds(organization_id, window_hours, db)
 
@@ -1205,7 +1243,7 @@ async def get_monitoring_health(
     Returns per-check status with alert flag and severity.  Broader than
     ``/monitoring-thresholds`` which focuses on AP-specific metrics only.
     """
-    _assert_org_access(user, organization_id)
+    organization_id = _assert_org_access(user, organization_id)
     from clearledgr.services.monitoring import run_monitoring_checks
     return await run_monitoring_checks(organization_id=organization_id)
 
@@ -1266,7 +1304,7 @@ async def get_retry_queue(
     Use ``POST /api/ops/retry-queue/{job_id}/retry`` or ``.../skip`` for
     manual intervention.
     """
-    _assert_org_access(user, organization_id)
+    organization_id = _assert_org_access(user, organization_id)
     db = get_db()
     safe_status: Any = str(status or "dead_letter").strip().lower()
     query_status = None if safe_status == "all" else safe_status

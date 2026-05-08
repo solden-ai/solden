@@ -511,6 +511,83 @@ def test_create_paths_fail_closed_on_missing_organization_id():
     )
 
 
+def test_ops_assert_org_access_has_no_role_bypass_and_no_default_fallback():
+    """Tier 1B: ``ops.py:_assert_org_access`` pre-fix returned early
+    when ``user.role`` was ``admin`` or ``owner`` — but those are
+    TENANT-LEVEL roles, not platform-ops roles. An admin of Tenant A
+    could pass ``?organization_id=Tenant_B`` to any ``/api/ops/*``
+    route and read Tenant B's tenant-health, box-health, and KPI
+    digests. There is no super-admin role on the tenant-facing API.
+
+    The same function also coerced ``organization_id or "default"``
+    before the equality check — a session whose org was the legacy
+    ``"default"`` literal could bypass via an empty query parameter.
+
+    This test pins both fixes via source inspection.
+    """
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parent.parent
+    src = (repo_root / "clearledgr" / "api" / "ops.py").read_text()
+
+    body = src.split("def _assert_org_access", 1)[1].split("\ndef ", 1)[0]
+
+    # No early-return on role.
+    assert "_OPS_ADMIN_ROLES" not in body, (
+        "ops.py:_assert_org_access still gates on _OPS_ADMIN_ROLES — "
+        "that's the tenant-admin cross-tenant bypass the audit flagged."
+    )
+
+    # No ``or "default"`` coercion before equality.
+    import re
+    or_default = re.compile(r"""or\s+["']default["']""")
+    assert not or_default.search(body), (
+        "ops.py:_assert_org_access still coerces missing org to "
+        "'default' before comparing — same M4 landmine."
+    )
+
+    # Must fail closed when the session has no org.
+    assert "user_missing_organization_id" in body, (
+        "ops.py:_assert_org_access must fail closed with 403 when "
+        "the user's session carries no organization_id."
+    )
+
+
+def test_gmail_extension_common_assert_user_org_access_fails_closed():
+    """Tier 1B: ``gmail_extension_common.assert_user_org_access`` /
+    ``resolve_org_id_for_user`` had ``or "default"`` coercions on
+    both the requested-org side and the session-org side. A session
+    with no org silently coerced to the literal ``"default"`` and
+    then either matched another ``"default"``-org session or fell
+    through to a global bucket. Same M4 landmine on a different
+    surface.
+    """
+    from pathlib import Path
+    import re
+
+    repo_root = Path(__file__).resolve().parent.parent
+    src = (repo_root / "clearledgr" / "api" / "gmail_extension_common.py").read_text()
+    or_default = re.compile(r"""or\s+["']default["']""")
+
+    # The two functions are the audit-flagged pair.
+    for fn_name in ("assert_user_org_access", "resolve_org_id_for_user"):
+        body = src.split(f"def {fn_name}", 1)[1].split("\ndef ", 1)[0]
+        assert not or_default.search(body), (
+            f"gmail_extension_common.{fn_name} still contains an "
+            f"``or 'default'`` coercion. Cross-tenant landmine: a "
+            f"session whose org was the legacy 'default' literal "
+            f"could bypass the access check via an empty body org."
+        )
+
+    # ``resolve_org_id_for_user`` must fail closed when the session
+    # has no org rather than returning the literal "default".
+    body_resolve = src.split("def resolve_org_id_for_user", 1)[1].split("\ndef ", 1)[0]
+    assert "user_missing_organization_id" in body_resolve, (
+        "resolve_org_id_for_user must raise on a session without an "
+        "organization_id, not silently return the literal 'default'."
+    )
+
+
 def test_get_invoice_status_endpoint_scopes_lookup_to_session_org():
     """M5: ``ap_store.get_invoice_status`` matches by ``thread_id``
     only. If two tenants ever share a thread_id (rare with Gmail
