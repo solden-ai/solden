@@ -808,8 +808,20 @@ async def gmail_push_notification(request: Request):
     causing gunicorn WORKER TIMEOUT and 502s on unrelated requests
     (most visibly /auth/google/callback during a sign-in attempt).
     """
-    body = await request.json()
+    # Verify FIRST — pre-fix the order was reversed (parse JSON, THEN
+    # verify), which let an attacker DoS the api fleet by stuffing
+    # the JSON parser with a huge body before the verifier ran. The
+    # verifier rejects unsigned requests synchronously; only signed
+    # requests reach the JSON parse.
     _enforce_push_verifier(request)
+    # Defensive size cap on the body. Real Gmail Pub/Sub pushes are
+    # well under 64KB; reject anything larger before parsing.
+    _content_length = int(request.headers.get("content-length") or 0)
+    if _content_length and _content_length > 65536:
+        raise HTTPException(
+            status_code=413, detail="gmail_push_body_too_large",
+        )
+    body = await request.json()
     payload = _validate_push_payload(body)
     email_address = payload["email_address"]
     history_id = payload["history_id"]
@@ -1027,6 +1039,15 @@ async def process_gmail_notification(email_address: str, history_id: str, push_r
                 # vs a new email. Check if thread belongs to existing Box.
                 event_type = AgentEventType.EMAIL_RECEIVED
                 thread_id_for_event = ""
+                # Pre-fix ``existing_item`` was bound only inside the
+                # inner try when the message had a thread AND the DB
+                # lookup succeeded. When either condition failed, the
+                # reference at the AgentEvent payload below raised
+                # ``NameError`` — silently swallowed by the outer
+                # try/except, dropping every per-message branch into
+                # the inline-LLM fallback. Initialising to None makes
+                # the fallthrough explicit + correct.
+                existing_item = None
                 try:
                     # Fetch thread_id from the message
                     msg_meta = await client.get_message(message_id, format="metadata")
@@ -1047,7 +1068,11 @@ async def process_gmail_notification(email_address: str, history_id: str, push_r
                         "thread_id": thread_id_for_event,
                         "mailbox": email_address,
                         "user_id": token.user_id,
-                        "vendor_id": (existing_item.get("vendor_name", "") if event_type == AgentEventType.VENDOR_RESPONSE_RECEIVED else ""),
+                        "vendor_id": (
+                            (existing_item or {}).get("vendor_name", "")
+                            if event_type == AgentEventType.VENDOR_RESPONSE_RECEIVED
+                            else ""
+                        ),
                     },
                     organization_id=organization_id,
                     idempotency_key=message_id,

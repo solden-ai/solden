@@ -259,6 +259,71 @@ def test_slack_received_lock_short_circuits_concurrent_retry():
     )
 
 
+def test_gmail_webhook_existing_item_initialized_before_inner_try():
+    """Pre-fix gmail_webhooks.py:1050 referenced ``existing_item``
+    that was only assigned inside an inner try block. When the
+    inner try raised (no thread on the message, transient DB
+    failure on get_ap_item_by_thread), ``existing_item`` was
+    undefined → ``NameError`` → silently swallowed by the outer
+    except → every per-message branch fell through to inline LLM
+    processing in the worker, an architecture the docstring
+    forbids. Initialising to ``None`` before the inner try makes
+    the fall-through explicit + correct.
+    """
+    from clearledgr.api import gmail_webhooks
+
+    src_path = gmail_webhooks.__file__
+    with open(src_path, "r") as f:
+        src = f.read()
+
+    # The fix initialises existing_item BEFORE the inner try block.
+    assert "existing_item = None" in src, (
+        "gmail_webhooks.py is no longer initialising existing_item before "
+        "the inner try. That re-introduces the NameError fall-through bug."
+    )
+    # The reference site uses (existing_item or {}) defensively.
+    assert "(existing_item or {}).get(\"vendor_name\"" in src, (
+        "gmail_webhooks.py is reading existing_item.get without the "
+        "(existing_item or {}) None-guard."
+    )
+
+
+def test_gmail_push_route_verifies_before_parsing_json():
+    """Pre-fix gmail_webhooks.py:/push parsed the JSON body BEFORE
+    calling ``_enforce_push_verifier``. An attacker could DoS the
+    api fleet by sending an enormous body — the JSON parser ran on
+    every request, even unsigned ones. Now the verifier runs first;
+    a defensive body-size cap (64KB) blocks oversize requests
+    before they reach the JSON parse.
+    """
+    from clearledgr.api import gmail_webhooks
+
+    src_path = gmail_webhooks.__file__
+    with open(src_path, "r") as f:
+        src = f.read()
+
+    # Find the body of the /push handler.
+    marker = '@router.post("/push")'
+    assert marker in src, "Could not locate /gmail/push route"
+    after_marker = src.split(marker, 1)[1]
+    next_route = after_marker.find("@router.")
+    push_body = after_marker[: next_route if next_route > 0 else 4000]
+
+    # _enforce_push_verifier MUST come before request.json() in the function body.
+    verify_pos = push_body.find("_enforce_push_verifier(request)")
+    parse_pos = push_body.find("body = await request.json()")
+    assert verify_pos > 0, "/gmail/push handler missing _enforce_push_verifier call"
+    assert parse_pos > 0, "/gmail/push handler missing body parse"
+    assert verify_pos < parse_pos, (
+        "/gmail/push parses JSON before verifying signature. That re-introduces "
+        f"the DoS where unsigned bodies are parsed. verify_pos={verify_pos} parse_pos={parse_pos}"
+    )
+    # Body-size cap must be present.
+    assert "gmail_push_body_too_large" in push_body, (
+        "/gmail/push missing the 64KB body-size cap that prevents JSON-parser DoS."
+    )
+
+
 def test_gmail_register_token_refuses_unprovisioned_email():
     """Pre-fix the Gmail extension's /register-token endpoint
     auto-provisioned ANY new email into ``org_id="default"`` when
