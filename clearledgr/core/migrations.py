@@ -4351,3 +4351,61 @@ def _v77_audit_events_hash_chain(cur, db):
         "ON audit_events (organization_id, chain_seq) "
         "WHERE chain_seq IS NOT NULL"
     )
+
+
+@migration(
+    78,
+    "teams_installations: per-tenant Microsoft Teams (AAD) bot installations",
+)
+def _v78_teams_installations(cur, db):
+    """Mirror of ``slack_installations`` for Microsoft Teams.
+
+    Pre-fix the Teams interactive callback at
+    ``api/teams_invoices.py`` accepted ``organization_id`` from the
+    request body. The AAD bot-token claims (``tid``,
+    ``oid``/``sub``) confirmed the caller was a valid Microsoft
+    principal but didn't bind them to a Solden tenant — so an
+    attacker holding any valid bot token could post
+    ``{"organization_id": "victim", "email_id": "<their_invoice>"}``
+    and approve invoices in the victim tenant. The interim fix
+    (commit 21439b3) ignored the body ``organization_id`` and
+    derived org from the AP-item resolution alone — fail-closed
+    when the email_id didn't resolve, but still tolerated the case
+    where AAD tenant A's bot token resolved an AP item belonging
+    to Solden tenant B.
+
+    This migration adds a proper team→org mapping so the AAD
+    ``tid`` claim can be verified BEFORE the AP-item lookup.
+
+    Schema mirrors ``slack_installations`` for consistency with
+    the existing per-org integration pattern.
+    """
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS teams_installations (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            aad_tenant_id TEXT NOT NULL,
+            tenant_name TEXT,
+            bot_app_id TEXT,
+            bot_app_password_encrypted TEXT,
+            service_url TEXT,
+            mode TEXT DEFAULT 'per_org',
+            is_active INTEGER DEFAULT 1,
+            metadata_json TEXT,
+            created_at TEXT,
+            updated_at TEXT,
+            UNIQUE(organization_id, aad_tenant_id)
+        )
+        """
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_teams_installations_org "
+        "ON teams_installations(organization_id)"
+    )
+    # The aad_tenant_id index is the lookup the bot-callback uses on
+    # every interactive click — ``get_teams_installation_by_aad_tenant``.
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_teams_installations_aad_tenant "
+        "ON teams_installations(aad_tenant_id) WHERE is_active = 1"
+    )

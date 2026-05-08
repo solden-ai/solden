@@ -300,37 +300,79 @@ async def handle_teams_interactive(request: Request) -> Dict[str, Any]:
         )
         raise HTTPException(status_code=400, detail="invalid_payload")
     email_candidate = str(payload.get("email_id") or payload.get("gmail_id") or "").strip()
-    # Pre-fix this read ``organization_id`` from the (untrusted) request
-    # body; the AAD bot-token claims proved the caller was a valid
-    # Microsoft principal but didn't bind them to a Solden tenant —
-    # so an attacker holding any valid bot token could post
-    # ``{"organization_id": "victim", "email_id": "<their_invoice>"}``
-    # and approve invoices in the victim tenant. Now the body
-    # ``organization_id`` is ignored entirely; the org comes solely
-    # from the AP-item resolution. If the email_candidate doesn't
-    # resolve to an AP item, the click is refused — fail-closed.
+    # Resolve the caller's Solden organization from the AAD ``tid`` claim
+    # via the per-org installation table, BEFORE any AP-item lookup.
+    # Pre-fix this either trusted the body ``organization_id`` (a
+    # cross-tenant approval surface — anyone holding a valid bot token
+    # could approve invoices in any tenant by setting the body field),
+    # or relied on resolving org from the AP item itself (which still
+    # let an AAD-tenant-A bot token act on AP items the AP-item-
+    # resolution happened to surface for tenant B if email_id collided).
     #
-    # Long-term TODO: add a ``teams_tenant_id`` column on
-    # ``organizations`` (or a ``teams_installations`` table mirroring
-    # ``slack_installations``) and verify ``claims["tid"]`` matches
-    # before the AP-item lookup, so the team→org boundary is
-    # enforced before any DB read.
+    # M9 closes the loop: the AAD ``tid`` MUST map to an active
+    # ``teams_installations`` row, and the resulting Solden org is
+    # the only org this callback can act on. A token whose AAD tenant
+    # has no installation refused entirely.
+    aad_tid = str((claims or {}).get("tid") or "").strip()
+    install = (
+        db.get_teams_installation_by_aad_tenant(aad_tid)
+        if aad_tid and hasattr(db, "get_teams_installation_by_aad_tenant")
+        else None
+    )
+    organization_id_from_install = str((install or {}).get("organization_id") or "").strip()
+    if not organization_id_from_install:
+        body_hash = hashlib.sha256(raw_body or b"").hexdigest()[:16]
+        _audit_callback_event(
+            db,
+            event_type="channel_callback_unauthorized",
+            organization_id="default",
+            idempotency_key=f"teams:no_installation:{body_hash}",
+            reason="aad_tenant_not_provisioned",
+            metadata={"aad_tid": aad_tid or None},
+        )
+        # 403 not 404: the bot token verified but the AAD tenant has
+        # no Solden installation — that's an authorization failure
+        # against the Solden multi-tenant boundary, not a missing
+        # resource on the surface.
+        raise HTTPException(status_code=403, detail="aad_tenant_not_provisioned")
+
     organization_id, ap_item_id = _resolve_ap_context(
         db,
-        "default",
+        organization_id_from_install,
         email_candidate,
     )
+    # ``_resolve_ap_context`` returns the org of the AP item it
+    # resolved; if that diverges from the install-derived org, the
+    # AP item belongs to a different tenant than the AAD caller —
+    # refuse.
+    if organization_id and organization_id != organization_id_from_install:
+        body_hash = hashlib.sha256(raw_body or b"").hexdigest()[:16]
+        _audit_callback_event(
+            db,
+            event_type="channel_callback_unauthorized",
+            organization_id=organization_id_from_install,
+            idempotency_key=f"teams:org_mismatch:{body_hash}",
+            reason="ap_item_org_mismatch",
+            metadata={
+                "aad_tid": aad_tid or None,
+                "install_org": organization_id_from_install,
+                "ap_item_org": organization_id,
+                "email_id": email_candidate or None,
+            },
+        )
+        raise HTTPException(status_code=403, detail="ap_item_org_mismatch")
+    organization_id = organization_id_from_install
     if not ap_item_id:
         body_hash = hashlib.sha256(raw_body or b"").hexdigest()[:16]
         _audit_callback_event(
             db,
             event_type="channel_action_invalid",
-            organization_id="default",
+            organization_id=organization_id,
             idempotency_key=f"teams:no_ap_item:{body_hash}",
             reason="no_ap_item_resolution",
             metadata={
                 "email_id": email_candidate or None,
-                "aad_tid": (claims or {}).get("tid"),
+                "aad_tid": aad_tid or None,
             },
         )
         raise HTTPException(status_code=404, detail="ap_item_not_found")

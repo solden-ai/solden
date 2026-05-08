@@ -491,6 +491,183 @@ class IntegrationStore:
         return affected
 
     # ------------------------------------------------------------------
+    # Microsoft Teams installations (per-org bot bindings)
+    # ------------------------------------------------------------------
+
+    def set_teams_installation(
+        self,
+        *,
+        organization_id: str,
+        aad_tenant_id: str,
+        tenant_name: Optional[str] = None,
+        bot_app_id: Optional[str] = None,
+        bot_app_password: Optional[str] = None,
+        service_url: Optional[str] = None,
+        mode: Optional[str] = "per_org",
+        is_active: bool = True,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Upsert a Teams installation row for an org.
+
+        Mirrors ``set_slack_installation``. The
+        ``(organization_id, aad_tenant_id)`` pair is the natural key
+        — UNIQUE at the DB layer so a single AAD tenant can only map
+        to one Solden organization at a time. Cross-tenant
+        verification on the bot callback resolves
+        ``claims["tid"]`` → ``organization_id`` via this table; a
+        token whose AAD tenant has no installation refused entirely.
+        """
+        import uuid
+
+        if not organization_id or not aad_tenant_id:
+            raise ValueError(
+                "set_teams_installation requires non-empty organization_id "
+                "and aad_tenant_id"
+            )
+        self.initialize()
+        now = datetime.now(timezone.utc).isoformat()
+        existing = self.get_teams_installation(organization_id)
+        row_id = (existing or {}).get("id") or f"TEAMS-{uuid.uuid4().hex}"
+        password_encrypted = (
+            self._encrypt_secret(bot_app_password) if bot_app_password else None
+        )
+        sql = (
+            """
+            INSERT INTO teams_installations
+            (id, organization_id, aad_tenant_id, tenant_name, bot_app_id,
+             bot_app_password_encrypted, service_url, mode, is_active,
+             metadata_json, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (organization_id, aad_tenant_id)
+            DO UPDATE SET tenant_name = EXCLUDED.tenant_name,
+                          bot_app_id = EXCLUDED.bot_app_id,
+                          bot_app_password_encrypted = EXCLUDED.bot_app_password_encrypted,
+                          service_url = EXCLUDED.service_url,
+                          mode = EXCLUDED.mode,
+                          is_active = EXCLUDED.is_active,
+                          metadata_json = EXCLUDED.metadata_json,
+                          updated_at = EXCLUDED.updated_at
+            """
+        )
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                sql,
+                (
+                    row_id,
+                    organization_id,
+                    aad_tenant_id,
+                    tenant_name,
+                    bot_app_id,
+                    password_encrypted,
+                    service_url,
+                    mode or "per_org",
+                    1 if is_active else 0,
+                    json.dumps(metadata or {}),
+                    (existing or {}).get("created_at") or now,
+                    now,
+                ),
+            )
+            conn.commit()
+        self.upsert_organization_integration(
+            organization_id=organization_id,
+            integration_type="teams",
+            status="connected" if is_active else "disconnected",
+            mode=mode or "per_org",
+            metadata={
+                "aad_tenant_id": aad_tenant_id,
+                "tenant_name": tenant_name,
+                "bot_app_id": bot_app_id,
+            },
+            last_sync_at=now,
+        )
+        return self.get_teams_installation(organization_id) or {}
+
+    def get_teams_installation(
+        self,
+        organization_id: str,
+        include_secrets: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        """Fetch the active Teams installation for an org, if any."""
+        self.initialize()
+        sql = (
+            "SELECT * FROM teams_installations "
+            "WHERE organization_id = %s AND is_active = 1 "
+            "ORDER BY updated_at DESC LIMIT 1"
+        )
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(sql, (organization_id,))
+            row = cur.fetchone()
+        if not row:
+            return None
+        return self._decode_teams_install_row(row, include_secrets=include_secrets)
+
+    def get_teams_installation_by_aad_tenant(
+        self,
+        aad_tenant_id: str,
+        include_secrets: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        """Resolve an AAD ``tid`` claim to its Solden installation row.
+
+        This is the lookup the Teams bot-callback handler runs on every
+        interactive click, BEFORE any AP-item resolution. If no row
+        exists for ``aad_tenant_id``, the click is refused — that's
+        the M9 fail-closed contract.
+        """
+        if not aad_tenant_id:
+            return None
+        self.initialize()
+        sql = (
+            "SELECT * FROM teams_installations "
+            "WHERE aad_tenant_id = %s AND is_active = 1 "
+            "ORDER BY updated_at DESC LIMIT 1"
+        )
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(sql, (aad_tenant_id,))
+            row = cur.fetchone()
+        if not row:
+            return None
+        return self._decode_teams_install_row(row, include_secrets=include_secrets)
+
+    def deactivate_teams_installation(self, aad_tenant_id: str) -> int:
+        """Mark every installation row for an AAD tenant as inactive.
+
+        Mirror of ``deactivate_slack_installation``. Called from the
+        bot's tenant-uninstall webhook so an admin who removes the
+        bot from their AAD tenant immediately stops the
+        ``team_id``→``organization_id`` mapping for that tenant.
+        """
+        self.initialize()
+        now = datetime.now(timezone.utc).isoformat()
+        sql = (
+            "UPDATE teams_installations "
+            "SET is_active = 0, updated_at = %s "
+            "WHERE aad_tenant_id = %s"
+        )
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(sql, (now, aad_tenant_id))
+            affected = int(cur.rowcount or 0)
+            conn.commit()
+        return affected
+
+    def _decode_teams_install_row(
+        self, row: Any, *, include_secrets: bool,
+    ) -> Dict[str, Any]:
+        data = dict(row)
+        data["is_active"] = bool(data.get("is_active"))
+        data["metadata"] = self._decode_json_value(data.get("metadata_json"), {})
+        if include_secrets:
+            data["bot_app_password"] = self._decrypt_secret(
+                data.get("bot_app_password_encrypted")
+            )
+        else:
+            data["bot_app_password"] = None
+        return data
+
+    # ------------------------------------------------------------------
     # Organization integrations
     # ------------------------------------------------------------------
 
