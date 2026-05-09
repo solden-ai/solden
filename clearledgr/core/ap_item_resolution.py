@@ -24,9 +24,9 @@ def resolve_ap_item_reference(
     *,
     allow_foreign_id: bool = False,
 ) -> Optional[Dict[str, Any]]:
-    org_id = str(organization_id or "default").strip() or "default"
+    org_id = str(organization_id or "").strip()
     ref = str(reference_id or "").strip()
-    if not ref:
+    if not ref or not org_id:
         return None
 
     item: Optional[Dict[str, Any]] = None
@@ -34,7 +34,7 @@ def resolve_ap_item_reference(
     if callable(getter):
         candidate = getter(ref)
         if candidate:
-            candidate_org = str(candidate.get("organization_id") or org_id).strip() or org_id
+            candidate_org = str(candidate.get("organization_id") or "").strip()
             if candidate_org == org_id or allow_foreign_id:
                 item = candidate
 
@@ -45,7 +45,7 @@ def resolve_ap_item_reference(
 
     if not item:
         return None
-    item_org = str(item.get("organization_id") or org_id).strip() or org_id
+    item_org = str(item.get("organization_id") or "").strip()
     if item_org != org_id and not allow_foreign_id:
         return None
     return item
@@ -56,19 +56,49 @@ def resolve_ap_context(
     organization_id: str,
     reference_id: str,
 ) -> Tuple[str, Optional[Dict[str, Any]]]:
-    org_id = str(organization_id or "default").strip() or "default"
+    """Resolve an AP item by (org, reference). Org-scoped at every step.
+
+    Pre-fix this called ``db.get_invoice_status(ref)`` WITHOUT passing
+    organization_id, then ADOPTED ``invoice_row.organization_id`` as
+    the resolved org. A thread_id collision across tenants would
+    silently swap the caller's intended org for whichever tenant's
+    row sorted last by ``created_at``. Slack flows downstream
+    inherited the swapped org and could act on a foreign tenant's
+    AP item.
+
+    Now: pass ``organization_id`` to ``get_invoice_status``
+    (M5-supported kwarg) so the lookup is SQL-scoped, and never adopt
+    a foreign org from the row itself. If the row's org doesn't match
+    the requested org, the lookup returns None and the function
+    fails closed.
+    """
+    org_id = str(organization_id or "").strip()
     ref = str(reference_id or "").strip()
     invoice_row: Optional[Dict[str, Any]] = None
 
-    if ref and hasattr(db, "get_invoice_status"):
+    if ref and org_id and hasattr(db, "get_invoice_status"):
         try:
-            candidate = db.get_invoice_status(ref)
+            candidate = db.get_invoice_status(ref, organization_id=org_id)
             invoice_row = candidate if isinstance(candidate, dict) else None
+        except TypeError:
+            # Older callers / mocked DBs may not accept the kwarg yet.
+            # Fall back to the unscoped form but DO NOT adopt the row's
+            # org — verify it post-fetch.
+            try:
+                candidate = db.get_invoice_status(ref)
+                invoice_row = candidate if isinstance(candidate, dict) else None
+            except Exception:
+                invoice_row = None
         except Exception:
             invoice_row = None
 
-    if invoice_row and invoice_row.get("organization_id"):
-        org_id = str(invoice_row.get("organization_id") or org_id).strip() or org_id
+    # Defense in depth: if the row's org disagrees with the requested
+    # org, drop the row. Pre-fix this branch ADOPTED the row's org —
+    # the cross-tenant landmine.
+    if invoice_row and org_id:
+        row_org = str(invoice_row.get("organization_id") or "").strip()
+        if row_org and row_org != org_id:
+            invoice_row = None
 
     item = resolve_ap_item_reference(db, org_id, ref)
     if not item and invoice_row:
@@ -96,9 +126,23 @@ def resolve_ap_correlation_id(
             row = resolved
         elif hasattr(db, "get_invoice_status"):
             try:
-                invoice_row = db.get_invoice_status(str(reference_id or "").strip())
+                invoice_row = db.get_invoice_status(
+                    str(reference_id or "").strip(),
+                    organization_id=organization_id,
+                )
+            except TypeError:
+                try:
+                    invoice_row = db.get_invoice_status(str(reference_id or "").strip())
+                except Exception:
+                    invoice_row = None
             except Exception:
                 invoice_row = None
+            # Defense in depth: drop foreign-org rows even if the
+            # unscoped fallback path returned one.
+            if isinstance(invoice_row, dict) and organization_id:
+                row_org = str(invoice_row.get("organization_id") or "").strip()
+                if row_org and row_org != organization_id:
+                    invoice_row = None
             row = invoice_row if isinstance(invoice_row, dict) else None
             organization_id = org_id
 

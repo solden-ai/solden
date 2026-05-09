@@ -551,6 +551,73 @@ def test_slack_runtime_per_org_fallback_off_by_default():
     )
 
 
+def test_ap_items_read_routes_no_query_org_no_default_fallback():
+    """M13 (post-codex-review): peer file ``ap_items_read_routes.py``
+    had the same anti-pattern that ``ap_items_action_routes.py`` did
+    pre-M7 — 9 routes accepted ``organization_id`` as
+    ``Query(default="default")`` and 11 ``verify_org_access(
+    item.get("organization_id") or "default", _user)`` post-fetch
+    coercions. The action_routes M7 fix didn't touch this peer.
+
+    Now: every read route derives org via ``_session_org(_user)``,
+    no Query parameters, no executable ``or "default"`` coercions.
+    """
+    from pathlib import Path
+    import re
+
+    repo_root = Path(__file__).resolve().parent.parent
+    src = (repo_root / "clearledgr" / "api" / "ap_items_read_routes.py").read_text()
+    # Strip docstrings before scanning so the helper's docstring (which
+    # legitimately mentions both patterns as the bugs it prevents)
+    # doesn't false-positive.
+    body_only = re.sub(r'"""(.*?)"""', "", src, flags=re.DOTALL)
+
+    assert 'Query(default="default")' not in body_only, (
+        "ap_items_read_routes.py still has Query(default=\"default\") "
+        "parameters. Org must come from the session, not the URL."
+    )
+    or_default = re.compile(r"""or\s+["']default["']""")
+    matches = or_default.findall(body_only)
+    assert not matches, (
+        f"ap_items_read_routes.py still contains executable "
+        f"``or 'default'`` fallbacks ({len(matches)} occurrences)."
+    )
+    assert "def _session_org" in src, (
+        "ap_items_read_routes.py must define _session_org(user) "
+        "(mirror of the action_routes helper)."
+    )
+
+
+def test_resolve_ap_context_does_not_swap_org_from_invoice_row():
+    """M13 (post-codex-review): ``ap_item_resolution.resolve_ap_context``
+    pre-fix called ``db.get_invoice_status(ref)`` WITHOUT passing
+    organization_id, then ADOPTED the matched row's organization_id
+    as the resolved org. A thread_id collision across tenants would
+    silently swap the caller's intended org for whichever tenant's
+    row sorted last by ``created_at``. Slack flows downstream
+    inherited the swapped org and acted on a foreign tenant's AP item.
+
+    Fix: pass ``organization_id`` to ``get_invoice_status`` (M5
+    kwarg) and never adopt a foreign org from the row itself.
+    """
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parent.parent
+    src = (repo_root / "clearledgr" / "core" / "ap_item_resolution.py").read_text()
+    body = src.split("def resolve_ap_context", 1)[1].split("\ndef ", 1)[0]
+
+    assert "db.get_invoice_status(ref, organization_id=" in body, (
+        "resolve_ap_context must pass organization_id to "
+        "get_invoice_status — pre-fix the unscoped call let any "
+        "thread_id collision swap the caller's org."
+    )
+    # The pre-fix shape adopted the row's org. Make sure that's gone.
+    assert 'org_id = str(invoice_row.get("organization_id")' not in body, (
+        "resolve_ap_context still ADOPTS invoice_row.organization_id "
+        "as the resolved org. That's the cross-tenant org-swap."
+    )
+
+
 def test_ops_autopilot_status_does_not_silently_escalate_to_default_org():
     """M11 (post-codex-review CRITICAL): ``api/ops.py:get_autopilot_status``
     pre-fix did

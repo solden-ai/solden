@@ -190,8 +190,21 @@ def _resolve_correlation_id(db, organization_id: str, ap_item_id: Optional[str],
 
 
 async def _dispatch_teams_action(action: Any) -> Dict[str, Any]:
+    # M9 made action.organization_id load-bearing — it's set from the
+    # AAD installation row at line 352, so any path that reaches this
+    # dispatcher has a non-empty org. The pre-fix ``or "default"``
+    # fallback was dead code armed: any future caller that constructed
+    # an ``action`` without org would silently route to the legacy
+    # "default" tenant. Fail closed instead.
+    org = str(getattr(action, "organization_id", "") or "").strip()
+    if not org:
+        raise ValueError(
+            "_dispatch_teams_action: action.organization_id is empty; "
+            "every Teams action must be bound to an org via the "
+            "AAD installation lookup before dispatch"
+        )
     runtime = _build_channel_runtime(
-        organization_id=action.organization_id or "default",
+        organization_id=org,
         actor_id=action.actor_id or "teams_user",
         actor_email=action.actor_display or action.actor_id or "teams_user",
         db=get_db(),
@@ -621,7 +634,12 @@ async def handle_teams_interactive(request: Request) -> Dict[str, Any]:
             try:
                 _db = get_db()
                 _db.enqueue_notification(
-                    organization_id=normalized.organization_id or "default",
+                    # By the time we reach this enqueue, ``normalized.organization_id``
+                    # was set from the AAD installation lookup (M9). The pre-fix
+                    # ``or "default"`` was dead code that would silently bind a
+                    # retry notification to the legacy "default" tenant if the
+                    # field ever went missing.
+                    organization_id=normalized.organization_id,
                     channel="teams_card_update",
                     payload={
                         "service_url": service_url,

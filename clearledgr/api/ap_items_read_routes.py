@@ -10,14 +10,36 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 
+from fastapi import HTTPException
+
 from clearledgr.core.auth import get_current_user
 from clearledgr.core.database import get_db
 from clearledgr.core.money import money_sum, money_to_float
-from clearledgr.api.deps import verify_org_access
 from clearledgr.services.ap_operator_audit import normalize_operator_audit_events
 
 
 router = APIRouter()
+
+
+def _session_org(user: Any) -> str:
+    """Derive the caller's org from the authenticated session.
+
+    Pre-fix every read route accepted ``organization_id`` as a
+    ``Query(default="default")`` parameter and threaded it through
+    ``or "default"`` fallback chains. The Query value was redundant —
+    every site already calls ``_require_item(...,
+    expected_organization_id=user.org)`` which enforces tenant scope —
+    but the fallback chain meant a missing/empty session-org silently
+    fetched against the literal ``"default"`` tenant. We now derive
+    org solely from the session and drop the Query entirely. Mirror
+    of the helper in ``ap_items_action_routes.py``.
+    """
+    org = str(getattr(user, "organization_id", "") or "").strip()
+    if not org:
+        raise HTTPException(
+            status_code=403, detail="user_missing_organization_id"
+        )
+    return org
 
 
 class _SharedProxy:
@@ -40,23 +62,21 @@ shared = _SharedProxy()
 
 @router.get("/upcoming")
 def get_upcoming_ap_tasks(
-    organization_id: str = Query(default="default"),
     limit: int = Query(default=50, ge=1, le=200),
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
-    verify_org_access(organization_id, _user)
+    organization_id = _session_org(_user)
     db = get_db()
     return shared._build_upcoming_tasks_payload(db, organization_id, limit=limit)
 
 
 @router.get("/vendors")
 def get_vendor_directory(
-    organization_id: str = Query(default="default"),
     search: str = Query(default=""),
     limit: int = Query(default=50, ge=1, le=200),
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
-    verify_org_access(organization_id, _user)
+    organization_id = _session_org(_user)
     db = get_db()
     rows = shared._build_vendor_summary_rows(db, organization_id, search=search, limit=limit)
     return {
@@ -69,12 +89,11 @@ def get_vendor_directory(
 @router.get("/vendors/{vendor_name}")
 def get_vendor_record(
     vendor_name: str,
-    organization_id: str = Query(default="default"),
     days: int = Query(default=180, ge=30, le=365),
     invoice_limit: int = Query(default=20, ge=6, le=30),
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
-    verify_org_access(organization_id, _user)
+    organization_id = _session_org(_user)
     db = get_db()
     return shared._build_vendor_detail_payload(
         db,
@@ -87,12 +106,11 @@ def get_vendor_record(
 
 @router.get("/search")
 def search_ap_items(
-    organization_id: str = Query(default="default"),
     q: str = Query(default=""),
     limit: int = Query(default=12, ge=1, le=50),
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
-    verify_org_access(organization_id, _user)
+    organization_id = _session_org(_user)
     db = get_db()
     query = str(q or "").strip().lower()
     items = db.list_ap_items(organization_id, limit=1000)
@@ -126,12 +144,11 @@ def search_ap_items(
 
 @router.get("/compose/lookup")
 def lookup_compose_record(
-    organization_id: str = Query(default="default"),
     draft_id: str = Query(default=""),
     thread_id: str = Query(default=""),
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
-    verify_org_access(organization_id, _user)
+    organization_id = _session_org(_user)
     db = get_db()
     normalized_draft_id = str(draft_id or "").strip()
     normalized_thread_id = str(thread_id or "").strip()
@@ -148,7 +165,7 @@ def lookup_compose_record(
             if not candidate_id:
                 continue
             item = db.get_ap_item(candidate_id)
-            if item and str(item.get("organization_id") or organization_id or "default").strip() == organization_id:
+            if item and str(item.get("organization_id") or "").strip() == organization_id:
                 return _build_found(item)
 
     if normalized_thread_id and hasattr(db, "get_ap_item_by_thread"):
@@ -161,12 +178,11 @@ def lookup_compose_record(
 
 @router.get("/metrics/aggregation")
 def get_ap_aggregation_metrics(
-    organization_id: str = Query(default="default"),
     limit: int = Query(default=10000, ge=100, le=50000),
     vendor_limit: int = Query(default=10, ge=1, le=50),
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
-    verify_org_access(organization_id, _user)
+    organization_id = _session_org(_user)
     db = get_db()
     metrics = db.get_ap_aggregation_metrics(
         organization_id=organization_id,
@@ -178,11 +194,10 @@ def get_ap_aggregation_metrics(
 
 @router.get("/aging")
 def get_ap_aging_report(
-    organization_id: str = Query(default="default"),
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     """AP aging report — open payables bucketed by days past due."""
-    verify_org_access(organization_id, _user)
+    organization_id = _session_org(_user)
     from clearledgr.services.ap_aging_report import get_ap_aging_report as _get_report
     report = _get_report(organization_id)
     return report.generate()
@@ -190,7 +205,6 @@ def get_ap_aging_report(
 
 @router.get("/audit/export")
 def export_audit_trail(
-    organization_id: str = Query(default="default"),
     format: str = Query(default="csv"),
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
@@ -203,7 +217,7 @@ def export_audit_trail(
 
     Filters by organization, date range, vendor, and AP item state.
     """
-    verify_org_access(organization_id, _user)
+    organization_id = _session_org(_user)
     db = get_db()
 
     # Fetch audit events joined with AP item data
@@ -283,10 +297,9 @@ def export_audit_trail(
 @router.get("/{ap_item_id}")
 def get_ap_item_detail(
     ap_item_id: str,
-    organization_id: str = Query(default="default"),
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
-    verify_org_access(organization_id, _user)
+    organization_id = _session_org(_user)
     db = get_db()
     item = shared._resolve_item_for_detail(
         db,
@@ -303,8 +316,8 @@ def get_ap_item_audit(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     db = get_db()
-    item = shared._require_item(db, ap_item_id, expected_organization_id=getattr(_user, "organization_id", None))
-    verify_org_access(item.get("organization_id") or "default", _user)
+    organization_id = _session_org(_user)
+    item = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
     events = db.list_ap_audit_events(ap_item_id)
     if browser_only:
         events = [event for event in events if str(event.get("event_type") or "").startswith("browser_")]
@@ -333,11 +346,11 @@ def get_ap_item_box(
     seconds of every transition.
     """
     db = get_db()
+    organization_id = _session_org(_user)
     item = shared._require_item(
         db, ap_item_id,
-        expected_organization_id=getattr(_user, "organization_id", None),
+        expected_organization_id=organization_id,
     )
-    verify_org_access(item.get("organization_id") or "default", _user)
 
     if not fresh:
         try:
@@ -433,11 +446,11 @@ def get_ap_item_history(
     history projection.
     """
     db = get_db()
+    organization_id = _session_org(_user)
     item = shared._require_item(
         db, ap_item_id,
-        expected_organization_id=getattr(_user, "organization_id", None),
+        expected_organization_id=organization_id,
     )
-    verify_org_access(item.get("organization_id") or "default", _user)
 
     from clearledgr.services.box_projection import get_box_history
     snapshots = get_box_history(
@@ -459,8 +472,8 @@ def get_ap_item_sources(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     db = get_db()
-    item = shared._require_item(db, ap_item_id, expected_organization_id=getattr(_user, "organization_id", None))
-    verify_org_access(item.get("organization_id") or "default", _user)
+    organization_id = _session_org(_user)
+    item = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
     sources = db.list_ap_item_sources(ap_item_id)
     return {"sources": sources, "source_count": len(sources)}
 
@@ -475,12 +488,12 @@ def get_ap_item_tasks(
     from clearledgr.services.email_tasks import get_tasks_for_ap_item
 
     db = get_db()
-    item = shared._require_item(db, ap_item_id, expected_organization_id=getattr(_user, "organization_id", None))
-    verify_org_access(item.get("organization_id") or "default", _user)
+    organization_id = _session_org(_user)
+    item = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
     tasks = get_tasks_for_ap_item(
         ap_item_id,
         thread_id=str(item.get("thread_id") or "").strip() or None,
-        organization_id=item.get("organization_id") or "default",
+        organization_id=organization_id,
         include_completed=include_completed,
         limit=limit,
     )
@@ -493,8 +506,8 @@ def get_ap_item_notes(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     db = get_db()
-    item = shared._require_item(db, ap_item_id, expected_organization_id=getattr(_user, "organization_id", None))
-    verify_org_access(item.get("organization_id") or "default", _user)
+    organization_id = _session_org(_user)
+    item = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
     metadata = shared._parse_json(item.get("metadata"))
     notes = metadata.get("record_notes")
     if not isinstance(notes, list):
@@ -508,8 +521,8 @@ def get_ap_item_comments(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     db = get_db()
-    item = shared._require_item(db, ap_item_id, expected_organization_id=getattr(_user, "organization_id", None))
-    verify_org_access(item.get("organization_id") or "default", _user)
+    organization_id = _session_org(_user)
+    item = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
     metadata = shared._parse_json(item.get("metadata"))
     comments = metadata.get("record_comments")
     if not isinstance(comments, list):
@@ -523,8 +536,8 @@ def get_ap_item_files(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     db = get_db()
-    item = shared._require_item(db, ap_item_id, expected_organization_id=getattr(_user, "organization_id", None))
-    verify_org_access(item.get("organization_id") or "default", _user)
+    organization_id = _session_org(_user)
+    item = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
     metadata = shared._parse_json(item.get("metadata"))
     files = metadata.get("record_file_links")
     if not isinstance(files, list):
@@ -539,8 +552,8 @@ def get_ap_item_context(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     db = get_db()
-    item = shared._require_item(db, ap_item_id, expected_organization_id=getattr(_user, "organization_id", None))
-    verify_org_access(item.get("organization_id") or "default", _user)
+    organization_id = _session_org(_user)
+    item = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
 
     if not refresh:
         cached = db.get_ap_item_context_cache(ap_item_id)
