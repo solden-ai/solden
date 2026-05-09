@@ -213,7 +213,19 @@ def test_rejected_item_resubmission_creates_new_item_with_supersession_linkage(d
     assert new_worklist["supersedes_ap_item_id"] == rejected["id"]
     assert new_worklist["is_resubmission"] is True
 
-    new_context = get_ap_item_context(new_ap_item_id, refresh=True)
+    # M13 contract: read routes derive org via _session_org(_user)
+    # so direct calls (bypassing FastAPI's Depends resolution) must
+    # pass a stub user with a session-scoped organization_id.
+    new_context = get_ap_item_context(
+        new_ap_item_id,
+        refresh=True,
+        _user=SimpleNamespace(
+            user_id="user-test",
+            email="user-test@default.example",
+            organization_id="default",
+            role="operator",
+        ),
+    )
     supersession = new_context.get("supersession") or {}
     assert supersession["supersedes_ap_item_id"] == rejected["id"]
     assert supersession["supersedes_invoice_key"] == rejected["invoice_key"]
