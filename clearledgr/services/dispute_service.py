@@ -158,5 +158,18 @@ class DisputeService:
         }
 
 
-def get_dispute_service(organization_id: str = "default") -> DisputeService:
+def get_dispute_service(organization_id: str) -> DisputeService:
+    """Construct a tenant-scoped DisputeService.
+
+    The pre-fix signature defaulted ``organization_id`` to the legacy
+    ``"default"`` string. No production caller used the default
+    today, but the helper is importable and an accidental zero-arg
+    call would silently bind the service to the legacy "default"
+    tenant. Required-arg now; missing-org becomes a TypeError, not a
+    cross-tenant landmine.
+    """
+    if not str(organization_id or "").strip():
+        raise ValueError(
+            "get_dispute_service requires a non-empty organization_id"
+        )
     return DisputeService(organization_id=organization_id)

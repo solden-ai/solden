@@ -29,6 +29,46 @@ live HTTP tests of webhook routes.
 
 from __future__ import annotations
 
+import re
+
+
+# Pattern: every shape of "coerce to the literal 'default' tenant".
+# Source-inspection regression tests use this to catch the M4-class
+# landmines we keep killing. Bypass-resistance is the goal — a future
+# regression that rewrites ``x or "default"`` into ``if not x: x = "default"``
+# (or any other equivalent) should still trip the test.
+_OR_DEFAULT_PATTERNS = [
+    # Bare "or 'default'" / 'or "default"'
+    r'\bor\s+["\']default["\']',
+    # ``if not x: x = "default"`` on one line
+    r'if\s+not\s+\w+\s*:\s*\w+\s*=\s*["\']default["\']',
+    # ``x = "default" if not <expr> else x``
+    r'=\s*["\']default["\']\s+if\s+not\s+',
+    # ``.get("organization_id", "default")`` and equivalents on
+    # str/int/dict accessors
+    r'\.get\s*\(\s*["\']organization_id["\']\s*,\s*["\']default["\']',
+    # ``getattr(x, "organization_id", "default")``
+    r'getattr\s*\([^)]*["\']organization_id["\']\s*,\s*["\']default["\']',
+]
+_OR_DEFAULT_RE = re.compile("|".join(_OR_DEFAULT_PATTERNS))
+
+
+def _strip_docstrings(src: str) -> str:
+    """Strip triple-quoted docstrings so docstring mentions of the
+    buggy patterns don't false-positive. Only EXECUTABLE shapes
+    matter for regression. Both double-triple-quote and single-
+    triple-quote docstrings are caught. Line comments stripped too.
+    """
+    src = re.sub(r"\"{3}.*?\"{3}", "", src, flags=re.DOTALL)
+    src = re.sub(r"'{3}.*?'{3}", "", src, flags=re.DOTALL)
+    src = re.sub(r"#.*$", "", src, flags=re.MULTILINE)
+    return src
+
+
+def _find_default_coercions(src: str) -> list[str]:
+    """Return executable ``or "default"``-style coercions. Empty list = clean."""
+    return _OR_DEFAULT_RE.findall(_strip_docstrings(src))
+
 
 def test_slack_events_route_requires_signature_verification():
     """Pre-fix the /slack/events route called ``await request.json()``
@@ -477,14 +517,13 @@ def test_create_paths_fail_closed_on_missing_organization_id():
     # (or ``or 'default'``) used to coerce a missing org. Comments and
     # docstrings legitimately mention the word "default" — match on
     # the executable ``or`` coercion only.
-    or_default = re.compile(r"""or\s+["']default["']""")
 
     for path, fn_name in cases:
         text = path.read_text()
         marker = f"def {fn_name}"
         assert marker in text, f"could not find {fn_name} in {path}"
         body = text.split(marker, 1)[1].split("\n    def ", 1)[0]
-        assert not or_default.search(body), (
+        assert not _OR_DEFAULT_RE.search(body), (
             f"{fn_name} in {path.name} still contains an "
             f"``or 'default'`` fallback. Cross-tenant landmine: any "
             f"payload that loses its org silently writes to a shared "
@@ -500,7 +539,7 @@ def test_create_paths_fail_closed_on_missing_organization_id():
     auth_path = repo_root / "clearledgr" / "api" / "auth.py"
     auth_src = auth_path.read_text()
     issue_body = auth_src.split("def _issue_google_auth_code", 1)[1].split("\ndef ", 1)[0]
-    assert not or_default.search(issue_body), (
+    assert not _OR_DEFAULT_RE.search(issue_body), (
         "_issue_google_auth_code in api/auth.py still contains an "
         "``or 'default'`` fallback. An auth code redeemed under "
         "'default' produces a session in the wrong tenant."
@@ -576,8 +615,7 @@ def test_ap_items_read_routes_no_query_org_no_default_fallback():
         "ap_items_read_routes.py still has Query(default=\"default\") "
         "parameters. Org must come from the session, not the URL."
     )
-    or_default = re.compile(r"""or\s+["']default["']""")
-    matches = or_default.findall(body_only)
+    matches = _OR_DEFAULT_RE.findall(body_only)
     assert not matches, (
         f"ap_items_read_routes.py still contains executable "
         f"``or 'default'`` fallbacks ({len(matches)} occurrences)."
@@ -839,11 +877,10 @@ def test_ap_items_action_routes_no_query_org_no_default_fallback():
         "not from the URL."
     )
 
-    or_default = re.compile(r"""or\s+["']default["']""")
     # Strip docstrings so their prose mentions of "or 'default'" don't
     # false-positive — re.DOTALL lets the inner ``.`` match newlines.
     body_only = re.sub(r'"""(.*?)"""', "", src, flags=re.DOTALL)
-    matches = or_default.findall(body_only)
+    matches = _OR_DEFAULT_RE.findall(body_only)
     assert not matches, (
         f"ap_items_action_routes.py still contains executable "
         f"``or 'default'`` fallbacks ({len(matches)} occurrences). "
@@ -891,8 +928,7 @@ def test_ops_assert_org_access_has_no_role_bypass_and_no_default_fallback():
 
     # No ``or "default"`` coercion before equality.
     import re
-    or_default = re.compile(r"""or\s+["']default["']""")
-    assert not or_default.search(body), (
+    assert not _OR_DEFAULT_RE.search(body), (
         "ops.py:_assert_org_access still coerces missing org to "
         "'default' before comparing — same M4 landmine."
     )
@@ -918,12 +954,11 @@ def test_gmail_extension_common_assert_user_org_access_fails_closed():
 
     repo_root = Path(__file__).resolve().parent.parent
     src = (repo_root / "clearledgr" / "api" / "gmail_extension_common.py").read_text()
-    or_default = re.compile(r"""or\s+["']default["']""")
 
     # The two functions are the audit-flagged pair.
     for fn_name in ("assert_user_org_access", "resolve_org_id_for_user"):
         body = src.split(f"def {fn_name}", 1)[1].split("\ndef ", 1)[0]
-        assert not or_default.search(body), (
+        assert not _OR_DEFAULT_RE.search(body), (
             f"gmail_extension_common.{fn_name} still contains an "
             f"``or 'default'`` coercion. Cross-tenant landmine: a "
             f"session whose org was the legacy 'default' literal "
@@ -1044,6 +1079,48 @@ def test_byid_store_mutations_require_organization_id():
         "holding a known id from another tenant could read/mutate that "
         "tenant's row at the SQL level. Methods:\n  - "
         + "\n  - ".join(missing)
+    )
+
+    # Defense in depth: a method having an ``organization_id`` parameter
+    # is not enough on its own — the SQL must actually USE it. A
+    # regression that adds the kwarg but never threads it into the
+    # WHERE clause would pass the inspect.signature check while leaving
+    # the by-id leak unchanged. Scan each method's source for an
+    # ``organization_id = %s`` clause to pin the SQL contract too.
+    import textwrap
+    # Methods that delegate to a sibling method (rather than writing
+    # SQL directly) are wrappers — the SQL contract is enforced one
+    # level down. Track them separately and accept either: own SQL
+    # contains ``organization_id = %s``, OR body forwards
+    # ``organization_id`` to a sibling method on the same class.
+    wrappers = {
+        # CustomRolesStore.resolve_custom_role_permissions wraps
+        # get_custom_role(role_id, organization_id). The SQL clause
+        # lives in get_custom_role.
+        "CustomRolesStore.resolve_custom_role_permissions",
+    }
+    sql_uses_org = []
+    for cls, name in methods_that_must_have_org:
+        try:
+            method_src = textwrap.dedent(inspect.getsource(getattr(cls, name)))
+        except (OSError, TypeError):
+            continue
+        full_name = f"{cls.__name__}.{name}"
+        if "organization_id = %s" in method_src:
+            continue
+        if full_name in wrappers and "organization_id" in method_src:
+            # Wrapper: confirm the parameter is at least USED
+            # somewhere in the body (i.e., threaded to the
+            # underlying SQL-bearing call).
+            continue
+        sql_uses_org.append(full_name)
+    assert not sql_uses_org, (
+        "Some store methods accept ``organization_id`` but their SQL "
+        "doesn't include ``organization_id = %s`` in the WHERE clause "
+        "and they're not registered as wrappers. A by-id read/mutate "
+        "that ignores the org parameter is the exact M3 leak the "
+        "parameter was supposed to close. Methods:\n  - "
+        + "\n  - ".join(sql_uses_org)
     )
 
 
