@@ -529,7 +529,7 @@ def test_dispatcher_orphan_emits_audit(db):
     )
     assert result["events_skipped"] == 1
     expected_key = (
-        "payment_orphan:default:netsuite:VP-ORPHAN"
+        "payment_orphan:org-test:netsuite:VP-ORPHAN"
     )
     fetched = db.get_ap_audit_event_by_key(expected_key)
     assert fetched is not None

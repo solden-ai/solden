@@ -189,7 +189,7 @@ def saml_config(db, keypair):
         idp_entity_id="https://idp.example.test",
         idp_sso_url="https://idp.example.test/sso",
         idp_certificate_pem=cert_pem,
-        sp_entity_id="https://workspace.clearledgr.test/saml/default",
+        sp_entity_id="https://workspace.clearledgr.test/saml/org-test",
         sp_acs_url="https://workspace.clearledgr.test/saml/default/acs",
         attribute_email="email",
         attribute_role="role",

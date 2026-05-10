@@ -339,7 +339,7 @@ def test_background_overdue_summary_is_throttled_per_org(monkeypatch):
     ]
     assert logged == [
         {
-            "task_id": "default:daily_summary",
+            "task_id": "org-test:daily_summary",
             "reminder_type": "overdue_summary",
             "next_reminder": None,
         }

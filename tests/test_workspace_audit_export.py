@@ -209,7 +209,7 @@ def test_export_full_lifecycle_writes_csv(db, client_factory):
     assert body["status"] == "done"
     assert body["total_rows"] >= 3
     assert body["content_size_bytes"] > 0
-    assert body["content_filename"].startswith("audit-default-")
+    assert body["content_filename"].startswith("audit-org-test-")
     assert body["content_filename"].endswith(".csv")
     assert body["completed_at"] is not None
     # Status payload must NOT include the content blob.

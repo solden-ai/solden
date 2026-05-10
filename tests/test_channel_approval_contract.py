@@ -59,6 +59,24 @@ def _stub_teams_claims():
     }
 
 
+# M18 Slack contract: every interactive callback now resolves the
+# verified ``team.id`` against ``slack_installations`` BEFORE any AP-
+# item lookup. Tests must seed a ``slack_installations`` row whose
+# ``team_id`` matches the test payload's ``team.id``.
+_TEST_SLACK_TEAM_ID = "T_SLACK_TEST"
+
+
+def _seed_slack_install_for_default_org(db) -> None:
+    db.upsert_slack_installation(
+        organization_id="default",
+        team_id=_TEST_SLACK_TEAM_ID,
+        team_name="Slack Test Team",
+        bot_user_id="U_BOT",
+        bot_token="xoxb-test-token",
+        scope_csv="chat:write,users:read",
+    )
+
+
 def _create_ap_item(db, *, gmail_id: str) -> dict:
     return db.create_ap_item(
         {

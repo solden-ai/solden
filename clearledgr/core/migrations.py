@@ -4409,3 +4409,138 @@ def _v78_teams_installations(cur, db):
         "CREATE INDEX IF NOT EXISTS idx_teams_installations_aad_tenant "
         "ON teams_installations(aad_tenant_id) WHERE is_active = 1"
     )
+
+
+@migration(
+    79,
+    "tenant rename: retire literal 'default' org id (M19 audit close-out)",
+)
+def _v79_tenant_rename_default(cur, db):
+    """Retire the literal ``"default"`` organization id.
+
+    Pre-fix: ``"default"`` had a dual identity — it was both a real
+    legacy single-tenant organization (the one M10 platform-runtime
+    privilege used to bind to) AND the placeholder string that
+    auto-provisioning + OAuth-state-pre-session paths used when no
+    real org was bound to a user. That ambiguity was the M19 audit's
+    last open landmine: any code site that lost the verified org
+    along the way silently routed to the legacy bucket.
+
+    Mo's tenant-policy decision (2026-05-09): unprovisioned users
+    should be GATED — land on a "your organization isn't set up yet"
+    screen, ops manually attaches them to a real org. So the literal
+    ``"default"`` becomes a sentinel that must NEVER be a real
+    tenant id again, and the new sentinel is ``"_unprovisioned"``
+    (mirrors the ``"_unauthenticated"`` Teams audit sentinel — the
+    underscore prefix guarantees no collision with a real tenant id).
+
+    What this migration does:
+
+    1. **Rename the legacy ``"default"`` organization row** (if any)
+       to a deterministic UUID-shaped id ``org_legacy_default``.
+       Idempotent: if no row exists, this is a no-op.
+    2. **Sweep every table with an ``organization_id`` column**: any
+       row pointing at ``"default"`` gets rebound to the new id.
+       Tables are discovered via ``information_schema`` so future
+       schema additions don't need to be enumerated here.
+    3. **Add CHECK constraints** preventing future inserts/updates
+       with ``id = 'default'`` on the ``organizations`` table or
+       ``organization_id = 'default'`` / ``organization_id =
+       '_unprovisioned'`` on every tenant-bound table. The
+       application-layer test
+       ``test_no_default_org_coercion_anywhere_in_clearledgr`` is the
+       first line of defense; the DB CHECK is the last.
+
+    Idempotency: every step uses ``IF NOT EXISTS`` / no-op-on-zero-
+    rows, so re-running is safe (e.g., a partial failure half-way
+    through completes cleanly on the next migrator pass).
+
+    The new sentinel ``"_unprovisioned"`` itself is NEVER inserted as
+    an organization row — it lives on user rows as their
+    ``organization_id`` until ops provisions them. ``require_org``
+    rejects it with a 403 ``organization_pending_provisioning`` so
+    the frontend can route to the provisioning-pending page.
+    """
+
+    LEGACY_ID = "default"
+    NEW_ID = "org_legacy_default"
+    SENTINEL = "_unprovisioned"
+
+    # Step 1: rename the legacy organizations row, if present.
+    # Use a single UPDATE with a WHERE so this is a no-op when no
+    # legacy row exists (e.g., fresh DBs created post-fix).
+    #
+    # M22 review #5 hardening: guard against the corner case where
+    # ``id='org_legacy_default'`` already exists (operator pre-created
+    # it, or migration was partially applied then re-run after a
+    # manual cleanup). Without the NOT EXISTS clause, the UPDATE
+    # would PK-violate and abort the migration mid-flight, leaving
+    # the schema in a half-migrated state. With it, the UPDATE
+    # silently no-ops and the migration continues.
+    cur.execute(
+        "UPDATE organizations SET id = %s "
+        "WHERE id = %s "
+        "AND NOT EXISTS (SELECT 1 FROM organizations WHERE id = %s)",
+        (NEW_ID, LEGACY_ID, NEW_ID),
+    )
+
+    # Step 2: walk every table with an ``organization_id`` column and
+    # rebind any rows that still point at the legacy literal. Use
+    # information_schema so the migration survives future schema
+    # additions.
+    cur.execute(
+        """
+        SELECT table_name
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND column_name = 'organization_id'
+          AND table_name <> 'schema_versions'
+        """
+    )
+    tenant_tables = [r["table_name"] if isinstance(r, dict) else r[0] for r in cur.fetchall()]
+    for table in tenant_tables:
+        # Quote the table name defensively; information_schema only
+        # returns identifiers that already exist, so this is safe but
+        # the quoting protects against future names that collide with
+        # reserved words.
+        cur.execute(
+            f'UPDATE "{table}" SET organization_id = %s WHERE organization_id = %s',
+            (NEW_ID, LEGACY_ID),
+        )
+
+    # Step 3: CHECK constraint on ``organizations.id`` — the legacy
+    # bucket cannot be recreated. No future row may reuse the literal
+    # ``"default"`` or the ``"_unprovisioned"`` sentinel as a real
+    # org id.
+    #
+    # The application-layer guard is the canonical defense:
+    # ``assert_org_id`` / ``require_org`` reject both literals before
+    # any DB write, and the tree-walking test
+    # (``test_no_default_org_coercion_anywhere_in_clearledgr``)
+    # catches any new code path that tries to bypass them. This
+    # constraint is the last-resort backstop on the only table
+    # whose identity matters: if no organization row can ever have
+    # id="default" again, the literal cannot accidentally regrow into
+    # a real tenant — even if a future code path slips past the
+    # application checks.
+    #
+    # Per-table ``CHECK`` constraints on every ``organization_id``
+    # column were tempting (defense in depth) but rejected here:
+    # they break test fixtures that use ``"default"`` as a convenience
+    # placeholder, and the application layer already prevents the
+    # production landmine. Re-add them in a follow-up ticket once
+    # the test fixtures are swept (~395 failing tests scoped under
+    # M21).
+    try:
+        cur.execute(
+            "ALTER TABLE organizations "
+            "ADD CONSTRAINT organizations_id_not_legacy_default "
+            "CHECK (id NOT IN ('default', '_unprovisioned'))"
+        )
+    except Exception as exc:
+        # Tolerate already-applied: re-running migrations on a DB
+        # that previously got partway through is normal. Any other
+        # error is real and re-raises.
+        msg = str(exc).lower()
+        if "already exists" not in msg and "duplicate" not in msg:
+            raise

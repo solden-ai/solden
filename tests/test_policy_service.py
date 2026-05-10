@@ -240,8 +240,14 @@ def _make_mock_db():
                 self._last = ({"coalesce": max((r["version_number"] for r in matching), default=0)},)
             elif sql_lower.startswith("select * from policy_versions where organization_id") and "limit 1" in sql_lower:
                 org, kind = params
+                # Sprint 2: ``_fetch_latest`` filters ``branch_id IS NULL``
+                # so branches don't accidentally become active. The fake
+                # cursor mirrors that — only main-branch rows count.
                 matching = sorted(
-                    [r for r in rows if r["organization_id"] == org and r["policy_kind"] == kind],
+                    [r for r in rows
+                     if r["organization_id"] == org
+                     and r["policy_kind"] == kind
+                     and r.get("branch_id") in (None, "")],
                     key=lambda r: r["version_number"], reverse=True,
                 )
                 self._last = (matching[0],) if matching else ()
@@ -257,14 +263,17 @@ def _make_mock_db():
                 matching = [r for r in rows if r["id"] == version_id and r["organization_id"] == org]
                 self._last = (matching[0],) if matching else ()
             elif sql_lower.startswith("insert into policy_versions"):
+                # Sprint 2 added the trailing branch_id parameter.
                 (vid, org, kind, vnum, content_json, content_hash, created_at,
-                 created_by, description, parent_version_id, is_rollback) = params
+                 created_by, description, parent_version_id, is_rollback,
+                 branch_id) = params
                 rows.append({
                     "id": vid, "organization_id": org, "policy_kind": kind,
                     "version_number": vnum, "content_json": content_json,
                     "content_hash": content_hash, "created_at": created_at,
                     "created_by": created_by, "description": description,
                     "parent_version_id": parent_version_id, "is_rollback": is_rollback,
+                    "branch_id": branch_id,
                 })
                 self._last = ()
             elif sql_lower.startswith("select * from ap_items"):
