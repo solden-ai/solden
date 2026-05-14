@@ -2608,3 +2608,25 @@ body.theme-manifesto {
   font-style: italic;
   color: var(--text-on-dark-soft);
 }
+
+/* Phase 4 — copy-tightening hooks */
+
+.problem-coda__em {
+  display: block;
+  margin-top: 14px;
+  font-size: clamp(20px, 2.2vw, 24px);
+  font-weight: 600;
+  font-style: italic;
+  color: var(--text-on-dark);
+  letter-spacing: -0.018em;
+}
+
+.solution__sub-stanza {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 500;
+}
+.solution__sub-stanza span:last-child {
+  color: var(--text-on-dark);
+}
