@@ -125,6 +125,41 @@ def test_revert_within_window_returns_to_needs_approval(db):
     assert body.get("reason") == "caught wrong vendor before posting"
 
 
+def test_revert_clears_stale_payment_scheduled_metadata(db):
+    """Defensive: if metadata.payment_scheduled is set (e.g. by a
+    future state-machine refactor that moves the marker earlier),
+    revert from READY_TO_POST must clear it so the flag doesn't
+    survive into needs_approval and mislead downstream observers."""
+    now = datetime.now(timezone.utc)
+    item = _make_approved_item(
+        db, item_id="AP-rev-meta-cleanup", approved_at=now.isoformat(),
+    )
+    # Advance approved -> ready_to_post and seed the stale flag.
+    db.update_ap_item(item["id"], state="ready_to_post")
+    db.update_ap_item(item["id"], metadata={
+        "payment_scheduled": True,
+        "payment_scheduled_at": now.isoformat(),
+        "unrelated_key": "preserve me",
+    })
+
+    outcome = attempt_approval_revert(
+        db=db,
+        ap_item_id=item["id"],
+        organization_id="orgRev",
+        actor_id="operator@example.com",
+        reason="catch before ERP",
+    )
+    assert outcome.status == "reverted"
+
+    fresh = db.get_ap_item(item["id"])
+    assert fresh["state"] == "needs_approval"
+    meta = fresh.get("metadata") or {}
+    assert "payment_scheduled" not in meta
+    assert "payment_scheduled_at" not in meta
+    # Other metadata keys must survive.
+    assert meta.get("unrelated_key") == "preserve me"
+
+
 def test_revert_after_window_expires_is_refused(db):
     expired = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
     item = _make_approved_item(
