@@ -1653,3 +1653,68 @@ body.theme-light-landing .ribbon--in-hero .ribbon__meta {
 @media (max-width: 980px) {
   .ribbon--in-hero { max-width: 620px; }
 }
+
+/* ─── Section eyebrow (Attio category-tag pattern) ────────────
+   Small monospace caps tag above each section title. Gives each
+   section a visible "chapter" label like Attio's tabs above their
+   product demo — but in-line rather than as nav. */
+
+body.theme-light-landing .section-eyebrow {
+  display: inline-block;
+  margin: 0 0 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(31, 27, 22, 0.55);
+}
+body.theme-light-landing .section-eyebrow::before {
+  content: "§ ";
+  color: rgba(31, 27, 22, 0.35);
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-style: italic;
+  letter-spacing: 0;
+}
+
+/* ─── Belief divider (ModernRelay "We believe" anaphora) ──────
+   Three full-width italic-serif pull quotes inserted between
+   sections. Each is bracketed by a hairline rule — reads like
+   a typographic epigraph between chapters. */
+
+.belief-divider {
+  display: block;
+  padding: 56px 24px;
+  text-align: center;
+  margin: 0 auto;
+  max-width: 880px;
+}
+
+.belief-divider__rule {
+  margin: 0 auto;
+  width: 48px;
+  height: 1px;
+  background: rgba(31, 27, 22, 0.18);
+}
+
+.belief-divider__text {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-size: clamp(22px, 2.6vw, 30px);
+  line-height: 1.4;
+  letter-spacing: -0.014em;
+  font-style: italic;
+  color: #1F1B16;
+  margin: 28px auto;
+  max-width: 760px;
+}
+.belief-divider__text em {
+  font-style: italic;
+  font-weight: 500;
+  /* Subtle teal accent on the emphasized clauses — same color
+     hierarchy as the manifesto page's italic emphasis. */
+  color: #1F1B16;
+  background-image: linear-gradient(to bottom, transparent 65%, rgba(24, 191, 176, 0.18) 65%);
+}
+
+@media (max-width: 600px) {
+  .belief-divider { padding: 40px 20px; }
+}
