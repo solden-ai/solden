@@ -1385,3 +1385,60 @@ body.theme-light-landing .audit__code *,
 body.theme-light-landing .stage-card__code * {
   color: inherit;
 }
+
+/* Flow section step titles — were missed in the first override
+   pass because they use .flow__step-title, not .stage-card__h. */
+body.theme-light-landing .flow__step-title {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-weight: 500;
+  color: #1F1B16;
+  font-size: clamp(28px, 3.6vw, 44px);
+  line-height: 1.1;
+  letter-spacing: -0.022em;
+}
+body.theme-light-landing .flow__step-num {
+  font-family: var(--font-mono);
+  color: rgba(31, 27, 22, 0.45);
+}
+body.theme-light-landing .flow__step-body {
+  font-family: var(--font);
+  font-size: 18px;
+  line-height: 1.65;
+  color: rgba(31, 27, 22, 0.78);
+}
+body.theme-light-landing .flow__step-tag {
+  background: rgba(31, 27, 22, 0.04);
+  color: rgba(31, 27, 22, 0.6);
+  border: 1px solid rgba(31, 27, 22, 0.12);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+/* Rules section — mode card titles */
+body.theme-light-landing .rules__mode-title {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-style: italic;
+  font-weight: 600;
+  color: #1F1B16;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+/* Audit chain section title */
+body.theme-light-landing .audit-chain__title {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-weight: 500;
+  color: #1F1B16;
+  font-size: clamp(28px, 3.6vw, 44px);
+  line-height: 1.1;
+  letter-spacing: -0.022em;
+}
+
+/* Ribbon title stays sans (it's a small data-card label) but use
+   a quieter weight for the editorial palette */
+body.theme-light-landing .ribbon__title {
+  font-weight: 600;
+  color: #1F1B16;
+  font-size: 14px;
+}
