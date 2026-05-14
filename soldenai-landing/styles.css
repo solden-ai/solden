@@ -3034,3 +3034,154 @@ body.theme-dark .footer-cta__title {
 body.theme-dark .footer-cta__sub {
   color: var(--text-on-dark-soft);
 }
+
+/* ═════════════════════════════════════════════════════════════
+   Manifesto lineage — editorial portrait cards
+   ───────────────────────────────────────────────────────────── */
+
+/* The plate / caption / dates / name / contribution / body
+   structure is more editorial than the monogram tiles. Classical
+   serif initial dominates the plate like a 19th-century
+   book-engraving; the caption block reads like a museum placard.
+   No photographs — typography carries the weight. */
+
+.lineage {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+  counter-reset: lineage;
+}
+@media (max-width: 920px) {
+  .lineage { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+}
+@media (max-width: 600px) {
+  .lineage { grid-template-columns: 1fr; }
+}
+
+.lineage__card {
+  counter-increment: lineage;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(
+    180deg,
+    rgba(14, 26, 51, 0.85) 0%,
+    rgba(14, 26, 51, 0.45) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color .25s var(--ease-out), transform .25s var(--ease-out);
+}
+.lineage__card:hover {
+  border-color: rgba(24, 191, 176, 0.45);
+  transform: translateY(-2px);
+}
+
+/* Portrait plate — the "engraving" field. Subtle radial vignette
+   on top of a layered noise gradient evokes aged paper without
+   loading any texture asset. */
+.lineage__plate {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background:
+    radial-gradient(60% 80% at 50% 35%, rgba(24, 191, 176, 0.08) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(5, 11, 30, 0.4) 0%, rgba(5, 11, 30, 0.85) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.lineage__plate::before {
+  /* Roman-numeral plate-number caption in the corner */
+  content: counter(lineage, upper-roman);
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: rgba(24, 191, 176, 0.6);
+  text-transform: uppercase;
+}
+.lineage__plate::after {
+  /* Inner border for the engraving feel */
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.lineage__plate-mark {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 120px;
+  line-height: 1;
+  font-weight: 400;
+  color: var(--text-on-dark);
+  letter-spacing: -0.04em;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 60px rgba(0, 0, 0, 0.45);
+  /* Subtle teal tint that catches the eye but doesn't overwhelm */
+  background: linear-gradient(180deg, #FFFFFF 0%, #B7E8E2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.lineage__plate-mark--glyph {
+  font-family: var(--font);
+  font-size: 78px;
+  color: var(--teal-soft);
+  background: none;
+  -webkit-text-fill-color: var(--teal-soft);
+}
+
+/* Caption block — museum-placard layout */
+.lineage__caption {
+  padding: 22px 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lineage__dates {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(24, 191, 176, 0.7);
+}
+
+.lineage__name {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.2;
+  letter-spacing: -0.018em;
+  font-weight: 700;
+  color: var(--text-on-dark);
+}
+
+.lineage__contribution {
+  margin: 0;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-on-dark-soft);
+  letter-spacing: -0.006em;
+}
+
+.lineage__body {
+  margin: 8px 0 0 !important;
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+  color: var(--text-on-dark-soft) !important;
+}
+
+/* Hide the old monogram styles so the cleanup is complete in case
+   any other surface re-uses the same class names. */
+.manifesto__portrait { display: none !important; }
