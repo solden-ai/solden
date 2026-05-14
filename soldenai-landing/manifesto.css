@@ -1983,3 +1983,179 @@ body.theme-light-landing .section-eyebrow::before {
   color: #1F1B16;
   word-break: break-word;
 }
+
+/* ─── Box card (hero right column) ────────────────────────────
+   Replaces the AP-event activity ribbon. The Box visualized as
+   a typed spec sheet — BoxType, ID, six fields, audit-chain
+   tail. Reads as "this is the thing," not "scrolling product
+   events." Same white-glass treatment as the prior ribbon. */
+
+.box-card {
+  width: 100%;
+  margin: 0;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(31, 27, 22, 0.1);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.7),
+    0 30px 60px -20px rgba(31, 27, 22, 0.18),
+    0 12px 24px -12px rgba(31, 27, 22, 0.12);
+  font-family: var(--font);
+  color: #1F1B16;
+}
+
+.box-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px;
+  background: rgba(31, 27, 22, 0.02);
+  border-bottom: 1px solid rgba(31, 27, 22, 0.06);
+}
+.box-card__head-l, .box-card__head-r {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.box-card__type {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(31, 27, 22, 0.5);
+}
+.box-card__type-val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: #1F1B16;
+  background: rgba(24, 191, 176, 0.1);
+  border: 1px solid rgba(24, 191, 176, 0.3);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+.box-card__seal-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #18BFB0;
+  box-shadow: 0 0 0 4px rgba(24, 191, 176, 0.18);
+}
+.box-card__id {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: rgba(31, 27, 22, 0.7);
+}
+
+.box-card__fields {
+  margin: 0;
+  padding: 18px 22px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.box-card__row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px dashed rgba(31, 27, 22, 0.07);
+}
+.box-card__row:last-child { border-bottom: 0; }
+.box-card__row dt {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(31, 27, 22, 0.5);
+}
+.box-card__row dd {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.45;
+  color: #1F1B16;
+  word-break: break-word;
+}
+.box-card__row dd code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  background: rgba(31, 27, 22, 0.05);
+  border: 1px solid rgba(31, 27, 22, 0.08);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.box-card__state-pill {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  background: rgba(244, 184, 64, 0.15);
+  border: 1px solid rgba(244, 184, 64, 0.45);
+  color: #8a5a00;
+  border-radius: 4px;
+  padding: 3px 9px;
+  letter-spacing: 0.02em;
+}
+.box-card__exception {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  background: rgba(229, 62, 62, 0.08);
+  border: 1px solid rgba(229, 62, 62, 0.35);
+  color: #a02020;
+  border-radius: 4px;
+  padding: 3px 9px;
+  letter-spacing: 0.02em;
+}
+
+.box-card__chain {
+  padding: 14px 22px 16px;
+  background: rgba(31, 27, 22, 0.02);
+  border-top: 1px solid rgba(31, 27, 22, 0.06);
+}
+.box-card__chain-label {
+  margin: 0 0 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(31, 27, 22, 0.5);
+}
+.box-card__chain-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.box-card__chain-list li {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: rgba(31, 27, 22, 0.68);
+}
+.box-card__chain-list code {
+  color: #1F1B16;
+}
+
+.box-card__caption {
+  margin: 0;
+  padding: 12px 22px 16px;
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-style: italic;
+  font-size: 13px;
+  color: rgba(31, 27, 22, 0.6);
+  border-top: 1px solid rgba(31, 27, 22, 0.06);
+}
+
+@media (max-width: 980px) {
+  .box-card { max-width: 620px; }
+}

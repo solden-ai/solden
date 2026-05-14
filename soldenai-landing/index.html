@@ -24,7 +24,7 @@
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/Geist-Variable.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/GeistMono-Variable.woff2" crossorigin />
     <link rel="stylesheet" href="/styles.css?v=6" />
-    <link rel="stylesheet" href="/manifesto.css?v=15" />
+    <link rel="stylesheet" href="/manifesto.css?v=16" />
   </head>
   <body class="theme-light-landing">
 
@@ -71,87 +71,55 @@
           </div>
         </div>
 
-        <aside class="ribbon ribbon--in-hero" aria-label="Sample agent activity">
-          <header class="ribbon__head">
-            <h2 class="ribbon__title">Agent activity</h2>
-            <span class="ribbon__head-meta">
-              <span class="ribbon__pulse" aria-hidden="true"></span>
-              Live, last 5
-            </span>
+        <aside class="box-card" aria-label="The Box: typed workflow record">
+          <header class="box-card__head">
+            <div class="box-card__head-l">
+              <span class="box-card__type">BoxType</span>
+              <code class="box-card__type-val">ap_item</code>
+            </div>
+            <div class="box-card__head-r">
+              <span class="box-card__seal-dot" aria-hidden="true"></span>
+              <code class="box-card__id">AP-9182</code>
+            </div>
           </header>
-          <ol class="ribbon__list">
-            <li class="ribbon__row">
-              <span class="ribbon__dot ribbon__dot--blue" aria-hidden="true"></span>
-              <div class="ribbon__body">
-                <div class="ribbon__line">
-                  <span class="ribbon__verb">captured</span><span class="ribbon__subject">invoice from Northwind Logistics, €18,420.00</span>
-                </div>
-                <div class="ribbon__meta">
-                  <span class="ribbon__time">1m ago</span>
-                  <span class="ribbon__sep">·</span>
-                  <span class="ribbon__actor">Agent</span>
-                  <span class="ribbon__sep">·</span>
-                  <span class="ribbon__surface">via gmail</span>
-                </div>
-              </div>
-            </li>
-            <li class="ribbon__row">
-              <span class="ribbon__dot ribbon__dot--teal" aria-hidden="true"></span>
-              <div class="ribbon__body">
-                <div class="ribbon__line">
-                  <span class="ribbon__verb">validated</span><span class="ribbon__subject">3-way match, PO #4821, vendor verified</span>
-                </div>
-                <div class="ribbon__meta">
-                  <span class="ribbon__time">44s ago</span>
-                  <span class="ribbon__sep">·</span>
-                  <span class="ribbon__actor">Agent</span>
-                </div>
-              </div>
-            </li>
-            <li class="ribbon__row">
-              <span class="ribbon__dot ribbon__dot--amber" aria-hidden="true"></span>
-              <div class="ribbon__body">
-                <div class="ribbon__line">
-                  <span class="ribbon__verb">routed</span><span class="ribbon__subject">to Priya for approval, over €15k threshold</span>
-                </div>
-                <div class="ribbon__meta">
-                  <span class="ribbon__time">22s ago</span>
-                  <span class="ribbon__sep">·</span>
-                  <span class="ribbon__actor">Agent</span>
-                  <span class="ribbon__sep">·</span>
-                  <span class="ribbon__surface">via slack</span>
-                </div>
-              </div>
-            </li>
-            <li class="ribbon__row">
-              <span class="ribbon__dot ribbon__dot--green" aria-hidden="true"></span>
-              <div class="ribbon__body">
-                <div class="ribbon__line">
-                  <span class="ribbon__verb">posted</span><span class="ribbon__subject">bill to NetSuite, GL 5210, vendor balance updated</span>
-                </div>
-                <div class="ribbon__meta">
-                  <span class="ribbon__time">2s ago</span>
-                  <span class="ribbon__sep">·</span>
-                  <span class="ribbon__actor">Agent</span>
-                  <span class="ribbon__sep">·</span>
-                  <span class="ribbon__surface">via netsuite</span>
-                </div>
-              </div>
-            </li>
-            <li class="ribbon__row">
-              <span class="ribbon__dot ribbon__dot--gray" aria-hidden="true"></span>
-              <div class="ribbon__body">
-                <div class="ribbon__line">
-                  <span class="ribbon__verb">logged</span><span class="ribbon__subject">audit event AP-9182, append-only</span>
-                </div>
-                <div class="ribbon__meta">
-                  <span class="ribbon__time">just now</span>
-                  <span class="ribbon__sep">·</span>
-                  <span class="ribbon__actor">Agent</span>
-                </div>
-              </div>
-            </li>
-          </ol>
+
+          <dl class="box-card__fields">
+            <div class="box-card__row">
+              <dt>state</dt>
+              <dd><span class="box-card__state-pill">needs_approval</span></dd>
+            </div>
+            <div class="box-card__row">
+              <dt>owner</dt>
+              <dd>priya@your-co.example</dd>
+            </div>
+            <div class="box-card__row">
+              <dt>waiting on</dt>
+              <dd>prior payment ref · PO #4821</dd>
+            </div>
+            <div class="box-card__row">
+              <dt>exception</dt>
+              <dd><span class="box-card__exception">duplicate</span></dd>
+            </div>
+            <div class="box-card__row">
+              <dt>history</dt>
+              <dd>5 events · sealed</dd>
+            </div>
+            <div class="box-card__row">
+              <dt>policy</dt>
+              <dd><code>v1</code> · stamped on transition</dd>
+            </div>
+          </dl>
+
+          <footer class="box-card__chain">
+            <p class="box-card__chain-label">§ Audit chain</p>
+            <ol class="box-card__chain-list">
+              <li><code>ev_9182</code> · sealed · prev <code>a4f1ed&hellip;</code></li>
+              <li><code>ev_9181</code> · routed · prev <code>8a72f1&hellip;</code></li>
+              <li><code>ev_9180</code> · validated · prev <code>d3e4a0&hellip;</code></li>
+            </ol>
+          </footer>
+
+          <p class="box-card__caption">One Box. Six primitives. The runtime holds it.</p>
         </aside>
       </div>
     </section>
