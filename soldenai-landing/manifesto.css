@@ -1718,3 +1718,103 @@ body.theme-light-landing .section-eyebrow::before {
 @media (max-width: 600px) {
   .belief-divider { padding: 40px 20px; }
 }
+
+/* ─── Belief plate (photographic divider) ─────────────────────
+   Mid-page editorial break: museum-style plate (Mesopotamian
+   bronze ruler from the Met) paired with one of the manifesto's
+   beliefs. Reads like a chapter frontispiece in a printed book.
+   Sits where the second belief-divider used to be (after the
+   Audit chain, before Time-to-value). */
+
+.belief-plate {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 56px;
+  align-items: center;
+  max-width: 1080px;
+  margin: 64px auto;
+  padding: 64px 32px;
+  border-top: 1px solid rgba(31, 27, 22, 0.12);
+  border-bottom: 1px solid rgba(31, 27, 22, 0.12);
+}
+
+@media (max-width: 860px) {
+  .belief-plate {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding: 48px 24px;
+  }
+}
+
+.belief-plate__figure {
+  margin: 0;
+}
+
+.belief-plate__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid rgba(31, 27, 22, 0.18);
+  background: #EDE3CC;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6),
+    0 30px 60px -22px rgba(31, 27, 22, 0.28),
+    0 12px 24px -12px rgba(31, 27, 22, 0.18);
+}
+
+.belief-plate__caption {
+  margin: 18px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid rgba(31, 27, 22, 0.14);
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-style: italic;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: rgba(31, 27, 22, 0.62);
+}
+
+.belief-plate__label {
+  display: block;
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(31, 27, 22, 0.5);
+  margin: 0 0 6px;
+}
+
+.belief-plate__credit {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  color: rgba(31, 27, 22, 0.45);
+  font-style: normal;
+}
+
+.belief-plate__text {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.belief-plate__belief {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-size: clamp(24px, 2.8vw, 32px);
+  line-height: 1.32;
+  letter-spacing: -0.014em;
+  font-style: italic;
+  color: #1F1B16;
+  margin: 0;
+}
+.belief-plate__belief em {
+  font-style: italic;
+  background-image: linear-gradient(to bottom, transparent 65%, rgba(24, 191, 176, 0.18) 65%);
+}
+
+.belief-plate__gloss {
+  font-size: 16px;
+  line-height: 1.62;
+  color: rgba(31, 27, 22, 0.68);
+  margin: 0;
+}
