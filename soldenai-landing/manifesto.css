@@ -1327,3 +1327,61 @@ body.theme-light-landing .footer .footer__bottom {
 body.theme-light-landing { color: #1F1B16; }
 body.theme-light-landing p { color: rgba(31, 27, 22, 0.85); }
 body.theme-light-landing strong { color: #1F1B16; }
+
+/* CSS custom-property overrides for theme-light-landing.
+   Most landing sections inherit text/bg colors from CSS variables.
+   Flipping these at the body scope re-skins every descendant without
+   needing per-section selectors. --bg-dark-deeper stays dark because
+   it backs the code blocks we deliberately keep dark (specimens). */
+body.theme-light-landing {
+  --bg-dark: #F4EDDC;
+  --bg-dark-elev: rgba(255, 255, 255, 0.55);
+  --bg-dark-panel: rgba(255, 255, 255, 0.5);
+  /* --bg-dark-deeper: stays #030714 → code blocks stay dark */
+  --text-on-dark: #1F1B16;
+  --text-on-dark-soft: rgba(31, 27, 22, 0.78);
+  --text-on-dark-muted: rgba(31, 27, 22, 0.55);
+  --text-on-dark-dim: rgba(31, 27, 22, 0.35);
+  --surface-card-bg: rgba(255, 255, 255, 0.55);
+  --surface-border: rgba(31, 27, 22, 0.14);
+  --border-on-dark-mid: rgba(31, 27, 22, 0.14);
+  --border-on-dark-faint: rgba(31, 27, 22, 0.08);
+}
+
+/* Force backgrounds that hard-coded --bg-dark off body */
+body.theme-light-landing,
+body.theme-light-landing .section--dark,
+body.theme-light-landing .hero,
+body.theme-light-landing .product-intro,
+body.theme-light-landing .solution,
+body.theme-light-landing .why,
+body.theme-light-landing .flow,
+body.theme-light-landing .rules,
+body.theme-light-landing .audit,
+body.theme-light-landing .fits,
+body.theme-light-landing .outcomes,
+body.theme-light-landing .trust,
+body.theme-light-landing .footer-cta,
+body.theme-light-landing .category-pair,
+body.theme-light-landing .spotlight,
+body.theme-light-landing .ttv {
+  background-color: #F4EDDC;
+}
+
+/* Code specimens stay dark with their own palette */
+body.theme-light-landing pre,
+body.theme-light-landing .code,
+body.theme-light-landing .code-block,
+body.theme-light-landing .audit__code,
+body.theme-light-landing .stage-card__code {
+  background: #1A1612 !important;
+  color: #E8E1D0 !important;
+  border: 1px solid rgba(31, 27, 22, 0.18) !important;
+}
+body.theme-light-landing pre *,
+body.theme-light-landing .code *,
+body.theme-light-landing .code-block *,
+body.theme-light-landing .audit__code *,
+body.theme-light-landing .stage-card__code * {
+  color: inherit;
+}
