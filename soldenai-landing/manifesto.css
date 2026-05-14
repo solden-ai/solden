@@ -1818,3 +1818,168 @@ body.theme-light-landing .section-eyebrow::before {
   color: rgba(31, 27, 22, 0.68);
   margin: 0;
 }
+
+/* ─── Generalization grid (4 domain cards) ────────────────────
+   Foregrounds the manifesto's "same shape, every workflow"
+   claim. Each card names a BoxType, its state machine, and
+   its current shipping status. The two "next" cards are
+   softer-styled to honestly signal roadmap, not product. */
+
+.generalize {
+  padding: 96px 0 72px;
+}
+
+.generalize__head {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 56px;
+}
+.generalize__head .section-eyebrow { display: inline-block; }
+
+.generalize__grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+@media (max-width: 760px) {
+  .generalize__grid { grid-template-columns: 1fr; }
+}
+
+.domain-card {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(31, 27, 22, 0.12);
+  border-radius: 12px;
+  padding: 24px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.domain-card--next {
+  background: rgba(31, 27, 22, 0.02);
+  border-style: dashed;
+  border-color: rgba(31, 27, 22, 0.18);
+}
+
+.domain-card__label {
+  margin: 0;
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-size: 18px;
+  font-weight: 600;
+  font-style: italic;
+  color: #1F1B16;
+  letter-spacing: -0.008em;
+}
+
+.domain-card__states {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: rgba(31, 27, 22, 0.78);
+  word-break: break-word;
+}
+.domain-card__states code {
+  background: rgba(31, 27, 22, 0.05);
+  border: 1px solid rgba(31, 27, 22, 0.08);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: #1F1B16;
+  font-size: 0.95em;
+}
+
+.domain-card__hint {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: rgba(31, 27, 22, 0.58);
+  font-style: italic;
+}
+.domain-card__hint code {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  color: rgba(31, 27, 22, 0.78);
+}
+
+.generalize__close {
+  margin: 40px auto 0;
+  max-width: 640px;
+  text-align: center;
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-style: italic;
+  font-size: 18px;
+  line-height: 1.5;
+  color: rgba(31, 27, 22, 0.72);
+}
+
+/* ─── Sovereign claims ────────────────────────────────────────
+   Three concrete claims about ownership/removability/
+   determinism. Each backed by a real artifact in the codebase
+   (BOX_SCHEMA.md, export endpoint, no-LLM-in-routing). */
+
+.sovereign {
+  padding: 72px 0 96px;
+}
+
+.sovereign__head {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 56px;
+}
+.sovereign__head .section-eyebrow { display: inline-block; }
+
+.sovereign__claims {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+@media (max-width: 860px) {
+  .sovereign__claims { grid-template-columns: 1fr; max-width: 640px; }
+}
+
+.sov-claim {
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(31, 27, 22, 0.1);
+  border-radius: 12px;
+  padding: 26px 26px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sov-claim__title {
+  margin: 0;
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-size: 20px;
+  font-style: italic;
+  font-weight: 600;
+  color: #1F1B16;
+  letter-spacing: -0.008em;
+}
+
+.sov-claim__body {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: rgba(31, 27, 22, 0.78);
+}
+.sov-claim__body code {
+  background: rgba(31, 27, 22, 0.05);
+  border: 1px solid rgba(31, 27, 22, 0.08);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: #1F1B16;
+  word-break: break-word;
+}

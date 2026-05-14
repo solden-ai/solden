@@ -24,7 +24,7 @@
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/Geist-Variable.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/GeistMono-Variable.woff2" crossorigin />
     <link rel="stylesheet" href="/styles.css?v=6" />
-    <link rel="stylesheet" href="/manifesto.css?v=14" />
+    <link rel="stylesheet" href="/manifesto.css?v=15" />
   </head>
   <body class="theme-light-landing">
 
@@ -255,13 +255,13 @@
         <p class="spotlight__eyebrow">A workflow that holds</p>
         <h2 class="spotlight__title">11:42pm. The invoice arrives.</h2>
         <div class="spotlight__body">
-          <p>A duplicate invoice from Northwind Logistics lands in <strong>ap@your-co</strong> at 11:42pm on a Thursday. Solden captures it, runs the three-way match, and finds the original — same vendor, same amount, same PO. Posted three weeks ago.</p>
-          <p>The agent doesn&rsquo;t reply to the vendor. It opens a <em>duplicate</em> exception, attaches the prior payment record, and routes the Box to Priya, the AP lead. She wakes up Friday to one Slack card with both invoices and the prior approval chain already linked. She marks the duplicate <em>declined-duplicate</em> with one click. The audit trail captures her decision, the prior reference, and the timestamp.</p>
-          <p>Nothing posts to the ERP. No email goes to Northwind. The vendor master stays clean. The audit committee sees the full chain six months later when they ask why a payment didn&rsquo;t go out twice.</p>
+          <p>A duplicate invoice from Northwind Logistics lands in <strong>ap@your-co</strong> at 11:42pm on a Thursday. Solden opens a Box for it. The <em>state</em> is <code>needs_approval</code>. The <em>owner</em> is Priya, the AP lead. The <em>dependency</em> is the prior-payment record the three-way match just surfaced. The <em>exception</em> is <code>duplicate</code>. The audit chain is sealed at <code>ev_9182</code>, prior hash linked. The policy version that authorized routing is stamped on the transition.</p>
+          <p>The agent doesn&rsquo;t reply to the vendor. The Box waits. Priya wakes up Friday to one Slack card with both invoices and the prior approval chain already linked. She marks the duplicate <em>declined-duplicate</em>. The Box closes. Same record, same audit chain, six months later, when the committee asks why a payment didn&rsquo;t go out twice.</p>
+          <p>Nothing posts to the ERP. No email goes to Northwind. The vendor master stays clean. Five surfaces touched the workflow; one Box held it.</p>
         </div>
         <p class="spotlight__close">
           <span>That&rsquo;s one Box.</span>
-          <span class="spotlight__close-em">Solden runs thousands at once.</span>
+          <span class="spotlight__close-em">The runtime holds thousands at once. Same shape.</span>
         </p>
       </div>
     </section>
@@ -271,11 +271,11 @@
       <div class="shell">
         <div class="solution__head" data-reveal>
           <p class="section-eyebrow">PRIMITIVES</p>
-          <h2 class="section-title">Every AP record holds its own workflow.</h2>
+          <h2 class="section-title">The Box is the unit.</h2>
           <p class="section-sub solution__sub-stanza">
-            <span>One record.</span>
-            <span>Four primitives.</span>
-            <span>Every surface in sync.</span>
+            <span>One typed record per workflow.</span>
+            <span>Six primitives baked in.</span>
+            <span>Every surface reads and writes to it.</span>
           </p>
         </div>
 
@@ -289,12 +289,20 @@
             <div class="primitive__def">who acts next</div>
           </div>
           <div class="primitive">
-            <div class="primitive__name">timeline</div>
-            <div class="primitive__def">everything that happened</div>
+            <div class="primitive__name">dependencies</div>
+            <div class="primitive__def">what it&rsquo;s waiting on</div>
           </div>
           <div class="primitive">
             <div class="primitive__name">exceptions</div>
-            <div class="primitive__def">what's blocking it</div>
+            <div class="primitive__def">what&rsquo;s stuck and why</div>
+          </div>
+          <div class="primitive">
+            <div class="primitive__name">history</div>
+            <div class="primitive__def">every transition, reversible</div>
+          </div>
+          <div class="primitive">
+            <div class="primitive__name">policy version</div>
+            <div class="primitive__def">what authorized each move</div>
           </div>
         </div>
 
@@ -886,6 +894,80 @@
       </div>
     </section>
 
+    <!-- Same shape, every workflow ──────────────────────────── -->
+    <section class="generalize" id="generalize">
+      <div class="shell">
+        <div class="generalize__head" data-reveal>
+          <p class="section-eyebrow">GENERALIZATION</p>
+          <h2 class="section-title">Same shape. Every workflow.</h2>
+          <p class="section-sub">
+            Finance is the wedge. The state machine doesn&rsquo;t care about the domain. Same Box. Same primitives. Same audit chain. Different states, different owners, different surfaces.
+          </p>
+        </div>
+
+        <ol class="generalize__grid">
+          <li class="domain-card">
+            <p class="domain-card__label">AP &mdash; shipping today</p>
+            <p class="domain-card__states"><code>received</code> &rarr; <code>validated</code> &rarr; <code>needs_approval</code> &rarr; <code>approved</code> &rarr; <code>ready_to_post</code> &rarr; <code>posted_to_erp</code> &rarr; <code>closed</code></p>
+            <p class="domain-card__hint">BoxType: <code>ap_item</code>. Registered, audited, exportable.</p>
+          </li>
+          <li class="domain-card">
+            <p class="domain-card__label">Bank reconciliation &mdash; child Box of AP</p>
+            <p class="domain-card__states"><code>proposed</code> &rarr; <code>accepted</code> | <code>rejected</code></p>
+            <p class="domain-card__hint">BoxType: <code>bank_match</code>. Registered, audited, parent-linked to <code>ap_item</code>.</p>
+          </li>
+          <li class="domain-card domain-card--next">
+            <p class="domain-card__label">Procurement &mdash; next</p>
+            <p class="domain-card__states"><code>requested</code> &rarr; <code>quoted</code> &rarr; <code>approved</code> &rarr; <code>ordered</code> &rarr; <code>received</code> &rarr; <code>reconciled</code></p>
+            <p class="domain-card__hint">Same state machine, different vocab. PO is the Box.</p>
+          </li>
+          <li class="domain-card domain-card--next">
+            <p class="domain-card__label">Compliance &mdash; later</p>
+            <p class="domain-card__states"><code>assigned</code> &rarr; <code>drafted</code> &rarr; <code>reviewed</code> &rarr; <code>approved</code> &rarr; <code>submitted</code> &rarr; <code>audited</code></p>
+            <p class="domain-card__hint">An attestation is a Box. The audit chain is the audit.</p>
+          </li>
+        </ol>
+
+        <p class="generalize__close">
+          Two BoxTypes registered today. The architecture isn&rsquo;t finance. Finance is where the pain is loudest.
+        </p>
+      </div>
+    </section>
+
+    <!-- Sovereign ──────────────────────────────────────────── -->
+    <section class="sovereign" id="sovereign">
+      <div class="shell">
+        <div class="sovereign__head" data-reveal>
+          <p class="section-eyebrow">SOVEREIGN</p>
+          <h2 class="section-title">The workflow record is yours.</h2>
+          <p class="section-sub">
+            Not ours. Not the point tool&rsquo;s. Lock-in is an architectural choice. We chose against it.
+          </p>
+        </div>
+
+        <ul class="sovereign__claims">
+          <li class="sov-claim">
+            <p class="sov-claim__title">Published Box schema.</p>
+            <p class="sov-claim__body">
+              <code>docs/BOX_SCHEMA.md</code> is the public contract. Every field, every state, every audit-event shape. A third party reading the export can reconstruct the workflow record without any Solden code running.
+            </p>
+          </li>
+          <li class="sov-claim">
+            <p class="sov-claim__title">Portable Box export.</p>
+            <p class="sov-claim__body">
+              <code>GET /api/workspace/ap-items/{id}/export</code> returns a complete, versioned JSON: state, fields, full audit chain with hash links, exceptions, parent/child Box references. Take it out, take it elsewhere.
+            </p>
+          </li>
+          <li class="sov-claim">
+            <p class="sov-claim__title">No master orchestrator.</p>
+            <p class="sov-claim__body">
+              No LLM in the routing loop. Match, sanctions, budget, three-way, escalation &mdash; all deterministic rules. The model reads invoices and writes operator prose. The model never votes on outcomes.
+            </p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
     <aside class="belief-divider" aria-hidden="true">
       <p class="belief-divider__rule"></p>
       <p class="belief-divider__text">We believe <em>the bond between systems</em> is the system.</p>
@@ -896,8 +978,8 @@
     <section class="footer-cta">
       <div class="shell shell--tight" data-reveal>
         <div class="category-pair">
-          <div class="category-pair__line">Your ERP shows what happened.</div>
-          <div class="category-pair__line category-pair__line--accent">Solden coordinates what's happening.</div>
+          <div class="category-pair__line">Your tools touched the work.</div>
+          <div class="category-pair__line category-pair__line--accent">Solden holds it.</div>
         </div>
         <p class="footer-cta__sub">
           30-minute demo. One sample invoice through your stack. The full audit trail.
