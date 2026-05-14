@@ -57,6 +57,34 @@ HUMAN_ACTION_STATES = frozenset({
 })
 
 
+# State classes group transitions where a manual owner assignment
+# should stick. Sticky-manual doctrine (Mo's call 2026-05-14):
+# manual owners survive WITHIN a class but get re-resolved on a
+# cross-class transition because the operator's deliberate choice
+# was for the prior class's role, not the new one's.
+#
+#   needs_info → needs_info (same class, sticky)
+#   needs_approval → needs_second_approval (same class, sticky)
+#   needs_info → needs_approval (cross-class, re-resolve)
+#   needs_approval → failed_post (cross-class, re-resolve)
+STATE_CLASSES: Dict[str, str] = {
+    APState.NEEDS_INFO.value: "info",
+    APState.NEEDS_APPROVAL.value: "approval",
+    APState.NEEDS_SECOND_APPROVAL.value: "approval",
+    APState.FAILED_POST.value: "post",
+}
+
+
+def state_class(state: str) -> str:
+    """Return the manual-owner stickiness class for a state.
+
+    Empty string means "no class" — typically a non-human-action
+    state (received, validated, approved, etc.) where no manual
+    owner can persist anyway.
+    """
+    return STATE_CLASSES.get(str(state or ""), "")
+
+
 @dataclass(frozen=True)
 class OwnerAssignment:
     """Resolved ownership for a Box.

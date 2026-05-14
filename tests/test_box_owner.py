@@ -372,3 +372,28 @@ def test_reassign_endpoint_404_for_missing_box(client_own):
         json={"new_owner_email": "x@example.com", "reason": ""},
     )
     assert resp.status_code == 404
+
+
+# ─── Sticky-manual doctrine (state-class semantics) ─────────────────
+
+
+def test_state_class_groups_approval_states():
+    """needs_approval and needs_second_approval share the approval class."""
+    from clearledgr.services.box_owner import state_class
+    assert state_class("needs_approval") == "approval"
+    assert state_class("needs_second_approval") == "approval"
+    assert state_class("needs_info") == "info"
+    assert state_class("failed_post") == "post"
+    # Auto-progressable states have no class — no manual owner persists there.
+    assert state_class("validated") == ""
+    assert state_class("approved") == ""
+    assert state_class("") == ""
+
+
+def test_state_class_partitions_human_action_states():
+    """Different state classes must not collide; this is what makes
+    cross-class transitions detectable."""
+    from clearledgr.services.box_owner import state_class
+    assert state_class("needs_info") != state_class("needs_approval")
+    assert state_class("needs_info") != state_class("failed_post")
+    assert state_class("needs_approval") != state_class("failed_post")

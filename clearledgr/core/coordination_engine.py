@@ -1689,32 +1689,44 @@ class CoordinationEngine:
 
         Manifesto §"Ownership" auto-assignment hook: after the state
         change lands, resolve who acts next on the Box and stamp
-        ``owner_*`` columns + an ``owner_changed`` audit event. Skips
-        ownership writes when:
-          * the new state doesn't require human action,
-          * the operator has set an explicit manual owner (we don't
-            silently overwrite a deliberate human routing decision),
-          * the org has no configured default owner for the state.
-        The hook is best-effort — a failure logs and continues; we
-        never block the transition itself on an ownership write.
+        ``owner_*`` columns + an ``owner_changed`` audit event. The
+        hook respects the sticky-manual doctrine — see
+        :func:`_maybe_assign_owner` for the rule. Failures log and
+        continue; ownership is observability + routing, not a
+        correctness invariant of the transition itself.
         """
         target = action.params.get("target", "")
         if plan.box_id and target:
+            # Capture prev_state before the update so the auto-assign
+            # hook can apply the sticky-manual-within-state-class rule.
+            prev_item = await asyncio.to_thread(self.db.get_ap_item, plan.box_id)
+            prev_state = str(prev_item.get("state") or "") if prev_item else ""
             try:
                 await asyncio.to_thread(
                     self.db.update_ap_item, plan.box_id, state=target,
                 )
             except Exception as exc:
                 return {"_abort": True, "error": f"Stage transition to {target} failed: {exc}"}
-            await self._maybe_assign_owner(plan.box_id)
+            await self._maybe_assign_owner(plan.box_id, prev_state=prev_state)
         return {"ok": True}
 
-    async def _maybe_assign_owner(self, box_id: str) -> None:
+    async def _maybe_assign_owner(self, box_id: str, prev_state: str = "") -> None:
         """Resolve and persist the current owner after a state transition.
 
-        Pure side effect. Errors are logged and swallowed — ownership
-        is observability + routing, not a correctness invariant of
-        the transition itself.
+        Sticky-manual doctrine (Mo's call 2026-05-14): a manual owner
+        assignment survives transitions WITHIN the same state class
+        but is re-resolved on a CROSS-class transition. State classes
+        are defined in :data:`clearledgr.services.box_owner.STATE_CLASSES`.
+
+        Rationale: when an operator manually routes a Box at, say,
+        ``needs_approval``, that choice was for the approval role.
+        A transition to ``needs_info`` typically routes to a different
+        role (a clerk who answers questions, not an approver) — sticky
+        across that boundary would silently leave the wrong human in
+        the queue. Within a class (e.g. needs_approval →
+        needs_second_approval) the operator's intent still applies.
+
+        Pure side effect. Errors are logged and swallowed.
         """
         if not box_id:
             return
@@ -1722,13 +1734,21 @@ class CoordinationEngine:
             item = await asyncio.to_thread(self.db.get_ap_item, box_id)
             if not item:
                 return
-            # Don't overwrite operator-set manual assignments.
-            if str(item.get("owner_source") or "") == "manual":
-                return
             from clearledgr.services.box_owner import (
                 apply_resolved_owner,
                 resolve_owner,
+                state_class,
             )
+            # Sticky-manual rule: if owner_source is 'manual' and the
+            # transition stays within the same class, keep it. Otherwise
+            # fall through to re-resolution, which will replace the
+            # manual owner with the configured default for the new
+            # state (auto or delegate).
+            if str(item.get("owner_source") or "") == "manual":
+                current_class = state_class(item.get("state") or "")
+                prev_class = state_class(prev_state)
+                if current_class and current_class == prev_class:
+                    return
             # resolve_owner is sync but makes three blocking DB calls
             # (get_organization, list delegation_rules, get_user_by_email).
             # Off-load it to a worker thread so a slow Postgres doesn't
