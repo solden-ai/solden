@@ -3247,7 +3247,92 @@ body.theme-manifesto-light .btn--primary:hover {
 
 /* Cover — restrained, lots of whitespace, no chunky gradient */
 .essay__cover {
-  padding: 88px 0 56px;
+  padding: 72px 0 56px;
+}
+
+/* Two-column museum-placard cover layout:
+   tablet image on the left, manifesto title + epigraph on the right.
+   Collapses to single column on mobile. */
+.essay__cover-grid {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+  gap: 56px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .essay__cover-grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+    max-width: 660px;
+  }
+}
+@media (max-width: 600px) {
+  .essay__cover-grid { padding: 0 24px; }
+}
+
+.essay__cover-figure { margin: 0; }
+@media (max-width: 860px) {
+  .essay__cover-figure { max-width: 360px; }
+}
+
+.essay__cover-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid rgba(31, 27, 22, 0.18);
+  background: #EDE3CC;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6),
+    0 24px 60px -20px rgba(31, 27, 22, 0.28),
+    0 8px 20px -10px rgba(31, 27, 22, 0.18);
+}
+
+.essay__cover-caption {
+  margin: 18px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: rgba(31, 27, 22, 0.62);
+  font-style: italic;
+  font-family: "Iowan Old Style", "Georgia", serif;
+  padding-top: 12px;
+  border-top: 1px solid rgba(31, 27, 22, 0.14);
+}
+
+.essay__cover-caption-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(31, 27, 22, 0.5);
+  margin: 0 0 6px;
+}
+
+.essay__cover-credit {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  color: rgba(31, 27, 22, 0.45);
+  font-style: normal;
+  letter-spacing: 0.01em;
+}
+
+.essay__cover-text { padding-top: 4px; }
+
+.essay__cover-footnote {
+  margin: 28px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid rgba(31, 27, 22, 0.12);
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: rgba(31, 27, 22, 0.65);
+  font-style: italic;
+  font-family: "Iowan Old Style", "Georgia", serif;
+  max-width: 520px;
 }
 
 .essay__eyebrow {
