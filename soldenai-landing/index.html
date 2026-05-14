@@ -241,6 +241,23 @@
       </div>
     </section>
 
+    <!-- Worked-example spotlight ────────────────────────────── -->
+    <section class="spotlight" id="spotlight">
+      <div class="shell shell--narrow">
+        <p class="spotlight__eyebrow">A workflow that holds</p>
+        <h2 class="spotlight__title">11:42pm. The invoice arrives.</h2>
+        <div class="spotlight__body">
+          <p>A duplicate invoice from Northwind Logistics lands in <strong>ap@your-co</strong> at 11:42pm on a Thursday. Solden captures it, runs the three-way match, and finds the original — same vendor, same amount, same PO. Posted three weeks ago.</p>
+          <p>The agent doesn&rsquo;t reply to the vendor. It opens a <em>duplicate</em> exception, attaches the prior payment record, and routes the Box to Priya, the AP lead. She wakes up Friday to one Slack card with both invoices and the prior approval chain already linked. She marks the duplicate <em>declined-duplicate</em> with one click. The audit trail captures her decision, the prior reference, and the timestamp.</p>
+          <p>Nothing posts to the ERP. No email goes to Northwind. The vendor master stays clean. The audit committee sees the full chain six months later when they ask why a payment didn&rsquo;t go out twice.</p>
+        </div>
+        <p class="spotlight__close">
+          <span>That&rsquo;s one Box.</span>
+          <span class="spotlight__close-em">Solden runs thousands at once.</span>
+        </p>
+      </div>
+    </section>
+
     <!-- Product intro ──────────────────────────────────────── -->
     <section class="product-intro" id="product">
       <div class="shell product-intro__head" data-reveal>
@@ -646,6 +663,45 @@
             </li>
           </ol>
         </div>
+      </div>
+    </section>
+
+    <!-- Time-to-value roadmap ─────────────────────────────── -->
+    <section class="ttv" id="ttv">
+      <div class="shell">
+        <div class="ttv__head" data-reveal>
+          <h2 class="section-title">From signature to first close. Four weeks.</h2>
+          <p class="section-sub">
+            Solden installs as infrastructure, not a six-month rollout. Each week is the next workflow that holds.
+          </p>
+        </div>
+
+        <ol class="ttv__list">
+          <li class="ttv__step" data-reveal>
+            <span class="ttv__week">Week 1</span>
+            <h3 class="ttv__step-title">Connect.</h3>
+            <p class="ttv__step-body">Gmail or Outlook. ERP (NetSuite, SAP, QuickBooks, Xero). Slack or Teams. Read-only first; one of your AP leads watches the agent shadow the queue for a day before any state moves.</p>
+          </li>
+          <li class="ttv__step" data-reveal data-reveal-delay="1">
+            <span class="ttv__week">Week 2</span>
+            <h3 class="ttv__step-title">First Boxes flowing.</h3>
+            <p class="ttv__step-body">Captured invoices walk the full state machine end-to-end. Validation, routing, approvals in Slack or Teams, post to ERP. Audit chain visible per record. You see the workflow runtime hold its first hundred Boxes.</p>
+          </li>
+          <li class="ttv__step" data-reveal data-reveal-delay="2">
+            <span class="ttv__week">Week 3</span>
+            <h3 class="ttv__step-title">Policy tuned.</h3>
+            <p class="ttv__step-body">Match tolerances, approval thresholds, escalation matrices, override windows. Every change is versioned. Audit-replay any decision against the policy version it ran under.</p>
+          </li>
+          <li class="ttv__step" data-reveal data-reveal-delay="3">
+            <span class="ttv__week">Week 4+</span>
+            <h3 class="ttv__step-title">Period close, with fewer surprises.</h3>
+            <p class="ttv__step-body">First month-end on the runtime. Exceptions surface as structured state, not buried email threads. The auditor sees one chain per Box. Your controller closes the period without a manual reconciliation spreadsheet.</p>
+          </li>
+        </ol>
+
+        <p class="ttv__close">
+          Same agent. Same audit. Same operator surface. Different week.
+        </p>
       </div>
     </section>
 

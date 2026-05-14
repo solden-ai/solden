@@ -2483,3 +2483,128 @@ body.theme-manifesto {
   transform: scaleX(1) !important;
   opacity: 1 !important;
 }
+
+/* ═════════════════════════════════════════════════════════════
+   Worked-example spotlight + Time-to-value roadmap
+   ───────────────────────────────────────────────────────────── */
+
+/* Spotlight — narrative prose between solution and product intro */
+.spotlight {
+  padding: 96px 0 48px;
+}
+.spotlight__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--teal-soft);
+  margin: 0 0 20px;
+}
+.spotlight__title {
+  font-size: clamp(34px, 4.6vw, 56px);
+  line-height: 1.04;
+  letter-spacing: -0.034em;
+  font-weight: 700;
+  color: var(--text-on-dark);
+  margin: 0 0 32px;
+}
+.spotlight__body p {
+  font-size: 19px;
+  line-height: 1.6;
+  color: var(--text-on-dark-soft);
+  margin: 0 0 20px;
+}
+.spotlight__body p strong { color: var(--text-on-dark); font-weight: 600; }
+.spotlight__body p em { color: var(--text-on-dark); font-style: italic; }
+
+.spotlight__close {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 36px 0 0;
+  padding-top: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: clamp(22px, 2.6vw, 28px);
+  line-height: 1.22;
+  letter-spacing: -0.018em;
+  font-weight: 500;
+  color: var(--text-on-dark-soft);
+}
+.spotlight__close-em {
+  color: var(--text-on-dark);
+  font-weight: 600;
+}
+
+/* Time-to-value — four weeks, stacked rows */
+.ttv { padding: 96px 0 88px; }
+
+.ttv__head {
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto 56px;
+}
+
+.ttv__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+@media (max-width: 980px) {
+  .ttv__list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .ttv__list { grid-template-columns: 1fr; }
+}
+
+.ttv__step {
+  background: rgba(14, 26, 51, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 26px 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color .25s var(--ease-out), transform .25s var(--ease-out);
+}
+.ttv__step:hover {
+  border-color: rgba(24, 191, 176, 0.45);
+  transform: translateY(-2px);
+}
+
+.ttv__week {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--teal-soft);
+  margin: 0;
+}
+
+.ttv__step-title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: var(--text-on-dark);
+}
+
+.ttv__step-body {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text-on-dark-soft);
+}
+
+.ttv__close {
+  margin: 48px auto 0;
+  max-width: 640px;
+  text-align: center;
+  font-size: 17px;
+  line-height: 1.55;
+  font-style: italic;
+  color: var(--text-on-dark-soft);
+}
