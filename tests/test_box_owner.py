@@ -135,6 +135,57 @@ def test_resolve_owner_walks_delegation(db):
     assert assignment.owner_source == "delegate"
     assert assignment.original_owner_email == "controller@example.com"
     assert "PTO" in assignment.delegation_reason
+    assert list(assignment.delegation_chain) == ["deputy@example.com"]
+
+
+def test_resolve_owner_walks_multi_hop_delegation_chain(db):
+    """A→B→C should deliver work to C, not to B (the previous bug)."""
+    _configure_routing(db, "orgOwn", {"needs_approval": "a@example.com"})
+    item = _make_ap_item(db, item_id="AP-own-multi-hop", state="needs_approval")
+    from clearledgr.services.approval_delegation import get_delegation_service
+    delegation = get_delegation_service(organization_id="orgOwn")
+    delegation.create_rule(
+        delegator_id="u-a", delegator_email="a@example.com",
+        delegate_id="u-b", delegate_email="b@example.com",
+        reason="A on leave",
+    )
+    delegation.create_rule(
+        delegator_id="u-b", delegator_email="b@example.com",
+        delegate_id="u-c", delegate_email="c@example.com",
+        reason="B also on leave",
+    )
+    assignment = resolve_owner(box=item, organization_id="orgOwn", db=db)
+    assert assignment is not None
+    assert assignment.owner_email == "c@example.com"
+    assert assignment.original_owner_email == "a@example.com"
+    assert list(assignment.delegation_chain) == ["b@example.com", "c@example.com"]
+    # Reason of the last hop wins — auditors see why work landed at its
+    # final destination.
+    assert "B also" in assignment.delegation_reason
+
+
+def test_resolve_owner_breaks_delegation_cycle(db):
+    """A→B→A is a cycle. Walk must stop at B and not infinite-loop."""
+    _configure_routing(db, "orgOwn", {"needs_approval": "a2@example.com"})
+    item = _make_ap_item(db, item_id="AP-own-cycle", state="needs_approval")
+    from clearledgr.services.approval_delegation import get_delegation_service
+    delegation = get_delegation_service(organization_id="orgOwn")
+    delegation.create_rule(
+        delegator_id="u-a2", delegator_email="a2@example.com",
+        delegate_id="u-b2", delegate_email="b2@example.com",
+        reason="A2 OOO",
+    )
+    delegation.create_rule(
+        delegator_id="u-b2", delegator_email="b2@example.com",
+        delegate_id="u-a2", delegate_email="a2@example.com",
+        reason="B2 returning the favor",
+    )
+    assignment = resolve_owner(box=item, organization_id="orgOwn", db=db)
+    assert assignment is not None
+    # Stop at B — never circle back to A.
+    assert assignment.owner_email == "b2@example.com"
+    assert assignment.original_owner_email == "a2@example.com"
+    assert list(assignment.delegation_chain) == ["b2@example.com"]
 
 
 # ─── apply_resolved_owner ───────────────────────────────────────────

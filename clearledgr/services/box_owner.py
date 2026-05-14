@@ -76,6 +76,11 @@ class OwnerAssignment:
     delegation_reason:
         Free-text reason supplied on the active delegation rule. ``""``
         when no delegation is in effect.
+    delegation_chain:
+        Ordered list of delegate emails walked from ``original_owner_email``
+        to ``owner_email``. Empty when no delegation is in effect.
+        For A→B→C this is ``["B", "C"]``; for A→B→A (cycle) the walk
+        stops at B with chain ``["B"]``.
     """
 
     owner_id: Optional[str]
@@ -83,6 +88,7 @@ class OwnerAssignment:
     owner_source: str
     original_owner_email: str
     delegation_reason: str = ""
+    delegation_chain: tuple = ()
 
     def to_audit_payload(self) -> Dict[str, Any]:
         """Shape for the ``owner_changed`` audit event payload_json."""
@@ -92,6 +98,7 @@ class OwnerAssignment:
             "owner_source": self.owner_source,
             "original_owner_email": self.original_owner_email,
             "delegation_reason": self.delegation_reason,
+            "delegation_chain": list(self.delegation_chain),
         }
 
 
@@ -168,24 +175,44 @@ def resolve_owner(
     if not base_email:
         return None
 
-    # Walk active delegations. One hop is enough for the common case;
-    # multi-hop chains would need cycle detection — out of scope here
-    # but easy to extend later (DelegationService already exposes the
-    # rules list).
+    # Walk active delegations with cycle detection. A→B→C delivers
+    # to C; A→B→A is detected via the visited set and stops at B
+    # (the last cycle-free hop). Without this, prior behaviour stopped
+    # after one hop — a three-link chain silently misrouted to the
+    # middle link.
     delegate_email: Optional[str] = None
     delegation_reason = ""
+    delegation_chain: list[str] = []
     try:
         from clearledgr.services.approval_delegation import get_delegation_service
         delegation = get_delegation_service(organization_id=organization_id)
-        delegate_email = delegation.get_delegate_for(base_email)
-        if delegate_email:
-            for rule in delegation.list_rules(active_only=True):
-                if (
-                    rule.get("delegator_email") == base_email
-                    and rule.get("delegate_email") == delegate_email
-                ):
-                    delegation_reason = str(rule.get("reason") or "")
-                    break
+        active_rules = delegation.list_rules(active_only=True)
+        # Index rule reasons by (delegator, delegate) once so each hop
+        # is a dict lookup instead of a linear scan.
+        rule_reasons: Dict[tuple, str] = {}
+        for rule in active_rules:
+            key = (rule.get("delegator_email"), rule.get("delegate_email"))
+            rule_reasons[key] = str(rule.get("reason") or "")
+
+        visited = {base_email}
+        cursor = base_email
+        # Cap the walk at len(rules) + 1 hops as a belt-and-braces
+        # guard against malformed data (a rule whose delegate_email
+        # equals its delegator_email, for instance).
+        for _ in range(len(active_rules) + 1):
+            next_hop = delegation.get_delegate_for(cursor)
+            if not next_hop or next_hop in visited:
+                # End of chain, or cycle detected — stop at the
+                # current cursor (the deepest cycle-free hop).
+                break
+            delegation_chain.append(next_hop)
+            visited.add(next_hop)
+            # Reason of the most-recent hop wins; an auditor reading
+            # the chain sees why work landed at its final destination.
+            delegation_reason = rule_reasons.get((cursor, next_hop), "")
+            cursor = next_hop
+        if delegation_chain:
+            delegate_email = delegation_chain[-1]
     except Exception as exc:
         logger.warning(
             "[box_owner] delegation lookup failed for %s/%s: %s",
@@ -202,6 +229,7 @@ def resolve_owner(
         owner_source=resolved_source,
         original_owner_email=base_email,
         delegation_reason=delegation_reason,
+        delegation_chain=tuple(delegation_chain),
     )
 
 
