@@ -1647,7 +1647,19 @@ class CoordinationEngine:
         )
 
     async def _handle_stage_transition(self, action: Action, plan: Plan) -> dict:
-        """§3: Advance or revert a Box to a specific pipeline stage."""
+        """§3: Advance or revert a Box to a specific pipeline stage.
+
+        Manifesto §"Ownership" auto-assignment hook: after the state
+        change lands, resolve who acts next on the Box and stamp
+        ``owner_*`` columns + an ``owner_changed`` audit event. Skips
+        ownership writes when:
+          * the new state doesn't require human action,
+          * the operator has set an explicit manual owner (we don't
+            silently overwrite a deliberate human routing decision),
+          * the org has no configured default owner for the state.
+        The hook is best-effort — a failure logs and continues; we
+        never block the transition itself on an ownership write.
+        """
         target = action.params.get("target", "")
         if plan.box_id and target:
             try:
@@ -1656,7 +1668,58 @@ class CoordinationEngine:
                 )
             except Exception as exc:
                 return {"_abort": True, "error": f"Stage transition to {target} failed: {exc}"}
+            await self._maybe_assign_owner(plan.box_id)
         return {"ok": True}
+
+    async def _maybe_assign_owner(self, box_id: str) -> None:
+        """Resolve and persist the current owner after a state transition.
+
+        Pure side effect. Errors are logged and swallowed — ownership
+        is observability + routing, not a correctness invariant of
+        the transition itself.
+        """
+        if not box_id:
+            return
+        try:
+            item = await asyncio.to_thread(self.db.get_ap_item, box_id)
+            if not item:
+                return
+            # Don't overwrite operator-set manual assignments.
+            if str(item.get("owner_source") or "") == "manual":
+                return
+            from clearledgr.services.box_owner import (
+                apply_resolved_owner,
+                resolve_owner,
+            )
+            assignment = resolve_owner(
+                box=item,
+                organization_id=self.organization_id,
+                db=self.db,
+            )
+            if assignment is None:
+                return
+            # Skip the write when the resolved owner already matches —
+            # avoids audit-spam on transitions that don't actually
+            # change ownership (e.g., needs_approval → needs_info
+            # routed to the same person).
+            if (
+                str(item.get("owner_email") or "") == assignment.owner_email
+                and str(item.get("owner_source") or "") == assignment.owner_source
+            ):
+                return
+            await asyncio.to_thread(
+                apply_resolved_owner,
+                db=self.db,
+                ap_item_id=box_id,
+                organization_id=self.organization_id,
+                assignment=assignment,
+                actor_id="coordination_engine",
+            )
+        except Exception as exc:
+            logger.warning(
+                "[CoordinationEngine] owner auto-assign failed for %s: %s",
+                box_id, exc,
+            )
 
     async def _handle_send_approval(self, action: Action, plan: Plan) -> dict:
         """§3: Send structured approval message to Slack/Teams."""
