@@ -98,9 +98,28 @@ VALID_TRANSITIONS: Dict[APState, FrozenSet[APState]] = {
         APState.REJECTED, APState.NEEDS_INFO, APState.SNOOZED,
         APState.CLOSED,
     }),
-    APState.APPROVED: frozenset({APState.READY_TO_POST, APState.NEEDS_INFO, APState.CLOSED}),
+    # Manifesto §"History — every reversal": approved can be reverted
+    # back to needs_approval within an operator-configurable window
+    # via ``services/approval_revert.py``. The window-expiry check is
+    # an application-layer concern (the state machine permits the
+    # edge unconditionally; the service enforces the time bound).
+    APState.APPROVED: frozenset({
+        APState.READY_TO_POST,
+        APState.NEEDS_APPROVAL,
+        APState.NEEDS_INFO,
+        APState.CLOSED,
+    }),
     APState.REJECTED: frozenset({APState.CLOSED}),
-    APState.READY_TO_POST: frozenset({APState.POSTED_TO_ERP, APState.FAILED_POST, APState.CLOSED}),
+    # ready_to_post can be reverted to needs_approval inside the
+    # approval-revert window — see services/approval_revert.py. Once
+    # the bill has actually posted (posted_to_erp), the ERP-level
+    # reversal path takes over instead.
+    APState.READY_TO_POST: frozenset({
+        APState.POSTED_TO_ERP,
+        APState.FAILED_POST,
+        APState.NEEDS_APPROVAL,
+        APState.CLOSED,
+    }),
     # posted_to_erp can advance to AWAITING_PAYMENT (payment-tracking
     # enabled — Wave 2 default), close directly (legacy / disabled
     # path), or be reversed inside the override window.

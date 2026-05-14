@@ -119,6 +119,7 @@ from clearledgr.api.outbox_ops import router as outbox_ops_router
 from clearledgr.api.outlook_routes import router as outlook_router
 from clearledgr.api.box_export import router as box_export_router
 from clearledgr.api.box_owner_routes import router as box_owner_router
+from clearledgr.api.box_revert_routes import router as box_revert_router
 from clearledgr.api.payment_confirmations import router as payment_confirmations_router
 from clearledgr.api.peppol import router as peppol_router
 from clearledgr.api.pipelines import (
@@ -759,6 +760,8 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         r"^/api/workspace/ap-items/[^/]+/export$",
         # Ownership primitive: manual reassignment (manifesto §"Ownership").
         r"^/api/workspace/ap-items/[^/]+/reassign$",
+        # Reversibility primitive: bounded approval revert (manifesto §"History").
+        r"^/api/workspace/ap-items/[^/]+/revert-approval$",
         r"^/api/agent/intents/skills/[^/]+/readiness$",
         r"^/api/agent/sessions/[^/]+$",
         r"^/api/agent/sessions/[^/]+/commands$",
@@ -1527,6 +1530,11 @@ app.include_router(box_export_router)
 # Ownership primitive: manual Box reassignment (the manifesto's
 # "ownership is explicit, enforceable, auditable" promise).
 app.include_router(box_owner_router)
+
+# Reversibility primitive: bounded approval revert (the manifesto's
+# "every reversal" promise — within-window undo for an approval
+# that hasn't yet posted to the ERP).
+app.include_router(box_revert_router)
 
 # Wave 2 / C4: manual payment confirmation surface
 app.include_router(payment_confirmations_router)
