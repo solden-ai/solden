@@ -1390,6 +1390,14 @@ class _ClearledgrDBBase:
             self._ensure_column(cur, "audit_events", "prev_hash", "TEXT")
             self._ensure_column(cur, "audit_events", "hash", "TEXT")
             self._ensure_column(cur, "audit_events", "chain_seq", "BIGINT")
+            # v81: policy_version stamped on every Box transition so
+            # the version of the policy that authorized each move is
+            # preserved in the audit trail (manifesto §"State" —
+            # "validated centrally, with the policy version that
+            # authorized it"). Backfill is implicit: existing rows get
+            # NULL and read sites coalesce to "v1" via
+            # CURRENT_AP_POLICY_VERSION in clearledgr.core.ap_states.
+            self._ensure_column(cur, "audit_events", "policy_version", "TEXT")
             # Now that the chain columns exist, install the BEFORE
             # INSERT trigger that fills them on every new audit row.
             # Idempotent (CREATE OR REPLACE).

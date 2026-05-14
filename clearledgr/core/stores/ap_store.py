@@ -2079,6 +2079,24 @@ class APStore:
                 except (TypeError, ValueError):
                     continue
 
+        # Manifesto §"State": every transition records the policy
+        # version that authorized it. Resolution order:
+        #   1. Caller passed it explicitly at the top level (best).
+        #   2. OverrideContext.to_dict() puts it in payload_json — pull
+        #      it up to a column so auditors can index/filter without
+        #      JSON extraction.
+        #   3. For ap_item-keyed rows, default to CURRENT_AP_POLICY_VERSION.
+        #   4. NULL for non-ap_item Box types (until they register a
+        #      current-version constant).
+        policy_version = payload.get("policy_version")
+        if policy_version is None and isinstance(payload_json, dict):
+            nested = payload_json.get("policy_version")
+            if nested:
+                policy_version = str(nested)
+        if policy_version is None and box_type == "ap_item":
+            from clearledgr.core.ap_states import CURRENT_AP_POLICY_VERSION
+            policy_version = CURRENT_AP_POLICY_VERSION
+
         # Module 9 §300: entity_id on audit_events for per-entity
         # auditor scoping. Resolution order:
         #   1. Caller passed it explicitly (best — they know their context).
@@ -2104,8 +2122,8 @@ class APStore:
              actor_type, actor_id, payload_json, external_refs,
              idempotency_key, source, correlation_id, workflow_id, run_id,
              decision_reason, governance_verdict, agent_confidence,
-             organization_id, entity_id, ts)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             organization_id, entity_id, policy_version, ts)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         try:
             with self.connect() as conn:
@@ -2131,6 +2149,7 @@ class APStore:
                     agent_confidence,
                     payload.get("organization_id"),
                     entity_id,
+                    policy_version,
                     now,
                 ))
                 conn.commit()

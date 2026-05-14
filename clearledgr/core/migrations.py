@@ -4819,3 +4819,47 @@ def _v82_rowset_branch_overlays(cur, db):
             and "duplicate" not in msg
         ):
             raise
+
+
+@migration(
+    83,
+    "audit_events.policy_version: stamp authorizing policy version on every Box transition (manifesto §State)",
+)
+def _v83_audit_events_policy_version(cur, db):
+    """Add ``policy_version`` to ``audit_events`` and backfill.
+
+    The manifesto promises each transition is "validated centrally,
+    with the policy version that authorized it." Until now, that
+    version was recorded only inside ``OverrideContext.to_dict()``
+    (which lands in ``payload_json``), not as a queryable column.
+    This migration:
+
+      1. Adds the ``policy_version TEXT`` column (idempotent via
+         IF NOT EXISTS).
+      2. Backfills existing rows for ap_item Boxes to ``v1`` so the
+         audit trail tells a consistent story across the cutover.
+         Non-ap_item rows are left NULL — when another BoxType ships,
+         that type's first migration should define its own current
+         policy version and backfill its own rows.
+      3. Adds a composite index on (organization_id, policy_version)
+         for the auditor flow "show me everything that ran under
+         policy version Y" without a sequential scan.
+
+    Coordinated write path: ``ApStore.append_audit_event`` was updated
+    in the same commit to populate the column on new rows, defaulting
+    to ``clearledgr.core.ap_states.CURRENT_AP_POLICY_VERSION`` when the
+    caller doesn't provide one for an ap_item Box.
+    """
+    cur.execute(
+        "ALTER TABLE audit_events "
+        "ADD COLUMN IF NOT EXISTS policy_version TEXT"
+    )
+    cur.execute(
+        "UPDATE audit_events SET policy_version = 'v1' "
+        "WHERE box_type = 'ap_item' AND policy_version IS NULL"
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_audit_events_org_policy_version "
+        "ON audit_events (organization_id, policy_version) "
+        "WHERE policy_version IS NOT NULL"
+    )

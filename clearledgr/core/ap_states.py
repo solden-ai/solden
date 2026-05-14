@@ -235,6 +235,22 @@ OVERRIDE_TYPE_PO_EXCEPTION = "po_exception"
 OVERRIDE_TYPE_MULTI = "multi"
 
 
+# Current AP policy version. Stamped on every audit_events row written
+# for an ap_item Box so the version of the routing/approval policy that
+# authorized each transition is preserved in the timeline.
+#
+# Bump this when policy semantics change in a way that downstream
+# auditors need to distinguish (new approval gate, changed dual-approval
+# threshold semantics, new escalation matrix). Old rows keep their
+# original version — that's the point of recording it.
+#
+# This is intentionally a flat string rather than a registry entry: a
+# proper policy registry (linked rules, hash of policy file) is the
+# next step (see manifesto roadmap), but stamping the version on every
+# transition is the precondition for any of that to be useful.
+CURRENT_AP_POLICY_VERSION = "v1"
+
+
 # Retry recoverability hints for `failed_post` handling.
 # Used by batch autonomy prechecks to avoid retrying hard failures.
 RECOVERABLE_POST_FAILURE_TOKENS = frozenset(
