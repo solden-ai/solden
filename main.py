@@ -117,6 +117,7 @@ from clearledgr.api.netsuite_panel import router as netsuite_panel_router
 from clearledgr.api.ops import router as ops_router
 from clearledgr.api.outbox_ops import router as outbox_ops_router
 from clearledgr.api.outlook_routes import router as outlook_router
+from clearledgr.api.bank_match_routes import router as bank_match_router
 from clearledgr.api.box_export import router as box_export_router
 from clearledgr.api.box_owner_routes import router as box_owner_router
 from clearledgr.api.box_revert_routes import router as box_revert_router
@@ -762,6 +763,12 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         r"^/api/workspace/ap-items/[^/]+/reassign$",
         # Reversibility primitive: bounded approval revert (manifesto §"History").
         r"^/api/workspace/ap-items/[^/]+/revert-approval$",
+        # bank_match BoxType — Solden's second BoxType (manifesto §"The pattern generalizes").
+        r"^/api/workspace/ap-items/[^/]+/bank-match-boxes$",
+        r"^/api/workspace/bank-matches/[^/]+$",
+        r"^/api/workspace/bank-matches/[^/]+/accept$",
+        r"^/api/workspace/bank-matches/[^/]+/reject$",
+        r"^/api/workspace/bank-matches/[^/]+/export$",
         r"^/api/agent/intents/skills/[^/]+/readiness$",
         r"^/api/agent/sessions/[^/]+$",
         r"^/api/agent/sessions/[^/]+/commands$",
@@ -1535,6 +1542,12 @@ app.include_router(box_owner_router)
 # "every reversal" promise — within-window undo for an approval
 # that hasn't yet posted to the ERP).
 app.include_router(box_revert_router)
+
+# bank_match — Solden's second BoxType. Same audit + state-machine
+# + export primitives as ap_item, applied to bank-reconciliation
+# proposals. The architectural test for the manifesto's "the
+# pattern generalizes" claim.
+app.include_router(bank_match_router)
 
 # Wave 2 / C4: manual payment confirmation surface
 app.include_router(payment_confirmations_router)

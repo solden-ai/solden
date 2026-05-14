@@ -114,10 +114,10 @@ def _normalize_exception(raw: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _box_fields(item: Dict[str, Any]) -> Dict[str, Any]:
-    """Project the raw ap_items row into the portable ``fields`` block.
+    """Project a raw row into the portable ``fields`` block.
 
-    Drops nothing — every persisted column on the AP item lands here
-    so the export is genuinely complete. Internal SQL columns
+    Drops nothing — every persisted column on the source row lands
+    here so the export is genuinely complete. Internal SQL columns
     (``state``, ``id``, ``organization_id``) are surfaced at the
     parent ``box`` level instead, not duplicated.
     """
@@ -125,6 +125,29 @@ def _box_fields(item: Dict[str, Any]) -> Dict[str, Any]:
         k: v for k, v in item.items()
         if k not in {"id", "state", "organization_id"}
     }
+
+
+def _bank_match_export_links(db: Any, ap_item_id: str, organization_id: str) -> Dict[str, Any]:
+    """Build the ``links`` block for an ap_item export — enumerates
+    child bank_match Boxes (the second BoxType, Phase 4.2).
+
+    Empty ``child_boxes`` is the universal default; populated only
+    when the underlying store mixin is available and reports at
+    least one match Box for the parent.
+    """
+    children = []
+    if hasattr(db, "list_bank_matches_for_ap"):
+        try:
+            for match in db.list_bank_matches_for_ap(
+                ap_item_id, organization_id=organization_id,
+            ) or []:
+                children.append({"type": "bank_match", "id": match["id"]})
+        except Exception as exc:
+            logger.warning(
+                "[box_export] list_bank_matches_for_ap failed for %s: %s",
+                ap_item_id, exc,
+            )
+    return {"parent_box": None, "child_boxes": children}
 
 
 def export_ap_item_box(db: Any, ap_item_id: str, organization_id: str, actor: str) -> Dict[str, Any]:
@@ -189,8 +212,99 @@ def export_ap_item_box(db: Any, ap_item_id: str, organization_id: str, actor: st
         "history": history,
         "exceptions": exceptions,
         "outcome": outcome,
+        "links": _bank_match_export_links(db, ap_item_id, organization_id),
+    }
+
+
+def export_bank_match_box(db: Any, box_id: str, organization_id: str, actor: str) -> Dict[str, Any]:
+    """Build the full export document for one bank_match Box.
+
+    Same shape as :func:`export_ap_item_box` so a consumer that knows
+    the BoxType doesn't have to vary its parser per type — only the
+    ``box.type`` discriminator and ``fields`` shape differ.
+    """
+    if not hasattr(db, "get_bank_match"):
+        raise HTTPException(status_code=500, detail="bank_match_store_unavailable")
+    item = db.get_bank_match(box_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="bank_match_not_found")
+    if str(item.get("organization_id") or "") != organization_id:
+        raise HTTPException(status_code=404, detail="bank_match_not_found")
+
+    raw_events: List[Dict[str, Any]] = []
+    # bank_match audit events live in audit_events keyed on
+    # box_type='bank_match'. There's no dedicated reader yet; use the
+    # generic helper if available, otherwise filter from the AP list
+    # by parent.
+    if hasattr(db, "list_audit_events_for_box"):
+        try:
+            raw_events = db.list_audit_events_for_box(
+                box_type="bank_match", box_id=box_id,
+            ) or []
+        except Exception as exc:
+            logger.warning(
+                "[box_export] list_audit_events_for_box failed for %s: %s",
+                box_id, exc,
+            )
+    else:
+        # Fallback path — direct SQL via the canonical store.
+        try:
+            with db.connect() as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT * FROM audit_events "
+                    "WHERE box_id = %s AND box_type = %s "
+                    "ORDER BY ts ASC",
+                    (box_id, "bank_match"),
+                )
+                rows = [dict(r) for r in cur.fetchall()]
+            # Deserialize JSON columns the same way the canonical
+            # reader does.
+            if hasattr(db, "_deserialize_audit_event"):
+                raw_events = [db._deserialize_audit_event(r) for r in rows]
+            else:
+                raw_events = rows
+        except Exception as exc:
+            logger.warning(
+                "[box_export] fallback audit fetch failed for %s: %s",
+                box_id, exc,
+            )
+
+    history = [_normalize_audit_event(e) for e in raw_events]
+
+    return {
+        "box_schema_version": BOX_SCHEMA_VERSION,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "exported_by": actor,
+        "box": {
+            "type": "bank_match",
+            "id": box_id,
+            "organization_id": organization_id,
+            "entity_id": None,
+            "state": item.get("state"),
+            "created_at": item.get("created_at"),
+            "updated_at": item.get("updated_at"),
+            "fields": _box_fields(item),
+        },
+        "history": history,
+        "exceptions": [],
+        "outcome": (
+            None
+            if item.get("state") == "proposed"
+            else {
+                "outcome": item.get("state"),
+                "completed_at": item.get("decided_at"),
+                "completed_by": item.get("decided_by"),
+                "metadata": {
+                    "rejection_reason": item.get("rejection_reason"),
+                },
+            }
+        ),
         "links": {
-            "parent_box": None,
+            "parent_box": {
+                "type": "ap_item",
+                "id": item.get("parent_ap_item_id"),
+            },
             "child_boxes": [],
         },
     }
@@ -214,6 +328,28 @@ def get_ap_item_export(
     return export_ap_item_box(
         db=db,
         ap_item_id=ap_item_id,
+        organization_id=organization_id,
+        actor=actor,
+    )
+
+
+@router.get("/bank-matches/{box_id}/export")
+def get_bank_match_export(
+    box_id: str,
+    _user=Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Return the full, portable, self-contained Box export for a bank_match.
+
+    Same schema-versioned shape as the ap_item export, with
+    ``box.type='bank_match'`` and ``links.parent_box`` pointing back
+    to the AP item this match reconciles.
+    """
+    organization_id = _session_org(_user)
+    actor = str(getattr(_user, "email", "") or getattr(_user, "user_id", "") or "")
+    db = get_db()
+    return export_bank_match_box(
+        db=db,
+        box_id=box_id,
         organization_id=organization_id,
         actor=actor,
     )
