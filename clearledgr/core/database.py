@@ -145,6 +145,7 @@ def _load_store_symbols() -> None:
     global EscalationPolicyStore
     global RulesStore
     global FxRateStore
+    global BankMatchStore
 
     if "APStore" in globals():
         return
