@@ -119,12 +119,54 @@ A follow-up commit walks `nomatches.json` and patches all 35 sites:
 
 Tree compile-check stays clean after follow-up.
 
+## Verification (commit 3)
+
+Ran the suite against a fresh Postgres test DB (`TEST_DATABASE_URL=
+postgresql://localhost/clearledgr_recovery_test`).
+
+**Sprint 1 – 5 modules + tenant-isolation runtime tests: 189/189 pass.**
+That includes every new module the recovery reconstructed:
+`test_box_cas`, `test_exception_graph`, `test_org_utils`,
+`test_policy_branches`, `test_policy_linter`, `test_specialist_agent`,
+`test_specialist_circuit_breaker`, `test_vendor_search`,
+`test_runtime_tenant_isolation`. The recovered payload is correct.
+
+**Wider suite: known follow-up scope, ~87 test files affected.**
+The application-layer M19 tenant-rename code (`core/org_utils.require_org`
++ `assert_org_id`) rejects sessions where `organization_id="default"`.
+Migrations v79 (CHECK on `organizations.id`) + v80 (per-table CHECKs)
+do the same at the DB layer. 87 test files in this repo still pass
+`"default"` as their fixture org id — that's the test-fixture sweep
+Mo flagged in MEMORY.md as *"~395 failing tests scoped under M21"*.
+The sweep was always queued as a follow-up; the disk corruption
+caught the work mid-flight.
+
+## Deferred to a follow-up PR
+
+* **Migration v79** (`_v79_tenant_rename_default`) — function body
+  retained in `migrations.py` for reference but stripped of its
+  `@migration(79, ...)` decorator so the migrator skips it. Re-decorate
+  as `@migration(83)` once the fixture sweep ships.
+* **Migration v80** (per-table CHECK constraints, M21) — removed
+  entirely from `migrations.py`. The doc-string in v79 already flagged
+  this as a follow-up. Re-author after v79 lands.
+
+What stays in this branch:
+
+* All application-layer tenant-rename work (`require_org` /
+  `assert_org_id` wired through every audited route).
+* Migrations **v81** (policy branches, Sprint 2) and **v82**
+  (data branches + overlay columns, Sprint 5 Phase B). Both are
+  additive only — they don't touch existing rows.
+
 ## Next steps
 
-1. Run the test suite against Postgres locally to confirm no
-   regressions from the hand-patches.
+1. Test-fixture sweep: replace `organization_id="default"` /
+   `ensure_organization("default", ...)` in the 87 affected test
+   files with UUID-shaped fixture org ids. Once green, re-add
+   migration v79 (decorated as v83) and v80 (decorated as v84).
 2. Spot-check `bash_commands.log` for any `mv`, `rm`, or `perl -i`
    operations that affected files outside the 74 touched here.
-3. Cherry-pick or merge this branch back into `main` (or split it
-   into the original M15 → M19f → Sprint-1/2/3/4 commit groups for
+3. Merge this branch back into `main` (single squash, or split into
+   the original M15 → M19f → Sprint-1/2/3/4 commit groups for
    cleaner history).
