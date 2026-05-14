@@ -154,6 +154,7 @@ body:not(.theme-dark) ::selection { color: var(--navy); }
 }
 
 .shell--tight { max-width: var(--shell-tight); }
+.shell--narrow { max-width: 720px; }
 .shell--prose { max-width: var(--shell-prose); }
 
 section { position: relative; }
@@ -295,6 +296,13 @@ body.theme-dark .topbar.is-scrolled {
 
 body.theme-dark .nav__link { color: var(--text-on-dark-soft); }
 body.theme-dark .nav__link:hover { color: var(--text-on-dark); }
+
+/* Manifesto nav link gets the full-color weight at rest so it
+   reads first — matches ModernRelay's pattern of surfacing the
+   manifesto as an equal peer to the demo CTA. */
+.nav__link--manifesto { color: var(--text); font-weight: 600; }
+body.theme-dark .nav__link--manifesto { color: var(--text-on-dark); }
+.nav__link--manifesto::after { transform: scaleX(1); opacity: 0.4; }
 
 .topbar__cta { display: flex; gap: 12px; align-items: center; }
 
@@ -479,6 +487,30 @@ body:not(.theme-dark) .btn--secondary:hover {
 }
 
 .hero__sub strong { color: var(--text-on-dark); font-weight: 600; }
+
+/* Stanza treatment — each clause on its own line with a terminal
+   period. The voice the manifesto wants: declarative, not run-on. */
+.hero__sub--stanza {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 760px;
+  letter-spacing: -0.022em;
+  font-weight: 500;
+}
+.hero__stanza-line {
+  display: block;
+  color: var(--text-on-dark);
+}
+.hero__stanza-line + .hero__stanza-line {
+  color: var(--text-on-dark-soft);
+}
+.hero__stanza-line:last-child {
+  color: var(--text-on-dark);
+}
+@media (max-width: 720px) {
+  .hero__sub--stanza { gap: 4px; }
+}
 
 .hero__ctas {
   display: inline-flex;
@@ -2161,4 +2193,293 @@ body:not(.theme-dark) .footer {
 
 @media (max-width: 600px) {
   .footer__bottom { flex-direction: column; gap: 8px; align-items: flex-start; }
+}
+
+/* ═════════════════════════════════════════════════════════════
+   Manifesto page — long-form reading mode
+   ───────────────────────────────────────────────────────────── */
+
+body.theme-manifesto {
+  background: var(--bg-dark);
+  color: var(--text-on-dark);
+}
+
+.manifesto {
+  position: relative;
+  padding-bottom: 96px;
+}
+
+/* Cover */
+.manifesto__cover {
+  position: relative;
+  padding: 96px 0 64px;
+  overflow: hidden;
+}
+.manifesto__cover::before {
+  content: "";
+  position: absolute;
+  inset: -200px 0 0 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 50% at 50% 0%, rgba(24, 191, 176, 0.14) 0%, transparent 60%),
+    radial-gradient(80% 60% at 50% 0%, rgba(10, 31, 68, 0.85) 0%, transparent 70%);
+}
+.manifesto__cover > .shell { position: relative; }
+
+.manifesto__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-on-dark-soft);
+  margin: 0 0 28px;
+}
+
+.manifesto__title {
+  font-size: clamp(40px, 6.5vw, 84px);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  font-weight: 700;
+  margin: 0 0 40px;
+}
+.manifesto__title-accent {
+  background: linear-gradient(180deg, var(--teal-soft) 0%, var(--teal) 60%, var(--teal-deep) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.manifesto__epigraph {
+  margin: 0;
+  padding: 24px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-on-dark-soft);
+  font-style: italic;
+  font-size: 18px;
+}
+.manifesto__epigraph p { margin: 0 0 8px; }
+.manifesto__epigraph footer {
+  font-style: normal;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--text-on-dark-faint, rgba(255, 255, 255, 0.45));
+}
+
+/* Section rhythm */
+.manifesto__section {
+  padding: 72px 0;
+  position: relative;
+}
+.manifesto__section + .manifesto__section {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.manifesto__h {
+  font-size: clamp(28px, 3.6vw, 40px);
+  line-height: 1.12;
+  letter-spacing: -0.028em;
+  font-weight: 700;
+  margin: 0 0 28px;
+  color: var(--text-on-dark);
+}
+
+.manifesto p {
+  font-size: 18px;
+  line-height: 1.62;
+  margin: 0 0 22px;
+  color: var(--text-on-dark-soft);
+}
+.manifesto p strong { color: var(--text-on-dark); font-weight: 600; }
+.manifesto p em { color: var(--text-on-dark); font-style: italic; }
+
+.manifesto__pull {
+  font-size: clamp(22px, 2.8vw, 30px) !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.022em;
+  font-weight: 600;
+  color: var(--text-on-dark) !important;
+  margin-top: 32px !important;
+  padding-top: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.manifesto__note {
+  font-size: 16px !important;
+  color: var(--text-on-dark-faint, rgba(255, 255, 255, 0.5)) !important;
+  font-style: italic;
+}
+
+/* Creed list */
+.manifesto__creed {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.manifesto__creed li {
+  font-size: clamp(20px, 2.4vw, 26px);
+  line-height: 1.32;
+  letter-spacing: -0.018em;
+  color: var(--text-on-dark);
+  padding-left: 22px;
+  position: relative;
+}
+.manifesto__creed li::before {
+  content: "—";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--teal);
+  font-weight: 600;
+}
+
+/* Definition list (primitives) */
+.manifesto__defs {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  margin: 8px 0 36px;
+}
+.manifesto__def dt {
+  font-size: clamp(20px, 2.2vw, 24px);
+  font-weight: 700;
+  letter-spacing: -0.018em;
+  color: var(--text-on-dark);
+  margin: 0 0 6px;
+}
+.manifesto__def dd {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text-on-dark-soft);
+}
+.manifesto__def dd em { color: var(--text-on-dark); }
+
+/* Lineage / portrait gallery */
+.manifesto__section--lineage {
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 96px 0 80px;
+}
+.manifesto__lineage-head {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 48px;
+}
+.manifesto__lineage-sub {
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--text-on-dark-soft);
+  margin: 0 auto;
+}
+
+.manifesto__lineage {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+@media (max-width: 920px) {
+  .manifesto__lineage { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .manifesto__lineage { grid-template-columns: 1fr; }
+}
+
+.manifesto__portrait {
+  background: rgba(14, 26, 51, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 28px 26px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color .25s var(--ease-out), transform .25s var(--ease-out);
+}
+.manifesto__portrait:hover {
+  border-color: rgba(24, 191, 176, 0.45);
+  transform: translateY(-2px);
+}
+
+.manifesto__portrait-mark {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(24, 191, 176, 0.18) 0%, rgba(10, 31, 68, 0.55) 100%);
+  border: 1px solid rgba(24, 191, 176, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--teal-soft);
+  letter-spacing: 0;
+  margin-bottom: 4px;
+}
+
+.manifesto__portrait-name {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.25;
+  letter-spacing: -0.012em;
+  font-weight: 600;
+  color: var(--text-on-dark);
+}
+
+.manifesto__portrait-meta {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--text-on-dark-faint, rgba(255, 255, 255, 0.5));
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.manifesto__portrait-body {
+  margin: 0 !important;
+  font-size: 14.5px !important;
+  line-height: 1.55 !important;
+  color: var(--text-on-dark-soft) !important;
+}
+
+.manifesto__lineage-close {
+  margin: 56px auto 0 !important;
+  max-width: 640px;
+  text-align: center;
+  font-size: 18px !important;
+  line-height: 1.55 !important;
+  color: var(--text-on-dark) !important;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+
+/* Closing CTA */
+.manifesto__cta {
+  padding: 80px 0 24px;
+  text-align: center;
+}
+.manifesto__cta-headline {
+  font-size: clamp(26px, 3.4vw, 36px);
+  line-height: 1.22;
+  letter-spacing: -0.022em;
+  font-weight: 600;
+  color: var(--text-on-dark);
+  margin: 0 0 28px;
+}
+.manifesto__cta-row {
+  display: inline-flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Active nav state on the manifesto page */
+.nav__link--active::after {
+  transform: scaleX(1) !important;
+  opacity: 1 !important;
 }
