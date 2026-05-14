@@ -113,18 +113,41 @@ def _normalize_exception(raw: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+_EXPORT_FIELD_DROPLIST = frozenset({
+    # Surfaced at the parent ``box`` level instead, not duplicated.
+    "id", "state", "organization_id",
+    # Fernet ciphertext. The argument for including it: it's encrypted
+    # at rest, so the leak surface is the key, not the column. The
+    # argument against (which wins): the export is the document we
+    # hand a regulator or a departing customer. Ciphertext they can't
+    # decrypt is dead weight at best and discovery evidence at worst —
+    # we held bank details we can no longer produce in plaintext if
+    # the Fernet key has rotated. Surfaced via ``bank_details_present``
+    # boolean below instead.
+    "bank_details_encrypted",
+})
+
+
 def _box_fields(item: Dict[str, Any]) -> Dict[str, Any]:
     """Project a raw row into the portable ``fields`` block.
 
-    Drops nothing — every persisted column on the source row lands
-    here so the export is genuinely complete. Internal SQL columns
-    (``state``, ``id``, ``organization_id``) are surfaced at the
-    parent ``box`` level instead, not duplicated.
+    Drops:
+      * the columns surfaced at the parent ``box`` level (id, state,
+        organization_id),
+      * the Fernet ciphertext for bank details (replaced by a
+        presence-only boolean).
+
+    Everything else lands here so the export is genuinely complete.
     """
-    return {
+    fields = {
         k: v for k, v in item.items()
-        if k not in {"id", "state", "organization_id"}
+        if k not in _EXPORT_FIELD_DROPLIST
     }
+    # Preserve the SIGNAL of "bank details exist for this AP item"
+    # without leaking the ciphertext into the export.
+    if "bank_details_encrypted" in item:
+        fields["bank_details_present"] = bool(item.get("bank_details_encrypted"))
+    return fields
 
 
 def _bank_match_export_links(db: Any, ap_item_id: str, organization_id: str) -> Dict[str, Any]:
@@ -165,7 +188,11 @@ def export_ap_item_box(db: Any, ap_item_id: str, organization_id: str, actor: st
         # as "no such item" to a caller without access.
         raise HTTPException(status_code=404, detail="ap_item_not_found")
 
-    raw_events = db.list_ap_audit_events(ap_item_id) or []
+    # Explicit limit=None + order="asc" so the export is unbounded
+    # and chronological even if a future refactor changes the
+    # function's defaults. A hash-chain export must be complete or
+    # offline chain-verification breaks at the truncation point.
+    raw_events = db.list_ap_audit_events(ap_item_id, limit=None, order="asc") or []
     history = [_normalize_audit_event(e) for e in raw_events]
 
     exceptions: List[Dict[str, Any]] = []
@@ -231,45 +258,16 @@ def export_bank_match_box(db: Any, box_id: str, organization_id: str, actor: str
     if str(item.get("organization_id") or "") != organization_id:
         raise HTTPException(status_code=404, detail="bank_match_not_found")
 
-    raw_events: List[Dict[str, Any]] = []
-    # bank_match audit events live in audit_events keyed on
-    # box_type='bank_match'. There's no dedicated reader yet; use the
-    # generic helper if available, otherwise filter from the AP list
-    # by parent.
-    if hasattr(db, "list_audit_events_for_box"):
-        try:
-            raw_events = db.list_audit_events_for_box(
-                box_type="bank_match", box_id=box_id,
-            ) or []
-        except Exception as exc:
-            logger.warning(
-                "[box_export] list_audit_events_for_box failed for %s: %s",
-                box_id, exc,
-            )
-    else:
-        # Fallback path — direct SQL via the canonical store.
-        try:
-            with db.connect() as conn:
-                cur = conn.cursor()
-                cur.execute(
-                    "SELECT * FROM audit_events "
-                    "WHERE box_id = %s AND box_type = %s "
-                    "ORDER BY ts ASC",
-                    (box_id, "bank_match"),
-                )
-                rows = [dict(r) for r in cur.fetchall()]
-            # Deserialize JSON columns the same way the canonical
-            # reader does.
-            if hasattr(db, "_deserialize_audit_event"):
-                raw_events = [db._deserialize_audit_event(r) for r in rows]
-            else:
-                raw_events = rows
-        except Exception as exc:
-            logger.warning(
-                "[box_export] fallback audit fetch failed for %s: %s",
-                box_id, exc,
-            )
-
+    # bank_match audit events use the same audit_events table as
+    # ap_item events, keyed on box_type='bank_match'. The canonical
+    # reader handles it uniformly — same JSON deserialisation, same
+    # ordering, same unbounded defaults.
+    raw_events = db.list_box_audit_events(
+        box_type="bank_match",
+        box_id=box_id,
+        limit=None,
+        order="asc",
+    ) or []
     history = [_normalize_audit_event(e) for e in raw_events]
 
     return {
@@ -321,16 +319,23 @@ def get_ap_item_export(
     via ``box_schema_version``. Consumers should treat unknown keys
     as additive and version-gate any breaking-change handling on the
     ``box_schema_version`` field.
+
+    The export action itself is recorded as a ``box_exported`` audit
+    event before the document is returned — regulator-export is the
+    primary use case for this endpoint and the request itself must
+    be reconstructable.
     """
     organization_id = _session_org(_user)
     actor = str(getattr(_user, "email", "") or getattr(_user, "user_id", "") or "")
     db = get_db()
-    return export_ap_item_box(
+    doc = export_ap_item_box(
         db=db,
         ap_item_id=ap_item_id,
         organization_id=organization_id,
         actor=actor,
     )
+    _record_export_event(db, "ap_item", ap_item_id, organization_id, actor)
+    return doc
 
 
 @router.get("/bank-matches/{box_id}/export")
@@ -347,9 +352,47 @@ def get_bank_match_export(
     organization_id = _session_org(_user)
     actor = str(getattr(_user, "email", "") or getattr(_user, "user_id", "") or "")
     db = get_db()
-    return export_bank_match_box(
+    doc = export_bank_match_box(
         db=db,
         box_id=box_id,
         organization_id=organization_id,
         actor=actor,
     )
+    _record_export_event(db, "bank_match", box_id, organization_id, actor)
+    return doc
+
+
+def _record_export_event(
+    db: Any,
+    box_type: str,
+    box_id: str,
+    organization_id: str,
+    actor: str,
+) -> None:
+    """Audit the export request itself.
+
+    Best-effort: a failure to write the audit row should not fail
+    the user-visible export response — the document has already been
+    composed and the caller's regulator-export flow shouldn't 500
+    because the audit funnel hiccuped. Failures log and continue.
+    """
+    if not hasattr(db, "append_audit_event"):
+        return
+    try:
+        db.append_audit_event({
+            "box_id": box_id,
+            "box_type": box_type,
+            "event_type": "box_exported",
+            "actor_type": "user",
+            "actor_id": actor,
+            "organization_id": organization_id,
+            "decision_reason": "portable Box export",
+            "payload_json": {
+                "box_schema_version": BOX_SCHEMA_VERSION,
+            },
+        })
+    except Exception as exc:
+        logger.warning(
+            "[box_export] export audit write failed for %s/%s: %s",
+            box_type, box_id, exc,
+        )

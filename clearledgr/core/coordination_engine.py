@@ -1729,7 +1729,13 @@ class CoordinationEngine:
                 apply_resolved_owner,
                 resolve_owner,
             )
-            assignment = resolve_owner(
+            # resolve_owner is sync but makes three blocking DB calls
+            # (get_organization, list delegation_rules, get_user_by_email).
+            # Off-load it to a worker thread so a slow Postgres doesn't
+            # stall the event loop on every stage transition. Same
+            # pattern as the surrounding to_thread calls.
+            assignment = await asyncio.to_thread(
+                resolve_owner,
                 box=item,
                 organization_id=self.organization_id,
                 db=self.db,

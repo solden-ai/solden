@@ -171,12 +171,22 @@ def attempt_approval_revert(
 
     approved_at = str(item.get("approved_at") or "")
     if not approved_at:
+        # Distinct from 'expired': the window can't be evaluated at all
+        # because the data needed to compute it (approved_at) is missing.
+        # Conflating this with 'expired' would blame the operator for
+        # missing a window that was never measurable — typically on
+        # legacy AP items approved before approved_at was populated.
+        # Auditors reading the trail need the cases distinguishable.
         return ApprovalRevertOutcome(
-            status="expired",
+            status="invalid_state",
             ap_item_id=ap_item_id,
             new_state=current_state,
             window_seconds_remaining=0,
-            message="No approval timestamp recorded — revert window unavailable.",
+            message=(
+                "No approval timestamp recorded for this AP item — "
+                "the revert window cannot be evaluated. Use the manual "
+                "exception path for human review."
+            ),
         )
 
     window_minutes = _approval_revert_window_minutes(db, organization_id)

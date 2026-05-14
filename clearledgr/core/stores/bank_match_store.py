@@ -171,7 +171,17 @@ class BankMatchStore:
 
         Raises :class:`IllegalBankMatchTransitionError` if the edge is
         invalid. Writes the audit_events row atomically.
+
+        ``actor_id`` is required and non-empty. The audit trail is
+        the source of truth for who decided each terminal transition;
+        a blank actor_id would silently produce an audit row blaming
+        no one, which is worse than the call failing loudly.
         """
+        if not str(actor_id or "").strip():
+            raise ValueError(
+                "update_bank_match_state requires a non-empty actor_id "
+                "for audit-trail integrity"
+            )
         existing = self.get_bank_match(box_id)
         if not existing:
             raise IllegalBankMatchTransitionError(
