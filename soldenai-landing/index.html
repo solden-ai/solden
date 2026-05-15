@@ -6,12 +6,12 @@
     <meta name="referrer" content="strict-origin-when-cross-origin" />
 
     <title>Solden. The coordinating layer for back office work.</title>
-    <meta name="description" content="Workflows that hold. Agents that propose. People decide. State you own. Solden is the bonding layer for back office work — finance is the wedge." />
-    <meta name="theme-color" content="#050B1E" />
+    <meta name="description" content="One typed record per workflow. Six primitives. The runtime holds it. Solden is the bonding layer for back office work — finance is the wedge." />
+    <meta name="theme-color" content="#F4EDDC" />
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Solden. The coordinating layer for back office work." />
-    <meta property="og:description" content="Workflows that hold. Agents that propose. People decide. State you own. Solden is the bonding layer for back office work — finance is the wedge." />
+    <meta property="og:description" content="One typed record per workflow. Six primitives. The runtime holds it." />
     <meta property="og:url" content="https://soldenai.com/" />
     <meta property="og:image" content="https://soldenai.com/assets/solden-lockup-dark.png" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -24,7 +24,7 @@
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/Geist-Variable.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/GeistMono-Variable.woff2" crossorigin />
     <link rel="stylesheet" href="/styles.css?v=6" />
-    <link rel="stylesheet" href="/manifesto.css?v=16" />
+    <link rel="stylesheet" href="/manifesto.css?v=17" />
   </head>
   <body class="theme-light-landing">
 
@@ -50,11 +50,10 @@
       </div>
     </header>
 
-    <!-- Hero ────────────────────────────────────────────────── -->
+    <!-- ═══ HERO ═══════════════════════════════════════════════
+         Linear-style split: claim left, primitive shown right.
+         The Box card on the right is the product, not a screenshot. -->
     <section class="hero hero--split">
-      <div class="hero__glow" aria-hidden="true"></div>
-      <div class="hero__grid" aria-hidden="true"></div>
-
       <div class="shell hero__split-grid">
         <div class="hero__split-text">
           <h1 class="hero__headline">
@@ -124,454 +123,298 @@
       </div>
     </section>
 
-    <!-- Built by strip ─────────────────────────────────────── -->
-    <!-- (hero__split-grid now wraps both columns; old hero__below removed) -->
-    <section class="strip" aria-label="Builders">
-      <div class="shell">
-        <p class="strip__text" data-reveal>
-          Built by operators from <strong>Paystack</strong>, <strong>Anchor</strong>, <strong>Datadog</strong>. We&rsquo;ve been the team holding the seam.
-        </p>
-      </div>
-    </section>
-
-    <!-- Why now ────────────────────────────────────────────── -->
-    <section class="why">
-      <div class="shell">
-        <div class="why__head" data-reveal>
-          <p class="section-eyebrow">CONTEXT</p>
-          <h2 class="section-title">Why now.</h2>
-          <p class="section-sub">
-            The model got reliable. The stack got open. The work didn&rsquo;t get coordinated. Three shifts made the runtime possible.
+    <!-- ═══ TABBED DEMO ════════════════════════════════════════
+         Attio-style: one slot, five states animated through it.
+         Same Box, different lifecycle moment. -->
+    <section class="demo" id="demo">
+      <div class="shell demo__shell">
+        <header class="demo__head">
+          <p class="demo__eyebrow">/ THE BOX, OVER TIME</p>
+          <h2 class="demo__title">Five states. Same record. Same audit.</h2>
+          <p class="demo__sub">
+            Watch a single AP item move through its lifecycle. The fields
+            change. The audit chain grows. Nothing else does.
           </p>
+        </header>
+
+        <nav class="demo__tabs" role="tablist" aria-label="Box lifecycle">
+          <button class="demo__tab is-active" role="tab" data-tab="captured"  aria-selected="true">
+            <span class="demo__tab-num">01</span><span class="demo__tab-label">Captured</span>
+          </button>
+          <button class="demo__tab" role="tab" data-tab="validated" aria-selected="false">
+            <span class="demo__tab-num">02</span><span class="demo__tab-label">Validated</span>
+          </button>
+          <button class="demo__tab" role="tab" data-tab="approved" aria-selected="false">
+            <span class="demo__tab-num">03</span><span class="demo__tab-label">Approved</span>
+          </button>
+          <button class="demo__tab" role="tab" data-tab="posted" aria-selected="false">
+            <span class="demo__tab-num">04</span><span class="demo__tab-label">Posted</span>
+          </button>
+          <button class="demo__tab" role="tab" data-tab="sealed" aria-selected="false">
+            <span class="demo__tab-num">05</span><span class="demo__tab-label">Sealed</span>
+          </button>
+        </nav>
+
+        <div class="demo__stage">
+
+          <!-- Tab 01 — Captured -->
+          <article class="demo__panel is-active" data-panel="captured" role="tabpanel">
+            <aside class="box-card box-card--demo">
+              <header class="box-card__head">
+                <div class="box-card__head-l">
+                  <span class="box-card__type">BoxType</span>
+                  <code class="box-card__type-val">ap_item</code>
+                </div>
+                <div class="box-card__head-r">
+                  <span class="box-card__seal-dot box-card__seal-dot--open" aria-hidden="true"></span>
+                  <code class="box-card__id">AP-9182</code>
+                </div>
+              </header>
+              <dl class="box-card__fields">
+                <div class="box-card__row"><dt>state</dt><dd><span class="box-card__state-pill box-card__state-pill--gray">received</span></dd></div>
+                <div class="box-card__row"><dt>vendor</dt><dd>Northwind Logistics</dd></div>
+                <div class="box-card__row"><dt>amount</dt><dd>€18,420.00</dd></div>
+                <div class="box-card__row"><dt>owner</dt><dd class="box-card__dim">—</dd></div>
+                <div class="box-card__row"><dt>history</dt><dd>1 event · open</dd></div>
+                <div class="box-card__row"><dt>policy</dt><dd><code>v1</code></dd></div>
+              </dl>
+              <footer class="box-card__chain">
+                <p class="box-card__chain-label">§ Audit chain</p>
+                <ol class="box-card__chain-list">
+                  <li><code>ev_9178</code> · captured · gmail webhook</li>
+                </ol>
+              </footer>
+            </aside>
+            <div class="demo__caption">
+              <p class="demo__caption-label">Step 01 · captured</p>
+              <h3 class="demo__caption-title">Lands where your team works.</h3>
+              <p class="demo__caption-body">
+                Gmail, Outlook, ERP queue, PEPPOL UBL. Solden lifts line
+                items, totals, taxes and references onto a typed record.
+                Vision fallback handles scans and photos.
+              </p>
+              <div class="demo__caption-tags">
+                <span>PDF</span><span>UBL</span><span>no email to vendors</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- Tab 02 — Validated -->
+          <article class="demo__panel" data-panel="validated" role="tabpanel" hidden>
+            <aside class="box-card box-card--demo">
+              <header class="box-card__head">
+                <div class="box-card__head-l">
+                  <span class="box-card__type">BoxType</span>
+                  <code class="box-card__type-val">ap_item</code>
+                </div>
+                <div class="box-card__head-r">
+                  <span class="box-card__seal-dot box-card__seal-dot--open" aria-hidden="true"></span>
+                  <code class="box-card__id">AP-9182</code>
+                </div>
+              </header>
+              <dl class="box-card__fields">
+                <div class="box-card__row"><dt>state</dt><dd><span class="box-card__state-pill box-card__state-pill--teal">validated</span></dd></div>
+                <div class="box-card__row"><dt>3-way match</dt><dd>PO #4821 · GRN-0918 · vendor verified</dd></div>
+                <div class="box-card__row"><dt>tolerance</dt><dd>within 2% (configurable)</dd></div>
+                <div class="box-card__row"><dt>sanctions</dt><dd>pass</dd></div>
+                <div class="box-card__row"><dt>history</dt><dd>3 events · open</dd></div>
+                <div class="box-card__row"><dt>policy</dt><dd><code>v1</code> · stamped</dd></div>
+              </dl>
+              <footer class="box-card__chain">
+                <p class="box-card__chain-label">§ Audit chain</p>
+                <ol class="box-card__chain-list">
+                  <li><code>ev_9180</code> · 3-way matched · agent</li>
+                  <li><code>ev_9179</code> · sanctions cleared · agent</li>
+                  <li><code>ev_9178</code> · captured · gmail webhook</li>
+                </ol>
+              </footer>
+            </aside>
+            <div class="demo__caption">
+              <p class="demo__caption-label">Step 02 · validated</p>
+              <h3 class="demo__caption-title">Clears every gate before a human looks.</h3>
+              <p class="demo__caption-body">
+                Three-way match against the PO and GRN. Tolerance check.
+                Sanctions screen. Duplicate scan. Each gate is rule-based,
+                versioned, and replayable. The model never gets a vote.
+              </p>
+              <div class="demo__caption-tags">
+                <span>rules</span><span>deterministic</span><span>replayable</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- Tab 03 — Approved -->
+          <article class="demo__panel" data-panel="approved" role="tabpanel" hidden>
+            <aside class="box-card box-card--demo">
+              <header class="box-card__head">
+                <div class="box-card__head-l">
+                  <span class="box-card__type">BoxType</span>
+                  <code class="box-card__type-val">ap_item</code>
+                </div>
+                <div class="box-card__head-r">
+                  <span class="box-card__seal-dot" aria-hidden="true"></span>
+                  <code class="box-card__id">AP-9182</code>
+                </div>
+              </header>
+              <dl class="box-card__fields">
+                <div class="box-card__row"><dt>state</dt><dd><span class="box-card__state-pill">approved</span></dd></div>
+                <div class="box-card__row"><dt>owner</dt><dd>priya@your-co.example</dd></div>
+                <div class="box-card__row"><dt>approver</dt><dd>Priya · approval surface: slack</dd></div>
+                <div class="box-card__row"><dt>decision</dt><dd>approved · &ldquo;duplicate cleared, vendor confirmed&rdquo;</dd></div>
+                <div class="box-card__row"><dt>history</dt><dd>5 events</dd></div>
+                <div class="box-card__row"><dt>policy</dt><dd><code>v1</code> · stamped on transition</dd></div>
+              </dl>
+              <footer class="box-card__chain">
+                <p class="box-card__chain-label">§ Audit chain</p>
+                <ol class="box-card__chain-list">
+                  <li><code>ev_9182</code> · approved · priya@your-co</li>
+                  <li><code>ev_9181</code> · routed · agent · via slack</li>
+                  <li><code>ev_9180</code> · 3-way matched · agent</li>
+                </ol>
+              </footer>
+            </aside>
+            <div class="demo__caption">
+              <p class="demo__caption-label">Step 03 · approved</p>
+              <h3 class="demo__caption-title">Routes to the surface your team already lives in.</h3>
+              <p class="demo__caption-body">
+                Slack card. Teams card. NetSuite SuiteApp panel. SAP Fiori
+                extension. Same record, rendered where the approver is.
+                The decision lands back on the Box. Audit captures who
+                clicked, why, and the policy version that authorized it.
+              </p>
+              <div class="demo__caption-tags">
+                <span>slack</span><span>teams</span><span>netsuite</span><span>sap fiori</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- Tab 04 — Posted -->
+          <article class="demo__panel" data-panel="posted" role="tabpanel" hidden>
+            <aside class="box-card box-card--demo">
+              <header class="box-card__head">
+                <div class="box-card__head-l">
+                  <span class="box-card__type">BoxType</span>
+                  <code class="box-card__type-val">ap_item</code>
+                </div>
+                <div class="box-card__head-r">
+                  <span class="box-card__seal-dot" aria-hidden="true"></span>
+                  <code class="box-card__id">AP-9182</code>
+                </div>
+              </header>
+              <dl class="box-card__fields">
+                <div class="box-card__row"><dt>state</dt><dd><span class="box-card__state-pill box-card__state-pill--blue">posted_to_erp</span></dd></div>
+                <div class="box-card__row"><dt>erp</dt><dd>NetSuite</dd></div>
+                <div class="box-card__row"><dt>erp_reference</dt><dd><code>NS-998447</code> · GL 5210</dd></div>
+                <div class="box-card__row"><dt>posted_at</dt><dd>14:03:21 · idempotent</dd></div>
+                <div class="box-card__row"><dt>history</dt><dd>7 events</dd></div>
+                <div class="box-card__row"><dt>policy</dt><dd><code>v1</code></dd></div>
+              </dl>
+              <footer class="box-card__chain">
+                <p class="box-card__chain-label">§ Audit chain</p>
+                <ol class="box-card__chain-list">
+                  <li><code>ev_9184</code> · posted · ERP webhook · NS-998447</li>
+                  <li><code>ev_9183</code> · post requested · agent</li>
+                  <li><code>ev_9182</code> · approved · priya@your-co</li>
+                </ol>
+              </footer>
+            </aside>
+            <div class="demo__caption">
+              <p class="demo__caption-label">Step 04 · posted</p>
+              <h3 class="demo__caption-title">Writes back to your ERP. Never to your vendor.</h3>
+              <p class="demo__caption-body">
+                NetSuite, SAP, QuickBooks, Xero. The bill posts on
+                approval, the GL line lands, the vendor balance updates.
+                Solden authors zero vendor email. Treasury runs the
+                payment batch from your ERP on its own schedule.
+              </p>
+              <div class="demo__caption-tags">
+                <span>idempotent</span><span>no vendor email</span><span>reversible (15 min)</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- Tab 05 — Sealed -->
+          <article class="demo__panel" data-panel="sealed" role="tabpanel" hidden>
+            <aside class="box-card box-card--demo">
+              <header class="box-card__head">
+                <div class="box-card__head-l">
+                  <span class="box-card__type">BoxType</span>
+                  <code class="box-card__type-val">ap_item</code>
+                </div>
+                <div class="box-card__head-r">
+                  <span class="box-card__seal-dot" aria-hidden="true"></span>
+                  <code class="box-card__id">AP-9182</code>
+                </div>
+              </header>
+              <dl class="box-card__fields">
+                <div class="box-card__row"><dt>state</dt><dd><span class="box-card__state-pill box-card__state-pill--sealed">closed</span></dd></div>
+                <div class="box-card__row"><dt>erp_reference</dt><dd><code>NS-998447</code></dd></div>
+                <div class="box-card__row"><dt>payment</dt><dd>settled · 14:11:08 · €18,420.00</dd></div>
+                <div class="box-card__row"><dt>bank_match</dt><dd>matched · bsl-2207</dd></div>
+                <div class="box-card__row"><dt>history</dt><dd>9 events · sealed</dd></div>
+                <div class="box-card__row"><dt>policy</dt><dd><code>v1</code> · final</dd></div>
+              </dl>
+              <footer class="box-card__chain">
+                <p class="box-card__chain-label">§ Audit chain</p>
+                <ol class="box-card__chain-list">
+                  <li><code>ev_9186</code> · sealed · system</li>
+                  <li><code>ev_9185</code> · bank_match · agent</li>
+                  <li><code>ev_9184</code> · posted · ERP webhook</li>
+                </ol>
+              </footer>
+            </aside>
+            <div class="demo__caption">
+              <p class="demo__caption-label">Step 05 · sealed</p>
+              <h3 class="demo__caption-title">Every step is signed and chained.</h3>
+              <p class="demo__caption-body">
+                When the Box closes, the chain seals. Every transition,
+                every override, every reversal is captured. Six months
+                later the audit committee reconstructs the entire
+                workflow from one record. The hash chain proves nothing
+                was changed after the fact.
+              </p>
+              <div class="demo__caption-tags">
+                <span>append-only</span><span>hash-chained</span><span>SOC 2</span>
+              </div>
+            </div>
+          </article>
+
         </div>
-        <ol class="why__list">
-          <li class="why__item">
-            <span class="why__num">01</span>
-            <span><strong>The model got reliable.</strong> It reads unstructured invoices, writes operator prose, and answers queries. Brittle five years ago, production-ready now.</span>
-          </li>
-          <li class="why__item">
-            <span class="why__num">02</span>
-            <span><strong>Procurement accepts overlay tools.</strong> A decade of Ramp, BILL, and Tipalti softened the ground. "Sits beside your ERP" is the expectation now.</span>
-          </li>
-          <li class="why__item">
-            <span class="why__num">03</span>
-            <span><strong>Approvals moved to Slack and Teams permanently.</strong> Remote work pushed finance decisions out of the ERP. They're not coming back.</span>
-          </li>
-        </ol>
-        <p class="why__close">
-          <strong>The work didn&rsquo;t get coordinated. That gap is the bottleneck now.</strong>
-        </p>
       </div>
     </section>
 
-    <aside class="belief-divider" aria-hidden="true">
-      <p class="belief-divider__rule"></p>
-      <p class="belief-divider__text">We believe <em>automation executes steps</em>. Only a runtime <em>maintains workflows over time</em>.</p>
-      <p class="belief-divider__rule"></p>
+    <!-- ═══ EDITORIAL DIVIDER ═══════════════════════════════════
+         Bronze ruler head, Plate II. Pull quote. The sovereignty bet. -->
+    <aside class="belief-plate">
+      <figure class="belief-plate__figure">
+        <img
+          class="belief-plate__image"
+          src="/assets/manifesto/bronze-ruler-head.jpg"
+          alt="Head of a ruler, ca. 2300&ndash;2000 BCE. Copper alloy, Mesopotamian."
+          width="600"
+          height="720"
+          loading="lazy"
+          decoding="async"
+        />
+        <figcaption class="belief-plate__caption">
+          <span class="belief-plate__label">Plate II</span>
+          Head of a ruler, ca. 2300&ndash;2000 BCE. Copper alloy.
+          <span class="belief-plate__credit">The Metropolitan Museum of Art, Open Access.</span>
+        </figcaption>
+      </figure>
+
+      <div class="belief-plate__text">
+        <p class="belief-plate__belief">
+          We believe the workflow record belongs to <em>the operator</em>. Not to the tool that processes a slice of it.
+        </p>
+        <p class="belief-plate__gloss">
+          Bronze outlasted every empire that smelted it. Workflow state should outlast every vendor that touches it. The substrate is the operator&rsquo;s; the surfaces commoditize.
+        </p>
+      </div>
     </aside>
 
-    <!-- Problem ────────────────────────────────────────────── -->
-    <section class="problem" id="problem">
-      <div class="shell problem__inner">
-        <div class="problem__copy" data-reveal>
-          <p class="section-eyebrow">THE GAP</p>
-          <h2 class="section-title">Work is everywhere. Ownership is nowhere.</h2>
-          <p class="section-sub">
-            Finance systems show you status. None of them move work forward, and none of them agree on who owns what.
-          </p>
-          <p class="problem-coda">
-            When work slows down, the systems show <strong>where it landed</strong>.
-            Not <strong>who acts next</strong>. Not <strong>what it&rsquo;s waiting on</strong>.
-            <span class="problem-coda__em">Humans hold the seam.</span>
-          </p>
-        </div>
-
-        <div class="problem__data" data-reveal data-reveal-delay="1">
-          <table class="problem-table">
-            <thead>
-              <tr>
-                <th scope="col">System</th>
-                <th scope="col">What it shows</th>
-                <th scope="col">What's missing</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>ERP</td>
-                <td>Completed transactions</td>
-                <td>Work in progress</td>
-              </tr>
-              <tr>
-                <td>AP tools</td>
-                <td>Process steps</td>
-                <td>Full workflow context</td>
-              </tr>
-              <tr>
-                <td>Email &amp; Slack</td>
-                <td>Decisions</td>
-                <td>Structure + ownership</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- Worked-example spotlight ────────────────────────────── -->
-    <section class="spotlight" id="spotlight">
-      <div class="shell shell--narrow">
-        <p class="spotlight__eyebrow">A workflow that holds</p>
-        <h2 class="spotlight__title">11:42pm. The invoice arrives.</h2>
-        <div class="spotlight__body">
-          <p>A duplicate invoice from Northwind Logistics lands in <strong>ap@your-co</strong> at 11:42pm on a Thursday. Solden opens a Box for it. The <em>state</em> is <code>needs_approval</code>. The <em>owner</em> is Priya, the AP lead. The <em>dependency</em> is the prior-payment record the three-way match just surfaced. The <em>exception</em> is <code>duplicate</code>. The audit chain is sealed at <code>ev_9182</code>, prior hash linked. The policy version that authorized routing is stamped on the transition.</p>
-          <p>The agent doesn&rsquo;t reply to the vendor. The Box waits. Priya wakes up Friday to one Slack card with both invoices and the prior approval chain already linked. She marks the duplicate <em>declined-duplicate</em>. The Box closes. Same record, same audit chain, six months later, when the committee asks why a payment didn&rsquo;t go out twice.</p>
-          <p>Nothing posts to the ERP. No email goes to Northwind. The vendor master stays clean. Five surfaces touched the workflow; one Box held it.</p>
-        </div>
-        <p class="spotlight__close">
-          <span>That&rsquo;s one Box.</span>
-          <span class="spotlight__close-em">The runtime holds thousands at once. Same shape.</span>
-        </p>
-      </div>
-    </section>
-
-    <!-- Solution ───────────────────────────────────────────── -->
-    <section class="solution">
-      <div class="shell">
-        <div class="solution__head" data-reveal>
-          <p class="section-eyebrow">PRIMITIVES</p>
-          <h2 class="section-title">The Box is the unit.</h2>
-          <p class="section-sub solution__sub-stanza">
-            <span>One typed record per workflow.</span>
-            <span>Six primitives baked in.</span>
-            <span>Every surface reads and writes to it.</span>
-          </p>
-        </div>
-
-        <div class="solution__primitives" data-reveal data-reveal-delay="1">
-          <div class="primitive">
-            <div class="primitive__name">state</div>
-            <div class="primitive__def">where it is right now</div>
-          </div>
-          <div class="primitive">
-            <div class="primitive__name">owner</div>
-            <div class="primitive__def">who acts next</div>
-          </div>
-          <div class="primitive">
-            <div class="primitive__name">dependencies</div>
-            <div class="primitive__def">what it&rsquo;s waiting on</div>
-          </div>
-          <div class="primitive">
-            <div class="primitive__name">exceptions</div>
-            <div class="primitive__def">what&rsquo;s stuck and why</div>
-          </div>
-          <div class="primitive">
-            <div class="primitive__name">history</div>
-            <div class="primitive__def">every transition, reversible</div>
-          </div>
-          <div class="primitive">
-            <div class="primitive__name">policy version</div>
-            <div class="primitive__def">what authorized each move</div>
-          </div>
-        </div>
-
-        <p class="solution__close">Not visibility. <em>Coordination.</em></p>
-      </div>
-    </section>
-
-    <!-- Product intro ──────────────────────────────────────── -->
-    <section class="product-intro" id="product">
-      <div class="shell product-intro__head" data-reveal>
-        <p class="section-eyebrow">THE FLOW</p>
-        <h2 class="section-title">One record. Five stages.</h2>
-        <p class="section-sub">
-          Same vendor. Same PO. Same amount. A different surface every step.
-        </p>
-      </div>
-    </section>
-
-    <!-- Flow signature: pinned card morphs through 5 states ── -->
-    <section class="flow" id="flow">
-      <div class="shell flow__inner">
-        <div class="flow__sticky" data-reveal>
-          <div class="flow__card" data-flow-state="capture">
-            <div class="flow__chrome">
-              <span class="flow__chrome-dots"><i></i><i></i><i></i></span>
-              <span class="flow__chrome-title" data-flow-title>gmail · ap@your-co.example</span>
-              <span class="flow__chrome-status" data-flow-status>captured</span>
-            </div>
-
-            <div class="flow__states">
-              <!-- 01: capture -->
-              <div class="flow__state flow__state--capture is-active">
-                <div class="flow__mail-row flow__mail-row--hot">
-                  <span class="flow__mail-sender">Northwind Logistics</span>
-                  <span class="flow__mail-subject">
-                    <span class="flow__mail-subject-text">Invoice INV-4821 · €18,420.00</span>
-                    <span class="flow__mail-attach">PDF</span>
-                  </span>
-                  <span class="flow__mail-tag">solden · captured</span>
-                </div>
-                <div class="flow__mail-row">
-                  <span class="flow__mail-sender">Acme Office Supplies</span>
-                  <span class="flow__mail-subject"><span class="flow__mail-subject-text">Stationery, March 2026</span><span class="flow__mail-attach">UBL</span></span>
-                  <span class="flow__mail-time">8:14</span>
-                </div>
-                <div class="flow__mail-row">
-                  <span class="flow__mail-sender">Globex Software</span>
-                  <span class="flow__mail-subject"><span class="flow__mail-subject-text">Re: Q1 license renewal</span></span>
-                  <span class="flow__mail-time">7:52</span>
-                </div>
-              </div>
-
-              <!-- 02: validate -->
-              <div class="flow__state flow__state--validate">
-                <div class="flow__diff">
-                  <div class="flow__diff-col">
-                    <div class="flow__diff-label">PO #4821</div>
-                    <div class="flow__diff-row">
-                      <span class="flow__diff-key">vendor</span>
-                      <span class="flow__diff-val">Northwind Logistics</span>
-                    </div>
-                    <div class="flow__diff-row">
-                      <span class="flow__diff-key">amount</span>
-                      <span class="flow__diff-val">€18,420.00</span>
-                    </div>
-                    <div class="flow__diff-row">
-                      <span class="flow__diff-key">gl</span>
-                      <span class="flow__diff-val">5210 Logistics</span>
-                    </div>
-                  </div>
-                  <div class="flow__diff-col">
-                    <div class="flow__diff-label">GRN #8821</div>
-                    <div class="flow__diff-row">
-                      <span class="flow__diff-key">vendor</span>
-                      <span class="flow__diff-val">Northwind Logistics</span>
-                    </div>
-                    <div class="flow__diff-row">
-                      <span class="flow__diff-key">amount</span>
-                      <span class="flow__diff-val">€18,420.00</span>
-                    </div>
-                    <div class="flow__diff-row">
-                      <span class="flow__diff-key">qty</span>
-                      <span class="flow__diff-val">1 / 1</span>
-                    </div>
-                  </div>
-                  <div class="flow__diff-col">
-                    <div class="flow__diff-label">invoice INV-4821</div>
-                    <div class="flow__diff-row">
-                      <span class="flow__diff-key">vendor</span>
-                      <span class="flow__diff-val flow__diff-val--ok">Northwind Logistics</span>
-                    </div>
-                    <div class="flow__diff-row">
-                      <span class="flow__diff-key">amount</span>
-                      <span class="flow__diff-val flow__diff-val--ok">€18,420.00</span>
-                    </div>
-                    <div class="flow__diff-row">
-                      <span class="flow__diff-key">tax_id</span>
-                      <span class="flow__diff-val flow__diff-val--ok">DE-128…</span>
-                    </div>
-                  </div>
-                </div>
-                <span class="flow__verdict">matched, no exceptions</span>
-              </div>
-
-              <!-- 03: route -->
-              <div class="flow__state flow__state--route">
-                <div class="flow__slack-head">
-                  <span class="flow__slack-avatar">S</span>
-                  <span class="flow__slack-app">Solden</span>
-                  <span class="flow__slack-app-tag">APP</span>
-                  <span>· #finance-approvals</span>
-                </div>
-                <div class="flow__slack-card">
-                  <div class="flow__slack-title">Invoice ready for approval</div>
-                  <div class="flow__slack-meta">Northwind Logistics · €18,420.00 · GL 5210 · PO #4821</div>
-                  <div class="flow__slack-tags">
-                    <span class="flow__slack-tag">3-way match</span>
-                    <span class="flow__slack-tag">vendor verified</span>
-                    <span class="flow__slack-tag flow__slack-tag--warn">over €15k threshold</span>
-                  </div>
-                  <div class="flow__slack-actions">
-                    <button class="flow__slack-btn flow__slack-btn--primary" type="button" disabled>Approve</button>
-                    <button class="flow__slack-btn" type="button" disabled>Ask</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 04: post -->
-              <div class="flow__state flow__state--post">
-<pre class="flow__code"><span class="flow__code-key">vendor</span>:       <span class="flow__code-str">"Northwind Logistics"</span>
-<span class="flow__code-key">amount</span>:       <span class="flow__code-num">18420.00</span> <span class="flow__code-str">EUR</span>
-<span class="flow__code-key">gl</span>:           <span class="flow__code-str">"5210 Logistics"</span>
-<span class="flow__code-key">po_ref</span>:       <span class="flow__code-str">"4821"</span>
-<span class="flow__code-key">approved_by</span>:  <span class="flow__code-str">"priya@your-co"</span>
-<span class="flow__code-key">audit_ref</span>:    <span class="flow__code-str">"AP-9182"</span>
-<span class="flow__code-key">payment</span>:      <span class="flow__code-str">null</span>             <span class="flow__code-cmt"># solden never triggers</span>
-</pre>
-                <div class="flow__post-receipt">200 OK · netsuite bill #8821 · 142ms</div>
-              </div>
-
-              <!-- 05: logged -->
-              <div class="flow__state flow__state--logged">
-                <div class="flow__audit-head">audit_chain · AP-9182</div>
-                <div class="flow__audit-entry">
-                  <div class="flow__audit-line">
-                    <span class="flow__audit-time">14:03:21</span>
-                    <span class="flow__audit-action">posted</span>
-                    <span>
-                      <span class="flow__audit-hash">hash 8a72f1c9</span>
-                      <span class="flow__audit-prev"> · prev d3e4a07b</span>
-                    </span>
-                  </div>
-                  <div class="flow__audit-line">
-                    <span class="flow__audit-time">14:03:18</span>
-                    <span class="flow__audit-action">approved</span>
-                    <span>
-                      <span class="flow__audit-hash">hash d3e4a07b</span>
-                      <span class="flow__audit-prev"> · prev f1bc02e7</span>
-                    </span>
-                  </div>
-                  <div class="flow__audit-line">
-                    <span class="flow__audit-time">14:02:45</span>
-                    <span class="flow__audit-action">routed</span>
-                    <span>
-                      <span class="flow__audit-hash">hash f1bc02e7</span>
-                      <span class="flow__audit-prev"> · prev c4e919a3</span>
-                    </span>
-                  </div>
-                  <div class="flow__audit-line">
-                    <span class="flow__audit-time">14:02:23</span>
-                    <span class="flow__audit-action">validated</span>
-                    <span>
-                      <span class="flow__audit-hash">hash c4e919a3</span>
-                      <span class="flow__audit-prev"> · prev e3f80a5c</span>
-                    </span>
-                  </div>
-                  <div class="flow__audit-line">
-                    <span class="flow__audit-time">14:02:11</span>
-                    <span class="flow__audit-action">captured</span>
-                    <span>
-                      <span class="flow__audit-hash">hash e3f80a5c</span>
-                      <span class="flow__audit-prev"> · genesis</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <ol class="flow__copy">
-          <li class="flow__step" data-flow-step="capture" id="capture">
-            <span class="flow__step-num">01</span>
-            <h2 class="flow__step-title">Lands where your team works.</h2>
-            <p class="flow__step-body">Gmail, Outlook, an ERP queue, PEPPOL UBL. Solden lifts line items, totals, taxes and references onto a fresh record. Vision fallback handles scans and photos.</p>
-            <div class="flow__step-tags">
-              <span class="flow__step-tag">PDF</span>
-              <span class="flow__step-tag">UBL</span>
-              <span class="flow__step-tag">no email to vendors</span>
-            </div>
-          </li>
-
-          <li class="flow__step" data-flow-step="validate" id="validate">
-            <span class="flow__step-num">02</span>
-            <h2 class="flow__step-title">Clears every gate before a human looks.</h2>
-            <p class="flow__step-body">Match against PO and GRN under your configured mode and tolerance. Sanctions, duplicate, budget, and bank-detail-change gates run deterministically. The model never votes.</p>
-            <div class="flow__step-tags">
-              <span class="flow__step-tag">PO · GRN · invoice</span>
-              <span class="flow__step-tag">sanctions</span>
-              <span class="flow__step-tag">duplicate</span>
-            </div>
-          </li>
-
-          <li class="flow__step" data-flow-step="route" id="route">
-            <span class="flow__step-num">03</span>
-            <h2 class="flow__step-title">Routes to the surface where decisions happen.</h2>
-            <p class="flow__step-body">Slack and Teams for fast approvals. NetSuite SuiteApp and SAP Fiori for in-ERP review. Same record everywhere; the audit trail follows the record, not the surface.</p>
-            <div class="flow__step-tags">
-              <span class="flow__step-tag">amount band</span>
-              <span class="flow__step-tag">vendor risk</span>
-              <span class="flow__step-tag">one-click undo</span>
-            </div>
-          </li>
-
-          <li class="flow__step" data-flow-step="post" id="post">
-            <span class="flow__step-num">04</span>
-            <h2 class="flow__step-title">Writes back to your ERP. Never to your bank.</h2>
-            <p class="flow__step-body">Correct GL, vendor balance, FX, document references. Idempotent retries. Treasury runs the payment batch out of the ERP on its own schedule. Solden does not initiate payments.</p>
-            <div class="flow__step-tags">
-              <span class="flow__step-tag">NetSuite</span>
-              <span class="flow__step-tag">SAP</span>
-              <span class="flow__step-tag">QuickBooks</span>
-              <span class="flow__step-tag">Xero</span>
-            </div>
-          </li>
-
-          <li class="flow__step" data-flow-step="logged" id="logged">
-            <span class="flow__step-num">05</span>
-            <h2 class="flow__step-title">Every step. Signed and chained.</h2>
-            <p class="flow__step-body">Append-only audit enforced by database triggers, not application code. Each event carries a hash linked to the prior event's hash. Tamper-evident at the schema layer.</p>
-            <div class="flow__step-tags">
-              <span class="flow__step-tag">DB triggers</span>
-              <span class="flow__step-tag">hash chain</span>
-              <span class="flow__step-tag">SOC 2</span>
-            </div>
-          </li>
-        </ol>
-      </div>
-    </section>
-
-    <!-- Guardrails (decision rules) ────────────────────────── -->
-    <section class="rules">
-      <div class="shell shell--tight rules__head" data-reveal>
-        <p class="section-eyebrow">DECISIONS</p>
-        <h2 class="section-title">Routing decisions are rules. The model never gets a vote.</h2>
-        <p class="section-sub" style="margin-left:auto;margin-right:auto;text-align:center;">
-          Match modes, tolerances, sanctions, duplicates, budget. Deterministic. The model reads. The model writes prose. The model never votes.
-        </p>
-      </div>
-
-      <div class="shell rules__modes-wrap" data-reveal>
-        <div class="rules__modes">
-          <article class="rules__mode">
-            <span class="rules__mode-key">three_way_required</span>
-            <h3 class="rules__mode-title">3-way matching required</h3>
-            <p class="rules__mode-body">PO, goods receipt, and invoice must all align. Missing GRN blocks the post and routes for review.</p>
-          </article>
-          <article class="rules__mode rules__mode--active">
-            <span class="rules__mode-key">two_way_fallback</span>
-            <h3 class="rules__mode-title">2-way fallback <span class="rules__mode-flag">default</span></h3>
-            <p class="rules__mode-body">Try 3-way first. Accept PO + invoice when GRN is the only blocker. Price, currency, and quantity variance still gate.</p>
-          </article>
-          <article class="rules__mode">
-            <span class="rules__mode-key">policy_only</span>
-            <h3 class="rules__mode-title">Approval policies only</h3>
-            <p class="rules__mode-body">Skip matching. Route every invoice through approval thresholds (amount band, vendor history, GL category).</p>
-          </article>
-        </div>
-        <p class="rules__modes-foot">Configurable per organization. Versioned: every match outcome is auditable back to the policy version it ran under.</p>
-      </div>
-
-      <div class="shell" data-reveal data-reveal-delay="1">
-<pre class="rules__pre"><span class="rules__cmt"># two_way_fallback (default mode)</span>
-<span class="rules__op">match</span>   invoice ↔ PO                     <span class="rules__cmt"># tolerance 2% / amount floor 10</span>
-<span class="rules__op">match</span>   invoice ↔ GRN                    <span class="rules__cmt"># if present; missing GRN → 2-way accept</span>
-<span class="rules__op">gate</span>    sanctions(vendor)                <span class="rules__cmt"># BLOCK on hit</span>
-<span class="rules__op">gate</span>    duplicate(invoice_no, vendor)    <span class="rules__cmt"># BLOCK</span>
-<span class="rules__op">gate</span>    budget(gl, period)               <span class="rules__cmt"># NEEDS_INFO if over</span>
-<span class="rules__op">gate</span>    bank_detail_change(vendor)       <span class="rules__cmt"># NEEDS_INFO, verify</span>
-
-<span class="rules__op">route</span>   amount &gt; 15_000                  <span class="rules__cmt">: CFO</span>
-<span class="rules__op">route</span>   amount &gt; 5_000                   <span class="rules__cmt">: Controller</span>
-<span class="rules__op">route</span>   default                          <span class="rules__cmt">: AP Lead</span>
-
-<span class="rules__op">post</span>    erp.bill                         <span class="rules__cmt"># on approve, idempotent</span>
-<span class="rules__op">log</span>     audit_event                      <span class="rules__cmt"># append-only, DB trigger</span>
-</pre>
-      </div>
-    </section>
-
-    <!-- Audit signature: hash-chain visualisation ───────────── -->
+    <!-- ═══ AUDIT CHAIN ════════════════════════════════════════
+         The one proof specimen on the landing. Editorial code listing. -->
     <section class="audit-chain">
       <div class="shell audit-chain__inner">
         <div class="audit-chain__copy" data-reveal>
@@ -618,7 +461,6 @@
                 <span class="audit-chain__hash audit-chain__hash-prev"><span class="audit-chain__hash-key">prev</span><span class="audit-chain__hash-val">d3e4a07b5f1c8a39e2b07c14d960f2a8</span></span>
               </div>
             </li>
-
             <li class="audit-chain__entry audit-chain__entry--approved">
               <div class="audit-chain__entry-head">
                 <span class="audit-chain__entry-time">14:03:18</span>
@@ -631,7 +473,6 @@
                 <span class="audit-chain__hash audit-chain__hash-prev"><span class="audit-chain__hash-key">prev</span><span class="audit-chain__hash-val">f1bc02e74a8d6b29e591a8fc22b7d031</span></span>
               </div>
             </li>
-
             <li class="audit-chain__entry">
               <div class="audit-chain__entry-head">
                 <span class="audit-chain__entry-time">14:02:45</span>
@@ -644,7 +485,6 @@
                 <span class="audit-chain__hash audit-chain__hash-prev"><span class="audit-chain__hash-key">prev</span><span class="audit-chain__hash-val">c4e919a3b8f502c61e7a3b9d8f04a712</span></span>
               </div>
             </li>
-
             <li class="audit-chain__entry">
               <div class="audit-chain__entry-head">
                 <span class="audit-chain__entry-time">14:02:23</span>
@@ -657,7 +497,6 @@
                 <span class="audit-chain__hash audit-chain__hash-prev"><span class="audit-chain__hash-key">prev</span><span class="audit-chain__hash-val">7d2a89f1c3b4e0a61828d9c7e677b0ac</span></span>
               </div>
             </li>
-
             <li class="audit-chain__entry">
               <div class="audit-chain__entry-head">
                 <span class="audit-chain__entry-time">14:02:11</span>
@@ -670,279 +509,12 @@
                 <span class="audit-chain__hash audit-chain__hash-prev"><span class="audit-chain__hash-key">prev</span><span class="audit-chain__hash-val">e3f80a5cb29714df8a31c0b5af9d6e2b</span></span>
               </div>
             </li>
-
-            <li class="audit-chain__entry">
-              <div class="audit-chain__entry-head">
-                <span class="audit-chain__entry-time">14:01:54</span>
-                <span class="audit-chain__entry-action">received</span>
-                <span class="audit-chain__entry-actor">gmail webhook</span>
-                <span class="audit-chain__entry-id">ev_9177</span>
-              </div>
-              <div class="audit-chain__entry-hashes">
-                <span class="audit-chain__hash"><span class="audit-chain__hash-key">hash</span><span class="audit-chain__hash-val">e3f80a5cb29714df8a31c0b5af9d6e2b</span></span>
-                <span class="audit-chain__hash audit-chain__hash-prev"><span class="audit-chain__hash-key">prev</span><span class="audit-chain__hash-val">b5d29a17c4f08e63a91c2bd7e84f0531</span></span>
-              </div>
-            </li>
           </ol>
         </div>
       </div>
     </section>
 
-    <aside class="belief-plate">
-      <figure class="belief-plate__figure">
-        <img
-          class="belief-plate__image"
-          src="/assets/manifesto/bronze-ruler-head.jpg"
-          alt="Head of a ruler, ca. 2300&ndash;2000 BCE. Copper alloy, Mesopotamian."
-          width="600"
-          height="720"
-          loading="lazy"
-          decoding="async"
-        />
-        <figcaption class="belief-plate__caption">
-          <span class="belief-plate__label">Plate II</span>
-          Head of a ruler, ca. 2300&ndash;2000 BCE. Copper alloy.
-          <span class="belief-plate__credit">The Metropolitan Museum of Art, Open Access.</span>
-        </figcaption>
-      </figure>
-
-      <div class="belief-plate__text">
-        <p class="belief-plate__belief">
-          We believe the workflow record belongs to <em>the operator</em>. Not to the tool that processes a slice of it.
-        </p>
-        <p class="belief-plate__gloss">
-          Bronze outlasted every empire that smelted it. Workflow state should outlast every vendor that touches it. The substrate is the operator&rsquo;s; the surfaces commoditize.
-        </p>
-      </div>
-    </aside>
-
-    <!-- Time-to-value roadmap ─────────────────────────────── -->
-    <section class="ttv" id="ttv">
-      <div class="shell">
-        <div class="ttv__head" data-reveal>
-          <p class="section-eyebrow">ONBOARDING</p>
-          <h2 class="section-title">From signature to first close. Four weeks.</h2>
-          <p class="section-sub">
-            Solden installs as infrastructure, not a six-month rollout. Each week is the next workflow that holds.
-          </p>
-        </div>
-
-        <ol class="ttv__list">
-          <li class="ttv__step" data-reveal>
-            <span class="ttv__week">Week 1</span>
-            <h3 class="ttv__step-title">Connect.</h3>
-            <p class="ttv__step-body">Gmail or Outlook. ERP (NetSuite, SAP, QuickBooks, Xero). Slack or Teams. Read-only first; one of your AP leads watches the agent shadow the queue for a day before any state moves.</p>
-          </li>
-          <li class="ttv__step" data-reveal data-reveal-delay="1">
-            <span class="ttv__week">Week 2</span>
-            <h3 class="ttv__step-title">First Boxes flowing.</h3>
-            <p class="ttv__step-body">Captured invoices walk the full state machine end-to-end. Validation, routing, approvals in Slack or Teams, post to ERP. Audit chain visible per record. You see the workflow runtime hold its first hundred Boxes.</p>
-          </li>
-          <li class="ttv__step" data-reveal data-reveal-delay="2">
-            <span class="ttv__week">Week 3</span>
-            <h3 class="ttv__step-title">Policy tuned.</h3>
-            <p class="ttv__step-body">Match tolerances, approval thresholds, escalation matrices, override windows. Every change is versioned. Audit-replay any decision against the policy version it ran under.</p>
-          </li>
-          <li class="ttv__step" data-reveal data-reveal-delay="3">
-            <span class="ttv__week">Week 4+</span>
-            <h3 class="ttv__step-title">Period close, with fewer surprises.</h3>
-            <p class="ttv__step-body">First month-end on the runtime. Exceptions surface as structured state, not buried email threads. The auditor sees one chain per Box. Your controller closes the period without a manual reconciliation spreadsheet.</p>
-          </li>
-        </ol>
-
-        <p class="ttv__close">
-          Same agent. Same audit. Same operator surface. Different week.
-        </p>
-      </div>
-    </section>
-
-    <!-- How it fits ────────────────────────────────────────── -->
-    <section class="fits" id="fits">
-      <div class="shell">
-        <div class="fits__head" data-reveal>
-          <p class="section-eyebrow">COEXISTENCE</p>
-          <h2 class="section-title">Sits beside your stack. Doesn&rsquo;t replace it.</h2>
-          <p class="section-sub">
-            No migration. No new system of record. Tracks state. Assigns ownership. Moves the work forward.
-          </p>
-        </div>
-
-        <div class="fits__triplet">
-          <div class="fits__row">
-            <span class="fits__row-name">your ERP</span>
-            <span class="fits__row-role">Stays your source of truth. NetSuite, SAP, QuickBooks, Xero, Dynamics. All unchanged.</span>
-          </div>
-          <div class="fits__row">
-            <span class="fits__row-name">your AP tools</span>
-            <span class="fits__row-role">Keep processing where you already use them. Solden adds the missing workflow context.</span>
-          </div>
-          <div class="fits__row">
-            <span class="fits__row-name">Slack, Teams, email</span>
-            <span class="fits__row-role">Stay your communication layers. Solden treats them as decision surfaces, not data homes.</span>
-          </div>
-        </div>
-
-        <p class="fits__pull"><em>No migration required.</em> Connect once, keep your existing stack.</p>
-
-        <div class="surfaces__head" style="margin-top: 16px;">
-          <h3 class="section-title" style="font-size: clamp(28px, 3.4vw, 38px);">Different surfaces. One record.</h3>
-          <p class="section-sub">
-            One record renders in every surface your team uses. The audit follows the record, not the surface.
-          </p>
-        </div>
-
-        <div class="surfaces__list">
-          <div class="surface-row">
-            <span class="surface-row__name">Gmail</span>
-            <span class="surface-row__role">Capture &amp; context. Sidebar shows live state, history, and risks.</span>
-            <span class="surface-row__verb">read · label · sidebar</span>
-          </div>
-          <div class="surface-row">
-            <span class="surface-row__name">Slack</span>
-            <span class="surface-row__role">Decision surface. Approve, reject, ask, escalate without leaving the channel.</span>
-            <span class="surface-row__verb">approval cards · queries</span>
-          </div>
-          <div class="surface-row">
-            <span class="surface-row__name">Teams</span>
-            <span class="surface-row__role">Decision surface for Microsoft-first orgs. Same actions, same audit trail.</span>
-            <span class="surface-row__verb">adaptive cards · queries</span>
-          </div>
-          <div class="surface-row">
-            <span class="surface-row__name">NetSuite</span>
-            <span class="surface-row__role">Native SuiteApp. Approve and review inside the system of record.</span>
-            <span class="surface-row__verb">SuiteApp · BFN-ready</span>
-          </div>
-          <div class="surface-row">
-            <span class="surface-row__name">SAP Fiori</span>
-            <span class="surface-row__role">Fiori extension for S/4HANA shops. Decisions never leave SAP.</span>
-            <span class="surface-row__verb">Fiori · ICC-ready</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Outcomes ───────────────────────────────────────────── -->
-    <section class="outcomes">
-      <div class="shell">
-        <div class="outcomes__head" data-reveal>
-          <p class="section-eyebrow">IMPACT</p>
-          <h2 class="section-title">What changes immediately.</h2>
-          <p class="section-sub">
-            A week in, the symptoms stop. An audit committee can sign off on the substrate underneath.
-          </p>
-        </div>
-        <ul class="outcomes__list">
-          <li class="outcomes__item">Approvals stop living in DMs.</li>
-          <li class="outcomes__item">Ownership becomes a column, not a chase.</li>
-          <li class="outcomes__item">Exceptions surface as structured state.</li>
-          <li class="outcomes__item">Duplicates die before they post.</li>
-          <li class="outcomes__item">The audit chain reads itself.</li>
-          <li class="outcomes__item">Period close stops surprising you.</li>
-        </ul>
-        <p class="outcomes__close">The workflow holds.</p>
-
-        <div class="stats stats--compact" data-reveal data-reveal-delay="1">
-          <div class="stat">
-            <span class="stat__num stat__num--accent">0</span>
-            <span class="stat__label">emails Solden sends to your vendors. Vendor outreach stays with the operator.</span>
-          </div>
-          <div class="stat">
-            <span class="stat__num">SOC 2</span>
-            <span class="stat__label">Type 1 at launch. Type 2 observation in window. DPA signed before production data flows.</span>
-          </div>
-          <div class="stat">
-            <span class="stat__num">100%</span>
-            <span class="stat__label">routing decisions made by deterministic rules. The model never votes on outcomes.</span>
-          </div>
-          <div class="stat">
-            <span class="stat__num">DB</span>
-            <span class="stat__label">triggers enforce the append-only audit trail. Tamper-evident at the schema layer, not the application.</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Same shape, every workflow ──────────────────────────── -->
-    <section class="generalize" id="generalize">
-      <div class="shell">
-        <div class="generalize__head" data-reveal>
-          <p class="section-eyebrow">GENERALIZATION</p>
-          <h2 class="section-title">Same shape. Every workflow.</h2>
-          <p class="section-sub">
-            Finance is the wedge. The state machine doesn&rsquo;t care about the domain. Same Box. Same primitives. Same audit chain. Different states, different owners, different surfaces.
-          </p>
-        </div>
-
-        <ol class="generalize__grid">
-          <li class="domain-card">
-            <p class="domain-card__label">AP &mdash; shipping today</p>
-            <p class="domain-card__states"><code>received</code> &rarr; <code>validated</code> &rarr; <code>needs_approval</code> &rarr; <code>approved</code> &rarr; <code>ready_to_post</code> &rarr; <code>posted_to_erp</code> &rarr; <code>closed</code></p>
-            <p class="domain-card__hint">BoxType: <code>ap_item</code>. Registered, audited, exportable.</p>
-          </li>
-          <li class="domain-card">
-            <p class="domain-card__label">Bank reconciliation &mdash; child Box of AP</p>
-            <p class="domain-card__states"><code>proposed</code> &rarr; <code>accepted</code> | <code>rejected</code></p>
-            <p class="domain-card__hint">BoxType: <code>bank_match</code>. Registered, audited, parent-linked to <code>ap_item</code>.</p>
-          </li>
-          <li class="domain-card domain-card--next">
-            <p class="domain-card__label">Procurement &mdash; next</p>
-            <p class="domain-card__states"><code>requested</code> &rarr; <code>quoted</code> &rarr; <code>approved</code> &rarr; <code>ordered</code> &rarr; <code>received</code> &rarr; <code>reconciled</code></p>
-            <p class="domain-card__hint">Same state machine, different vocab. PO is the Box.</p>
-          </li>
-          <li class="domain-card domain-card--next">
-            <p class="domain-card__label">Compliance &mdash; later</p>
-            <p class="domain-card__states"><code>assigned</code> &rarr; <code>drafted</code> &rarr; <code>reviewed</code> &rarr; <code>approved</code> &rarr; <code>submitted</code> &rarr; <code>audited</code></p>
-            <p class="domain-card__hint">An attestation is a Box. The audit chain is the audit.</p>
-          </li>
-        </ol>
-
-        <p class="generalize__close">
-          Two BoxTypes registered today. The architecture isn&rsquo;t finance. Finance is where the pain is loudest.
-        </p>
-      </div>
-    </section>
-
-    <!-- Sovereign ──────────────────────────────────────────── -->
-    <section class="sovereign" id="sovereign">
-      <div class="shell">
-        <div class="sovereign__head" data-reveal>
-          <p class="section-eyebrow">SOVEREIGN</p>
-          <h2 class="section-title">The workflow record is yours.</h2>
-          <p class="section-sub">
-            Not ours. Not the point tool&rsquo;s. Lock-in is an architectural choice. We chose against it.
-          </p>
-        </div>
-
-        <ul class="sovereign__claims">
-          <li class="sov-claim">
-            <p class="sov-claim__title">Published Box schema.</p>
-            <p class="sov-claim__body">
-              <code>docs/BOX_SCHEMA.md</code> is the public contract. Every field, every state, every audit-event shape. A third party reading the export can reconstruct the workflow record without any Solden code running.
-            </p>
-          </li>
-          <li class="sov-claim">
-            <p class="sov-claim__title">Portable Box export.</p>
-            <p class="sov-claim__body">
-              <code>GET /api/workspace/ap-items/{id}/export</code> returns a complete, versioned JSON: state, fields, full audit chain with hash links, exceptions, parent/child Box references. Take it out, take it elsewhere.
-            </p>
-          </li>
-          <li class="sov-claim">
-            <p class="sov-claim__title">No master orchestrator.</p>
-            <p class="sov-claim__body">
-              No LLM in the routing loop. Match, sanctions, budget, three-way, escalation &mdash; all deterministic rules. The model reads invoices and writes operator prose. The model never votes on outcomes.
-            </p>
-          </li>
-        </ul>
-      </div>
-    </section>
-
-    <aside class="belief-divider" aria-hidden="true">
-      <p class="belief-divider__rule"></p>
-      <p class="belief-divider__text">We believe <em>the bond between systems</em> is the system.</p>
-      <p class="belief-divider__rule"></p>
-    </aside>
-
-    <!-- Category + Footer CTA ──────────────────────────────── -->
+    <!-- ═══ CLOSING CTA ═════════════════════════════════════════ -->
     <section class="footer-cta">
       <div class="shell shell--tight" data-reveal>
         <div class="category-pair">
@@ -954,7 +526,7 @@
         </p>
         <div class="footer-cta__ctas">
           <a class="btn btn--teal btn--lg" href="/contact.html">Talk to us</a>
-          <a class="btn btn--ghost btn--lg" href="/security.html">Security overview</a>
+          <a class="btn btn--ghost btn--lg" href="/manifesto.html">Read the manifesto</a>
         </div>
       </div>
     </section>
@@ -970,9 +542,8 @@
           <div>
             <span class="footer__col-title">product</span>
             <ul class="footer__col-list">
-              <li><a href="#problem">Problem</a></li>
-              <li><a href="#product">Product</a></li>
-              <li><a href="#fits">How it fits</a></li>
+              <li><a href="#demo">The Box</a></li>
+              <li><a href="/manifesto.html">Manifesto</a></li>
               <li><a href="/contact.html">Talk to us</a></li>
             </ul>
           </div>
@@ -987,7 +558,7 @@
           <div>
             <span class="footer__col-title">company</span>
             <ul class="footer__col-list">
-              <li><a href="/manifesto.html">Manifesto</a></li>
+              <li><a href="/manifesto.html">About</a></li>
               <li><a href="/contact.html">Contact</a></li>
             </ul>
           </div>
@@ -1000,5 +571,50 @@
     </footer>
 
     <script src="/site.js" defer></script>
+    <script>
+      // Tabbed demo — vanilla, ~25 lines. Auto-advance every 7s, pauses
+      // on hover/focus. Click any tab to jump + cancel auto-advance.
+      (() => {
+        const tabs = document.querySelectorAll('.demo__tab');
+        const panels = document.querySelectorAll('.demo__panel');
+        if (!tabs.length || !panels.length) return;
+
+        let timer = null;
+        const ORDER = Array.from(tabs).map(t => t.dataset.tab);
+        let active = 0;
+        let autoAdvance = true;
+
+        function activate(name, fromClick = false) {
+          tabs.forEach(t => {
+            const on = t.dataset.tab === name;
+            t.classList.toggle('is-active', on);
+            t.setAttribute('aria-selected', on ? 'true' : 'false');
+          });
+          panels.forEach(p => {
+            const on = p.dataset.panel === name;
+            p.classList.toggle('is-active', on);
+            if (on) p.removeAttribute('hidden'); else p.setAttribute('hidden', '');
+          });
+          active = ORDER.indexOf(name);
+          if (fromClick) autoAdvance = false;
+        }
+
+        function tick() {
+          if (!autoAdvance) return;
+          activate(ORDER[(active + 1) % ORDER.length]);
+        }
+
+        timer = setInterval(tick, 7000);
+
+        tabs.forEach(t => t.addEventListener('click', () => activate(t.dataset.tab, true)));
+
+        const demo = document.getElementById('demo');
+        if (demo) {
+          demo.addEventListener('mouseenter', () => { autoAdvance = false; }, { passive: true });
+          // Don't resume after hover-leave: human looked at it, treat
+          // that as a deliberate scrub.
+        }
+      })();
+    </script>
   </body>
 </html>

@@ -2270,3 +2270,221 @@ body.theme-light-landing .ribbon--in-hero .ribbon__subject {
 body.theme-light-landing .ribbon--in-hero .ribbon__meta {
   color: rgba(31, 27, 22, 0.42);
 }
+
+/* ═════════════════════════════════════════════════════════════
+   Tabbed live demo (Attio-style)
+   One slot, five lifecycle states animated through it.
+   ───────────────────────────────────────────────────────────── */
+
+.demo {
+  padding: 120px 0 96px;
+  background: #F4EDDC;
+  position: relative;
+}
+
+.demo__shell {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+@media (max-width: 600px) {
+  .demo__shell { padding: 0 24px; }
+}
+
+.demo__head {
+  max-width: 760px;
+  margin: 0 auto 56px;
+  text-align: center;
+}
+
+.demo__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(31, 27, 22, 0.55);
+  margin: 0 0 16px;
+}
+
+.demo__title {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-size: clamp(34px, 4.4vw, 56px);
+  line-height: 1.05;
+  letter-spacing: -0.028em;
+  font-weight: 500;
+  color: #1F1B16;
+  margin: 0 0 18px;
+}
+
+.demo__sub {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-style: italic;
+  font-size: 18px;
+  line-height: 1.55;
+  color: rgba(31, 27, 22, 0.7);
+  margin: 0 auto;
+  max-width: 560px;
+}
+
+/* Tabs — top border style. Active tab gets the dark underline + ink. */
+.demo__tabs {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  border-top: 1px solid rgba(31, 27, 22, 0.12);
+  border-bottom: 1px solid rgba(31, 27, 22, 0.12);
+  margin: 0 auto 48px;
+  max-width: 1080px;
+}
+@media (max-width: 720px) {
+  .demo__tabs { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 440px) {
+  .demo__tabs { grid-template-columns: 1fr; }
+}
+
+.demo__tab {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  text-align: left;
+  font-family: var(--font);
+  color: rgba(31, 27, 22, 0.55);
+  border-right: 1px solid rgba(31, 27, 22, 0.08);
+  border-bottom: 2px solid transparent;
+  position: relative;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  margin-bottom: -1px;
+}
+.demo__tab:last-child { border-right: 0; }
+.demo__tab:hover { color: #1F1B16; background: rgba(31, 27, 22, 0.02); }
+.demo__tab.is-active {
+  color: #1F1B16;
+  border-bottom-color: #1F1B16;
+}
+.demo__tab.is-active .demo__tab-num { color: #1F1B16; }
+
+.demo__tab-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: rgba(31, 27, 22, 0.4);
+  transition: color 0.2s ease;
+}
+.demo__tab-label {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+
+/* Stage = the panel slot. All panels stack; only .is-active visible. */
+.demo__stage {
+  position: relative;
+}
+
+.demo__panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 64px;
+  align-items: center;
+  animation: demoFadeIn 0.4s ease;
+}
+.demo__panel[hidden] { display: none; }
+@media (max-width: 900px) {
+  .demo__panel { grid-template-columns: 1fr; gap: 36px; }
+}
+
+@keyframes demoFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.demo__caption {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: flex-start;
+}
+.demo__caption-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(24, 191, 176, 0.85);
+  margin: 0;
+}
+.demo__caption-title {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-size: clamp(28px, 3.4vw, 40px);
+  line-height: 1.12;
+  letter-spacing: -0.022em;
+  font-weight: 500;
+  color: #1F1B16;
+  margin: 0;
+}
+.demo__caption-body {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-size: 17px;
+  line-height: 1.62;
+  color: rgba(31, 27, 22, 0.78);
+  margin: 0;
+  max-width: 480px;
+}
+.demo__caption-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.demo__caption-tags span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(31, 27, 22, 0.6);
+  padding: 4px 10px;
+  border: 1px solid rgba(31, 27, 22, 0.18);
+  border-radius: 3px;
+  background: rgba(31, 27, 22, 0.03);
+}
+
+/* Box card variant when used inside the demo (slightly larger,
+   no max-width constraint, full breathing room) */
+.box-card--demo {
+  margin: 0;
+  width: 100%;
+}
+
+/* State pill color variants */
+.box-card__state-pill--gray {
+  background: rgba(31, 27, 22, 0.08);
+  color: rgba(31, 27, 22, 0.72);
+}
+.box-card__state-pill--teal {
+  background: rgba(24, 191, 176, 0.16);
+  color: #0e6e64;
+}
+.box-card__state-pill--blue {
+  background: rgba(30, 95, 200, 0.14);
+  color: #1b4a8f;
+}
+.box-card__state-pill--sealed {
+  background: rgba(31, 27, 22, 0.85);
+  color: #F4EDDC;
+}
+
+/* "Not yet" placeholder dash on dim fields */
+.box-card__dim {
+  color: rgba(31, 27, 22, 0.35);
+  font-style: italic;
+}
+
+/* Seal dot — green when sealed, hollow when open */
+.box-card__seal-dot--open {
+  background: transparent !important;
+  border: 1px solid rgba(31, 27, 22, 0.35);
+  box-shadow: none !important;
+}
