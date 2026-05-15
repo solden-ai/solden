@@ -3015,6 +3015,98 @@ body.theme-light-landing .ribbon--in-hero .ribbon__meta {
   }
 }
 
+/* Spec grid — bottom half of the card. Shows what the Box IS
+   (owner / waiting on / exception / history / policy) below what the
+   operator sees (header / actions / reasoning). Subtler than the
+   workspace-UI top half: dimmer label color, dashed row dividers,
+   no chrome boxes around values. Reads as "the data spec underneath
+   the surface." */
+.record-preview__spec {
+  padding: 14px 24px 16px;
+  border-top: 1px solid var(--rp-rule);
+  background: rgba(15, 23, 42, 0.015);
+}
+.record-preview__spec-grid {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+.record-preview__spec-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--rp-rule);
+  font-size: 12.5px;
+}
+.record-preview__spec-row:last-child { border-bottom: 0; }
+.record-preview__spec-row dt {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rp-ink-dim);
+  margin: 0;
+}
+.record-preview__spec-row dd {
+  margin: 0;
+  color: var(--rp-ink);
+  font-weight: 500;
+}
+.record-preview__exception {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #FEE2E2;
+  color: #991B1B;
+  letter-spacing: 0.02em;
+}
+.record-preview__code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  background: rgba(15, 23, 42, 0.05);
+  border-radius: 3px;
+  color: var(--rp-ink);
+}
+
+/* Audit chain footer — append-only hash chain, monospace, dark.
+   Visually the "proof tail" of the card. */
+.record-preview__chain {
+  padding: 14px 24px 18px;
+  border-top: 1px solid var(--rp-rule);
+  background: rgba(15, 23, 42, 0.03);
+}
+.record-preview__chain-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--rp-ink-dim);
+  margin: 0 0 8px;
+}
+.record-preview__chain-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.record-preview__chain-list li {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--rp-ink-muted);
+  line-height: 1.5;
+}
+.record-preview__chain-list code {
+  color: var(--rp-ink);
+  font-weight: 500;
+}
+
 /* ═════════════════════════════════════════════════════════════
    FOR-WHOM — three-column buyer block
    No icons. Header + body. Equal weight.

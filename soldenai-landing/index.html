@@ -24,7 +24,7 @@
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/Geist-Variable.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/GeistMono-Variable.woff2" crossorigin />
     <link rel="stylesheet" href="/styles.css?v=6" />
-    <link rel="stylesheet" href="/manifesto.css?v=26" />
+    <link rel="stylesheet" href="/manifesto.css?v=27" />
   </head>
   <body class="theme-light-landing">
 
@@ -180,6 +180,40 @@
               <span class="record-preview__recommendation-value">Approve <span class="record-preview__confidence">&middot; 87% confidence</span></span>
             </div>
           </section>
+
+          <section class="record-preview__spec" aria-label="Record state">
+            <dl class="record-preview__spec-grid">
+              <div class="record-preview__spec-row">
+                <dt>Owner</dt>
+                <dd>priya@your-co.example</dd>
+              </div>
+              <div class="record-preview__spec-row">
+                <dt>Waiting on</dt>
+                <dd>prior payment ref &middot; PO #4821</dd>
+              </div>
+              <div class="record-preview__spec-row">
+                <dt>Exception</dt>
+                <dd><span class="record-preview__exception">duplicate</span></dd>
+              </div>
+              <div class="record-preview__spec-row">
+                <dt>History</dt>
+                <dd>5 events &middot; sealed</dd>
+              </div>
+              <div class="record-preview__spec-row">
+                <dt>Policy</dt>
+                <dd><code class="record-preview__code">v1</code> &middot; stamped on transition</dd>
+              </div>
+            </dl>
+          </section>
+
+          <footer class="record-preview__chain">
+            <p class="record-preview__chain-label">&sect; Audit chain</p>
+            <ol class="record-preview__chain-list">
+              <li><code>ev_9182</code> &middot; sealed &nbsp;&nbsp; &middot; prev <code>a4f1ed&hellip;</code></li>
+              <li><code>ev_9181</code> &middot; routed &nbsp;&nbsp; &middot; prev <code>8a72f1&hellip;</code></li>
+              <li><code>ev_9180</code> &middot; validated &middot; prev <code>d3e4a0&hellip;</code></li>
+            </ol>
+          </footer>
         </aside>
       </div>
     </section>
