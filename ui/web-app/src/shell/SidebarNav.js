@@ -10,7 +10,7 @@ import { BrandMark } from './BrandMark.js';
  */
 export const NAV_ITEMS = [
   { path: '/', label: 'Home', group: 'primary' },
-  { path: '/pipeline', label: 'Pipeline', group: 'work' },
+  { path: '/pipeline', label: 'Records', group: 'work' },
   { path: '/review', label: 'Review queue', group: 'work' },
   { path: '/exceptions', label: 'Exceptions', group: 'work' },
   { path: '/vendors', label: 'Vendors', group: 'work' },
