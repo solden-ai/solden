@@ -2644,7 +2644,7 @@ body.theme-light-landing .ribbon--in-hero .ribbon__meta {
    ───────────────────────────────────────────────────────────── */
 
 .problem {
-  padding: 96px 0 80px;
+  padding: 96px 0 72px;
   background: #F9F5EC;
   border-top: 1px solid rgba(31, 27, 22, 0.08);
 }
@@ -2689,9 +2689,12 @@ body.theme-light-landing .ribbon--in-hero .ribbon__meta {
   margin: 0;
 }
 
+/* Pullquote now sits INSIDE the body flow as a callout between
+   paragraphs 2 and 3. The body's flex gap (22px) handles vertical
+   rhythm; we only need internal padding + the border-left bar. */
 .problem__pullquote {
-  margin: 56px 0 0;
-  padding: 32px 36px;
+  margin: 6px 0;
+  padding: 8px 0 8px 24px;
   border-left: 2px solid rgba(31, 27, 22, 0.4);
   max-width: 56ch;
 }
@@ -2717,7 +2720,7 @@ body.theme-light-landing .ribbon--in-hero .ribbon__meta {
    ───────────────────────────────────────────────────────────── */
 
 .primitive {
-  padding: 96px 0 96px;
+  padding: 64px 0 96px;
   background: #F9F5EC;
 }
 
