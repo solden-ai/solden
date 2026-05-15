@@ -24,7 +24,7 @@
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/Geist-Variable.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/GeistMono-Variable.woff2" crossorigin />
     <link rel="stylesheet" href="/styles.css?v=6" />
-    <link rel="stylesheet" href="/manifesto.css?v=25" />
+    <link rel="stylesheet" href="/manifesto.css?v=26" />
   </head>
   <body class="theme-light-landing">
 
@@ -122,54 +122,64 @@
           </p>
         </div>
 
-        <aside class="box-card box-card--primitive" aria-label="Workflow record">
-          <header class="box-card__head">
-            <div class="box-card__head-l">
-              <span class="box-card__type">Type</span>
-              <code class="box-card__type-val">AP invoice</code>
-            </div>
-            <div class="box-card__head-r">
-              <span class="box-card__seal-dot" aria-hidden="true"></span>
-              <code class="box-card__id">AP-9182</code>
-            </div>
+        <aside class="record-preview" aria-label="Record detail preview">
+          <header class="record-preview__topbar">
+            <span class="record-preview__back" aria-hidden="true">&larr; Records</span>
+            <code class="record-preview__id">AP-a1ea8e92fe5a&hellip;</code>
           </header>
 
-          <dl class="box-card__fields">
-            <div class="box-card__row">
-              <dt>state</dt>
-              <dd><span class="box-card__state-pill">needs_approval</span></dd>
+          <section class="record-preview__header">
+            <div class="record-preview__header-primary">
+              <div class="record-preview__vendor">
+                <span class="record-preview__eyebrow">Vendor</span>
+                <p class="record-preview__vendor-name">Northwind Logistics</p>
+              </div>
+              <div class="record-preview__amount-block">
+                <span class="record-preview__eyebrow">Amount</span>
+                <span class="record-preview__money">&euro;18,420.00</span>
+              </div>
             </div>
-            <div class="box-card__row">
-              <dt>owner</dt>
-              <dd>priya@your-co.example</dd>
-            </div>
-            <div class="box-card__row">
-              <dt>waiting on</dt>
-              <dd>prior payment ref · PO #4821</dd>
-            </div>
-            <div class="box-card__row">
-              <dt>exception</dt>
-              <dd><span class="box-card__exception">duplicate</span></dd>
-            </div>
-            <div class="box-card__row">
-              <dt>history</dt>
-              <dd>5 events · sealed</dd>
-            </div>
-            <div class="box-card__row">
-              <dt>policy</dt>
-              <dd><code>v1</code> · stamped on transition</dd>
-            </div>
-          </dl>
+            <dl class="record-preview__meta">
+              <div class="record-preview__meta-cell">
+                <dt>Invoice</dt>
+                <dd>INV-2026-0418</dd>
+              </div>
+              <div class="record-preview__meta-cell">
+                <dt>Status</dt>
+                <dd><span class="record-preview__state record-preview__state--pending">needs_approval</span></dd>
+              </div>
+              <div class="record-preview__meta-cell">
+                <dt>Due</dt>
+                <dd>14 Apr</dd>
+              </div>
+              <div class="record-preview__meta-cell">
+                <dt>Age</dt>
+                <dd>6d</dd>
+              </div>
+            </dl>
+          </section>
 
-          <footer class="box-card__chain">
-            <p class="box-card__chain-label">§ Audit chain</p>
-            <ol class="box-card__chain-list">
-              <li><code>ev_9182</code> · sealed · prev <code>a4f1ed&hellip;</code></li>
-              <li><code>ev_9181</code> · routed · prev <code>8a72f1&hellip;</code></li>
-              <li><code>ev_9180</code> · validated · prev <code>d3e4a0&hellip;</code></li>
-            </ol>
-          </footer>
+          <section class="record-preview__actions" aria-label="Record actions">
+            <button class="record-preview__btn record-preview__btn--primary" type="button" disabled>Approve</button>
+            <button class="record-preview__btn" type="button" disabled>Reject</button>
+            <button class="record-preview__btn" type="button" disabled>Request info</button>
+            <button class="record-preview__btn" type="button" disabled>Send to person</button>
+            <button class="record-preview__btn record-preview__btn--warn" type="button" disabled>Override and post</button>
+          </section>
 
+          <section class="record-preview__reasoning">
+            <header class="record-preview__reasoning-head">
+              <h4>Agent reasoning</h4>
+              <span class="record-preview__reasoning-tag">RULES</span>
+            </header>
+            <p class="record-preview__reasoning-body">
+              Three-way match passed against PO #4821 and GRN-0918, within 2% tolerance. Vendor verified, sanctions clean. Invoice is &euro;37.40 above PO total (&euro;18,382.60), inside the configured variance allowance.
+            </p>
+            <div class="record-preview__recommendation">
+              <span class="record-preview__eyebrow">Recommendation</span>
+              <span class="record-preview__recommendation-value">Approve <span class="record-preview__confidence">&middot; 87% confidence</span></span>
+            </div>
+          </section>
         </aside>
       </div>
     </section>
