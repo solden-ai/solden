@@ -189,6 +189,8 @@ export default function RecordDetailPage({
         busy=${actionBusy}
       />
 
+      <${RecordStatePanel} item=${item} timeline=${timeline} />
+
       <${AgentReasoningPanel}
         reasoning=${reasoning}
         item=${item}
@@ -485,6 +487,81 @@ function ActionDialog({ kind, onCancel, onSubmit, busy }) {
       </form>
     </div>
   `;
+}
+
+
+// ─── Record state panel — what this record IS, beyond the operator view ──
+// Owner / waiting on / exception / history / policy. The fields exist on
+// ap_items (owner_email v84, waiting_condition v59, exception_code legacy)
+// and on audit_events (policy_version v83), but no other panel surfaces
+// them as a unified spec view. Matches the marketing card's bottom half.
+
+function RecordStatePanel({ item, timeline }) {
+  const events = Array.isArray(timeline) ? timeline : [];
+  const ownerEmail = item?.owner_email || '';
+  const exceptionCode = String(item?.exception_code || '').trim().toLowerCase();
+  const stateLower = String(item?.state || '').toLowerCase();
+  const isSealed = ['closed', 'sealed', 'rejected', 'paid'].includes(stateLower);
+
+  // waiting_condition is JSON: {type, expected_by, context}. Sometimes
+  // already-parsed, sometimes a JSON string — handle both.
+  let waiting = item?.waiting_condition;
+  if (typeof waiting === 'string') {
+    try { waiting = JSON.parse(waiting); } catch (_) { waiting = null; }
+  }
+  const waitingDescription = formatWaitingCondition(waiting);
+
+  // Policy version: take the most recent event with one. v83 stamps
+  // policy_version on every state-changing audit_event.
+  const policyEvent = events.find((e) => e && (e.policy_version != null));
+  const policyVersion = policyEvent?.policy_version != null
+    ? `v${policyEvent.policy_version}`
+    : null;
+
+  // Nothing to surface? Skip the panel entirely. Empty rows make the
+  // detail page look broken; missing-by-design is better than empty.
+  const rows = [
+    ownerEmail ? { label: 'Owner', value: ownerEmail } : null,
+    waitingDescription ? { label: 'Waiting on', value: waitingDescription } : null,
+    exceptionCode ? { label: 'Exception', value: html`<span class="cl-record-spec-exception">${exceptionCode}</span>` } : null,
+    events.length > 0
+      ? { label: 'History', value: `${events.length} event${events.length === 1 ? '' : 's'}${isSealed ? ' · sealed' : ''}` }
+      : null,
+    policyVersion
+      ? { label: 'Policy', value: html`<code class="cl-record-spec-code">${policyVersion}</code> · stamped on transition` }
+      : null,
+  ].filter(Boolean);
+
+  if (rows.length === 0) return null;
+
+  return html`
+    <section class="cl-record-panel cl-record-spec" aria-label="Record state">
+      <header class="cl-record-panel-head">
+        <h2>Record state</h2>
+      </header>
+      <dl class="cl-record-spec-grid">
+        ${rows.map((row) => html`
+          <div class="cl-record-spec-row" key=${row.label}>
+            <dt>${row.label}</dt>
+            <dd>${row.value}</dd>
+          </div>
+        `)}
+      </dl>
+    </section>
+  `;
+}
+
+function formatWaitingCondition(waiting) {
+  if (!waiting || typeof waiting !== 'object') return '';
+  const ctx = waiting.context || {};
+  // Common shapes from the agent: reasons + expected_by + a po_ref.
+  const reasons = Array.isArray(ctx.reasons) ? ctx.reasons : (Array.isArray(waiting.reasons) ? waiting.reasons : []);
+  const ref = ctx.po_ref || ctx.po_number || ctx.invoice_ref || waiting.po_ref || '';
+  const parts = [];
+  if (reasons.length) parts.push(reasons.join(' · '));
+  if (ref) parts.push(typeof ref === 'string' && ref.startsWith('PO') ? ref : `PO #${ref}`);
+  if (!parts.length && waiting.type) parts.push(String(waiting.type).replace(/_/g, ' '));
+  return parts.join(' · ');
 }
 
 
@@ -1045,6 +1122,10 @@ function WorkflowTimeline({ events }) {
                   <span class=${`cl-record-chip cl-record-chip-${VERDICT_TONE[String(event.governance_verdict).toLowerCase()] || 'info'}`}>
                     ${event.governance_verdict}
                   </span>` : null}
+                ${event.policy_version != null ? html`
+                  <span class="cl-record-timeline-policy" title="Policy version stamped on this transition">
+                    v${event.policy_version}
+                  </span>` : null}
               </div>
               <div class="cl-record-timeline-meta">
                 <span>${fmtDateTime(event.ts)}</span>
@@ -1052,6 +1133,16 @@ function WorkflowTimeline({ events }) {
                 ${event.prev_state || event.new_state ? html`
                   <span>· ${event.prev_state || '—'} → ${event.new_state || '—'}</span>` : null}
               </div>
+              ${event.hash ? html`
+                <div class="cl-record-timeline-chain" title="Append-only hash chain. The audit trail proves its own integrity.">
+                  <span class="cl-record-timeline-chain-key">hash</span>
+                  <code class="cl-record-timeline-chain-val">${truncateHash(event.hash)}</code>
+                  ${event.prev_hash ? html`
+                    <span class="cl-record-timeline-chain-key">prev</span>
+                    <code class="cl-record-timeline-chain-val">${truncateHash(event.prev_hash)}</code>
+                  ` : null}
+                </div>
+              ` : null}
             </div>
           </li>`)}
       </ol>
@@ -1061,6 +1152,15 @@ function WorkflowTimeline({ events }) {
 
 
 // ─── Helpers ────────────────────────────────────────────────────────
+
+// Hashes are 64-char sha256 hex. Show the leading 8 chars + ellipsis so
+// the chain is visible without dominating the timeline.
+function truncateHash(value) {
+  if (!value || typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (trimmed.length <= 8) return trimmed;
+  return `${trimmed.slice(0, 8)}…`;
+}
 
 function computeAgeDays(createdAt) {
   if (!createdAt) return null;

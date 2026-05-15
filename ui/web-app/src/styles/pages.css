@@ -2559,6 +2559,100 @@
   font-family: var(--cl-font-mono);
 }
 
+/* Policy-version chip on each timeline event. v83 stamps a policy
+   version on every state-changing audit_event; surfacing it makes the
+   "policy that authorized this transition" visible to the operator. */
+.cl-record-timeline-policy {
+  font-family: var(--cl-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--cl-ink-muted);
+}
+
+/* Hash chain line beneath each timeline event. v77 added sha256
+   hash + prev_hash + chain_seq columns to audit_events; this line
+   surfaces them so the operator can see the chain is intact. */
+.cl-record-timeline-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.03);
+  border: 1px dashed rgba(15, 23, 42, 0.1);
+  font-size: 11.5px;
+}
+.cl-record-timeline-chain-key {
+  font-family: var(--cl-font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cl-ink-dim, #94A3B8);
+}
+.cl-record-timeline-chain-val {
+  font-family: var(--cl-font-mono);
+  font-size: 11.5px;
+  color: var(--cl-ink, #0F172A);
+}
+
+/* Record state panel — bottom-half of the marketing card's promise.
+   Sits between the action bar and the agent reasoning panel. Compact
+   field-by-field render of owner / waiting on / exception / history /
+   policy. Subtler chrome than the action panels above (smaller text,
+   dashed row dividers) so it reads as a "spec view." */
+.cl-record-spec .cl-record-spec-grid {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+.cl-record-spec-row {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px dashed rgba(15, 23, 42, 0.08);
+  font-size: 13px;
+}
+.cl-record-spec-row:last-child { border-bottom: 0; }
+.cl-record-spec-row dt {
+  font-family: var(--cl-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cl-ink-dim, #94A3B8);
+  margin: 0;
+}
+.cl-record-spec-row dd {
+  margin: 0;
+  color: var(--cl-ink, #0F172A);
+  font-weight: 500;
+}
+.cl-record-spec-exception {
+  display: inline-block;
+  font-family: var(--cl-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #FEE2E2;
+  color: #991B1B;
+  letter-spacing: 0.02em;
+}
+.cl-record-spec-code {
+  font-family: var(--cl-font-mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  background: rgba(15, 23, 42, 0.05);
+  border-radius: 3px;
+  color: var(--cl-ink, #0F172A);
+}
+
 /* ------- Loading + error states ------- */
 
 .cl-record-detail-loading {
