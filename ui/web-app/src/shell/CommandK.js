@@ -21,7 +21,7 @@ import { useOrgId } from './BootstrapContext.js';
 
 const NAV_ENTRIES = [
   { kind: 'nav', label: 'Home', sub: 'Workspace overview', path: '/', tokens: ['home', 'overview', 'dashboard'] },
-  { kind: 'nav', label: 'Pipeline', sub: 'AP items by stage', path: '/pipeline', tokens: ['pipeline', 'invoices', 'ap'] },
+  { kind: 'nav', label: 'Records', sub: 'AP records by stage', path: '/pipeline', tokens: ['records', 'pipeline', 'invoices', 'ap'] },
   { kind: 'nav', label: 'Review queue', sub: 'Items needing attention', path: '/review', tokens: ['review', 'queue'] },
   { kind: 'nav', label: 'Exceptions', sub: 'Items with blockers', path: '/exceptions', tokens: ['exceptions', 'errors', 'blockers'] },
   { kind: 'nav', label: 'Vendors', sub: 'Vendor directory', path: '/vendors', tokens: ['vendors', 'suppliers'] },
