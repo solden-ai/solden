@@ -178,4 +178,53 @@ describe('ThreadSidebar contract', () => {
     assert.match(source, /needsApproval = state === 'needs_approval' \|\| state === 'pending_approval'/);
     assert.match(source, /\$\{needsApproval \? html`/);
   });
+
+  it('exposes an ActionBarSection that renders canonical intent buttons', () => {
+    // Closes the parity gap with the workspace RecordDetailPage: the
+    // Gmail sidebar must let an approver act on the Box without
+    // context-switching. Buttons are driven by the actions prop
+    // (from /api/ap/items/{id}/context, computed by available_intents).
+    assert.match(source, /function ActionBarSection\(\{ actions, busy, onIntent \}\)/);
+    assert.match(source, /cl-ts-actionbar/);
+    // Three new props on the main component. Pull just the destructuring
+    // block of ThreadSidebar's signature so we don't false-positive on
+    // the ActionBarSection sub-component's own props of the same name.
+    const propsBlock = source.match(/export function ThreadSidebar\(\{[\s\S]*?\}\)/);
+    assert.ok(propsBlock, 'ThreadSidebar destructuring block must be parseable');
+    assert.ok(propsBlock[0].includes('\n  actions,'), 'must accept actions prop');
+    assert.ok(propsBlock[0].includes('\n  actionBusy,'), 'must accept actionBusy prop');
+    assert.ok(propsBlock[0].includes('\n  onIntent,'), 'must accept onIntent prop');
+    // Mounted after the conditional banners, before InvoiceSection.
+    const sectionIdx = source.indexOf('<${ActionBarSection}');
+    const fraudIdx = source.indexOf('<${FraudFlagsBanner}');
+    const invoiceIdx = source.indexOf('<${InvoiceSection}');
+    assert.ok(sectionIdx > fraudIdx && sectionIdx < invoiceIdx,
+      'ActionBar must sit between FraudFlagsBanner and InvoiceSection');
+  });
+
+  it('carries the canonical intent vocabulary in lockstep with the backend', () => {
+    // INTENT_LABELS must include every intent the backend exposes
+    // (clearledgr/services/finance_skills/ap_skill.py). If the backend
+    // ships a new intent, the corresponding label must land here too
+    // or the button will render as the bare intent slug.
+    const labels = [
+      'approve_invoice', 'reject_invoice', 'request_info',
+      'escalate_approval', 'reassign_approval', 'request_approval',
+      'snooze_invoice', 'unsnooze_invoice', 'post_to_erp',
+      'reverse_invoice_post', 'manually_classify_invoice',
+      'resubmit_invoice',
+    ];
+    for (const intent of labels) {
+      assert.match(source, new RegExp(`\\b${intent}: '`),
+        `THREAD_SIDEBAR_INTENT_LABELS missing ${intent}`);
+    }
+  });
+
+  it('renders a primary intent button distinct from secondaries', () => {
+    // The agent's recommendation drives which button gets the dark-fill
+    // treatment. Without this, every button reads the same and the
+    // operator loses the "recommended next action" signal.
+    assert.match(source, /cl-ts-actionbtn--primary/);
+    assert.match(source, /actions\?\.primary && available\.includes\(actions\.primary\)/);
+  });
 });

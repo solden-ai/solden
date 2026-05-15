@@ -2142,7 +2142,26 @@ export default function SidebarApp({ queueManager }) {
     // Dialog-required intents collect a reason first. Cancelled dialogs
     // resolve to undefined; treat that as a no-op (user backed out).
     let inputExtras = { ...(extraInput || {}) };
-    if (SIDEBAR_INTENTS_REQUIRING_REASON.has(intent) && !inputExtras.reason) {
+    if (intent === 'reassign_approval' && !inputExtras.new_owner_email) {
+      // Email picker. The dialog reuses the generic input mode; we
+      // validate shape on submit (must look like an email) so we don't
+      // call the backend with garbage.
+      const raw = await openSidebarActionDialog({
+        actionType: 'generic',
+        dialogMode: 'input',
+        title: 'Send to person',
+        label: 'Email of approver',
+        placeholder: 'alex@your-co.example',
+        confirmLabel: 'Send to person',
+      });
+      if (!raw) return;
+      const email = (typeof raw === 'string' ? raw : (raw?.value || '')).trim();
+      if (!email.includes('@') || email.length < 5) {
+        showToast('That email looks off — try again.', 'error');
+        return;
+      }
+      inputExtras.new_owner_email = email;
+    } else if (SIDEBAR_INTENTS_REQUIRING_REASON.has(intent) && !inputExtras.reason) {
       const reason = await openSidebarActionDialog({
         actionType: intent === 'reject_invoice' ? 'reject' : 'generic',
         title: SIDEBAR_INTENT_LABELS[intent] || intent,
@@ -2310,18 +2329,7 @@ export default function SidebarApp({ queueManager }) {
                 budgetStatus=${s.llmBudgetStatus}
                 onBudgetOverride=${onBudgetOverride}
                 budgetOverridePending=${s.llmBudgetOverridePending}
-                onSnooze=${async (snoozeItem) => {
-                  try {
-                    const result = await queueManager.backendFetch(
-                      queueManager.runtimeConfig?.backendUrl + '/api/ap/items/' + snoozeItem.id + '/snooze?organization_id=' + encodeURIComponent(queueManager.runtimeConfig?.organizationId || 'default'),
-                      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ duration_minutes: 240 }) },
-                    );
-                    showToast(result?.ok ? 'Snoozed for 4 hours' : 'Snooze failed', result?.ok ? 'success' : 'error');
-                    if (result?.ok) await queueManager.refreshQueue();
-                  } catch (err) {
-                    showToast('Snooze failed: ' + (err.message || err), 'error');
-                  }
-                }}
+                onSnooze=${() => handleSidebarIntent('snooze_invoice', { duration_minutes: 240 })}
                 onQuery=${agentQuery}
                 onSubmitFeedback=${async ({ message, kind, ap_item_id, page }) => {
                   const orgId = queueManager.runtimeConfig?.organizationId || 'default';
@@ -2345,29 +2353,7 @@ export default function SidebarApp({ queueManager }) {
                   }
                   return resp.json();
                 }}
-                onUndoOverride=${async (window_) => {
-                  // §9.1: Undo an auto-approved post while the override window is open.
-                  // Backend: POST /api/ap/items/{id}/reverse
-                  try {
-                    const orgId = queueManager.runtimeConfig?.organizationId || 'default';
-                    const url = queueManager.runtimeConfig?.backendUrl
-                      + '/api/ap/items/' + encodeURIComponent(item.id)
-                      + '/reverse?organization_id=' + encodeURIComponent(orgId);
-                    const result = await queueManager.backendFetch(url, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        reason: 'sidebar_undo',
-                        actor_surface: 'gmail_sidebar',
-                      }),
-                    });
-                    const ok = result && result.reversed !== false && !result.detail;
-                    showToast(ok ? 'Post reversed' : (result?.detail || 'Reverse failed'), ok ? 'success' : 'error');
-                    if (ok) await queueManager.refreshQueue();
-                  } catch (err) {
-                    showToast('Reverse failed: ' + (err.message || err), 'error');
-                  }
-                }}
+                onUndoOverride=${() => handleSidebarIntent('reverse_invoice_post', { reason: 'sidebar_undo' })}
               />`
             }`
           : html`<${EmptyState} queueCount=${queueCount} queueManager=${queueManager} />`}
