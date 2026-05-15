@@ -3210,6 +3210,50 @@ body.theme-light-landing .ribbon--in-hero .ribbon__meta {
 
 
 /* ═════════════════════════════════════════════════════════════
+   SOVEREIGNTY — text-only runtime contract beat
+   Replaces the bronze-plate aside. The belief stays as a serif H2
+   with em-italic accent; gloss paragraph reads as editorial body.
+   ───────────────────────────────────────────────────────────── */
+
+.sovereignty {
+  padding: 96px 0 96px;
+  background: #F9F5EC;
+  border-top: 1px solid rgba(31, 27, 22, 0.08);
+}
+
+.sovereignty__inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+@media (max-width: 600px) {
+  .sovereignty__inner { padding: 0 24px; }
+}
+
+.sovereignty__belief {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-size: clamp(36px, 5.4vw, 64px);
+  line-height: 1.04;
+  letter-spacing: -0.026em;
+  font-weight: 500;
+  color: #1F1B16;
+  margin: 0 0 28px;
+}
+.sovereignty__belief em {
+  font-style: italic;
+}
+
+.sovereignty__gloss {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-size: 19px;
+  line-height: 1.62;
+  color: rgba(31, 27, 22, 0.84);
+  margin: 0;
+  max-width: 64ch;
+}
+
+
+/* ═════════════════════════════════════════════════════════════
    FOR-WHOM — three-column buyer block
    No icons. Header + body. Equal weight.
    ───────────────────────────────────────────────────────────── */
