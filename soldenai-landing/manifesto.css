@@ -4,7 +4,7 @@
 
 body.theme-manifesto-light {
   /* Warm off-white, like a book page — not pure white */
-  background: #F4EDDC;
+  background: #F9F5EC;
   color: #1F1B16;
   font-family: var(--font);
   font-weight: 400;
@@ -14,7 +14,7 @@ body.theme-manifesto-light {
 
 /* Light topbar override */
 .topbar--light {
-  background: #F4EDDC;
+  background: #F9F5EC;
   border-bottom: 1px solid rgba(31, 27, 22, 0.1);
 }
 body.theme-manifesto-light .nav__link {
@@ -34,7 +34,7 @@ body.theme-manifesto-light .nav__link--manifesto::after {
 }
 body.theme-manifesto-light .btn--primary {
   background: #1F1B16;
-  color: #F4EDDC;
+  color: #F9F5EC;
   border-color: #1F1B16;
 }
 body.theme-manifesto-light .btn--primary:hover {
@@ -95,7 +95,7 @@ body.theme-manifesto-light .btn--primary:hover {
   width: 100%;
   height: auto;
   border: 1px solid rgba(31, 27, 22, 0.18);
-  background: #EDE3CC;
+  background: #F2ECDE;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.6),
     0 24px 60px -20px rgba(31, 27, 22, 0.28),
@@ -396,7 +396,7 @@ body.theme-manifesto-light .btn--primary:hover {
   aspect-ratio: 1 / 1;
   object-fit: cover;
   border: 1px solid rgba(31, 27, 22, 0.18);
-  background: #EDE3CC;
+  background: #F2ECDE;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.6),
     0 12px 28px -16px rgba(31, 27, 22, 0.22),
@@ -501,7 +501,7 @@ body.theme-manifesto-light .btn--primary:hover {
 /* Buttons — dark on light */
 .btn--dark {
   background: #1F1B16;
-  color: #F4EDDC;
+  color: #F9F5EC;
   border: 1px solid #1F1B16;
   font-weight: 500;
   letter-spacing: -0.005em;
@@ -524,7 +524,7 @@ body.theme-manifesto-light .btn--primary:hover {
 
 /* Light footer override */
 .footer--light {
-  background: #EDE3CC;
+  background: #F2ECDE;
   border-top: 1px solid rgba(31, 27, 22, 0.1);
 }
 body.theme-manifesto-light .footer--light {
@@ -555,7 +555,7 @@ body.theme-manifesto-light .footer--light .footer__bottom {
    ───────────────────────────────────────────────────────────── */
 
 body.theme-manifesto-light.theme-subpage-light {
-  background: #F4EDDC;
+  background: #F9F5EC;
   color: #1F1B16;
 }
 
@@ -777,7 +777,7 @@ body.theme-subpage-light .form__hint a {
 }
 body.theme-subpage-light .btn--primary {
   background: #1F1B16;
-  color: #F4EDDC;
+  color: #F9F5EC;
   border-color: #1F1B16;
 }
 body.theme-subpage-light .btn--primary:hover {
@@ -907,7 +907,7 @@ body.theme-subpage-light .footer-cta__sub {
 }
 body.theme-subpage-light .btn--teal {
   background: #1F1B16;
-  color: #F4EDDC;
+  color: #F9F5EC;
   border-color: #1F1B16;
 }
 body.theme-subpage-light .btn--teal:hover { background: #0a0907; }
@@ -923,12 +923,12 @@ body.theme-subpage-light .btn--ghost:hover {
 /* Subpage topbar + footer — inherit the light editorial palette
    without requiring per-page class changes on those elements. */
 body.theme-subpage-light .topbar {
-  background: #F4EDDC;
+  background: #F9F5EC;
   border-bottom: 1px solid rgba(31, 27, 22, 0.1);
 }
 
 body.theme-subpage-light .footer {
-  background: #EDE3CC;
+  background: #F2ECDE;
   border-top: 1px solid rgba(31, 27, 22, 0.1);
   color: rgba(31, 27, 22, 0.7);
 }
@@ -960,11 +960,11 @@ body.theme-subpage-light .footer .footer__bottom {
    ───────────────────────────────────────────────────────────── */
 
 body.theme-light-landing {
-  background: #F4EDDC;
+  background: #F9F5EC;
   color: #1F1B16;
 }
 body.theme-light-landing .topbar {
-  background: #F4EDDC;
+  background: #F9F5EC;
   border-bottom: 1px solid rgba(31, 27, 22, 0.1);
 }
 body.theme-light-landing .nav__link {
@@ -981,7 +981,7 @@ body.theme-light-landing .nav__link--manifesto::after {
   background: #1F1B16; opacity: 1; transform: scaleX(1);
 }
 body.theme-light-landing .btn--primary {
-  background: #1F1B16; color: #F4EDDC; border-color: #1F1B16;
+  background: #1F1B16; color: #F9F5EC; border-color: #1F1B16;
 }
 body.theme-light-landing .btn--primary:hover { background: #0a0907; }
 body.theme-light-landing .btn--secondary {
@@ -989,7 +989,7 @@ body.theme-light-landing .btn--secondary {
 }
 body.theme-light-landing .btn--secondary:hover { border-color: #1F1B16; }
 body.theme-light-landing .btn--teal {
-  background: #1F1B16; color: #F4EDDC; border-color: #1F1B16;
+  background: #1F1B16; color: #F9F5EC; border-color: #1F1B16;
 }
 body.theme-light-landing .btn--teal:hover { background: #0a0907; }
 body.theme-light-landing .btn--ghost {
@@ -1307,7 +1307,7 @@ body.theme-light-landing .footer-cta__sub {
 
 /* FOOTER */
 body.theme-light-landing .footer {
-  background: #EDE3CC;
+  background: #F2ECDE;
   border-top: 1px solid rgba(31, 27, 22, 0.1);
   color: rgba(31, 27, 22, 0.7);
 }
@@ -1334,7 +1334,7 @@ body.theme-light-landing strong { color: #1F1B16; }
    needing per-section selectors. --bg-dark-deeper stays dark because
    it backs the code blocks we deliberately keep dark (specimens). */
 body.theme-light-landing {
-  --bg-dark: #F4EDDC;
+  --bg-dark: #F9F5EC;
   --bg-dark-elev: rgba(255, 255, 255, 0.55);
   --bg-dark-panel: rgba(255, 255, 255, 0.5);
   /* --bg-dark-deeper: stays #030714 → code blocks stay dark */
@@ -1365,7 +1365,7 @@ body.theme-light-landing .footer-cta,
 body.theme-light-landing .category-pair,
 body.theme-light-landing .spotlight,
 body.theme-light-landing .ttv {
-  background-color: #F4EDDC;
+  background-color: #F9F5EC;
 }
 
 /* Code specimens stay dark with their own palette */
@@ -1503,11 +1503,11 @@ body.theme-light-landing .category-pair__line--accent {
   padding: 10px 24px;
   text-decoration: none;
   background: #1F1B16;
-  color: #F4EDDC;
+  color: #F9F5EC;
   font-size: 13px;
   letter-spacing: -0.005em;
   line-height: 1.4;
-  border-bottom: 1px solid rgba(244, 237, 220, 0.08);
+  border-bottom: 1px solid rgba(249, 245, 236, 0.08);
   transition: background-color .15s var(--ease-out);
 }
 .announcement-bar:hover { background: #2c2620; }
@@ -1517,26 +1517,26 @@ body.theme-light-landing .category-pair__line--accent {
   font-size: 10px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: rgba(244, 237, 220, 0.55);
+  color: rgba(249, 245, 236, 0.55);
   padding-right: 14px;
-  border-right: 1px solid rgba(244, 237, 220, 0.18);
+  border-right: 1px solid rgba(249, 245, 236, 0.18);
 }
 
 .announcement-bar__text {
   font-family: "Iowan Old Style", "Georgia", serif;
   font-style: italic;
   font-size: 15px;
-  color: #F4EDDC;
+  color: #F9F5EC;
 }
 
 .announcement-bar__arrow {
   font-size: 14px;
-  color: rgba(244, 237, 220, 0.7);
+  color: rgba(249, 245, 236, 0.7);
   transition: transform .2s var(--ease-out), color .2s var(--ease-out);
 }
 .announcement-bar:hover .announcement-bar__arrow {
   transform: translateX(3px);
-  color: #F4EDDC;
+  color: #F9F5EC;
 }
 
 @media (max-width: 640px) {
@@ -1755,7 +1755,7 @@ body.theme-light-landing .section-eyebrow::before {
   width: 100%;
   height: auto;
   border: 1px solid rgba(31, 27, 22, 0.18);
-  background: #EDE3CC;
+  background: #F2ECDE;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.6),
     0 30px 60px -22px rgba(31, 27, 22, 0.28),
@@ -2170,7 +2170,7 @@ body.theme-light-landing .section-eyebrow::before {
   gap: 12px;
   padding: 10px 24px;
   background: #1F1B16;
-  color: #F4EDDC;
+  color: #F9F5EC;
   text-decoration: none;
   font-family: var(--font);
   font-size: 13px;
@@ -2183,13 +2183,13 @@ body.theme-light-landing .section-eyebrow::before {
   font-size: 10px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(244, 237, 220, 0.55);
+  color: rgba(249, 245, 236, 0.55);
 }
 .announcement-bar__text {
   font-style: italic;
   font-family: "Iowan Old Style", "Georgia", serif;
   font-size: 14px;
-  color: #F4EDDC;
+  color: #F9F5EC;
 }
 .announcement-bar__arrow {
   font-size: 14px;
@@ -2278,7 +2278,7 @@ body.theme-light-landing .ribbon--in-hero .ribbon__meta {
 
 .demo {
   padding: 120px 0 96px;
-  background: #F4EDDC;
+  background: #F9F5EC;
   position: relative;
 }
 
@@ -2473,7 +2473,7 @@ body.theme-light-landing .ribbon--in-hero .ribbon__meta {
 }
 .box-card__state-pill--sealed {
   background: rgba(31, 27, 22, 0.85);
-  color: #F4EDDC;
+  color: #F9F5EC;
 }
 
 /* "Not yet" placeholder dash on dim fields */
@@ -2526,16 +2526,16 @@ body.theme-light-landing .ribbon--in-hero .ribbon__meta {
   background:
     linear-gradient(
       to right,
-      rgba(244, 237, 220, 0.92) 0%,
-      rgba(244, 237, 220, 0.78) 38%,
-      rgba(244, 237, 220, 0.55) 62%,
-      rgba(244, 237, 220, 0.42) 100%
+      rgba(249, 245, 236, 0.92) 0%,
+      rgba(249, 245, 236, 0.78) 38%,
+      rgba(249, 245, 236, 0.55) 62%,
+      rgba(249, 245, 236, 0.42) 100%
     );
   z-index: -1;
 }
 @media (max-width: 860px) {
   .hero--welder .hero__bg-veil {
-    background: rgba(244, 237, 220, 0.86);
+    background: rgba(249, 245, 236, 0.86);
   }
 }
 
@@ -2629,7 +2629,7 @@ body.theme-light-landing .ribbon--in-hero .ribbon__meta {
 
 .problem {
   padding: 96px 0 80px;
-  background: #F4EDDC;
+  background: #F9F5EC;
   border-top: 1px solid rgba(31, 27, 22, 0.08);
 }
 
@@ -2702,7 +2702,7 @@ body.theme-light-landing .ribbon--in-hero .ribbon__meta {
 
 .primitive {
   padding: 96px 0 96px;
-  background: #F4EDDC;
+  background: #F9F5EC;
 }
 
 .primitive__inner {
@@ -2763,7 +2763,7 @@ body.theme-light-landing .ribbon--in-hero .ribbon__meta {
 
 .for-whom {
   padding: 96px 0 96px;
-  background: #EEE4CD;
+  background: #F3EDDF;
   border-top: 1px solid rgba(31, 27, 22, 0.06);
   border-bottom: 1px solid rgba(31, 27, 22, 0.06);
 }
@@ -2821,7 +2821,7 @@ body.theme-light-landing .ribbon--in-hero .ribbon__meta {
 
 .thesis {
   padding: 112px 0 112px;
-  background: #F4EDDC;
+  background: #F9F5EC;
 }
 
 .thesis__inner {
