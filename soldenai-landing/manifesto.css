@@ -1755,34 +1755,47 @@ body.theme-light-landing .section-eyebrow::before {
 
 .howitworks__step {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-areas: 'text glyph';
   gap: 56px;
   align-items: center;
-  padding: 40px 0;
+  padding: 48px 0;
   border-top: 1px solid rgba(31, 27, 22, 0.12);
 }
 .howitworks__step:last-child {
   border-bottom: 1px solid rgba(31, 27, 22, 0.12);
 }
 
+/* Alternate: even rows place the glyph on the left */
+.howitworks__step:nth-child(even) {
+  grid-template-columns: 360px minmax(0, 1fr);
+  grid-template-areas: 'glyph text';
+}
+
 .howitworks__step-text {
+  grid-area: text;
   display: grid;
   grid-template-columns: 80px minmax(0, 1fr);
   gap: 20px;
   align-items: baseline;
 }
 
-@media (max-width: 880px) {
-  .howitworks__step {
+.howitworks__step-glyph {
+  grid-area: glyph;
+}
+
+@media (max-width: 940px) {
+  .howitworks__step,
+  .howitworks__step:nth-child(even) {
     grid-template-columns: 1fr;
-    gap: 24px;
-    padding: 36px 0;
+    grid-template-areas: 'text' 'glyph';
+    gap: 28px;
+    padding: 40px 0;
   }
   .howitworks__step-glyph {
-    order: 2;
     justify-self: start;
     width: 100%;
-    max-width: 360px;
+    max-width: 420px;
   }
 }
 
@@ -1833,22 +1846,43 @@ body.theme-light-landing .section-eyebrow::before {
 
 .glyph {
   width: 100%;
-  max-width: 320px;
+  max-width: 360px;
   height: auto;
   display: block;
 }
 .glyph * {
   fill: none;
   stroke: #1F1B16;
-  stroke-opacity: 0.7;
-  stroke-width: 1.5;
+  stroke-opacity: 0.78;
+  stroke-width: 1.4;
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
 }
+
+/* Secondary detail strokes: thinner + softer, so primary forms read first */
+.glyph .glyph__detail,
+.glyph .glyph__detail * {
+  stroke-width: 0.9;
+  stroke-opacity: 0.5;
+}
+
 .glyph text {
   stroke: none;
   fill: #1F1B16;
+}
+.glyph .glyph__cap {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  fill: rgba(31, 27, 22, 0.5);
+}
+.glyph .glyph__cap-tiny {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 7.5px;
+  letter-spacing: 0.04em;
+  fill: rgba(31, 27, 22, 0.55);
 }
 
 /* Line draw: site.js measures each path/line/rect/circle with
