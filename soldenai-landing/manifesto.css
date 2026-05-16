@@ -208,13 +208,13 @@ body.theme-manifesto-light .btn--primary:hover {
   max-width: 1080px;
 }
 
-/* Section rhythm — tightened so the essay reads as continuous
-   narration. 32px top + 32px bottom = 64px between adjacent
-   sections (half the prior gap). */
+/* Section rhythm — sections butt directly against each other.
+   Breathing room comes from the H2 top margin alone, so the essay
+   reads as continuous narration without empty gaps. */
 .essay__section {
-  padding: 32px 0;
+  padding: 0;
 }
-.essay__section--lineage { padding-top: 32px; }
+.essay__section--lineage { padding-top: 0; }
 
 .essay__h {
   font-family: "Iowan Old Style", "Georgia", serif;
@@ -223,8 +223,9 @@ body.theme-manifesto-light .btn--primary:hover {
   letter-spacing: -0.012em;
   font-weight: 500;
   color: #1F1B16;
-  margin: 0 0 32px;
+  margin: 48px 0 32px;
 }
+.essay__section:first-of-type .essay__h { margin-top: 0; }
 
 .essay__h3 {
   font-family: "Iowan Old Style", "Georgia", serif;
@@ -348,17 +349,10 @@ body.theme-manifesto-light .btn--primary:hover {
 }
 .essay__def dd em { color: #1F1B16; }
 
-/* Centered classical divider between sections */
-.essay__divider {
-  text-align: center;
-  padding: 8px 0;
-}
-.essay__divider-mark {
-  font-family: "Iowan Old Style", "Georgia", serif;
-  font-size: 18px;
-  color: rgba(31, 27, 22, 0.35);
-  letter-spacing: 0.4em;
-}
+/* Asterism dividers — hidden. Sections butt directly so the essay
+   reads as continuous narration; the H2 margin provides the only
+   breathing room between movements. */
+.essay__divider { display: none; }
 
 /* Lineage list — museum-placard rows with B&W square portraits.
    Each entry: portrait + caption on the left, italic numeral + serif
