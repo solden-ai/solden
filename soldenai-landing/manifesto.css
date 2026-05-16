@@ -1914,6 +1914,95 @@ body.theme-light-landing .section-eyebrow::before {
 
 
 /* ═════════════════════════════════════════════════════════════
+   SCOPE — back-office functions the runtime is built to cover.
+   Two-column row at desktop: H2 + sub on the left, five function
+   labels on the right. Matches the Basis 'One platform across
+   your firm' pattern. Confident: no status pills, no shipping
+   markers. The category claim names the scope; this section names
+   the functions inside it.
+   ───────────────────────────────────────────────────────────── */
+
+.scope {
+  padding: 96px 0;
+  background: #F2ECDE;
+  border-top: 1px solid rgba(31, 27, 22, 0.08);
+  border-bottom: 1px solid rgba(31, 27, 22, 0.08);
+}
+
+.scope__inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+@media (max-width: 600px) {
+  .scope__inner { padding: 0 24px; }
+}
+
+.scope__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: 64px;
+  align-items: center;
+}
+@media (max-width: 940px) {
+  .scope__row {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+}
+
+.scope__lead {
+  max-width: 420px;
+}
+
+.scope__title {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-size: clamp(28px, 3.6vw, 40px);
+  line-height: 1.1;
+  letter-spacing: -0.018em;
+  font-weight: 500;
+  color: #1F1B16;
+  margin: 14px 0 16px;
+}
+.scope__title em { font-style: italic; }
+
+.scope__sub {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-size: 16px;
+  line-height: 1.55;
+  color: rgba(31, 27, 22, 0.62);
+  margin: 0;
+}
+
+.scope__cells {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 56px;
+  align-items: baseline;
+}
+
+.scope__cell {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-size: clamp(22px, 2.4vw, 30px);
+  font-weight: 600;
+  color: #1F1B16;
+  letter-spacing: -0.014em;
+  line-height: 1.1;
+}
+
+@media (max-width: 600px) {
+  .scope__cells {
+    flex-direction: column;
+    gap: 18px;
+  }
+}
+
+
+/* ═════════════════════════════════════════════════════════════
    SOVEREIGNTY — text-only runtime contract beat
    Replaces the bronze-plate aside. The belief stays as a serif H2
    with em-italic accent; gloss paragraph reads as editorial body.
