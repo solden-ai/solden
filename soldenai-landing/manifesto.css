@@ -1515,10 +1515,30 @@ body.theme-light-landing .section-eyebrow::before {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  padding: 140px 0 160px;
+  padding: 96px 0 0;
+  /* Fill the viewport minus the topbar (~105px including its top
+     gap). Trust band anchored to the bottom stays above the fold. */
+  min-height: calc(100vh - 105px);
+  display: flex;
+  flex-direction: column;
 }
 @media (max-width: 720px) {
-  .hero--welder { padding: 96px 0 96px; }
+  .hero--welder { padding: 72px 0 0; min-height: auto; }
+}
+
+/* Hero content group flex-grows so the trust band stays anchored
+   to the bottom of the hero. */
+.hero--welder .hero__welder-inner {
+  flex: 1 1 auto;
+}
+
+/* Trust band inside the hero: bottom-anchored, hero's cream veil,
+   subtle hairline at top so it reads as a continuation of the hero
+   rather than a standalone section. */
+.hero__trust {
+  position: relative;
+  padding: 28px 0 32px;
+  border-top: 1px solid rgba(31, 27, 22, 0.12);
 }
 
 .hero--welder .hero__bg {
@@ -1914,18 +1934,13 @@ body.theme-light-landing .section-eyebrow::before {
 
 
 /* ═════════════════════════════════════════════════════════════
-   TRUST STRIP — runs-across word-marks under the hero.
+   TRUST STRIP — runs-across word-marks inside the hero.
    No customer logos (we don't fabricate); the real trust signal
    is the systems Solden plugs into, plus one architectural fact
    (sha256 audit chain). Mono caps eyebrow + serif word-marks.
+   Wrapper lives at .hero__trust (see hero section); these styles
+   target the inner row and items.
    ───────────────────────────────────────────────────────────── */
-
-.trust-strip {
-  padding: 36px 0;
-  background: #F9F5EC;
-  border-top: 1px solid rgba(31, 27, 22, 0.08);
-  border-bottom: 1px solid rgba(31, 27, 22, 0.08);
-}
 
 .trust-strip__inner {
   max-width: 1280px;
