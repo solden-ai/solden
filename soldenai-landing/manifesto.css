@@ -1570,7 +1570,7 @@ body.theme-light-landing .section-eyebrow::before {
   color: #1F1B16;
   margin: 0 0 36px;
   text-align: left;
-  max-width: 12ch;
+  max-width: 22ch;
 }
 .hero__headline--welder .hero__accent {
   font-style: italic;
@@ -1910,6 +1910,76 @@ body.theme-light-landing .section-eyebrow::before {
   font-size: 9.5px;
   letter-spacing: 0.04em;
   fill: rgba(31, 27, 22, 0.55);
+}
+
+
+/* ═════════════════════════════════════════════════════════════
+   TRUST STRIP — runs-across word-marks under the hero.
+   No customer logos (we don't fabricate); the real trust signal
+   is the systems Solden plugs into, plus one architectural fact
+   (sha256 audit chain). Mono caps eyebrow + serif word-marks.
+   ───────────────────────────────────────────────────────────── */
+
+.trust-strip {
+  padding: 36px 0;
+  background: #F9F5EC;
+  border-top: 1px solid rgba(31, 27, 22, 0.08);
+  border-bottom: 1px solid rgba(31, 27, 22, 0.08);
+}
+
+.trust-strip__inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 32px;
+}
+@media (max-width: 600px) {
+  .trust-strip__inner { padding: 0 24px; }
+}
+
+.trust-strip__label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(31, 27, 22, 0.55);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.trust-strip__items {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 8px 24px;
+  align-items: baseline;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.trust-strip__items li {
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-size: 17px;
+  font-weight: 500;
+  color: rgba(31, 27, 22, 0.8);
+  letter-spacing: -0.008em;
+}
+
+.trust-strip__seal {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: rgba(31, 27, 22, 0.52);
+  margin: 0;
+  white-space: nowrap;
+}
+@media (max-width: 900px) {
+  .trust-strip__seal { flex-basis: 100%; }
 }
 
 
