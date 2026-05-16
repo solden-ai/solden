@@ -1880,25 +1880,21 @@ body.theme-light-landing .section-eyebrow::before {
   color: rgba(31, 27, 22, 0.42);
 }
 
-/* Body reveal uses the grid-template-rows: 0fr → 1fr trick so the
-   height transition is genuinely smooth (not max-height's
-   instant-fill failure). The inner element gets overflow:hidden
-   and min-height:0 so content clips cleanly during the transition. */
+/* Body slots are pre-reserved at full height from the start. No
+   grid trick, no max-height, no layout shift when bullets activate.
+   Future bodies render with opacity 0 (invisible, but still take
+   vertical space). Reveal is pure opacity — GPU-accelerated, no
+   reflow, no jolt as the user scrolls. Combined with the
+   transform-scale dot, the whole transition is one consistent
+   motion that never pushes content below. */
 .runtime__bullet-body {
-  display: grid;
-  grid-template-rows: 0fr;
   opacity: 0;
-  transition: grid-template-rows 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.35s ease;
+  transition: opacity 0.45s ease;
+  will-change: opacity;
 }
 .runtime__bullet[data-state="active"] .runtime__bullet-body,
 .runtime__bullet[data-state="past"] .runtime__bullet-body {
-  grid-template-rows: 1fr;
   opacity: 1;
-}
-.runtime__bullet-body > * {
-  overflow: hidden;
-  min-height: 0;
 }
 .runtime__bullet-body p {
   font-family: "Iowan Old Style", "Georgia", serif;
