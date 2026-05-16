@@ -49,7 +49,7 @@ body.theme-manifesto-light .btn--primary:hover {
 }
 
 .essay__shell {
-  max-width: 780px;
+  max-width: 920px;
   margin: 0 auto;
   padding: 0 32px;
 }
@@ -208,11 +208,13 @@ body.theme-manifesto-light .btn--primary:hover {
   max-width: 1080px;
 }
 
-/* Section rhythm */
+/* Section rhythm — tightened so the essay reads as continuous
+   narration. 32px top + 32px bottom = 64px between adjacent
+   sections (half the prior gap). */
 .essay__section {
-  padding: 64px 0;
+  padding: 32px 0;
 }
-.essay__section--lineage { padding-top: 56px; }
+.essay__section--lineage { padding-top: 32px; }
 
 .essay__h {
   font-family: "Iowan Old Style", "Georgia", serif;
@@ -1642,7 +1644,7 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 .problem__inner {
-  max-width: 1040px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 0 32px;
 }
@@ -1821,7 +1823,7 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 .sovereignty__inner {
-  max-width: 720px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 0 32px;
 }
@@ -1921,7 +1923,7 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 .thesis__inner {
-  max-width: 720px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 0 32px;
 }
