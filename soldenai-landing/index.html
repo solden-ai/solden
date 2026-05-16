@@ -24,7 +24,7 @@
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/Geist-Variable.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/GeistMono-Variable.woff2" crossorigin />
     <link rel="stylesheet" href="/styles.css?v=10" />
-    <link rel="stylesheet" href="/manifesto.css?v=36" />
+    <link rel="stylesheet" href="/manifesto.css?v=37" />
   </head>
   <body class="theme-light-landing">
 
@@ -147,53 +147,273 @@
 
         <ol class="howitworks__list">
           <li class="howitworks__step">
-            <span class="howitworks__step-num" aria-hidden="true">01</span>
-            <div class="howitworks__step-body">
-              <h3 class="howitworks__step-title">Captured</h3>
-              <p>
-                Invoices arrive in your inbox, your ERP queue, a vendor portal, or a PEPPOL UBL feed. Solden reads the unstructured input. The model lifts vendor, amount, dates, references, and line items onto a typed record. The record exists the moment work enters the building.
-              </p>
+            <div class="howitworks__step-text">
+              <span class="howitworks__step-num" aria-hidden="true">01</span>
+              <div class="howitworks__step-body">
+                <h3 class="howitworks__step-title">Captured</h3>
+                <p>
+                  Invoices arrive in your inbox, your ERP queue, a vendor portal, or a PEPPOL UBL feed. Solden reads the unstructured input. The model lifts vendor, amount, dates, references, and line items onto a typed record. The record exists the moment work enters the building.
+                </p>
+              </div>
             </div>
+            <figure class="howitworks__step-glyph" aria-hidden="true">
+              <svg class="glyph glyph--captured" viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg">
+                <!-- entry sources (left column) -->
+                <g class="glyph__sources">
+                  <!-- envelope -->
+                  <rect x="14" y="22" width="44" height="28" rx="2"/>
+                  <path d="M14 22 L36 40 L58 22"/>
+                  <!-- queue list -->
+                  <line x1="14" y1="74" x2="58" y2="74"/>
+                  <line x1="14" y1="84" x2="58" y2="84"/>
+                  <line x1="14" y1="94" x2="42" y2="94"/>
+                  <!-- portal page -->
+                  <rect x="14" y="116" width="44" height="32" rx="2"/>
+                  <line x1="22" y1="126" x2="50" y2="126"/>
+                  <line x1="22" y1="134" x2="46" y2="134"/>
+                  <line x1="22" y1="142" x2="40" y2="142"/>
+                  <!-- UBL marker -->
+                  <circle cx="36" cy="174" r="12"/>
+                  <line x1="28" y1="174" x2="44" y2="174"/>
+                </g>
+                <!-- flow lines into record -->
+                <g class="glyph__flows">
+                  <path d="M62 36 Q116 36 154 78"/>
+                  <path d="M62 84 L154 96"/>
+                  <path d="M62 132 Q116 132 154 114"/>
+                  <path d="M62 174 Q116 174 154 132"/>
+                </g>
+                <!-- typed record card (right) -->
+                <g class="glyph__record">
+                  <!-- corner brackets -->
+                  <path d="M160 60 L154 60 L154 66"/>
+                  <path d="M306 60 L312 60 L312 66"/>
+                  <path d="M154 144 L154 150 L160 150"/>
+                  <path d="M312 144 L312 150 L306 150"/>
+                  <!-- card outline -->
+                  <rect x="160" y="60" width="146" height="90" rx="3"/>
+                  <!-- field rows -->
+                  <line x1="170" y1="78" x2="206" y2="78"/>
+                  <line x1="214" y1="78" x2="296" y2="78"/>
+                  <line x1="170" y1="96" x2="206" y2="96"/>
+                  <line x1="214" y1="96" x2="296" y2="96"/>
+                  <line x1="170" y1="114" x2="206" y2="114"/>
+                  <line x1="214" y1="114" x2="296" y2="114"/>
+                  <line x1="170" y1="132" x2="206" y2="132"/>
+                  <line x1="214" y1="132" x2="296" y2="132"/>
+                </g>
+              </svg>
+            </figure>
           </li>
 
           <li class="howitworks__step">
-            <span class="howitworks__step-num" aria-hidden="true">02</span>
-            <div class="howitworks__step-body">
-              <h3 class="howitworks__step-title">Validated</h3>
-              <p>
-                The cross-checks your ERP has data for but doesn&rsquo;t run. Three-way match against PO and GRN. Sanctions screen. Duplicate scan. Budget tolerance. Each gate is rule-based, versioned, and replayable. Rules decide. The model only writes the explanation.
-              </p>
+            <div class="howitworks__step-text">
+              <span class="howitworks__step-num" aria-hidden="true">02</span>
+              <div class="howitworks__step-body">
+                <h3 class="howitworks__step-title">Validated</h3>
+                <p>
+                  The cross-checks your ERP has data for but doesn&rsquo;t run. Three-way match against PO and GRN. Sanctions screen. Duplicate scan. Budget tolerance. Each gate is rule-based, versioned, and replayable. Rules decide. The model only writes the explanation.
+                </p>
+              </div>
             </div>
+            <figure class="howitworks__step-glyph" aria-hidden="true">
+              <svg class="glyph glyph--validated" viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg">
+                <!-- record (left) -->
+                <g class="glyph__record">
+                  <rect x="14" y="60" width="78" height="90" rx="3"/>
+                  <line x1="22" y1="78" x2="84" y2="78"/>
+                  <line x1="22" y1="96" x2="84" y2="96"/>
+                  <line x1="22" y1="114" x2="84" y2="114"/>
+                  <line x1="22" y1="132" x2="84" y2="132"/>
+                </g>
+                <!-- 4 gates -->
+                <g class="glyph__gate">
+                  <!-- 3-way match -->
+                  <line x1="92" y1="78" x2="232" y2="78"/>
+                  <rect x="238" y="70" width="16" height="16" rx="2"/>
+                  <path d="M242 78 L246 82 L252 74"/>
+                  <text x="262" y="82" font-size="9" font-family="ui-monospace, monospace" fill="#1F1B16" opacity="0.55">3-way</text>
+                </g>
+                <g class="glyph__gate">
+                  <!-- sanctions -->
+                  <line x1="92" y1="96" x2="232" y2="96"/>
+                  <rect x="238" y="88" width="16" height="16" rx="2"/>
+                  <path d="M242 96 L246 100 L252 92"/>
+                  <text x="262" y="100" font-size="9" font-family="ui-monospace, monospace" fill="#1F1B16" opacity="0.55">sanc</text>
+                </g>
+                <g class="glyph__gate">
+                  <!-- duplicate -->
+                  <line x1="92" y1="114" x2="232" y2="114"/>
+                  <rect x="238" y="106" width="16" height="16" rx="2"/>
+                  <path d="M242 114 L246 118 L252 110"/>
+                  <text x="262" y="118" font-size="9" font-family="ui-monospace, monospace" fill="#1F1B16" opacity="0.55">dup</text>
+                </g>
+                <g class="glyph__gate">
+                  <!-- budget -->
+                  <line x1="92" y1="132" x2="232" y2="132"/>
+                  <rect x="238" y="124" width="16" height="16" rx="2"/>
+                  <path d="M242 132 L246 136 L252 128"/>
+                  <text x="262" y="136" font-size="9" font-family="ui-monospace, monospace" fill="#1F1B16" opacity="0.55">bdgt</text>
+                </g>
+              </svg>
+            </figure>
           </li>
 
           <li class="howitworks__step">
-            <span class="howitworks__step-num" aria-hidden="true">03</span>
-            <div class="howitworks__step-body">
-              <h3 class="howitworks__step-title">Decided</h3>
-              <p>
-                When a record needs a human call, Solden surfaces it where the approver already works. Gmail sidebar, Slack card, Teams card, NetSuite SuiteApp panel, SAP Fiori extension. Same record, rendered where the approver is. The decision lands back on the record. Audit captures who clicked, why, and the policy version that authorized it.
-              </p>
+            <div class="howitworks__step-text">
+              <span class="howitworks__step-num" aria-hidden="true">03</span>
+              <div class="howitworks__step-body">
+                <h3 class="howitworks__step-title">Decided</h3>
+                <p>
+                  When a record needs a human call, Solden surfaces it where the approver already works. Gmail sidebar, Slack card, Teams card, NetSuite SuiteApp panel, SAP Fiori extension. Same record, rendered where the approver is. The decision lands back on the record. Audit captures who clicked, why, and the policy version that authorized it.
+                </p>
+              </div>
             </div>
+            <figure class="howitworks__step-glyph" aria-hidden="true">
+              <svg class="glyph glyph--decided" viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg">
+                <!-- record (center) -->
+                <g class="glyph__record">
+                  <rect x="130" y="74" width="60" height="52" rx="3"/>
+                  <line x1="138" y1="86" x2="182" y2="86"/>
+                  <line x1="138" y1="96" x2="182" y2="96"/>
+                  <line x1="138" y1="106" x2="182" y2="106"/>
+                  <line x1="138" y1="116" x2="172" y2="116"/>
+                </g>
+                <!-- 5 fan-out lines + surface glyphs -->
+                <!-- NW: Gmail envelope -->
+                <g class="glyph__surface">
+                  <path d="M130 80 Q90 50 50 30"/>
+                  <rect x="22" y="20" width="36" height="22" rx="2"/>
+                  <path d="M22 20 L40 36 L58 20"/>
+                </g>
+                <!-- N: Slack hash -->
+                <g class="glyph__surface">
+                  <path d="M160 74 L160 28"/>
+                  <line x1="144" y1="14" x2="154" y2="42"/>
+                  <line x1="166" y1="14" x2="176" y2="42"/>
+                  <line x1="140" y1="22" x2="180" y2="22"/>
+                  <line x1="138" y1="34" x2="178" y2="34"/>
+                </g>
+                <!-- NE: Teams T -->
+                <g class="glyph__surface">
+                  <path d="M190 80 Q230 50 270 30"/>
+                  <rect x="252" y="14" width="36" height="32" rx="2"/>
+                  <line x1="260" y1="22" x2="280" y2="22"/>
+                  <line x1="270" y1="22" x2="270" y2="40"/>
+                </g>
+                <!-- SW: NetSuite grid -->
+                <g class="glyph__surface">
+                  <path d="M130 120 Q90 152 50 174"/>
+                  <rect x="22" y="160" width="36" height="28" rx="2"/>
+                  <line x1="40" y1="160" x2="40" y2="188"/>
+                  <line x1="22" y1="174" x2="58" y2="174"/>
+                </g>
+                <!-- SE: SAP lattice -->
+                <g class="glyph__surface">
+                  <path d="M190 120 Q230 152 270 174"/>
+                  <rect x="252" y="160" width="36" height="28" rx="2"/>
+                  <line x1="252" y1="170" x2="288" y2="170"/>
+                  <line x1="252" y1="180" x2="288" y2="180"/>
+                  <line x1="264" y1="160" x2="264" y2="188"/>
+                  <line x1="276" y1="160" x2="276" y2="188"/>
+                </g>
+              </svg>
+            </figure>
           </li>
 
           <li class="howitworks__step">
-            <span class="howitworks__step-num" aria-hidden="true">04</span>
-            <div class="howitworks__step-body">
-              <h3 class="howitworks__step-title">Posted</h3>
-              <p>
-                Approval lands. Solden writes to your ERP &mdash; NetSuite, SAP, QuickBooks, Xero &mdash; with retry, idempotency, and a bounded override window. The record knows what posted, when, and by which policy. Treasury runs the payment from the ERP on its own schedule. Solden authors zero vendor email.
-              </p>
+            <div class="howitworks__step-text">
+              <span class="howitworks__step-num" aria-hidden="true">04</span>
+              <div class="howitworks__step-body">
+                <h3 class="howitworks__step-title">Posted</h3>
+                <p>
+                  Approval lands. Solden writes to your ERP &mdash; NetSuite, SAP, QuickBooks, Xero &mdash; with retry, idempotency, and a bounded override window. The record knows what posted, when, and by which policy. Treasury runs the payment from the ERP on its own schedule. Solden authors zero vendor email.
+                </p>
+              </div>
             </div>
+            <figure class="howitworks__step-glyph" aria-hidden="true">
+              <svg class="glyph glyph--posted" viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg">
+                <!-- record (left) -->
+                <g class="glyph__record">
+                  <rect x="14" y="74" width="78" height="52" rx="3"/>
+                  <line x1="22" y1="86" x2="84" y2="86"/>
+                  <line x1="22" y1="96" x2="84" y2="96"/>
+                  <line x1="22" y1="106" x2="84" y2="106"/>
+                  <line x1="22" y1="116" x2="70" y2="116"/>
+                </g>
+                <!-- arrow -->
+                <g class="glyph__arrow">
+                  <line x1="98" y1="100" x2="186" y2="100"/>
+                  <path d="M178 92 L186 100 L178 108"/>
+                </g>
+                <!-- ERP stack (right) — 4 ledger blocks -->
+                <g class="glyph__erp">
+                  <rect x="194" y="46" width="112" height="22" rx="2"/>
+                  <line x1="278" y1="57" x2="294" y2="57"/>
+                  <rect x="194" y="74" width="112" height="22" rx="2"/>
+                  <line x1="278" y1="85" x2="294" y2="85"/>
+                  <rect x="194" y="102" width="112" height="22" rx="2"/>
+                  <line x1="278" y1="113" x2="294" y2="113"/>
+                  <rect x="194" y="130" width="112" height="22" rx="2"/>
+                  <line x1="278" y1="141" x2="294" y2="141"/>
+                </g>
+              </svg>
+            </figure>
           </li>
 
           <li class="howitworks__step">
-            <span class="howitworks__step-num" aria-hidden="true">05</span>
-            <div class="howitworks__step-body">
-              <h3 class="howitworks__step-title">Sealed</h3>
-              <p>
-                The chain closes when the bill is paid and the bank matched. Every transition is signed with sha256. Each event hashes the event before it. Strip a row and the chain breaks. Six months later your audit committee reconstructs the entire workflow from one file. The proof writes itself as a side effect of doing the work.
-              </p>
+            <div class="howitworks__step-text">
+              <span class="howitworks__step-num" aria-hidden="true">05</span>
+              <div class="howitworks__step-body">
+                <h3 class="howitworks__step-title">Sealed</h3>
+                <p>
+                  The chain closes when the bill is paid and the bank matched. Every transition is signed with sha256. Each event hashes the event before it. Strip a row and the chain breaks. Six months later your audit committee reconstructs the entire workflow from one file. The proof writes itself as a side effect of doing the work.
+                </p>
+              </div>
             </div>
+            <figure class="howitworks__step-glyph" aria-hidden="true">
+              <svg class="glyph glyph--sealed" viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg">
+                <!-- chain of 4 hash blocks + final seal -->
+                <g class="glyph__block">
+                  <rect x="10" y="78" width="58" height="44" rx="3"/>
+                  <line x1="18" y1="92" x2="60" y2="92"/>
+                  <line x1="18" y1="102" x2="60" y2="102"/>
+                  <line x1="18" y1="112" x2="44" y2="112"/>
+                </g>
+                <g class="glyph__link">
+                  <line x1="68" y1="100" x2="84" y2="100"/>
+                </g>
+                <g class="glyph__block">
+                  <rect x="84" y="78" width="58" height="44" rx="3"/>
+                  <line x1="92" y1="92" x2="134" y2="92"/>
+                  <line x1="92" y1="102" x2="134" y2="102"/>
+                  <line x1="92" y1="112" x2="118" y2="112"/>
+                </g>
+                <g class="glyph__link">
+                  <line x1="142" y1="100" x2="158" y2="100"/>
+                </g>
+                <g class="glyph__block">
+                  <rect x="158" y="78" width="58" height="44" rx="3"/>
+                  <line x1="166" y1="92" x2="208" y2="92"/>
+                  <line x1="166" y1="102" x2="208" y2="102"/>
+                  <line x1="166" y1="112" x2="192" y2="112"/>
+                </g>
+                <g class="glyph__link">
+                  <line x1="216" y1="100" x2="232" y2="100"/>
+                </g>
+                <!-- final block with seal -->
+                <g class="glyph__block">
+                  <rect x="232" y="78" width="58" height="44" rx="3"/>
+                  <line x1="240" y1="92" x2="282" y2="92"/>
+                  <line x1="240" y1="102" x2="282" y2="102"/>
+                  <line x1="240" y1="112" x2="266" y2="112"/>
+                </g>
+                <g class="glyph__seal">
+                  <circle cx="296" cy="138" r="14"/>
+                  <path d="M289 138 L295 144 L303 132"/>
+                </g>
+              </svg>
+            </figure>
           </li>
         </ol>
       </div>
@@ -305,6 +525,6 @@
       </div>
     </footer>
 
-    <script src="/site.js?v=2" defer></script>
+    <script src="/site.js?v=3" defer></script>
   </body>
 </html>
