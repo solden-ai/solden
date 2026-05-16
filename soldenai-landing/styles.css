@@ -154,7 +154,7 @@ body:not(.theme-dark) ::selection { color: var(--navy); }
 }
 
 .shell--tight { max-width: var(--shell-tight); }
-.shell--narrow { max-width: 720px; }
+.shell--narrow { max-width: 860px; }
 .shell--prose { max-width: var(--shell-prose); }
 
 section { position: relative; }

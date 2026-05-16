@@ -49,7 +49,7 @@ body.theme-manifesto-light .btn--primary:hover {
 }
 
 .essay__shell {
-  max-width: 660px;
+  max-width: 780px;
   margin: 0 auto;
   padding: 0 32px;
 }
@@ -1642,7 +1642,7 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 .problem__inner {
-  max-width: 920px;
+  max-width: 1040px;
   margin: 0 auto;
   padding: 0 32px;
 }
@@ -1720,7 +1720,7 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 .howitworks__inner {
-  max-width: 800px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 0 32px;
 }
@@ -1749,7 +1749,7 @@ body.theme-light-landing .section-eyebrow::before {
   line-height: 1.62;
   color: rgba(31, 27, 22, 0.84);
   margin: 0;
-  max-width: 64ch;
+  max-width: 72ch;
 }
 
 .howitworks__list {
@@ -1804,7 +1804,7 @@ body.theme-light-landing .section-eyebrow::before {
   line-height: 1.62;
   color: rgba(31, 27, 22, 0.82);
   margin: 0;
-  max-width: 60ch;
+  max-width: 68ch;
 }
 
 
@@ -1848,7 +1848,7 @@ body.theme-light-landing .section-eyebrow::before {
   line-height: 1.62;
   color: rgba(31, 27, 22, 0.84);
   margin: 0;
-  max-width: 64ch;
+  max-width: 72ch;
 }
 
 
