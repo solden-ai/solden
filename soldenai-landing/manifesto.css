@@ -1867,6 +1867,18 @@ body.theme-light-landing .section-eyebrow::before {
   stroke-opacity: 0.5;
 }
 
+/* Ghost strokes: extensibility markers (e.g. the '+ next' surface
+   placeholder in step 03). Drawn faintly so the eye reads "this slot
+   exists" without competing with the real, named primaries. */
+.glyph .glyph__ghost,
+.glyph .glyph__ghost * {
+  stroke-width: 1;
+  stroke-opacity: 0.3;
+}
+.glyph .glyph__ghost text {
+  fill: rgba(31, 27, 22, 0.32);
+}
+
 .glyph text {
   stroke: none;
   fill: #1F1B16;

@@ -24,7 +24,7 @@
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/Geist-Variable.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/GeistMono-Variable.woff2" crossorigin />
     <link rel="stylesheet" href="/styles.css?v=10" />
-    <link rel="stylesheet" href="/manifesto.css?v=38" />
+    <link rel="stylesheet" href="/manifesto.css?v=39" />
   </head>
   <body class="theme-light-landing">
 
@@ -349,6 +349,10 @@
                   <path d="M170 142 Q126 168 80 192"/>
                   <path d="M210 142 Q252 168 290 192"/>
                 </g>
+                <!-- connector to the next-surface ghost -->
+                <g class="glyph__ghost">
+                  <path d="M204 114 Q244 118 282 126"/>
+                </g>
 
                 <!-- record card (center, primary) -->
                 <rect x="156" y="86" width="48" height="56" rx="3"/>
@@ -430,6 +434,18 @@
                 <g class="glyph__detail">
                   <line x1="306" y1="192" x2="340" y2="192"/>
                   <line x1="306" y1="200" x2="332" y2="200"/>
+                </g>
+
+                <!-- E (extensibility): the next surface — faint outline
+                     signals the dispatch path accepts any new render
+                     target. Not a fifth claim. -->
+                <g class="glyph__ghost">
+                  <rect x="282" y="108" width="64" height="44" rx="3"/>
+                  <line x1="282" y1="120" x2="346" y2="120"/>
+                  <text x="288" y="117" class="glyph__cap-tiny">+ next</text>
+                  <line x1="290" y1="130" x2="332" y2="130"/>
+                  <line x1="290" y1="138" x2="324" y2="138"/>
+                  <line x1="290" y1="146" x2="328" y2="146"/>
                 </g>
               </svg>
             </figure>
