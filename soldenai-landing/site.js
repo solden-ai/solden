@@ -35,9 +35,9 @@
   // ── 1e. Sections fade up when they enter the viewport. ──
   initScrollReveal();
 
-  // ── 1f. How-it-works glyphs: stroke-draw each element when the
-  // SVG enters the viewport, staggered by element index. ──
-  initGlyphs();
+  // ── 1f. Runtime concept timeline: advance the active bullet
+  // (future → active → past) as the reader scrolls. ──
+  initRuntimeBullets();
 
   function initFlow() {
     var card = document.querySelector('[data-flow-state]');
@@ -241,68 +241,37 @@
     nodes.forEach(function (n) { io.observe(n); });
   }
 
-  function initGlyphs() {
-    var glyphs = document.querySelectorAll('.glyph');
-    if (!glyphs.length) return;
+  function initRuntimeBullets() {
+    var bullets = document.querySelectorAll('.runtime__bullet');
+    if (!bullets.length) return;
 
-    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var hasObserver = typeof IntersectionObserver !== 'undefined';
-    var STAGGER_MS = 65;
-    var DURATION_MS = 900;
-    var EASING = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
-
-    function prepareGlyph(svg) {
-      var els = svg.querySelectorAll('path, line, rect, circle, polygon, polyline');
-      var i = 0;
-      els.forEach(function (el) {
-        var length = 200;
-        try {
-          if (typeof el.getTotalLength === 'function') {
-            var measured = el.getTotalLength();
-            if (measured && isFinite(measured) && measured > 0) length = measured;
-          }
-        } catch (err) { /* keep fallback */ }
-        // Round up + small epsilon so the path fully clears at offset 0.
-        var dash = Math.ceil(length) + 1;
-        el.style.strokeDasharray = dash + ' ' + dash;
-        el.style.strokeDashoffset = dash;
-        el.style.transition =
-          'stroke-dashoffset ' + DURATION_MS + 'ms ' + EASING + ' ' + (i * STAGGER_MS) + 'ms';
-        el.setAttribute('data-glyph-line', '1');
-        i++;
-      });
+    function setStates(activeIdx) {
+      for (var i = 0; i < bullets.length; i++) {
+        var state = i < activeIdx ? 'past' : (i === activeIdx ? 'active' : 'future');
+        bullets[i].setAttribute('data-state', state);
+      }
     }
 
-    function revealGlyph(svg) {
-      svg.classList.add('is-visible');
-      var els = svg.querySelectorAll('[data-glyph-line="1"]');
-      els.forEach(function (el) { el.style.strokeDashoffset = '0'; });
-    }
-
-    if (reduced) {
-      // No animation, just show everything immediately.
-      glyphs.forEach(function (svg) { svg.classList.add('is-visible'); });
-      return;
-    }
-
-    glyphs.forEach(prepareGlyph);
-
-    if (!hasObserver) {
-      // No IntersectionObserver, reveal immediately.
-      glyphs.forEach(revealGlyph);
+    if (typeof IntersectionObserver === 'undefined') {
+      // No IO: mark everything active so all bodies render.
+      for (var i = 0; i < bullets.length; i++) bullets[i].setAttribute('data-state', 'active');
       return;
     }
 
     var io = new IntersectionObserver(function (entries) {
+      // Among visible entries, pick the one with the largest ratio.
+      var best = null;
       entries.forEach(function (e) {
-        if (e.isIntersecting) {
-          revealGlyph(e.target);
-          io.unobserve(e.target);
-        }
+        if (!e.isIntersecting) return;
+        if (!best || e.intersectionRatio > best.intersectionRatio) best = e;
       });
-    }, { threshold: 0.3 });
+      if (!best) return;
+      var idx = parseInt(best.target.getAttribute('data-bullet'), 10);
+      if (!isNaN(idx)) setStates(idx);
+    }, { rootMargin: '-40% 0px -40% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] });
 
-    glyphs.forEach(function (g) { io.observe(g); });
+    bullets.forEach(function (b) { io.observe(b); });
+    setStates(0);
   }
 
   // ── 2. Contact form ──

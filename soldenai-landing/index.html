@@ -24,7 +24,7 @@
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/Geist-Variable.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/GeistMono-Variable.woff2" crossorigin />
     <link rel="stylesheet" href="/styles.css?v=10" />
-    <link rel="stylesheet" href="/manifesto.css?v=40" />
+    <link rel="stylesheet" href="/manifesto.css?v=41" />
   </head>
   <body class="theme-light-landing">
 
@@ -128,534 +128,136 @@
     </section>
 
     <!-- ═══ HOW SOLDEN WORKS ═══════════════════════════════════════
-         Replaces the prior Record / Tabbed Demo / Audit Chain trio
-         with a single editorial walkthrough. Five numbered steps in
-         prose. No cards, no tabs, no visualisations. Matches the
-         text-first register Mo named in his references. -->
-    <section class="howitworks" id="how-solden-works">
-      <div class="shell shell--narrow howitworks__inner">
-        <header class="howitworks__head">
+         Basis-style concept timeline. Four bullets, not five lifecycle
+         steps. Each is a runtime claim, not a product walkthrough.
+         As the reader scrolls, IntersectionObserver in site.js
+         advances the active bullet (future → active → past). One
+         anchor visual (the typed-record card) pins beside the column,
+         so the primitive stays in view while the runtime claims fly
+         past. -->
+    <section class="runtime" id="how-solden-works">
+      <div class="shell runtime__inner">
+        <header class="runtime__head">
           <p class="section-eyebrow">How Solden works</p>
-          <h2 class="howitworks__title">
+          <h2 class="runtime__title">
             One record per workflow.<br />
-            Five steps. Every move signed.
+            Every move signed.
           </h2>
-          <p class="howitworks__lead">
+          <p class="runtime__lead">
             Every back-office workflow becomes a record. The record holds its own state, its own owner, what it&rsquo;s waiting on, what broke, its history, and the policy that decided each call. It lives across your tools without belonging to any one of them. Your tools render it. Solden holds it.
           </p>
         </header>
 
-        <ol class="howitworks__list">
-          <li class="howitworks__step">
-            <div class="howitworks__step-text">
-              <span class="howitworks__step-num" aria-hidden="true">01</span>
-              <div class="howitworks__step-body">
-                <h3 class="howitworks__step-title">Captured</h3>
+        <div class="runtime__layout">
+          <ol class="runtime__bullets">
+            <li class="runtime__bullet" data-state="active" data-bullet="0">
+              <span class="runtime__dot" aria-hidden="true"></span>
+              <h3 class="runtime__bullet-title">The workflow becomes a record.</h3>
+              <div class="runtime__bullet-body">
                 <p>
                   Any back-office artifact enters wherever the team already works. Inbox, ERP queue, vendor portal, UBL feed. The runtime reads the unstructured input and lifts the typed fields onto a record. The record exists the moment work enters the building.
                 </p>
-                <p class="howitworks__step-aside">
-                  <span class="howitworks__step-aside-tag">Today &middot; AP</span>
-                  invoices in; vendor, amount, dates, references, and line items out.
-                </p>
               </div>
-            </div>
-            <figure class="howitworks__step-glyph" aria-hidden="true">
-              <svg class="glyph glyph--captured" viewBox="0 0 360 220" xmlns="http://www.w3.org/2000/svg">
-                <!-- captions -->
-                <text x="14" y="12" class="glyph__cap">sources</text>
-                <text x="132" y="12" class="glyph__cap">typed record · ap_item</text>
-
-                <!-- 1. envelope -->
-                <rect x="14" y="22" width="60" height="34" rx="3"/>
-                <path d="M14 22 L44 44 L74 22"/>
-
-                <!-- 2. queue card -->
-                <rect x="14" y="64" width="60" height="42" rx="3"/>
-                <g class="glyph__detail">
-                  <circle cx="22" cy="74" r="1.5"/>
-                  <line x1="28" y1="74" x2="66" y2="74"/>
-                  <circle cx="22" cy="86" r="1.5"/>
-                  <line x1="28" y1="86" x2="66" y2="86"/>
-                  <circle cx="22" cy="98" r="1.5"/>
-                  <line x1="28" y1="98" x2="54" y2="98"/>
-                </g>
-
-                <!-- 3. portal page with dog-ear -->
-                <path d="M14 116 L60 116 L74 130 L74 158 L14 158 Z"/>
-                <path d="M60 116 L60 130 L74 130"/>
-                <g class="glyph__detail">
-                  <line x1="22" y1="138" x2="64" y2="138"/>
-                  <line x1="22" y1="144" x2="58" y2="144"/>
-                  <line x1="22" y1="150" x2="48" y2="150"/>
-                </g>
-
-                <!-- 4. UBL hex marker -->
-                <path d="M44 166 L66 172 L66 196 L44 202 L22 196 L22 172 Z"/>
-                <text x="44" y="187" text-anchor="middle" class="glyph__cap-tiny">UBL</text>
-
-                <!-- flow lines (thinner) -->
-                <g class="glyph__detail">
-                  <path d="M74 38 Q104 38 130 60"/>
-                  <path d="M74 84 Q104 84 130 84"/>
-                  <path d="M74 138 Q104 138 130 108"/>
-                  <path d="M74 184 Q104 184 130 132"/>
-                </g>
-
-                <!-- record card -->
-                <rect x="130" y="22" width="220" height="184" rx="4"/>
-
-                <!-- header strip -->
-                <line x1="130" y1="44" x2="350" y2="44"/>
-                <text x="138" y="38" class="glyph__cap">ap_item</text>
-                <circle cx="340" cy="33" r="3"/>
-
-                <!-- field rows: label + value-line -->
-                <text x="138" y="60" class="glyph__cap-tiny">vendor</text>
-                <line x1="186" y1="57" x2="340" y2="57"/>
-                <text x="138" y="76" class="glyph__cap-tiny">amount</text>
-                <line x1="186" y1="73" x2="340" y2="73"/>
-                <text x="138" y="92" class="glyph__cap-tiny">date</text>
-                <line x1="186" y1="89" x2="340" y2="89"/>
-                <text x="138" y="108" class="glyph__cap-tiny">ref</text>
-                <line x1="186" y1="105" x2="340" y2="105"/>
-                <text x="138" y="124" class="glyph__cap-tiny">terms</text>
-                <line x1="186" y1="121" x2="340" y2="121"/>
-
-                <!-- subheader divider -->
-                <line x1="138" y1="138" x2="342" y2="138"/>
-                <text x="138" y="152" class="glyph__cap-tiny">line items</text>
-
-                <!-- line items -->
-                <g class="glyph__detail">
-                  <line x1="138" y1="162" x2="342" y2="162"/>
-                  <line x1="138" y1="174" x2="320" y2="174"/>
-                  <line x1="138" y1="186" x2="296" y2="186"/>
-                  <line x1="138" y1="198" x2="334" y2="198"/>
-                </g>
-              </svg>
-            </figure>
-          </li>
-
-          <li class="howitworks__step">
-            <div class="howitworks__step-text">
-              <span class="howitworks__step-num" aria-hidden="true">02</span>
-              <div class="howitworks__step-body">
-                <h3 class="howitworks__step-title">Validated</h3>
+            </li>
+            <li class="runtime__bullet" data-state="future" data-bullet="1">
+              <span class="runtime__dot" aria-hidden="true"></span>
+              <h3 class="runtime__bullet-title">Rules decide. The model explains.</h3>
+              <div class="runtime__bullet-body">
                 <p>
-                  The cross-checks defined for the workflow type run against the typed record. Each gate is rule-based, versioned, and replayable. Rules decide. The model only writes the explanation.
-                </p>
-                <p class="howitworks__step-aside">
-                  <span class="howitworks__step-aside-tag">Today &middot; AP</span>
-                  three-way match against PO and GRN, sanctions screen, duplicate scan, budget tolerance. The checks your ERP has data for but doesn&rsquo;t run.
+                  The cross-checks defined for the workflow type run against the typed record. Each gate is rule-based, versioned, and replayable. The model writes the explanation. It does not write the decision.
                 </p>
               </div>
-            </div>
-            <figure class="howitworks__step-glyph" aria-hidden="true">
-              <svg class="glyph glyph--validated" viewBox="0 0 360 220" xmlns="http://www.w3.org/2000/svg">
-                <!-- captions -->
-                <text x="14" y="12" class="glyph__cap">record</text>
-                <text x="132" y="12" class="glyph__cap">rule cascade</text>
-
-                <!-- record card (left, smaller — not the hero here) -->
-                <rect x="14" y="62" width="100" height="96" rx="3"/>
-                <line x1="14" y1="80" x2="114" y2="80"/>
-                <text x="22" y="76" class="glyph__cap-tiny">ap_item</text>
-                <circle cx="106" cy="71" r="2.5"/>
-                <g class="glyph__detail">
-                  <line x1="22" y1="92" x2="106" y2="92"/>
-                  <line x1="22" y1="104" x2="106" y2="104"/>
-                  <line x1="22" y1="116" x2="106" y2="116"/>
-                  <line x1="22" y1="128" x2="92" y2="128"/>
-                  <line x1="22" y1="140" x2="100" y2="140"/>
-                  <line x1="22" y1="152" x2="76" y2="152"/>
-                </g>
-
-                <!-- connectors from record to each gate -->
-                <g class="glyph__detail">
-                  <path d="M114 92 Q130 92 142 70"/>
-                  <path d="M114 110 Q130 110 142 96"/>
-                  <path d="M114 128 Q130 128 142 152"/>
-                  <path d="M114 146 Q130 146 142 178"/>
-                </g>
-
-                <!-- gate 1: 3-way match (top-left of grid) -->
-                <rect x="142" y="40" width="100" height="60" rx="3"/>
-                <line x1="142" y1="56" x2="242" y2="56"/>
-                <text x="150" y="52" class="glyph__cap-tiny">3-way match</text>
-                <text x="220" y="52" class="glyph__cap-tiny">v17</text>
-                <rect x="150" y="68" width="14" height="14" rx="2"/>
-                <path d="M154 75 L158 79 L164 71"/>
-                <g class="glyph__detail">
-                  <line x1="172" y1="76" x2="234" y2="76"/>
-                  <line x1="172" y1="88" x2="220" y2="88"/>
-                </g>
-
-                <!-- gate 2: sanctions (top-right) -->
-                <rect x="250" y="40" width="100" height="60" rx="3"/>
-                <line x1="250" y1="56" x2="350" y2="56"/>
-                <text x="258" y="52" class="glyph__cap-tiny">sanctions</text>
-                <text x="328" y="52" class="glyph__cap-tiny">v04</text>
-                <rect x="258" y="68" width="14" height="14" rx="2"/>
-                <path d="M262 75 L266 79 L272 71"/>
-                <g class="glyph__detail">
-                  <line x1="280" y1="76" x2="342" y2="76"/>
-                  <line x1="280" y1="88" x2="324" y2="88"/>
-                </g>
-
-                <!-- gate 3: duplicate (bottom-left) -->
-                <rect x="142" y="120" width="100" height="60" rx="3"/>
-                <line x1="142" y1="136" x2="242" y2="136"/>
-                <text x="150" y="132" class="glyph__cap-tiny">duplicate</text>
-                <text x="220" y="132" class="glyph__cap-tiny">v11</text>
-                <rect x="150" y="148" width="14" height="14" rx="2"/>
-                <path d="M154 155 L158 159 L164 151"/>
-                <g class="glyph__detail">
-                  <line x1="172" y1="156" x2="234" y2="156"/>
-                  <line x1="172" y1="168" x2="216" y2="168"/>
-                </g>
-
-                <!-- gate 4: budget tolerance (bottom-right) -->
-                <rect x="250" y="120" width="100" height="60" rx="3"/>
-                <line x1="250" y1="136" x2="350" y2="136"/>
-                <text x="258" y="132" class="glyph__cap-tiny">budget</text>
-                <text x="328" y="132" class="glyph__cap-tiny">v22</text>
-                <rect x="258" y="148" width="14" height="14" rx="2"/>
-                <path d="M262 155 L266 159 L272 151"/>
-                <g class="glyph__detail">
-                  <line x1="280" y1="156" x2="342" y2="156"/>
-                  <line x1="280" y1="168" x2="322" y2="168"/>
-                </g>
-
-                <!-- footer ribbon: outcome -->
-                <line x1="14" y1="196" x2="350" y2="196"/>
-                <text x="14" y="210" class="glyph__cap-tiny">cascade · 4/4 · rules decide · model writes the why</text>
-              </svg>
-            </figure>
-          </li>
-
-          <li class="howitworks__step">
-            <div class="howitworks__step-text">
-              <span class="howitworks__step-num" aria-hidden="true">03</span>
-              <div class="howitworks__step-body">
-                <h3 class="howitworks__step-title">Decided</h3>
+            </li>
+            <li class="runtime__bullet" data-state="future" data-bullet="2">
+              <span class="runtime__dot" aria-hidden="true"></span>
+              <h3 class="runtime__bullet-title">Decisions render where the approver works.</h3>
+              <div class="runtime__bullet-body">
                 <p>
-                  When a record needs a human call, Solden surfaces it where the approver already works. Gmail sidebar, Slack card, Teams card, NetSuite SuiteApp panel, SAP Fiori extension. Same record, rendered where the approver is. The decision lands back on the record. Audit captures who clicked, why, and the policy version that authorized it.
+                  When a record needs a human call, the runtime surfaces it where the approver already lives. Gmail sidebar, Slack card, Teams card, NetSuite SuiteApp panel, SAP Fiori extension, and the next surface plugs in the same way. When approval lands, the runtime writes to the system of record with retry, idempotency, and a bounded override window.
                 </p>
               </div>
-            </div>
-            <figure class="howitworks__step-glyph" aria-hidden="true">
-              <svg class="glyph glyph--decided" viewBox="0 0 360 220" xmlns="http://www.w3.org/2000/svg">
-                <!-- caption -->
-                <text x="14" y="12" class="glyph__cap">one record · wherever the approver works</text>
-
-                <!-- connectors first so they draw under the surface cards -->
-                <g class="glyph__detail">
-                  <path d="M160 96 Q116 70 78 46"/>
-                  <path d="M180 86 Q180 60 180 36"/>
-                  <path d="M200 96 Q242 70 282 46"/>
-                  <path d="M170 142 Q126 168 80 192"/>
-                  <path d="M210 142 Q252 168 290 192"/>
-                </g>
-                <!-- connector to the next-surface ghost -->
-                <g class="glyph__ghost">
-                  <path d="M204 114 Q244 118 282 126"/>
-                </g>
-
-                <!-- record card (center, primary) -->
-                <rect x="156" y="86" width="48" height="56" rx="3"/>
-                <line x1="156" y1="100" x2="204" y2="100"/>
-                <text x="160" y="97" class="glyph__cap-tiny">ap_item</text>
-                <g class="glyph__detail">
-                  <line x1="162" y1="110" x2="198" y2="110"/>
-                  <line x1="162" y1="118" x2="198" y2="118"/>
-                  <line x1="162" y1="126" x2="198" y2="126"/>
-                  <line x1="162" y1="134" x2="190" y2="134"/>
-                </g>
-
-                <!-- NW: Gmail card -->
-                <rect x="14" y="18" width="76" height="46" rx="3"/>
-                <line x1="14" y1="30" x2="90" y2="30"/>
-                <text x="20" y="27" class="glyph__cap-tiny">gmail</text>
-                <rect x="20" y="38" width="22" height="14" rx="1.5"/>
-                <path d="M20 38 L31 47 L42 38"/>
-                <g class="glyph__detail">
-                  <line x1="48" y1="42" x2="84" y2="42"/>
-                  <line x1="48" y1="50" x2="76" y2="50"/>
-                  <line x1="48" y1="58" x2="80" y2="58"/>
-                </g>
-
-                <!-- N: Slack card -->
-                <rect x="146" y="10" width="68" height="42" rx="3"/>
-                <line x1="146" y1="22" x2="214" y2="22"/>
-                <text x="152" y="19" class="glyph__cap-tiny">slack</text>
-                <!-- hash mark # -->
-                <g>
-                  <line x1="156" y1="28" x2="162" y2="48"/>
-                  <line x1="168" y1="28" x2="174" y2="48"/>
-                  <line x1="154" y1="34" x2="176" y2="34"/>
-                  <line x1="152" y1="42" x2="174" y2="42"/>
-                </g>
-                <g class="glyph__detail">
-                  <line x1="184" y1="32" x2="208" y2="32"/>
-                  <line x1="184" y1="40" x2="204" y2="40"/>
-                  <line x1="184" y1="48" x2="206" y2="48"/>
-                </g>
-
-                <!-- NE: Teams card -->
-                <rect x="270" y="18" width="76" height="46" rx="3"/>
-                <line x1="270" y1="30" x2="346" y2="30"/>
-                <text x="276" y="27" class="glyph__cap-tiny">teams</text>
-                <!-- T mark -->
-                <line x1="278" y1="38" x2="298" y2="38"/>
-                <line x1="288" y1="38" x2="288" y2="56"/>
-                <g class="glyph__detail">
-                  <line x1="306" y1="42" x2="340" y2="42"/>
-                  <line x1="306" y1="50" x2="334" y2="50"/>
-                  <line x1="306" y1="58" x2="338" y2="58"/>
-                </g>
-
-                <!-- SW: NetSuite card -->
-                <rect x="14" y="170" width="76" height="42" rx="3"/>
-                <line x1="14" y1="182" x2="90" y2="182"/>
-                <text x="20" y="179" class="glyph__cap-tiny">netsuite</text>
-                <!-- grid mark -->
-                <line x1="22" y1="188" x2="40" y2="188"/>
-                <line x1="22" y1="196" x2="40" y2="196"/>
-                <line x1="22" y1="204" x2="40" y2="204"/>
-                <line x1="22" y1="188" x2="22" y2="204"/>
-                <line x1="40" y1="188" x2="40" y2="204"/>
-                <line x1="31" y1="188" x2="31" y2="204"/>
-                <g class="glyph__detail">
-                  <line x1="48" y1="192" x2="84" y2="192"/>
-                  <line x1="48" y1="200" x2="76" y2="200"/>
-                </g>
-
-                <!-- SE: SAP card -->
-                <rect x="270" y="170" width="76" height="42" rx="3"/>
-                <line x1="270" y1="182" x2="346" y2="182"/>
-                <text x="276" y="179" class="glyph__cap-tiny">sap fiori</text>
-                <!-- isometric cube mark -->
-                <path d="M280 200 L290 194 L300 200 L290 206 Z"/>
-                <path d="M280 200 L280 206 L290 212 L290 206"/>
-                <path d="M300 200 L300 206 L290 212"/>
-                <g class="glyph__detail">
-                  <line x1="306" y1="192" x2="340" y2="192"/>
-                  <line x1="306" y1="200" x2="332" y2="200"/>
-                </g>
-
-                <!-- E (extensibility): the next surface — faint outline
-                     signals the dispatch path accepts any new render
-                     target. Not a fifth claim. -->
-                <g class="glyph__ghost">
-                  <rect x="282" y="108" width="64" height="44" rx="3"/>
-                  <line x1="282" y1="120" x2="346" y2="120"/>
-                  <text x="288" y="117" class="glyph__cap-tiny">+ next</text>
-                  <line x1="290" y1="130" x2="332" y2="130"/>
-                  <line x1="290" y1="138" x2="324" y2="138"/>
-                  <line x1="290" y1="146" x2="328" y2="146"/>
-                </g>
-              </svg>
-            </figure>
-          </li>
-
-          <li class="howitworks__step">
-            <div class="howitworks__step-text">
-              <span class="howitworks__step-num" aria-hidden="true">04</span>
-              <div class="howitworks__step-body">
-                <h3 class="howitworks__step-title">Posted</h3>
+            </li>
+            <li class="runtime__bullet" data-state="future" data-bullet="3">
+              <span class="runtime__dot" aria-hidden="true"></span>
+              <h3 class="runtime__bullet-title">The audit chain seals itself.</h3>
+              <div class="runtime__bullet-body">
                 <p>
-                  Approval lands. The runtime writes to the system of record with retry, idempotency, and a bounded override window. The record knows what posted, when, and by which policy.
-                </p>
-                <p class="howitworks__step-aside">
-                  <span class="howitworks__step-aside-tag">Today &middot; AP</span>
-                  the system of record is your ERP. NetSuite, SAP, QuickBooks, Xero. Treasury runs the payment from the ERP on its own schedule. Solden authors zero vendor email.
+                  Every transition is signed with sha256. Each event hashes the event before it. Strip a row and the chain breaks. The proof writes itself as a side effect of doing the work. Six months later your audit committee reconstructs the entire workflow from one file.
                 </p>
               </div>
-            </div>
-            <figure class="howitworks__step-glyph" aria-hidden="true">
-              <svg class="glyph glyph--posted" viewBox="0 0 360 220" xmlns="http://www.w3.org/2000/svg">
-                <!-- captions -->
-                <text x="14" y="12" class="glyph__cap">approved</text>
-                <text x="200" y="12" class="glyph__cap">system of record</text>
+            </li>
+          </ol>
 
-                <!-- record card (left) with approved seal -->
-                <rect x="14" y="58" width="112" height="104" rx="3"/>
-                <line x1="14" y1="76" x2="126" y2="76"/>
-                <text x="22" y="72" class="glyph__cap-tiny">ap_item</text>
-                <!-- approved mark in header -->
-                <circle cx="116" cy="68" r="5"/>
-                <path d="M113 68 L115 70 L119 66"/>
-                <g class="glyph__detail">
-                  <line x1="22" y1="88" x2="118" y2="88"/>
-                  <line x1="22" y1="100" x2="118" y2="100"/>
-                  <line x1="22" y1="112" x2="118" y2="112"/>
-                  <line x1="22" y1="124" x2="104" y2="124"/>
-                  <line x1="22" y1="136" x2="112" y2="136"/>
-                  <line x1="22" y1="148" x2="82" y2="148"/>
-                </g>
+          <aside class="runtime__anchor" aria-hidden="true">
+            <svg class="runtime__record" width="320" height="460" viewBox="0 0 320 460" xmlns="http://www.w3.org/2000/svg">
+              <!-- card outline -->
+              <rect x="10" y="20" width="300" height="420" rx="6"/>
 
-                <!-- arrow with API path label -->
-                <text x="132" y="98" class="glyph__cap-tiny">POST /api/erp/bills</text>
-                <line x1="132" y1="110" x2="208" y2="110"/>
-                <path d="M200 104 L208 110 L200 116"/>
-                <text x="132" y="128" class="glyph__cap-tiny">retry · idempotent · bounded</text>
+              <!-- header strip -->
+              <line x1="10" y1="60" x2="310" y2="60"/>
+              <text x="22" y="46" class="runtime__record-tag">ap_item</text>
+              <circle cx="290" cy="40" r="3"/>
+              <text x="280" y="46" text-anchor="end" class="runtime__record-tag-tiny">01h8k</text>
 
-                <!-- ERP ledger stack (right) — 4 spines -->
-                <rect x="216" y="40" width="130" height="26" rx="2"/>
-                <line x1="216" y1="50" x2="346" y2="50"/>
-                <text x="224" y="48" class="glyph__cap-tiny">netsuite</text>
-                <text x="316" y="48" class="glyph__cap-tiny">v23</text>
-                <g class="glyph__detail">
-                  <line x1="224" y1="58" x2="338" y2="58"/>
-                  <line x1="224" y1="62" x2="320" y2="62"/>
-                </g>
-                <!-- tick badge -->
-                <circle cx="338" cy="53" r="2"/>
+              <!-- field rows: label + value-line pairs -->
+              <text x="22" y="86" class="runtime__record-label">vendor</text>
+              <line x1="118" y1="83" x2="298" y2="83"/>
 
-                <rect x="216" y="74" width="130" height="26" rx="2"/>
-                <line x1="216" y1="84" x2="346" y2="84"/>
-                <text x="224" y="82" class="glyph__cap-tiny">sap s/4hana</text>
-                <text x="316" y="82" class="glyph__cap-tiny">v23</text>
-                <g class="glyph__detail">
-                  <line x1="224" y1="92" x2="338" y2="92"/>
-                  <line x1="224" y1="96" x2="324" y2="96"/>
-                </g>
-                <circle cx="338" cy="87" r="2"/>
+              <text x="22" y="108" class="runtime__record-label">vendor_id</text>
+              <line x1="118" y1="105" x2="234" y2="105"/>
 
-                <rect x="216" y="108" width="130" height="26" rx="2"/>
-                <line x1="216" y1="118" x2="346" y2="118"/>
-                <text x="224" y="116" class="glyph__cap-tiny">quickbooks</text>
-                <text x="316" y="116" class="glyph__cap-tiny">v23</text>
-                <g class="glyph__detail">
-                  <line x1="224" y1="126" x2="338" y2="126"/>
-                  <line x1="224" y1="130" x2="316" y2="130"/>
-                </g>
-                <circle cx="338" cy="121" r="2"/>
+              <text x="22" y="130" class="runtime__record-label">amount</text>
+              <line x1="118" y1="127" x2="226" y2="127"/>
 
-                <rect x="216" y="142" width="130" height="26" rx="2"/>
-                <line x1="216" y1="152" x2="346" y2="152"/>
-                <text x="224" y="150" class="glyph__cap-tiny">xero</text>
-                <text x="316" y="150" class="glyph__cap-tiny">v23</text>
-                <g class="glyph__detail">
-                  <line x1="224" y1="160" x2="338" y2="160"/>
-                  <line x1="224" y1="164" x2="328" y2="164"/>
-                </g>
-                <circle cx="338" cy="155" r="2"/>
+              <text x="22" y="152" class="runtime__record-label">currency</text>
+              <line x1="118" y1="149" x2="172" y2="149"/>
 
-                <!-- status badge -->
-                <rect x="216" y="180" width="130" height="22" rx="2"/>
-                <text x="223" y="194" class="glyph__cap-tiny">200 OK · 142ms</text>
-                <circle cx="332" cy="191" r="3"/>
-                <path d="M329 191 L331 193 L335 189"/>
-              </svg>
-            </figure>
-          </li>
+              <text x="22" y="174" class="runtime__record-label">issue_date</text>
+              <line x1="118" y1="171" x2="218" y2="171"/>
 
-          <li class="howitworks__step">
-            <div class="howitworks__step-text">
-              <span class="howitworks__step-num" aria-hidden="true">05</span>
-              <div class="howitworks__step-body">
-                <h3 class="howitworks__step-title">Sealed</h3>
-                <p>
-                  The chain closes when the workflow terminates. Every transition is signed with sha256. Each event hashes the event before it. Strip a row and the chain breaks. Six months later your audit committee reconstructs the entire workflow from one file. The proof writes itself as a side effect of doing the work.
-                </p>
-                <p class="howitworks__step-aside">
-                  <span class="howitworks__step-aside-tag">Today &middot; AP</span>
-                  the chain closes when the bill is paid and the bank matched.
-                </p>
-              </div>
-            </div>
-            <figure class="howitworks__step-glyph" aria-hidden="true">
-              <svg class="glyph glyph--sealed" viewBox="0 0 360 220" xmlns="http://www.w3.org/2000/svg">
-                <!-- caption -->
-                <text x="14" y="12" class="glyph__cap">audit chain · sha256</text>
+              <text x="22" y="196" class="runtime__record-label">due_date</text>
+              <line x1="118" y1="193" x2="218" y2="193"/>
 
-                <!-- block 1 -->
-                <rect x="14" y="40" width="68" height="92" rx="3"/>
-                <line x1="14" y1="56" x2="82" y2="56"/>
-                <text x="20" y="52" class="glyph__cap-tiny">captured</text>
-                <text x="20" y="70" class="glyph__cap-tiny">sha256</text>
-                <g class="glyph__detail">
-                  <line x1="20" y1="78" x2="76" y2="78"/>
-                  <line x1="20" y1="86" x2="74" y2="86"/>
-                  <line x1="20" y1="94" x2="72" y2="94"/>
-                  <line x1="20" y1="102" x2="68" y2="102"/>
-                </g>
-                <line x1="14" y1="116" x2="82" y2="116"/>
-                <text x="20" y="127" class="glyph__cap-tiny">t+00:00</text>
+              <text x="22" y="218" class="runtime__record-label">ref</text>
+              <line x1="118" y1="215" x2="262" y2="215"/>
 
-                <!-- chain link to block 2 -->
-                <line x1="82" y1="86" x2="98" y2="86"/>
-                <text x="78" y="80" class="glyph__cap-tiny">prev</text>
+              <text x="22" y="240" class="runtime__record-label">po_number</text>
+              <line x1="118" y1="237" x2="252" y2="237"/>
 
-                <!-- block 2 -->
-                <rect x="98" y="40" width="68" height="92" rx="3"/>
-                <line x1="98" y1="56" x2="166" y2="56"/>
-                <text x="104" y="52" class="glyph__cap-tiny">validated</text>
-                <text x="104" y="70" class="glyph__cap-tiny">sha256</text>
-                <g class="glyph__detail">
-                  <line x1="104" y1="78" x2="160" y2="78"/>
-                  <line x1="104" y1="86" x2="158" y2="86"/>
-                  <line x1="104" y1="94" x2="154" y2="94"/>
-                  <line x1="104" y1="102" x2="148" y2="102"/>
-                </g>
-                <line x1="98" y1="116" x2="166" y2="116"/>
-                <text x="104" y="127" class="glyph__cap-tiny">t+00:08</text>
+              <text x="22" y="262" class="runtime__record-label">terms</text>
+              <line x1="118" y1="259" x2="196" y2="259"/>
 
-                <!-- chain link to block 3 -->
-                <line x1="166" y1="86" x2="182" y2="86"/>
-                <text x="162" y="80" class="glyph__cap-tiny">prev</text>
+              <!-- subheader divider + caption -->
+              <line x1="22" y1="278" x2="298" y2="278"/>
+              <text x="22" y="294" class="runtime__record-label">line items</text>
 
-                <!-- block 3 -->
-                <rect x="182" y="40" width="68" height="92" rx="3"/>
-                <line x1="182" y1="56" x2="250" y2="56"/>
-                <text x="188" y="52" class="glyph__cap-tiny">decided</text>
-                <text x="188" y="70" class="glyph__cap-tiny">sha256</text>
-                <g class="glyph__detail">
-                  <line x1="188" y1="78" x2="244" y2="78"/>
-                  <line x1="188" y1="86" x2="240" y2="86"/>
-                  <line x1="188" y1="94" x2="236" y2="94"/>
-                  <line x1="188" y1="102" x2="232" y2="102"/>
-                </g>
-                <line x1="182" y1="116" x2="250" y2="116"/>
-                <text x="188" y="127" class="glyph__cap-tiny">t+04:12</text>
+              <!-- line item rows -->
+              <g class="runtime__record-detail">
+                <line x1="22" y1="308" x2="298" y2="308"/>
+                <line x1="22" y1="324" x2="278" y2="324"/>
+                <line x1="22" y1="340" x2="262" y2="340"/>
+                <line x1="22" y1="356" x2="290" y2="356"/>
+              </g>
 
-                <!-- chain link to block 4 -->
-                <line x1="250" y1="86" x2="266" y2="86"/>
-                <text x="246" y="80" class="glyph__cap-tiny">prev</text>
+              <!-- footer strip with audit + policy mark -->
+              <line x1="22" y1="378" x2="298" y2="378"/>
+              <text x="22" y="394" class="runtime__record-label">audit</text>
+              <g class="runtime__record-detail">
+                <rect x="118" y="384" width="20" height="14" rx="2"/>
+                <rect x="142" y="384" width="20" height="14" rx="2"/>
+                <rect x="166" y="384" width="20" height="14" rx="2"/>
+                <rect x="190" y="384" width="20" height="14" rx="2"/>
+                <line x1="214" y1="391" x2="244" y2="391"/>
+              </g>
+              <circle cx="270" cy="391" r="6"/>
+              <path d="M266 391 L269 394 L274 388"/>
 
-                <!-- block 4 (final) -->
-                <rect x="266" y="40" width="68" height="92" rx="3"/>
-                <line x1="266" y1="56" x2="334" y2="56"/>
-                <text x="272" y="52" class="glyph__cap-tiny">posted</text>
-                <text x="272" y="70" class="glyph__cap-tiny">sha256</text>
-                <g class="glyph__detail">
-                  <line x1="272" y1="78" x2="328" y2="78"/>
-                  <line x1="272" y1="86" x2="324" y2="86"/>
-                  <line x1="272" y1="94" x2="318" y2="94"/>
-                  <line x1="272" y1="102" x2="312" y2="102"/>
-                </g>
-                <line x1="266" y1="116" x2="334" y2="116"/>
-                <text x="272" y="127" class="glyph__cap-tiny">t+04:13</text>
+              <text x="22" y="420" class="runtime__record-label">policy</text>
+              <text x="118" y="420" class="runtime__record-label">v23 &middot; sealed</text>
+            </svg>
+          </aside>
+        </div>
 
-                <!-- chain to seal -->
-                <line x1="334" y1="86" x2="346" y2="86"/>
-
-                <!-- seal medallion (below the chain) -->
-                <circle cx="180" cy="174" r="22"/>
-                <circle cx="180" cy="174" r="16"/>
-                <path d="M168 174 L177 183 L192 168"/>
-                <text x="180" y="208" text-anchor="middle" class="glyph__cap-tiny">sealed · tamper-evident</text>
-
-                <!-- subtle connector from block 4 down to seal -->
-                <g class="glyph__detail">
-                  <path d="M300 132 Q260 154 200 168"/>
-                </g>
-              </svg>
-            </figure>
-          </li>
-        </ol>
       </div>
     </section>
 
@@ -765,6 +367,6 @@
       </div>
     </footer>
 
-    <script src="/site.js?v=3" defer></script>
+    <script src="/site.js?v=4" defer></script>
   </body>
 </html>

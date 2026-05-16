@@ -1702,32 +1702,36 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   HOW SOLDEN WORKS — five numbered editorial steps
-   Replaces the prior Record / Tabbed Demo / Audit Chain trio.
-   Pure prose, no cards. Numbered list with oversized step number
-   acting as a flush-left rule, step title in serif, body paragraph
-   in editorial body weight. Matches text-first register.
+   HOW SOLDEN WORKS — runtime concept timeline (Basis-style)
+   Four concept bullets on a vertical timeline rail. As the reader
+   scrolls, IntersectionObserver in site.js advances the active
+   bullet (data-state: future → active → past). Active bullet shows
+   full body in heavy color; past bullets show muted body; future
+   bullets show title only. One anchor visual (the typed-record
+   card) sits sticky-pinned on the right at desktop, keeping the
+   primitive in view while the runtime claims scroll past.
    ───────────────────────────────────────────────────────────── */
 
-.howitworks {
-  padding: 112px 0 112px;
+.runtime {
+  padding: 96px 0 112px;
   background: #F9F5EC;
 }
 
-.howitworks__inner {
-  max-width: 960px;
+.runtime__inner {
+  max-width: 1080px;
   margin: 0 auto;
   padding: 0 32px;
 }
 @media (max-width: 600px) {
-  .howitworks__inner { padding: 0 24px; }
+  .runtime__inner { padding: 0 24px; }
 }
 
-.howitworks__head {
-  margin: 0 0 64px;
+.runtime__head {
+  margin: 0 0 72px;
+  max-width: 720px;
 }
 
-.howitworks__title {
+.runtime__title {
   font-family: "Iowan Old Style", "Georgia", serif;
   font-size: clamp(34px, 5vw, 56px);
   line-height: 1.06;
@@ -1735,10 +1739,9 @@ body.theme-light-landing .section-eyebrow::before {
   font-weight: 500;
   color: #1F1B16;
   margin: 0 0 28px;
-  max-width: 22ch;
 }
 
-.howitworks__lead {
+.runtime__lead {
   font-family: "Iowan Old Style", "Georgia", serif;
   font-size: 19px;
   line-height: 1.62;
@@ -1746,134 +1749,132 @@ body.theme-light-landing .section-eyebrow::before {
   margin: 0;
 }
 
-.howitworks__list {
+.runtime__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 64px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .runtime__layout {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+}
+
+/* ── Bullet column ──────────────────────────────────────────── */
+
+.runtime__bullets {
   list-style: none;
   margin: 0;
   padding: 0;
-  counter-reset: howitworks-steps;
 }
 
-.howitworks__step {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  grid-template-areas: 'text glyph';
-  gap: 56px;
-  align-items: center;
-  padding: 48px 0;
-  border-top: 1px solid rgba(31, 27, 22, 0.12);
+.runtime__bullet {
+  position: relative;
+  padding-left: 44px;
+  padding-bottom: 48px;
 }
-.howitworks__step:last-child {
-  border-bottom: 1px solid rgba(31, 27, 22, 0.12);
+.runtime__bullet:last-child {
+  padding-bottom: 0;
 }
 
-/* Alternate: even rows place the glyph on the left */
-.howitworks__step:nth-child(even) {
-  grid-template-columns: 360px minmax(0, 1fr);
-  grid-template-areas: 'glyph text';
+/* Connector line from each dot down to the next */
+.runtime__bullet::before {
+  content: '';
+  position: absolute;
+  left: 6.5px;
+  top: 22px;
+  bottom: 0;
+  width: 1px;
+  background: rgba(31, 27, 22, 0.15);
+}
+.runtime__bullet:last-child::before {
+  display: none;
 }
 
-.howitworks__step-text {
-  grid-area: text;
-  display: grid;
-  grid-template-columns: 80px minmax(0, 1fr);
-  gap: 20px;
-  align-items: baseline;
+.runtime__dot {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid rgba(31, 27, 22, 0.32);
+  border-radius: 50%;
+  background: #F9F5EC;
+  z-index: 1;
+  box-sizing: border-box;
+  transition: background 0.4s ease, border-color 0.4s ease;
+}
+.runtime__bullet[data-state="active"] .runtime__dot,
+.runtime__bullet[data-state="past"] .runtime__dot {
+  background: #1F1B16;
+  border-color: #1F1B16;
 }
 
-.howitworks__step-glyph {
-  grid-area: glyph;
-}
-
-@media (max-width: 940px) {
-  .howitworks__step,
-  .howitworks__step:nth-child(even) {
-    grid-template-columns: 1fr;
-    grid-template-areas: 'text' 'glyph';
-    gap: 28px;
-    padding: 40px 0;
-  }
-  .howitworks__step-glyph {
-    justify-self: start;
-    width: 100%;
-    max-width: 420px;
-  }
-}
-
-@media (max-width: 600px) {
-  .howitworks__step-text {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-}
-
-.howitworks__step-num {
-  font-family: var(--font-mono);
-  font-size: clamp(28px, 4vw, 44px);
-  font-weight: 500;
-  color: rgba(31, 27, 22, 0.35);
-  line-height: 1;
-  letter-spacing: -0.01em;
-}
-
-.howitworks__step-body h3.howitworks__step-title {
+.runtime__bullet-title {
   font-family: "Iowan Old Style", "Georgia", serif;
-  font-size: clamp(26px, 3.2vw, 36px);
-  line-height: 1.1;
-  letter-spacing: -0.022em;
+  font-size: clamp(22px, 2.6vw, 30px);
+  line-height: 1.18;
+  letter-spacing: -0.02em;
   font-weight: 500;
-  color: #1F1B16;
   margin: 0 0 14px;
+  color: rgba(31, 27, 22, 0.35);
+  transition: color 0.45s ease;
+}
+.runtime__bullet[data-state="active"] .runtime__bullet-title {
+  color: #1F1B16;
+}
+.runtime__bullet[data-state="past"] .runtime__bullet-title {
+  color: rgba(31, 27, 22, 0.55);
 }
 
-.howitworks__step-body p {
+.runtime__bullet-body {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.55s ease, opacity 0.4s ease;
+}
+.runtime__bullet[data-state="active"] .runtime__bullet-body,
+.runtime__bullet[data-state="past"] .runtime__bullet-body {
+  max-height: 320px;
+  opacity: 1;
+}
+.runtime__bullet-body p {
   font-family: "Iowan Old Style", "Georgia", serif;
-  font-size: 18px;
-  line-height: 1.62;
+  font-size: 17px;
+  line-height: 1.6;
+  margin: 0;
   color: rgba(31, 27, 22, 0.82);
-  margin: 0;
+  transition: color 0.4s ease;
+}
+.runtime__bullet[data-state="past"] .runtime__bullet-body p {
+  color: rgba(31, 27, 22, 0.45);
 }
 
-/* Aside paragraph: the AP-specific instance line beneath each step's
-   runtime-level body. Smaller, italic, muted. The leading mono tag
-   marks it as "the wedge today" rather than "what the runtime does". */
-.howitworks__step-body p.howitworks__step-aside {
-  font-family: "Iowan Old Style", "Georgia", serif;
-  font-size: 15.5px;
-  font-style: italic;
-  line-height: 1.55;
-  color: rgba(31, 27, 22, 0.6);
-  margin: 16px 0 0;
+/* ── Anchor visual: typed-record card, sticky-pinned ────────── */
+
+.runtime__anchor {
+  position: sticky;
+  top: 100px;
+  align-self: start;
 }
-.howitworks__step-aside-tag {
-  display: inline-block;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-style: normal;
-  color: rgba(31, 27, 22, 0.52);
-  margin-right: 10px;
-  white-space: nowrap;
+@media (max-width: 900px) {
+  .runtime__anchor {
+    position: static;
+    justify-self: center;
+    width: 100%;
+    max-width: 360px;
+  }
 }
 
-/* ── Glyphs ──────────────────────────────────────────────────
-   Schematic ink line-art per step. Each path is drawn on scroll
-   via stroke-dasharray + stroke-dashoffset, staggered by element
-   index from site.js. Stroke = ink-on-cream, no fills. */
-.howitworks__step-glyph {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.glyph {
+.runtime__record {
   width: 100%;
-  max-width: 360px;
+  max-width: 320px;
   height: auto;
   display: block;
 }
-.glyph * {
+.runtime__record * {
   fill: none;
   stroke: #1F1B16;
   stroke-opacity: 0.78;
@@ -1882,63 +1883,33 @@ body.theme-light-landing .section-eyebrow::before {
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
 }
-
-/* Secondary detail strokes: thinner + softer, so primary forms read first */
-.glyph .glyph__detail,
-.glyph .glyph__detail * {
+.runtime__record text {
+  stroke: none;
+  fill: #1F1B16;
+}
+.runtime__record .runtime__record-detail,
+.runtime__record .runtime__record-detail * {
   stroke-width: 0.9;
   stroke-opacity: 0.5;
 }
-
-/* Ghost strokes: extensibility markers (e.g. the '+ next' surface
-   placeholder in step 03). Drawn faintly so the eye reads "this slot
-   exists" without competing with the real, named primaries. */
-.glyph .glyph__ghost,
-.glyph .glyph__ghost * {
-  stroke-width: 1;
-  stroke-opacity: 0.3;
-}
-.glyph .glyph__ghost text {
-  fill: rgba(31, 27, 22, 0.32);
-}
-
-.glyph text {
-  stroke: none;
-  fill: #1F1B16;
-}
-.glyph .glyph__cap {
+.runtime__record .runtime__record-tag {
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 8.5px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  fill: rgba(31, 27, 22, 0.6);
+}
+.runtime__record .runtime__record-tag-tiny {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px;
+  letter-spacing: 0.04em;
   fill: rgba(31, 27, 22, 0.5);
 }
-.glyph .glyph__cap-tiny {
+.runtime__record .runtime__record-label {
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 7.5px;
+  font-size: 9.5px;
   letter-spacing: 0.04em;
   fill: rgba(31, 27, 22, 0.55);
-}
-
-/* Line draw: site.js measures each path/line/rect/circle with
-   getTotalLength() and sets inline stroke-dasharray + initial
-   stroke-dashoffset = length. On .is-visible (toggled by an
-   IntersectionObserver), site.js sets dashoffset to 0 with a
-   staggered per-element transition delay. */
-
-.glyph text {
-  stroke: none;
-  fill: #1F1B16;
-  opacity: 0;
-}
-.glyph.is-visible text {
-  opacity: 0.55;
-  transition: opacity 0.6s ease-out;
-  transition-delay: 700ms;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .glyph text { opacity: 0.55; transition: none; }
 }
 
 
