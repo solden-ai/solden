@@ -641,12 +641,35 @@ body:not(.theme-dark) .footer-cta {
    minimal top nav, legal strip at the bottom. */
 
 .footer--hero {
-  background: #1F1B16;
+  position: relative;
+  isolation: isolate;
+  background-color: #1F1B16;
+  background-image: url('/assets/manifesto/cuneiform-tablet.jpg');
+  background-position: center right;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-blend-mode: multiply;
   color: rgba(249, 245, 236, 0.85);
   padding: 56px 0 32px;
   border-top: none;
+  overflow: hidden;
+}
+/* Dark gradient overlay so the pitch text on the left stays clean
+   while the cuneiform tablet reads through softly on the right. */
+.footer--hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(31, 27, 22, 0.96) 0%,
+    rgba(31, 27, 22, 0.88) 40%,
+    rgba(31, 27, 22, 0.55) 100%
+  );
+  z-index: -1;
 }
 .footer__inner {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 72px;
@@ -683,17 +706,7 @@ body:not(.theme-dark) .footer-cta {
 
 /* Hero center: pitch + CTA on left, illustration on right */
 .footer__hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 64px;
-  align-items: end;
-}
-@media (max-width: 900px) {
-  .footer__hero {
-    grid-template-columns: 1fr;
-    gap: 40px;
-    align-items: start;
-  }
+  display: block;
 }
 
 .footer__pitch-block { max-width: 520px; }
@@ -737,27 +750,6 @@ body:not(.theme-dark) .footer-cta {
   border-color: rgba(249, 245, 236, 0.7);
 }
 
-/* Illustration: museum-piece cuneiform tablet — bookends the
-   manifesto's first-ledger opening. Slight contrast/saturation
-   nudge so the image sits in the dark register. */
-.footer__visual {
-  margin: 0;
-  display: flex;
-  justify-content: flex-end;
-}
-.footer__visual img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  max-height: 380px;
-  width: auto;
-  filter: contrast(1.05) saturate(0.7) brightness(0.92);
-  border-radius: 4px;
-}
-@media (max-width: 900px) {
-  .footer__visual { justify-content: flex-start; }
-  .footer__visual img { max-height: 280px; }
-}
 
 /* Legal strip: tiny mark + copyright */
 .footer__legal {
