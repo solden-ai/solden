@@ -244,7 +244,6 @@
   function initRuntimeBullets() {
     var track = document.querySelector('.runtime__scroll-track');
     var bullets = document.querySelectorAll('.runtime__bullet');
-    var rail = document.querySelector('.runtime__rail');
     if (!track || !bullets.length) return;
 
     function setStates(activeIdx) {
@@ -254,34 +253,22 @@
       }
     }
 
-    // Compute scroll progress through the sticky-pinned scroll
-    // track. The track is multi-viewport tall; the sticky-frame
-    // pins inside it. Progress is 0 when the track's top hits the
-    // viewport top, 1 when its bottom hits the viewport bottom.
-    //
-    // Two things ride that progress value:
-    //   1. The rail-fill (--runtime-progress) grows top→down as one
-    //      continuous element — the visual spine through the section.
-    //   2. State changes (future/active/past) fire at 25%/50%/75%,
-    //      timed so the fill tip reaches each bullet's dot exactly
-    //      when that bullet activates.
+    // Basis-style scroll mapping. Track is (count + 1) × viewport
+    // tall. As the user scrolls past the track top, divide that
+    // scrolled distance by one viewport to get the active index.
+    // Each bullet owns exactly one viewport of scroll — generous
+    // reading pace before handoff.
     function update() {
       var rect = track.getBoundingClientRect();
       var viewportH = window.innerHeight || document.documentElement.clientHeight;
       var scrollable = rect.height - viewportH;
       if (scrollable <= 0) {
-        // Mobile / non-sticky fallback: mark everything active and
-        // fill the rail so it doesn't read as empty.
         for (var i = 0; i < bullets.length; i++) bullets[i].setAttribute('data-state', 'active');
-        if (rail) rail.style.setProperty('--runtime-progress', '100%');
         return;
       }
-      var raw = -rect.top / scrollable;
-      var progress = Math.max(0, Math.min(0.9999, raw));
-      // Drive the continuous rail-fill (0–100%).
-      if (rail) rail.style.setProperty('--runtime-progress', (progress * 100).toFixed(2) + '%');
-      // Discrete state per bullet — each owns 1/N of the range.
-      var activeIdx = Math.floor(progress * bullets.length);
+      // -rect.top = how far we've scrolled past the track top.
+      var scrolled = -rect.top;
+      var activeIdx = Math.max(0, Math.min(bullets.length - 1, Math.floor(scrolled / viewportH)));
       setStates(activeIdx);
     }
 

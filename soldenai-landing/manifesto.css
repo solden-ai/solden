@@ -1792,9 +1792,10 @@ body.theme-light-landing .section-eyebrow::before {
    flurry of state changes flying past. */
 .runtime__scroll-track {
   position: relative;
-  /* 4 bullets × 70vh of scroll each, plus 30vh head/tail breathing
-     so the first/last bullet activations don't feel clipped. */
-  height: 310vh;
+  /* (count + 1) × viewport-height. 4 bullets → 5 viewports of
+     scroll-distance. Matches Basis's spacing so each bullet gets
+     a full viewport of reading time before the next activates. */
+  height: 500vh;
 }
 
 .runtime__sticky-frame {
@@ -1833,111 +1834,98 @@ body.theme-light-landing .section-eyebrow::before {
   list-style: none;
   margin: 0;
   padding: 0;
-  position: relative;
-}
-
-/* Continuous vertical rail spanning all bullets. Replaces the
-   per-bullet ::before connector with one unbroken element. The
-   rail-fill grows top→down as the reader scrolls, driven by the
-   --runtime-progress CSS custom property set in site.js. This is
-   the single continuous motion through the section — the visual
-   spine the eye locks onto. */
-.runtime__rail {
-  position: absolute;
-  left: 6.5px;
-  top: 17px;
-  bottom: 17px;
-  width: 1px;
-  background: rgba(31, 27, 22, 0.15);
-  pointer-events: none;
-  z-index: 0;
-}
-.runtime__rail-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: var(--runtime-progress, 0%);
-  background: #1F1B16;
-  transform-origin: top;
-  will-change: height;
 }
 
 .runtime__bullet {
   position: relative;
   padding-left: 44px;
-  padding-bottom: 48px;
+  padding-bottom: 24px;
 }
 .runtime__bullet:last-child {
   padding-bottom: 0;
 }
 
+/* Per-bullet connector line — always solid black, flex-equivalent
+   via absolute positioning so it reaches the next dot regardless
+   of body height. The state readout is carried by the dot (hollow
+   vs filled) + heading size + body collapse. No fill animation. */
+.runtime__bullet::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 26px;
+  bottom: 0;
+  width: 1px;
+  background: #1F1B16;
+}
+.runtime__bullet:last-child::before {
+  display: none;
+}
+
+/* Basis-style dot: 18px hollow circle default, fills solid black
+   on active. Same size in every state — visual hierarchy comes
+   from the heading size and the body collapse, not the dot. */
 .runtime__dot {
   position: absolute;
   left: 0;
-  top: 10px;
-  width: 14px;
-  height: 14px;
-  border: 1.5px solid rgba(31, 27, 22, 0.32);
+  top: 12px;
+  width: 18px;
+  height: 18px;
+  border: 1px solid #1F1B16;
   border-radius: 50%;
-  background: #F9F5EC;
+  background: transparent;
   z-index: 1;
   box-sizing: border-box;
-  transform-origin: center center;
-  /* transform-based resize is GPU-accelerated and scales from the
-     dot's center, so the active state grows in place rather than
-     shifting position while it resizes. */
-  transition: background 0.35s ease,
-              border-color 0.35s ease,
-              transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.35s ease;
+  transition: background 0.3s ease;
 }
-/* Past: filled, base size. The journey-passed state. */
-.runtime__bullet[data-state="past"] .runtime__dot {
-  background: #1F1B16;
-  border-color: #1F1B16;
-}
-/* Active: filled, scaled up with a cream halo so the eye lands. */
 .runtime__bullet[data-state="active"] .runtime__dot {
   background: #1F1B16;
-  border-color: #1F1B16;
-  transform: scale(1.3);
-  box-shadow: 0 0 0 4px rgba(249, 245, 236, 1),
-              0 0 0 5px rgba(31, 27, 22, 0.18);
 }
 
-/* Titles behave the same as bodies: hidden by default, revealed
-   only while their bullet is active. Past and future both fade
-   the title out so the active bullet is the lone focal point.
-   The rail fill + dots carry the 'you are here' work. */
+/* Basis-style title: always visible, but smaller + faded when
+   inactive. Active state scales up the font-size and brings to
+   full opacity. The size change is the visual cue — heading
+   grows into focus, shrinks back out. Transitions size, opacity,
+   and bottom margin together so the layout settles smoothly. */
 .runtime__bullet-title {
   font-family: "Iowan Old Style", "Georgia", serif;
-  font-size: clamp(22px, 2.6vw, 30px);
+  font-size: clamp(18px, 2vw, 22px);
   line-height: 1.18;
-  letter-spacing: -0.02em;
-  font-weight: 600;
-  margin: 0 0 14px;
+  letter-spacing: -0.018em;
+  font-weight: 500;
   color: #1F1B16;
-  opacity: 0;
-  transition: opacity 0.45s ease;
-  will-change: opacity;
+  opacity: 0.5;
+  margin: 0 0 10px;
+  transition: font-size 0.4s ease, opacity 0.4s ease, margin-bottom 0.4s ease;
 }
 .runtime__bullet[data-state="active"] .runtime__bullet-title {
+  font-size: clamp(26px, 3vw, 34px);
   opacity: 1;
+  margin: 0 0 18px;
 }
 
-/* Body slots are pre-reserved at full height (no layout shift),
-   but only the ACTIVE bullet's body is visible. Past and future
-   bodies are both invisible so the section reads as one focal
-   point at a time, not an accumulating scroll. The progress rail
-   is the only 'you are here' indicator the reader needs. */
+/* Basis-style body collapse. Future = max-height 0 + opacity 0
+   (the body slot doesn't take vertical space). Active (open) =
+   full height + opacity 1. Past (done) = full height + opacity
+   0.5 + transform scale(0.8) so the body 'shrinks back' visually
+   as it becomes done. */
 .runtime__bullet-body {
+  overflow: hidden;
+  max-height: 0;
   opacity: 0;
-  transition: opacity 0.45s ease;
-  will-change: opacity;
+  padding-bottom: 4px;
+  transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.35s ease;
+}
+.runtime__bullet[data-state="active"] .runtime__bullet-body,
+.runtime__bullet[data-state="past"] .runtime__bullet-body {
+  max-height: 500px;
 }
 .runtime__bullet[data-state="active"] .runtime__bullet-body {
   opacity: 1;
+}
+.runtime__bullet[data-state="past"] .runtime__bullet-body {
+  opacity: 0.5;
 }
 .runtime__bullet-body p {
   font-family: "Iowan Old Style", "Georgia", serif;
@@ -1945,6 +1933,15 @@ body.theme-light-landing .section-eyebrow::before {
   line-height: 1.6;
   margin: 0;
   color: rgba(31, 27, 22, 0.85);
+  transform-origin: top left;
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.runtime__bullet[data-state="active"] .runtime__bullet-body p {
+  transform: scale(1);
+}
+.runtime__bullet[data-state="past"] .runtime__bullet-body p {
+  transform: scale(0.85);
+  width: calc(100% / 0.85);
 }
 
 /* ── Anchor visual: typed-record card ───────────────────────── */
