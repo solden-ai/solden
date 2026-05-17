@@ -1906,22 +1906,24 @@ body.theme-light-landing .section-eyebrow::before {
               0 0 0 5px rgba(31, 27, 22, 0.18);
 }
 
+/* Titles behave the same as bodies: hidden by default, revealed
+   only while their bullet is active. Past and future both fade
+   the title out so the active bullet is the lone focal point.
+   The rail fill + dots carry the 'you are here' work. */
 .runtime__bullet-title {
   font-family: "Iowan Old Style", "Georgia", serif;
   font-size: clamp(22px, 2.6vw, 30px);
   line-height: 1.18;
   letter-spacing: -0.02em;
-  font-weight: 500;
+  font-weight: 600;
   margin: 0 0 14px;
-  color: rgba(31, 27, 22, 0.32);
-  transition: color 0.35s ease, font-weight 0.35s ease;
+  color: #1F1B16;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  will-change: opacity;
 }
 .runtime__bullet[data-state="active"] .runtime__bullet-title {
-  color: #1F1B16;
-  font-weight: 600;
-}
-.runtime__bullet[data-state="past"] .runtime__bullet-title {
-  color: rgba(31, 27, 22, 0.42);
+  opacity: 1;
 }
 
 /* Body slots are pre-reserved at full height (no layout shift),
