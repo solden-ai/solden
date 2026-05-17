@@ -1387,61 +1387,6 @@ body.theme-light-landing .category-pair__line--accent {
   color: #1F1B16;
 }
 
-/* ─── Announcement bar (Basis-pattern) ─────────────────────────
-   Thin promo strip above the nav. Surfaces the Manifesto as a
-   first-class destination, not just a nav link. Matches the
-   Basis "Series B announcement" treatment but for our content. */
-
-.announcement-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 10px 24px;
-  text-decoration: none;
-  background: #1F1B16;
-  color: #F9F5EC;
-  font-size: 13px;
-  letter-spacing: -0.005em;
-  line-height: 1.4;
-  border-bottom: 1px solid rgba(249, 245, 236, 0.08);
-  transition: background-color .15s var(--ease-out);
-}
-.announcement-bar:hover { background: #2c2620; }
-
-.announcement-bar__label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(249, 245, 236, 0.55);
-  padding-right: 14px;
-  border-right: 1px solid rgba(249, 245, 236, 0.18);
-}
-
-.announcement-bar__text {
-  font-family: "Iowan Old Style", "Georgia", serif;
-  font-style: italic;
-  font-size: 15px;
-  color: #F9F5EC;
-}
-
-.announcement-bar__arrow {
-  font-size: 14px;
-  color: rgba(249, 245, 236, 0.7);
-  transition: transform .2s var(--ease-out), color .2s var(--ease-out);
-}
-.announcement-bar:hover .announcement-bar__arrow {
-  transform: translateX(3px);
-  color: #F9F5EC;
-}
-
-@media (max-width: 640px) {
-  .announcement-bar { padding: 8px 16px; gap: 10px; }
-  .announcement-bar__label { font-size: 9px; padding-right: 10px; }
-  .announcement-bar__text { font-size: 13px; }
-}
-
 /* ─── Section eyebrow (Attio category-tag pattern) ────────────
    Small monospace caps tag above each section title. Gives each
    section a visible "chapter" label like Attio's tabs above their
@@ -1462,47 +1407,6 @@ body.theme-light-landing .section-eyebrow::before {
   font-family: "Iowan Old Style", "Georgia", serif;
   font-style: italic;
   letter-spacing: 0;
-}
-
-/* ═════════════════════════════════════════════════════════════
-   Announcement bar (Basis-style) — thin promo bar above topbar
-   ───────────────────────────────────────────────────────────── */
-.announcement-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 10px 24px;
-  background: #1F1B16;
-  color: #F9F5EC;
-  text-decoration: none;
-  font-family: var(--font);
-  font-size: 13px;
-  letter-spacing: -0.005em;
-  transition: background 0.2s ease-out;
-}
-.announcement-bar:hover { background: #0a0907; }
-.announcement-bar__label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(249, 245, 236, 0.55);
-}
-.announcement-bar__text {
-  font-style: italic;
-  font-family: "Iowan Old Style", "Georgia", serif;
-  font-size: 14px;
-  color: #F9F5EC;
-}
-.announcement-bar__arrow {
-  font-size: 14px;
-  transition: transform 0.25s ease-out;
-}
-.announcement-bar:hover .announcement-bar__arrow { transform: translateX(3px); }
-@media (max-width: 600px) {
-  .announcement-bar { font-size: 12px; padding: 8px 16px; }
-  .announcement-bar__text { font-size: 12px; }
 }
 
 /* ═════════════════════════════════════════════════════════════
