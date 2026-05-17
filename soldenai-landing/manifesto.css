@@ -1801,11 +1801,13 @@ body.theme-light-landing .section-eyebrow::before {
 .runtime__sticky-frame {
   position: sticky;
   top: 105px;
-  height: calc(100vh - 105px);
-  display: flex;
-  align-items: flex-start;
+  /* Sized to content (bullets + anchor + padding) so there's no
+     empty container space below the bullets when sticky-pinned.
+     The scroll-track parent is much taller, so sticky still has
+     plenty of room to pin. Padding-top gives breathing room from
+     the topbar once the frame engages. */
   padding-top: 40px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .runtime__layout {
