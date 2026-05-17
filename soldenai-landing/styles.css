@@ -349,7 +349,18 @@ body.theme-dark .nav__link:hover { color: var(--text-on-dark); }
 body.theme-dark .nav__link--manifesto { color: var(--text-on-dark); }
 .nav__link--manifesto::after { transform: scaleX(1); opacity: 0.4; }
 
-.topbar__cta { display: flex; gap: 12px; align-items: center; }
+.topbar__cta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  transition: opacity 0.4s ease;
+}
+/* On scroll, the brand collapses to a centered mark and the nav
+   cluster on the right fades out with it — leaving just the icon. */
+.topbar.is-scrolled .topbar__cta {
+  opacity: 0;
+  pointer-events: none;
+}
 
 @media (max-width: 720px) {
   .nav { display: none; }
