@@ -265,8 +265,53 @@ body.theme-dark .topbar.is-scrolled {
   gap: 32px;
 }
 
-.brand { display: inline-flex; align-items: center; }
-.brand__lockup { height: 24px; width: auto; display: block; }
+/* ModernRelay-style brand: at the top of the page the full lockup
+   shows on the left of the topbar; on scroll the lockup fades out
+   and a 28×28 icon mark fades in. The container itself is always
+   28×28 so the icon centers cleanly when the brand translates to
+   the middle of the navbar (translate distance set as
+   --brand-translate-x by site.js, recomputed on resize). */
+.brand {
+  position: relative;
+  display: block;
+  width: 28px;
+  height: 28px;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+.topbar.is-scrolled .brand {
+  transform: translateX(var(--brand-translate-x, 0));
+}
+
+.brand__lockup {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 24px;
+  width: auto;
+  max-width: none;
+  transform: translateY(-50%);
+  display: block;
+  transition: opacity 0.4s ease;
+}
+.topbar.is-scrolled .brand__lockup {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.brand__mark {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.topbar.is-scrolled .brand__mark {
+  opacity: 1;
+}
 
 .nav { display: flex; align-items: center; gap: 28px; }
 

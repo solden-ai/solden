@@ -213,6 +213,25 @@
     if (!topbar) return;
     var THRESHOLD = 60;
     var ticking = false;
+
+    var row = topbar.querySelector('.topbar__row');
+    var brand = topbar.querySelector('.brand');
+
+    // ModernRelay-style brand translate: compute the X distance that
+    // moves the 28×28 brand container from its natural left position
+    // to the horizontal center of the topbar row. Stored as a CSS
+    // custom property so the transform animates GPU-accelerated when
+    // .is-scrolled toggles. Recomputed on resize.
+    function updateBrandCenter() {
+      if (!row || !brand) return;
+      var rowRect = row.getBoundingClientRect();
+      var brandRect = brand.getBoundingClientRect();
+      var rowCenterX = rowRect.left + rowRect.width / 2;
+      var brandCenterX = brandRect.left + brandRect.width / 2;
+      var translateX = Math.round(rowCenterX - brandCenterX);
+      topbar.style.setProperty('--brand-translate-x', translateX + 'px');
+    }
+
     function update() {
       ticking = false;
       topbar.classList.toggle('is-scrolled', (window.scrollY || window.pageYOffset || 0) > THRESHOLD);
@@ -223,6 +242,11 @@
       window.requestAnimationFrame(update);
     }
     window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', updateBrandCenter, { passive: true });
+
+    // Initial: compute center BEFORE first scroll so the transform is
+    // ready by the time .is-scrolled lands.
+    updateBrandCenter();
     update();
   }
 
