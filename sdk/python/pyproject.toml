@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "solden"
+version = "0.1.0"
+description = "Official Python SDK for the Solden /v1 API"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Solden Technologies Ltd.", email = "support@soldenai.com" },
+]
+keywords = ["solden", "finance", "ap", "workflow", "agent", "api"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Office/Business :: Financial",
+]
+dependencies = [
+    "httpx>=0.25,<1.0",
+]
+
+[project.urls]
+Homepage = "https://soldenai.com"
+Documentation = "https://github.com/soldenai/Clearledgr-AP/tree/main/docs/v1"
+Source = "https://github.com/soldenai/Clearledgr-AP/tree/main/sdk/python"
+Changelog = "https://github.com/soldenai/Clearledgr-AP/blob/main/sdk/python/CHANGELOG.md"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "respx>=0.20",
+]
+
+[tool.setuptools.packages.find]
+include = ["solden*"]

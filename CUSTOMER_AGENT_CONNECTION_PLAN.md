@@ -430,6 +430,30 @@ extended to read/write them).
   the three new columns; `list_api_keys` + `get_api_key` SELECTs
   include them.
 
+### Step 12 — Python SDK ✅ SHIPPED (publish to PyPI pending creds)
+
+**Files:** new [sdk/python/](sdk/python/) package, name `solden`.
+
+- Sync (`Solden`) and async (`AsyncSolden`) clients with identical
+  resource surface: `me`, `records`, `intents`, `webhooks`, `audit`.
+- Single dependency: `httpx>=0.25,<1.0`. No pydantic, no other deps —
+  stays under 30KB installed.
+- Auto-generated UUID4 `Idempotency-Key` on `intents.execute` (caller
+  can override with an explicit key for retry-aware callers).
+- 429 auto-retry honouring `Retry-After` (default `max_retries=3`).
+- Typed exception per error_code (`InvalidScope`, `StateConflict`,
+  `IdempotencyConflict`, `RateLimitExceeded`, …) all inheriting from
+  `SoldenError`.
+- `verify_signature(body, header, secret=...)` helper for inbound
+  webhook verification (constant-time `hmac.compare_digest`).
+- `iter_records()` walks `next_cursor` automatically.
+- Env-var auth via `SOLDEN_API_KEY`.
+- 23 unit tests using `httpx.MockTransport` (no network, no backend).
+
+**Publish step (left for human):** `cd sdk/python && python -m build
+&& twine upload dist/*` once PyPI account is set up under the
+`solden` package name.
+
 ### Step 11 — Developer docs ✅ SHIPPED
 
 **Files:** new [docs/v1/](docs/v1/) section. Five focused docs that
