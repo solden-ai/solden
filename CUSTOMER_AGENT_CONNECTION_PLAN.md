@@ -1,6 +1,7 @@
 # Customer-side agent connection — implementation plan
 
-**Status:** planned, not started. Authored 2026-05-18.
+**Status:** in progress. Authored 2026-05-18. Steps 1-5 shipped to main;
+decisions on the 7 open questions settled below.
 
 ## Goal
 
@@ -26,23 +27,46 @@ live records.
 
 ## The shape we're shipping
 
-Five sub-pieces, each independently testable:
+Nine sub-pieces (expanded from five after Mo's call on the 7 open
+questions: Box-type-agnostic vocab, idempotency keys, rate limits,
+webhooks, and a Python SDK are all in v1):
 
-1. **API key + service-account auth** for agent callers.
+1. **API key + service-account auth** for agent callers. **[shipped]**
 2. **Agent identity in the audit chain**: extend `audit_events.actor`
    with `actor_type` ∈ {`human`, `service`, `agent`, `system`},
    `agent_id`, `agent_version`. Additive migration. Hash chain stays
-   backward-compatible.
+   backward-compatible. **[shipped]**
 3. **Public intent endpoint**: existing `/api/agent/intents/execute`
    re-exposed at `/v1/intents/execute` with API-key auth and a stable
-   schema.
+   schema. **[shipped]**
 4. **Generic Box read API**: new `/v1/records` (and
-   `/v1/records/{id}`) returning the canonical `BoxSummary` shape.
+   `/v1/records/{id}`) returning the canonical record shape.
    Box-type-agnostic by construction so the second Box type ships
-   without re-architecting the API.
-5. **Developer surface**: API keys management page in the workspace,
-   reference docs, one quickstart (auth → list records → execute
-   intent → see audit row).
+   without re-architecting the API. **[shipped]**
+5. **Baseline `/v1` surface**: `/v1/health`, `/v1/me`, `/v1/audit`.
+   **[shipped]**
+6. **Box-type-agnostic scope vocab**: ship `records:read`,
+   `records:write`, `intents:execute`, `intents:preview`,
+   `audit:read`, `webhooks:manage` as canonical scopes. The auth dep
+   accepts either the new vocab OR the old AP-pinned vocab
+   (`read:ap_items` covers `records:read` for AP-keyed records)
+   during a 6-month deprecation window.
+7. **Idempotency keys** on `/v1/intents/execute`: client passes
+   `Idempotency-Key: <uuid>` header (or body field). Server caches
+   the response in a new `intent_responses` table for 24h. Same
+   key + same payload returns the cached response; same key +
+   different payload returns 409 conflict. Stripe pattern.
+8. **Per-key rate limits**: 100 req/min per API key, 1000 req/min
+   per organisation. Cheap counter middleware that runs after
+   `require_agent_key`. Org-level cap protects shared capacity;
+   per-key cap protects against a single runaway agent.
+9. **Webhooks**: `/v1/webhooks` CRUD (subscribe, list, revoke),
+   HMAC-SHA256 outbound signatures, retries with exponential
+   backoff. Foundation already exists (`webhook_subscriptions` +
+   `webhook_deliveries` tables); v1 is the public surface + docs.
+10. **Developer surface**: API-keys management page in the workspace,
+    reference docs, one quickstart, plus a thin Python SDK published
+    to PyPI as `solden`.
 
 ## Current state
 
@@ -185,7 +209,9 @@ Stable error_code values: `invalid_token`, `invalid_scope`, `not_found`,
 
 ## Implementation steps
 
-### Step 1 — Migration: extend api_keys + audit_events
+Steps 1-5 are shipped to main. Status under each step.
+
+### Step 1 — Migration: extend api_keys + audit_events **[SHIPPED — commit 30d8fa3a]**
 
 **Files:** [clearledgr/core/migrations.py](clearledgr/core/migrations.py)
 (new migration), [clearledgr/core/database.py](clearledgr/core/database.py)
@@ -204,7 +230,7 @@ Stable error_code values: `invalid_token`, `invalid_scope`, `not_found`,
 **Why additive:** hash chain stays valid. New columns default to NULL
 for existing rows. New rows fill them.
 
-### Step 2 — API key auth dependency for the public surface
+### Step 2 — API key auth dependency for the public surface **[SHIPPED — commit 95c26cbd]**
 
 **Files:** new [clearledgr/api/v1_auth.py](clearledgr/api/v1_auth.py),
 [clearledgr/core/auth.py](clearledgr/core/auth.py) (resolve helper).
@@ -221,7 +247,7 @@ for existing rows. New rows fill them.
   `f5d542a7` — every rejected agent call lands in audit as
   `event_type=authorization_denied`.
 
-### Step 3 — `/v1/intents` router
+### Step 3 — `/v1/intents` router **[SHIPPED — commit 95c26cbd]**
 
 **Files:** new [clearledgr/api/v1_intents.py](clearledgr/api/v1_intents.py),
 register in main.py.
@@ -237,7 +263,7 @@ register in main.py.
 - Typed error envelopes via a small `error_response(code, message)`
   helper.
 
-### Step 4 — `/v1/records` router
+### Step 4 — `/v1/records` router **[SHIPPED — commit 2dc04e2b]**
 
 **Files:** new [clearledgr/api/v1_records.py](clearledgr/api/v1_records.py).
 
@@ -251,7 +277,7 @@ register in main.py.
 - Per-tenant filter enforced by the auth dependency — the agent's
   `organization_id` is the only org returned, never inferable.
 
-### Step 5 — `/v1/audit`, `/v1/me`, `/v1/health` (minimum surface)
+### Step 5 — `/v1/audit`, `/v1/me`, `/v1/health` (minimum surface) **[SHIPPED — commit 2dc04e2b]**
 
 **Files:** extend [clearledgr/api/v1.py](clearledgr/api/v1.py).
 
@@ -261,7 +287,78 @@ register in main.py.
 - `GET /v1/audit?box_id=&from=&to=` — read-only audit history for the
   caller's org. Scope `audit:read`.
 
-### Step 6 — API keys management page in workspace
+### Step 6 — Box-type-agnostic scope vocab
+
+**Files:** [clearledgr/api/api_keys.py](clearledgr/api/api_keys.py)
+(extend `_SCOPE_CATALOG`),
+[clearledgr/api/v1_auth.py](clearledgr/api/v1_auth.py) (accept-either
+fallback),
+[clearledgr/api/v1_intents.py](clearledgr/api/v1_intents.py) +
+[clearledgr/api/v1_records.py](clearledgr/api/v1_records.py) +
+[clearledgr/api/v1.py](clearledgr/api/v1.py) (switch the scope strings
+each route asks for).
+
+- Add `records:read`, `records:write`, `intents:execute`,
+  `intents:preview`, `audit:read`, `webhooks:manage` to
+  `_SCOPE_CATALOG`.
+- Auth dep's `has_scope(target)` falls back to a synonym map:
+  `records:read` ← `read:ap_items` (for AP-only keys), etc. So
+  customers don't get locked out on rename day.
+- /v1 routes ask for the new vocab. The old AP-pinned vocab still
+  works through the synonym fallback for 6 months.
+
+### Step 7 — Idempotency keys on `/v1/intents/execute`
+
+**Files:** migration adds `intent_responses` table; route reads
+`Idempotency-Key` header; response cache wrapper around
+`runtime.execute_intent`.
+
+- New `intent_responses` table: `(idempotency_key TEXT PRIMARY KEY,
+  organization_id, payload_hash TEXT, response_json TEXT, ts TEXT,
+  expires_at TEXT)`. TTL 24h via a periodic cleanup job (or just
+  a query-time `WHERE expires_at > now()` filter).
+- `/v1/intents/execute` reads `Idempotency-Key` from header first,
+  then body. Generates payload hash. If a row exists with that key:
+  - same hash → return cached response, HTTP 200, header
+    `Solden-Idempotent-Replay: true`.
+  - different hash → 409 `{error_code: "idempotency_conflict"}`.
+- Otherwise: execute the intent, store the response with hash + TTL,
+  return.
+
+### Step 8 — Per-key rate limits
+
+**Files:** new
+[clearledgr/api/v1_rate_limit.py](clearledgr/api/v1_rate_limit.py)
+helper, integrated into the auth dep (or as a separate middleware
+that runs only on /v1 paths).
+
+- Per-key counter: 100 req/min sliding window. Backed by an
+  in-process token bucket for v1 (Redis upgrade when we have more
+  than one app process).
+- Per-org counter: piggybacks on the existing
+  `RateLimitMiddleware`; v1 just bumps the cap to 1000 req/min for
+  organisations with active /v1 keys.
+- Limit-breach response: HTTP 429, `Retry-After` header, audit
+  event `rate_limit_exceeded` with key_id + window stats.
+
+### Step 9 — Webhooks (`/v1/webhooks/*`)
+
+**Files:** new [clearledgr/api/v1_webhooks.py](clearledgr/api/v1_webhooks.py),
+[clearledgr/services/webhook_dispatcher.py](clearledgr/services/webhook_dispatcher.py)
+(likely already exists for migration 52's `webhook_deliveries`
+table; extend for the public-API event payloads).
+
+- `POST /v1/webhooks` — register `{url, event_types, description}`.
+  Returns `{id, signing_secret}` once. Scope: `webhooks:manage`.
+- `GET /v1/webhooks` — list subscriptions for the caller's org.
+- `DELETE /v1/webhooks/{id}` — revoke.
+- Outbound: every event matching a subscription's `event_types`
+  filter is POSTed to the URL with `Solden-Signature: t=<ts>,
+  v1=<hmac-sha256>` header. Retries: 1s, 5s, 30s, 5m, 1h (5
+  attempts total).
+- Event payload shape published in docs.
+
+### Step 10 — API keys management page in workspace
 
 **Files:** new
 [ui/web-app/src/routes/pages/ApiKeysPage.js](ui/web-app/src/routes/pages/ApiKeysPage.js),
@@ -275,18 +372,37 @@ new backend route `/api/workspace/api-keys/*`.
 - "Revoke" button per key.
 - Admin-only route (uses existing role check).
 
-### Step 7 — Developer docs page
+### Step 11 — Developer docs
 
-**Files:** new [soldenai-landing/docs/](soldenai-landing/docs/) section
-OR a separate `docs.soldenai.com` host (decision in open questions).
+**Files:** new [soldenai-landing/docs/](soldenai-landing/docs/)
+section (in-repo for v1 per the Decisions section).
 
 - Reference for each endpoint (request/response shape, errors).
 - Authentication walkthrough.
 - Quickstart: bash + Python snippets to (a) auth, (b) list records,
-  (c) execute one intent, (d) read the resulting audit row.
+  (c) execute one intent, (d) subscribe to a webhook, (e) read the
+  audit row.
 - Error code reference.
 
-### Step 8 — Tests
+### Step 12 — Python SDK (published to PyPI as `solden`)
+
+**Files:** new top-level [`sdk/python/`](sdk/python/) directory with
+its own `pyproject.toml`, separate package release.
+
+- `Solden(api_key)` client. Namespaced methods: `client.records.list(...)`,
+  `client.records.get(...)`, `client.intents.execute(...)`,
+  `client.intents.preview(...)`, `client.webhooks.subscribe(...)`,
+  `client.webhooks.list(...)`, `client.webhooks.revoke(...)`,
+  `client.audit.list(...)`, `client.me()`.
+- Auto-retries with idempotency: every `intents.execute` call without
+  an explicit `idempotency_key` gets one generated automatically;
+  network retries reuse it.
+- Typed error envelopes: `solden.errors.{InvalidScope, NotFound,
+  StateConflict, RateLimited, ...}`.
+- Test harness against a mock server.
+- Publish to PyPI under `solden`.
+
+### Step 13 — Tests
 
 - Backend integration tests under [tests/test_v1_*.py](tests/):
   - Unauthorised request → 401 with typed error envelope + audit row
@@ -300,42 +416,68 @@ OR a separate `docs.soldenai.com` host (decision in open questions).
   - Records list filtered by state and box_type.
 - Frontend component tests for ApiKeysPage.
 
-## Open questions
+## Decisions (settled 2026-05-18)
 
-1. **Scope vocabulary.** The plan uses
-   `intents:execute, records:read, audit:read`. Are there other minimum
-   scopes needed for v1 (e.g., `intents:preview` as separate from
-   execute)? Sub-decision: should preview be free (no scope), since
-   it's read-only?
+The seven open questions are answered. Two pulled new sub-pieces into
+v1 (rate limits and the Python SDK); two confirmed existing direction
+(Box-type-agnostic vocab, Stripe-pattern idempotency); two stayed open
+(docs hosting, design partner).
 
-2. **Rate limits.** Per-key? Per-org? What numbers? The existing
-   `RateLimitMiddleware` covers org-level; per-key needs a new
-   middleware or a wrapping decorator. Suggest: org limit (1000 req/min)
-   + per-key limit (100 req/min) for v1.
+1. **Scope vocabulary — Box-type-agnostic.** Ship
+   `records:read`, `records:write`, `intents:execute`,
+   `intents:preview`, `audit:read`, `webhooks:manage` as canonical
+   scopes for the public /v1 surface. The existing
+   `read:ap_items` / `write:ap_items` vocab keeps working at the
+   internal-routes layer; the auth dep accepts either form on /v1
+   during a 6-month deprecation window. Decision rationale: the
+   runtime claim is workflow-type-agnostic; AP-pinned scope tokens
+   force a deprecation cycle once the second Box type lands and
+   leak AP-shape assumptions into the public contract.
 
-3. **Idempotency keys for `/v1/intents/execute`.** Client passes
-   `Idempotency-Key` header → server stores result and returns the same
-   response on retry. Standard pattern (Stripe). Yes/no for v1?
+2. **Rate limits — enforce in v1.** Per-key: 100 req/min.
+   Per-organisation: 1000 req/min. Reasons: cost defense (runaway
+   agent in a tight loop costs us $$ / CPU / DB), abuse (leaked
+   keys), fairness (one tenant monopolises shared capacity). For
+   the first design partner the risk is theoretical but the
+   middleware is cheap to land, and shipping without it forces a
+   second deprecation conversation later. Implementation: a tiny
+   per-key counter that runs after `require_agent_key`; org-level
+   cap reuses `RateLimitMiddleware`.
 
-4. **Webhooks.** Should `/v1` ship with subscription for state
-   transitions (so a customer agent can react to changes without
-   polling)? `webhook_subscriptions` table already exists at
-   [clearledgr/core/database.py:1093](clearledgr/core/database.py#L1093).
-   v1 minimum vs. v1.1 follow-up?
+3. **Idempotency keys — yes, Stripe pattern.** Client passes
+   `Idempotency-Key: <uuid>` header (or body field). Server caches
+   `(key → response)` for 24h in a new `intent_responses` table.
+   Same key + same payload returns the cached response; same key +
+   different payload returns 409 conflict (a defensive guard
+   against buggy clients reusing a key). The
+   `audit_events.idempotency_key UNIQUE` constraint already covers
+   the substrate side; the new table is just the response cache so
+   the API hands back the original 200 instead of replaying.
 
-5. **Docs hosting.** Subfolder under soldenai-landing (`/docs/...`),
-   or a separate `docs.soldenai.com` (e.g., GitBook / Mintlify)? The
-   former keeps it cheap and in-repo; the latter scales better as the
-   surface grows. Suggest: in-repo for v1, migrate later if needed.
+4. **Webhooks — yes, in v1.** `/v1/webhooks` CRUD (subscribe with
+   URL + event-type filter, list, revoke). Outbound calls signed
+   with HMAC-SHA256, `Solden-Signature` header, retries with
+   exponential backoff (5 attempts). The substrate is already
+   there (`webhook_subscriptions` table + migration 52's
+   `webhook_deliveries` per-attempt log); v1 is the public surface
+   + docs. Without this, agents poll, and polling is expensive on
+   both sides.
 
-6. **First customer.** Who's the design partner? Plan assumes one
-   customer agent ships against this surface in parallel with the
-   build, so we catch DX issues before public release.
+5. **Docs hosting — TBD.** Recommendation stands: in-repo
+   `soldenai-landing/docs/` for v1, migrate to a dedicated host
+   only if the surface grows past what a directory of static
+   markdown can carry. Decision can wait until docs are drafted.
 
-7. **SDK vs. raw HTTP.** Plan ships HTTP only. A thin Python +
-   TypeScript SDK is a natural follow-up but not in scope here. Should
-   the quickstart show raw `curl` + `requests`, or also a
-   `pip install solden` snippet that doesn't yet exist?
+6. **First customer / design partner — TBD.** Engineering can ship
+   the surface without naming a partner; partner names define
+   target dates and DX feedback channels, not API shape.
+
+7. **SDK — yes, Python first.** Thin wrapper around `requests`
+   that exposes `Solden(api_key)` with namespaced methods
+   (`client.records.list(...)`, `client.intents.execute(...)`,
+   `client.webhooks.subscribe(...)`). Auto-retries with the
+   idempotency key. Typed error envelopes. Published to PyPI as
+   `solden`. TypeScript is a fast follow.
 
 ## Out of scope
 
@@ -345,7 +487,7 @@ OR a separate `docs.soldenai.com` host (decision in open questions).
 - Multi-org keys (one key, one org, period).
 - OAuth (API keys only for v1; OAuth for the human-side surfaces).
 - A hosted "playground" UI.
-- SDKs in any language.
+- TypeScript SDK (fast follow after Python lands).
 
 ## Test plan
 
@@ -368,34 +510,44 @@ OR a separate `docs.soldenai.com` host (decision in open questions).
 
 ## Estimated effort
 
-- Step 1 (migration): ½ day
-- Step 2 (auth dep): ½ day
-- Step 3 (intents router): 1 day
-- Step 4 (records router): 1.5 days (BoxSummary contract, pagination
-  cursor, filtering)
-- Step 5 (audit/me/health): ½ day
-- Step 6 (management UI): 2-3 days
-- Step 7 (docs + quickstart): 1-2 days
-- Step 8 (tests): 1-2 days
-- Integration + first-customer dogfood: 2-3 days
+Shipped tonight:
+- Step 1 (migration): ½ day ✓
+- Step 2 (auth dep): ½ day ✓
+- Step 3 (intents router): 1 day ✓
+- Step 4 (records router): 1.5 days ✓
+- Step 5 (audit/me/health): ½ day ✓
 
-Total: 3-4 weeks for a single engineer, faster with parallelisation
-between backend and the management UI. Memory's 3-6 weeks estimate
-holds.
+Remaining:
+- Step 6 (Box-type-agnostic vocab + accept-either fallback): ½ day
+- Step 7 (idempotency keys + `intent_responses` table): 1 day
+- Step 8 (per-key rate limits + 429 audit): 1 day
+- Step 9 (webhooks: /v1/webhooks CRUD + outbound HMAC + retries): 2-3 days
+- Step 10 (management UI): 2-3 days
+- Step 11 (docs + quickstart): 1-2 days
+- Step 12 (Python SDK + PyPI publish): 1-2 days
+- Step 13 (integration tests + first-customer dogfood): 1-2 days
+
+Total remaining: 10-15 engineering days. Memory's 3-6 weeks estimate
+still holds; the new sub-pieces (rate limits, webhooks, SDK) added
+~4 days but landed cleanly within the original envelope.
 
 ## Recommended sequencing
 
 The pieces ship in this order so each cut adds value alone:
 
-1. **Migration** (step 1) — unblocks everything else.
-2. **Auth + `/v1/intents/execute`** (steps 2 + 3) — minimum cut. Any
-   customer with curl can call it after we hand them a key.
-3. **`/v1/records`** (step 4) — agents need to discover their work
-   before executing on it.
-4. **Management UI** (step 6) — customers self-serve keys instead of
-   us issuing them by hand.
-5. **`/v1/audit`, `/v1/me`** (step 5) — completeness.
-6. **Docs** (step 7) — once the API is stable, write the surface
-   contract publicly.
-7. **Tests + first-customer dogfood** (step 8) — throughout, not at
-   the end.
+1. **Migration** (Step 1) ✓ — unblocked everything else.
+2. **Auth + `/v1/intents/execute`** (Steps 2 + 3) ✓ — minimum cut.
+3. **`/v1/records`** (Step 4) ✓ — agents discover their work.
+4. **`/v1/audit`, `/v1/me`** (Step 5) ✓ — completeness.
+5. **Box-type-agnostic vocab** (Step 6) — rename day; cheap.
+6. **Idempotency keys** (Step 7) — every agent retry stops being
+   a gamble.
+7. **Rate limits** (Step 8) — cost / abuse / fairness defense.
+8. **Webhooks** (Step 9) — agents stop polling; push beats poll.
+9. **Management UI** (Step 10) — customers self-serve keys.
+10. **Docs** (Step 11) — once the API is stable, write the contract
+    publicly.
+11. **Python SDK** (Step 12) — Python first because the agent
+    ecosystem lives there.
+12. **Tests + first-customer dogfood** (Step 13) — throughout, not
+    at the end.
