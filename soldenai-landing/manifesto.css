@@ -1650,8 +1650,8 @@ body.theme-light-landing .section-eyebrow::before {
 
 .runtime__layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 64px;
+  grid-template-columns: minmax(0, 1fr) 440px;
+  gap: 72px;
   align-items: start;
   width: 100%;
 }
@@ -1797,14 +1797,14 @@ body.theme-light-landing .section-eyebrow::before {
   .runtime__anchor {
     justify-self: center;
     width: 100%;
-    max-width: 360px;
+    max-width: 440px;
   }
 }
 
 .runtime__glyph-stack {
   position: relative;
   width: 100%;
-  max-width: 360px;
+  max-width: 440px;
   aspect-ratio: 360 / 460;
 }
 
@@ -1859,6 +1859,40 @@ body.theme-light-landing .section-eyebrow::before {
   font-size: 8px;
   letter-spacing: 0.04em;
   fill: rgba(31, 27, 22, 0.55);
+}
+
+/* Pill: filled accent chip (status / format / signer). The rect
+   gets a subtle fill so the chip reads as a tag, not just an
+   outline. Text inside is mono caps. */
+.runtime__glyph .runtime__glyph-pill {
+  fill: rgba(31, 27, 22, 0.06);
+  stroke: rgba(31, 27, 22, 0.35);
+  stroke-width: 0.8;
+}
+.runtime__glyph .runtime__glyph-pill-text {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 7px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  fill: rgba(31, 27, 22, 0.75);
+  stroke: none;
+}
+
+/* Mono inline string (hash, ref). Smaller than caps, monospaced,
+   typeset in place. */
+.runtime__glyph .runtime__glyph-mono {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 7.5px;
+  letter-spacing: 0.02em;
+  fill: rgba(31, 27, 22, 0.7);
+  stroke: none;
+}
+
+/* Arrow tip — short filled triangle used where a connector ends
+   at a surface card. The fill makes it read as direction. */
+.runtime__glyph .runtime__glyph-tip {
+  fill: rgba(31, 27, 22, 0.78);
+  stroke: none;
 }
 
 
