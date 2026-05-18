@@ -677,7 +677,7 @@ body:not(.theme-dark) .footer-cta {
 
 .footer__cols {
   display: grid;
-  grid-template-columns: repeat(3, minmax(120px, auto));
+  grid-template-columns: repeat(2, minmax(120px, auto));
   gap: 56px;
 }
 @media (max-width: 600px) {
