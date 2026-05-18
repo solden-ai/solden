@@ -1450,6 +1450,45 @@ async def _permission_error_handler(request: Request, exc: PermissionError):
     return JSONResponse(status_code=403, content={"detail": detail})
 
 
+# /v1 rate limit — typed exception raised by `enforce_v1_rate_limit`
+# inside `require_agent_key`. Emits one `rate_limit_exceeded` audit row
+# (so "why did my agent stop at 14:03 UTC?" stays answerable forever)
+# then 429s with Retry-After.
+from clearledgr.api.v1_rate_limit import (  # noqa: E402
+    RateLimitExceeded,
+    emit_rate_limit_exceeded_audit,
+)
+
+
+@app.exception_handler(RateLimitExceeded)
+async def _v1_rate_limit_exceeded_handler(
+    request: Request, exc: RateLimitExceeded
+):
+    from fastapi.responses import JSONResponse
+
+    emit_rate_limit_exceeded_audit(exc)
+    body = {
+        "error_code": "rate_limit_exceeded",
+        "message": (
+            f"{exc.scope} rate limit exceeded "
+            f"({exc.limit}/{exc.window_seconds}s). Retry after "
+            f"{exc.retry_after_seconds}s."
+        ),
+        "scope": exc.scope,
+        "limit": exc.limit,
+        "window_seconds": exc.window_seconds,
+        "retry_after_seconds": exc.retry_after_seconds,
+    }
+    rid = getattr(request.state, "correlation_id", None)
+    if rid:
+        body["request_id"] = rid
+    return JSONResponse(
+        status_code=429,
+        content=body,
+        headers={"Retry-After": str(exc.retry_after_seconds)},
+    )
+
+
 # Global exception handler for unhandled exceptions
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):

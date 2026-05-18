@@ -285,6 +285,13 @@ def require_agent_key(scope: Optional[str] = None):
                 http_status=403,
                 http_detail=f"missing_scope:{scope}",
             )
+        # Rate-limit check runs after auth + scope so a 429 is only
+        # ever shown to an otherwise-authorised caller. Import here to
+        # avoid a circular import at module load time (v1_rate_limit
+        # imports AgentIdentity from this file).
+        from clearledgr.api.v1_rate_limit import enforce_v1_rate_limit
+
+        enforce_v1_rate_limit(request, identity)
         return identity
 
     return _dep

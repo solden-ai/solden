@@ -307,39 +307,59 @@ each route asks for).
 - /v1 routes ask for the new vocab. The old AP-pinned vocab still
   works through the synonym fallback for 6 months.
 
-### Step 7 — Idempotency keys on `/v1/intents/execute`
+### Step 7 — Idempotency keys on `/v1/intents/execute` ✅ SHIPPED
 
-**Files:** migration adds `intent_responses` table; route reads
-`Idempotency-Key` header; response cache wrapper around
-`runtime.execute_intent`.
+**Files:** migration 87 added `intent_responses` table;
+[clearledgr/api/v1_idempotency.py](clearledgr/api/v1_idempotency.py)
+holds the helpers; `/v1/intents/execute` wires the four-call
+sequence around `runtime.execute_intent`.
 
-- New `intent_responses` table: `(idempotency_key TEXT PRIMARY KEY,
-  organization_id, payload_hash TEXT, response_json TEXT, ts TEXT,
-  expires_at TEXT)`. TTL 24h via a periodic cleanup job (or just
-  a query-time `WHERE expires_at > now()` filter).
+- New `intent_responses` table: `(organization_id, idempotency_key,
+  payload_hash, response_json, http_status, ts, expires_at)` with
+  composite PK `(organization_id, idempotency_key)`. TTL 24h via
+  `expires_at`; expired rows are functionally absent at read time.
 - `/v1/intents/execute` reads `Idempotency-Key` from header first,
-  then body. Generates payload hash. If a row exists with that key:
+  then body. Generates SHA-256 hash of canonical-JSON `(intent, input)`.
+  If a row exists with that key:
   - same hash → return cached response, HTTP 200, header
     `Solden-Idempotent-Replay: true`.
   - different hash → 409 `{error_code: "idempotency_conflict"}`.
-- Otherwise: execute the intent, store the response with hash + TTL,
-  return.
+- Otherwise: execute the intent, `INSERT ... ON CONFLICT DO UPDATE`
+  the response with hash + TTL, return.
+- Cache lookup/write failures are swallowed — they never block the
+  request. Worst case the intent runs twice, which the
+  `audit_events.idempotency_key UNIQUE` constraint still catches at
+  the substrate layer.
 
-### Step 8 — Per-key rate limits
+### Step 8 — Per-key rate limits ✅ SHIPPED
 
-**Files:** new
+**Files:**
 [clearledgr/api/v1_rate_limit.py](clearledgr/api/v1_rate_limit.py)
-helper, integrated into the auth dep (or as a separate middleware
-that runs only on /v1 paths).
+holds the counters + typed `RateLimitExceeded` exception;
+`require_agent_key` in
+[clearledgr/api/v1_auth.py](clearledgr/api/v1_auth.py) calls
+`enforce_v1_rate_limit` after auth + scope pass; `main.py` has the
+typed exception handler that emits the audit row and returns 429.
 
-- Per-key counter: 100 req/min sliding window. Backed by an
-  in-process token bucket for v1 (Redis upgrade when we have more
-  than one app process).
-- Per-org counter: piggybacks on the existing
-  `RateLimitMiddleware`; v1 just bumps the cap to 1000 req/min for
-  organisations with active /v1 keys.
-- Limit-breach response: HTTP 429, `Retry-After` header, audit
-  event `rate_limit_exceeded` with key_id + window stats.
+- Per-key counter: **100 req/min** sliding window
+  (`V1_KEY_LIMIT_PER_MIN`, env-overridable). Trips first because
+  it's the narrower bound — a single misbehaving agent fails at its
+  own bucket before it can affect siblings under the same tenant.
+- Per-org counter: **1000 req/min** sliding window
+  (`V1_ORG_LIMIT_PER_MIN`). Broader fence — caps blast radius when
+  an org has many keys distributed across teams.
+- Backend: Redis when `REDIS_URL` is set (shared across workers),
+  otherwise per-process in-memory (dev/test). Mirrors
+  `clearledgr.services.rate_limit`. Fails open on Redis errors
+  matching the existing contract.
+- Limit-breach response: HTTP 429 with `Retry-After` header + typed
+  error envelope (`error_code: rate_limit_exceeded`, scope, limit,
+  window_seconds, retry_after_seconds, request_id). One
+  `rate_limit_exceeded` row written to `audit_events` so "why did
+  my agent stop at 14:03 UTC?" stays answerable forever.
+- Kill switch: `V1_RATE_LIMIT_ENABLED=false` lets everything
+  through (for incident response when limits themselves are the
+  problem).
 
 ### Step 9 — Webhooks (`/v1/webhooks/*`)
 
