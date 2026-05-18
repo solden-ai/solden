@@ -245,19 +245,63 @@ function MatchingSection({ api, toast, canManage }) {
   </div>`;
 }
 
-function InviteRow({ invite, onRevoke, canManage }) {
-  return html`<div class="secondary-row">
-    <div class="secondary-row-copy">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-        <strong style="font-size:14px">${invite.email}</strong>
-        <span class="status-badge ${invite.status === 'pending' ? '' : 'connected'}">${invite.status || 'pending'}</span>
+function InviteRow({ invite, onRevoke, canManage, toast }) {
+  const [copied, setCopied] = useState(false);
+  const inviteLink = invite.invite_link || '';
+  const isPending = invite.status === 'pending';
+
+  const copyLink = async () => {
+    if (!inviteLink) return;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(inviteLink);
+      } else {
+        // Fallback for older browsers / non-HTTPS dev: synthesise a
+        // text input, select, execCommand('copy'). Not pretty but
+        // unblocks the admin if the modern clipboard API isn't
+        // available.
+        const ta = document.createElement('textarea');
+        ta.value = inviteLink;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'absolute';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast?.('Invite link copied. Share it with the teammate.', 'success');
+    } catch (e) {
+      toast?.('Could not copy the link. Select it manually below.', 'error');
+    }
+  };
+
+  return html`<div class="secondary-row" style="flex-direction:column;align-items:stretch;gap:8px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div class="secondary-row-copy" style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+          <strong style="font-size:14px">${invite.email}</strong>
+          <span class="status-badge ${isPending ? '' : 'connected'}">${invite.status || 'pending'}</span>
+        </div>
+        <div class="muted" style="font-size:12px">Role: ${
+          { ap_clerk: 'AP Clerk', ap_manager: 'AP Manager', financial_controller: 'Financial Controller', cfo: 'CFO', read_only: 'Read Only', member: 'AP Clerk', admin: 'Financial Controller', viewer: 'Read Only', operator: 'AP Manager' }[invite.role] || invite.role || 'AP Clerk'
+        }</div>
       </div>
-      <div class="muted" style="font-size:12px">Role: ${
-        { ap_clerk: 'AP Clerk', ap_manager: 'AP Manager', financial_controller: 'Financial Controller', cfo: 'CFO', read_only: 'Read Only', member: 'AP Clerk', admin: 'Financial Controller', viewer: 'Read Only', operator: 'AP Manager' }[invite.role] || invite.role || 'AP Clerk'
-      }</div>
+      ${isPending
+        ? html`<button class="btn-danger btn-sm" onClick=${() => onRevoke(invite.id)} disabled=${!canManage}>Revoke</button>`
+        : null}
     </div>
-    ${invite.status === 'pending'
-      ? html`<button class="btn-danger btn-sm" onClick=${() => onRevoke(invite.id)} disabled=${!canManage}>Revoke</button>`
+    ${isPending && inviteLink
+      ? html`
+        <div style="display:flex;gap:8px;align-items:center;background:rgba(0,0,0,0.04);border-radius:6px;padding:8px 10px">
+          <code style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title=${inviteLink}>${inviteLink}</code>
+          <button class="btn-sm" onClick=${copyLink}>
+            ${copied ? 'Copied!' : 'Copy link'}
+          </button>
+        </div>
+      `
       : null}
   </div>`;
 }
@@ -333,7 +377,8 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
 
   const [createInvite, creatingInvite] = useAction(async () => {
     if (!canManageTeam) return;
-    const email = document.getElementById('cl-invite-email')?.value?.trim();
+    const emailInput = document.getElementById('cl-invite-email');
+    const email = emailInput?.value?.trim();
     const role = document.getElementById('cl-invite-role')?.value;
     if (!email) {
       toast?.('Enter an email before sending the invite.', 'error');
@@ -351,14 +396,45 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
     if (entityRestrictions.length > 0) {
       body.entity_restrictions = entityRestrictions;
     }
-    await api('/api/workspace/team/invites', {
+    const response = await api('/api/workspace/team/invites', {
       method: 'POST',
       body: JSON.stringify(body),
     });
     const scope = entityRestrictions.length > 0
       ? ` (scoped to ${entityRestrictions.length} entit${entityRestrictions.length === 1 ? 'y' : 'ies'})`
       : '';
-    toast?.(`Invite sent to ${email}${scope}.`, 'success');
+    // Reflect actual delivery state. SMTP isn't configured in every
+    // deploy — when it isn't, the row is still created and the
+    // admin shares the link manually, but we must NOT claim the
+    // email went out. The "Invite created" copy nudges the admin
+    // toward the copy-link button in the row below.
+    if (response?.email_delivered) {
+      toast?.(`Invite sent to ${email}${scope}.`, 'success');
+    } else if (response?.email_skipped) {
+      toast?.(
+        `Invite created for ${email}${scope}. Email isn't configured — copy the link below to share.`,
+        'success',
+      );
+    } else {
+      toast?.(
+        `Invite created for ${email}${scope}. Email delivery failed — copy the link below to share.`,
+        'success',
+      );
+    }
+    // Merge the new invite into local state so the row + copy-link
+    // button appear immediately, without waiting for a list refetch.
+    if (response?.invite) {
+      const newRow = {
+        ...response.invite,
+        invite_link: response.invite_link,
+        status: response.invite.status || 'pending',
+      };
+      setInvites((prev) => {
+        const without = prev.filter((p) => p.id !== newRow.id);
+        return [newRow, ...without];
+      });
+    }
+    if (emailInput) emailInput.value = '';
     onRefresh?.();
   });
 
@@ -366,6 +442,11 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
     if (!canManageTeam) return;
     await api(`/api/workspace/team/invites/${id}/revoke?organization_id=${encodeURIComponent(orgId)}`, { method: 'POST' });
     toast?.('Invite revoked.', 'success');
+    // Reflect revocation in local state immediately so the row's
+    // status flips without waiting for a refetch.
+    setInvites((prev) => prev.map((inv) =>
+      inv.id === id ? { ...inv, status: 'revoked' } : inv,
+    ));
     onRefresh?.();
   });
 
@@ -1129,7 +1210,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         <div style="margin-top:18px">
           ${invites.length
             ? html`<div class="secondary-list">
-                ${invites.map((invite) => html`<${InviteRow} key=${invite.id} invite=${invite} onRevoke=${revokeInvite} canManage=${canManageTeam && !revokingInvite} />`)}
+                ${invites.map((invite) => html`<${InviteRow} key=${invite.id} invite=${invite} onRevoke=${revokeInvite} canManage=${canManageTeam && !revokingInvite} toast=${toast} />`)}
               </div>`
             : html`<div class="secondary-empty">No invites yet. Send one when someone needs access.</div>`}
         </div>

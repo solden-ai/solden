@@ -3790,7 +3790,43 @@ def create_team_invite(
     )
     base = os.getenv("APP_BASE_URL", os.getenv("API_BASE_URL", "http://127.0.0.1:8010")).rstrip("/")
     invite_link = f"{base}/api/auth/google/start?invite_token={invite.get('token')}"
-    return {"success": True, "organization_id": org_id, "invite": invite, "invite_link": invite_link}
+
+    # Send the invite email via the SMTP relay. The transactional
+    # service short-circuits to skipped=True when SMTP isn't
+    # configured (dev / staging without secrets), in which case we
+    # still return the invite_link so the admin can copy-share it
+    # manually. We never fail the whole request on email delivery
+    # failure — the invite row is the source of truth; email is the
+    # convenience layer.
+    org_name = ""
+    try:
+        org_row = db.get_organization(org_id) or {}
+        org_name = str(org_row.get("name") or "").strip()
+    except Exception:
+        pass
+    # Email composition + send lives in clearledgr.services.team_invite_email
+    # so the body + delivery-state shape stay testable without the
+    # workspace_shell import chain. send_team_invite_email never
+    # raises; it returns {"delivered": bool, "skipped": bool, "error": str|None}.
+    from clearledgr.services.team_invite_email import send_team_invite_email
+
+    email_status = send_team_invite_email(
+        recipient=request.email,
+        invite_link=invite_link,
+        inviter_email=getattr(user, "email", None) or user.user_id,
+        org_name=org_name,
+        role=normalized_role,
+    )
+
+    return {
+        "success": True,
+        "organization_id": org_id,
+        "invite": invite,
+        "invite_link": invite_link,
+        "email_delivered": email_status["delivered"],
+        "email_skipped": email_status["skipped"],
+        "email_error": email_status["error"],
+    }
 
 
 @router.post("/team/invites/{invite_id}/revoke")
