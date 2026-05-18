@@ -4488,6 +4488,29 @@ def _v79_tenant_rename_default(cur, db):
     # rebind any rows that still point at the legacy literal. Use
     # information_schema so the migration survives future schema
     # additions.
+    #
+    # Two failure modes the naive ``UPDATE %I SET org_id = NEW WHERE
+    # org_id = LEGACY`` shape doesn't handle:
+    #
+    # 1. **Append-only triggers** (``invoice_originals``,
+    #    ``audit_events``). Their ``BEFORE UPDATE`` trigger raises
+    #    ``invoice_originals is append-only`` / ``audit_events is
+    #    append-only``, aborting the migration. Fix: detect tables
+    #    with a ``clearledgr_prevent_append_only_mutation`` trigger
+    #    on UPDATE and DISABLE it for the duration of the rebind.
+    #    For ``audit_events`` we also clear the hash-chain fields on
+    #    the rebound rows — the chain canonicalises organization_id,
+    #    so faking a valid chain across two attribution periods would
+    #    be dishonest. The migrated rows become inspectable-but-off-
+    #    chain.
+    #
+    # 2. **UNIQUE constraints on organization_id** (``subscriptions``
+    #    has ``UNIQUE(organization_id)``). When both the legacy and
+    #    the new org already have a row, the UPDATE PK-violates. Fix:
+    #    detect tables with a UNIQUE constraint on organization_id
+    #    and DELETE the source row instead of UPDATEing — the target
+    #    row is the canonical one (it was created later or by an
+    #    explicit code path; the source is the orphan).
     cur.execute(
         """
         SELECT table_name
@@ -4498,15 +4521,92 @@ def _v79_tenant_rename_default(cur, db):
         """
     )
     tenant_tables = [r["table_name"] if isinstance(r, dict) else r[0] for r in cur.fetchall()]
+
+    # Discover UNIQUE constraints / indexes that include organization_id
+    # as their only column. UPDATE on such a table requires conflict
+    # resolution: drop the orphan source row rather than UPDATEing onto
+    # a colliding target.
+    cur.execute(
+        """
+        SELECT t.relname AS table_name
+        FROM pg_index i
+        JOIN pg_class t  ON t.oid = i.indrelid
+        JOIN pg_class ix ON ix.oid = i.indexrelid
+        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(i.indkey)
+        WHERE i.indisunique
+          AND a.attname = 'organization_id'
+          AND array_length(i.indkey::int[], 1) = 1
+          AND t.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = current_schema())
+        """
+    )
+    org_unique_tables = {
+        (r["table_name"] if isinstance(r, dict) else r[0])
+        for r in cur.fetchall()
+    }
+
+    # Discover tables with an append-only BEFORE UPDATE trigger so we
+    # can disable + re-enable cleanly. The trigger name pattern in the
+    # codebase is ``trg_<table>_no_update`` (see migration v76 +
+    # invoice_originals); we match by trigger function instead so a
+    # future rename of the trigger still works.
+    cur.execute(
+        """
+        SELECT c.relname AS table_name, t.tgname AS trigger_name
+        FROM pg_trigger t
+        JOIN pg_class c ON c.oid = t.tgrelid
+        JOIN pg_proc  p ON p.oid = t.tgfoid
+        WHERE NOT t.tgisinternal
+          AND p.proname = 'clearledgr_prevent_append_only_mutation'
+          AND (t.tgtype & 16) <> 0   -- bit 16 = ON UPDATE
+          AND c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = current_schema())
+        """
+    )
+    appendonly_triggers: dict[str, list[str]] = {}
+    for r in cur.fetchall():
+        tbl = r["table_name"] if isinstance(r, dict) else r[0]
+        trg = r["trigger_name"] if isinstance(r, dict) else r[1]
+        appendonly_triggers.setdefault(tbl, []).append(trg)
+
     for table in tenant_tables:
-        # Quote the table name defensively; information_schema only
-        # returns identifiers that already exist, so this is safe but
-        # the quoting protects against future names that collide with
-        # reserved words.
-        cur.execute(
-            f'UPDATE "{table}" SET organization_id = %s WHERE organization_id = %s',
-            (NEW_ID, LEGACY_ID),
-        )
+        triggers = appendonly_triggers.get(table, [])
+        for trg in triggers:
+            cur.execute(f'ALTER TABLE "{table}" DISABLE TRIGGER "{trg}"')
+        try:
+            if table in org_unique_tables:
+                # Conflict resolution path: when the target row already
+                # exists, the orphan source row is the one to drop.
+                cur.execute(
+                    f'DELETE FROM "{table}" WHERE organization_id = %s '
+                    f'AND EXISTS (SELECT 1 FROM "{table}" t2 '
+                    f'WHERE t2.organization_id = %s)',
+                    (LEGACY_ID, NEW_ID),
+                )
+                # Any remaining source rows (no collision) move cleanly.
+                cur.execute(
+                    f'UPDATE "{table}" SET organization_id = %s '
+                    f'WHERE organization_id = %s',
+                    (NEW_ID, LEGACY_ID),
+                )
+            elif table == "audit_events":
+                # Hash chain canonicalises organization_id. Migrated
+                # rows are marked off-chain (NULL hash/prev_hash/
+                # chain_seq) — inspectable, excluded from verification.
+                cur.execute(
+                    'UPDATE audit_events '
+                    'SET organization_id = %s, hash = NULL, '
+                    '    prev_hash = NULL, chain_seq = NULL '
+                    'WHERE organization_id = %s',
+                    (NEW_ID, LEGACY_ID),
+                )
+            else:
+                cur.execute(
+                    f'UPDATE "{table}" SET organization_id = %s '
+                    f'WHERE organization_id = %s',
+                    (NEW_ID, LEGACY_ID),
+                )
+        finally:
+            for trg in triggers:
+                cur.execute(f'ALTER TABLE "{table}" ENABLE TRIGGER "{trg}"')
 
     # Step 3: CHECK constraint on ``organizations.id`` — the legacy
     # bucket cannot be recreated. No future row may reuse the literal
@@ -4854,10 +4954,26 @@ def _v83_audit_events_policy_version(cur, db):
         "ALTER TABLE audit_events "
         "ADD COLUMN IF NOT EXISTS policy_version TEXT"
     )
+    # audit_events has an append-only ``BEFORE UPDATE`` trigger
+    # (``trg_audit_events_no_update``, installed by v76) that raises
+    # ``audit_events is append-only``. A naked UPDATE here errors
+    # the whole migration. Disable for the backfill, re-enable after.
+    # The hash chain doesn't need clearing on these rows — we're
+    # only writing a new column that wasn't part of the canonical
+    # hash payload at the time of insertion, so existing hashes
+    # remain consistent with what they were chained against.
     cur.execute(
-        "UPDATE audit_events SET policy_version = 'v1' "
-        "WHERE box_type = 'ap_item' AND policy_version IS NULL"
+        "ALTER TABLE audit_events DISABLE TRIGGER trg_audit_events_no_update"
     )
+    try:
+        cur.execute(
+            "UPDATE audit_events SET policy_version = 'v1' "
+            "WHERE box_type = 'ap_item' AND policy_version IS NULL"
+        )
+    finally:
+        cur.execute(
+            "ALTER TABLE audit_events ENABLE TRIGGER trg_audit_events_no_update"
+        )
     cur.execute(
         "CREATE INDEX IF NOT EXISTS idx_audit_events_org_policy_version "
         "ON audit_events (organization_id, policy_version) "
