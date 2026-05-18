@@ -17,10 +17,10 @@ intentionally isolated from this service.
 
 ```
 soldenai-landing/
-├── index.html        # hero, how it works, render targets, trust, CTA
-├── about.html        # mission + founders + backing
-├── security.html     # SOC2 posture, DPA, controls, sub-processors
-├── contact.html      # demo / sales / support form
+├── index.html        # hero, how it works, scope, runtime walkthrough, CTA
+├── manifesto.html    # The Back Office Runtime Manifesto
+├── contact.html      # demo / sales form
+├── privacy.html      # privacy posture
 ├── styles.css        # design tokens + homepage layout
 ├── pages.css         # sub-page primitives (subpage hero, prose, founders, form)
 ├── site.js           # year stamp + contact-form fetch

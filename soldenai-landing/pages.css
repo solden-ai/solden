@@ -1,7 +1,7 @@
 /* ============================================================
  * pages.css, sub-page primitives layered on top of styles.css
  *
- * Used by: security.html and contact.html.
+ * Used by: contact.html and privacy.html.
  * Keeps the homepage in styles.css uncluttered while sharing the
  * same design tokens (custom properties live on :root in styles.css).
  * ============================================================ */
@@ -104,21 +104,6 @@
 }
 .prose a:hover { border-bottom-color: var(--teal-deep); }
 
-/* ── Controls grid (security page) ───────────────────────── */
-
-.controls {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: var(--border);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  margin: 32px 0 16px;
-}
-
-@media (max-width: 900px) { .controls { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 560px) { .controls { grid-template-columns: 1fr; } }
 
 .control {
   background: var(--surface);
