@@ -41,6 +41,7 @@ from pydantic import BaseModel, Field
 from clearledgr.core.ap_states import APState, normalize_state, VALID_TRANSITIONS
 from clearledgr.core.auth import TokenData, get_current_user
 from clearledgr.core.database import get_db
+from clearledgr.core.org_utils import require_org
 from clearledgr.services.ap_item_service import (
     _resolve_item_for_detail,
     build_worklist_item,
@@ -426,7 +427,7 @@ def ask_the_agent_endpoint(
     answers only what the bundle supports. Returns within 10-15s on a
     cache-warm Sonnet path.
     """
-    organization_id = getattr(user, "organization_id", None) or "default"
+    organization_id = require_org(user)
     db = get_db()
 
     # Verify the item belongs to this tenant — _resolve_item_for_detail
@@ -469,7 +470,7 @@ def get_ap_item_bank_match(
                              or ``unmatched`` despite being linked to
                              a confirmation. Needs human review.
     """
-    organization_id = getattr(user, "organization_id", None) or "default"
+    organization_id = require_org(user)
     db = get_db()
 
     # _resolve_item_for_detail enforces tenant isolation; cross-tenant
@@ -563,7 +564,7 @@ def get_ap_item_detail(
     in a different tenant — preserves the no-membership-leak guarantee
     in ``_resolve_item_for_detail``.
     """
-    organization_id = getattr(user, "organization_id", None) or "default"
+    organization_id = require_org(user)
     db = get_db()
 
     item = _resolve_item_for_detail(

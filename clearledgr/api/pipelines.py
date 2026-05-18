@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from clearledgr.core.auth import get_current_user, require_ops_user
 from clearledgr.core.database import get_db
+from clearledgr.core.org_utils import require_org
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +26,11 @@ box_links_router = APIRouter(prefix="/api/box-links", tags=["box-links"])
 
 @router.get("")
 def list_pipelines(
-    organization_id: str = Query(default="default"),
-    _user=Depends(get_current_user),
+    organization_id: Optional[str] = Query(default=None),
+    user=Depends(get_current_user),
 ):
     """List all pipelines for an organization."""
+    organization_id = require_org(user, requested=organization_id)
     db = get_db()
     return {"pipelines": db.list_pipelines(organization_id)}
 
@@ -36,10 +38,11 @@ def list_pipelines(
 @router.get("/{slug}")
 def get_pipeline(
     slug: str,
-    organization_id: str = Query(default="default"),
-    _user=Depends(get_current_user),
+    organization_id: Optional[str] = Query(default=None),
+    user=Depends(get_current_user),
 ):
     """Get a pipeline with its stages and columns."""
+    organization_id = require_org(user, requested=organization_id)
     db = get_db()
     pipeline = db.get_pipeline(organization_id, slug)
     if not pipeline:
@@ -50,10 +53,11 @@ def get_pipeline(
 @router.get("/{slug}/stages")
 def get_pipeline_stages(
     slug: str,
-    organization_id: str = Query(default="default"),
-    _user=Depends(get_current_user),
+    organization_id: Optional[str] = Query(default=None),
+    user=Depends(get_current_user),
 ):
     """Get stage definitions for a pipeline."""
+    organization_id = require_org(user, requested=organization_id)
     db = get_db()
     pipeline = db.get_pipeline(organization_id, slug)
     if not pipeline:
@@ -65,12 +69,13 @@ def get_pipeline_stages(
 def list_boxes_in_stage(
     slug: str,
     stage_slug: str,
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     entity_id: Optional[str] = None,
     limit: int = Query(default=200, ge=1, le=1000),
-    _user=Depends(get_current_user),
+    user=Depends(get_current_user),
 ):
     """List Boxes (items) in a specific pipeline stage."""
+    organization_id = require_org(user, requested=organization_id)
     db = get_db()
     pipeline = db.get_pipeline(organization_id, slug)
     if not pipeline:
@@ -84,10 +89,11 @@ def list_boxes_in_stage(
 @router.get("/{slug}/columns")
 def get_pipeline_columns(
     slug: str,
-    organization_id: str = Query(default="default"),
-    _user=Depends(get_current_user),
+    organization_id: Optional[str] = Query(default=None),
+    user=Depends(get_current_user),
 ):
     """Get column definitions for a pipeline."""
+    organization_id = require_org(user, requested=organization_id)
     db = get_db()
     pipeline = db.get_pipeline(organization_id, slug)
     if not pipeline:
@@ -99,7 +105,7 @@ def get_pipeline_columns(
 
 
 class CreateSavedViewRequest(BaseModel):
-    organization_id: str = "default"
+    organization_id: Optional[str] = None
     pipeline_slug: str
     name: str = Field(..., min_length=1, max_length=100)
     filter_json: Dict[str, Any] = Field(default_factory=dict)
@@ -109,11 +115,12 @@ class CreateSavedViewRequest(BaseModel):
 
 @saved_views_router.get("")
 def list_saved_views(
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     pipeline: Optional[str] = None,
-    _user=Depends(get_current_user),
+    user=Depends(get_current_user),
 ):
     """List saved views for an org, optionally filtered by pipeline."""
+    organization_id = require_org(user, requested=organization_id)
     db = get_db()
     pipeline_id = None
     if pipeline:
@@ -137,8 +144,9 @@ def create_saved_view(
     and compare against the workspace's plan tier cap. -1 is the
     unlimited sentinel (Pro/Enterprise).
     """
+    organization_id = require_org(_user, requested=request.organization_id)
     db = get_db()
-    pipeline = db.get_pipeline(request.organization_id, request.pipeline_slug)
+    pipeline = db.get_pipeline(organization_id, request.pipeline_slug)
     if not pipeline:
         raise HTTPException(status_code=404, detail="pipeline_not_found")
 
@@ -151,12 +159,12 @@ def create_saved_view(
     try:
         from clearledgr.services.subscription import get_subscription_service
         sub_svc = get_subscription_service()
-        existing = db.list_saved_views(request.organization_id, pipeline_id=pipeline["id"])
+        existing = db.list_saved_views(organization_id, pipeline_id=pipeline["id"])
         user_created_count = sum(
             1 for v in (existing or []) if not v.get("is_default")
         )
         check = sub_svc.check_limit(
-            request.organization_id,
+            organization_id,
             "saved_views_per_pipeline",
             current_value=user_created_count,
         )
@@ -183,7 +191,7 @@ def create_saved_view(
 
     actor = getattr(_user, "email", None) or getattr(_user, "user_id", "system")
     view = db.create_saved_view(
-        organization_id=request.organization_id,
+        organization_id=organization_id,
         pipeline_id=pipeline["id"],
         name=request.name,
         filter_json=request.filter_json,

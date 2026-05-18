@@ -25,8 +25,8 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from clearledgr.api.deps import verify_org_access
 from clearledgr.core.auth import get_current_user
+from clearledgr.core.org_utils import require_org
 from clearledgr.services.outbox import (
     OutboxEvent,
     list_events,
@@ -60,15 +60,21 @@ def _event_to_dict(e: OutboxEvent) -> Dict[str, Any]:
     }
 
 
-def _require_ops_access(user, organization_id: str) -> None:
-    """Ops endpoints are restricted to admin/ops role within the org."""
-    verify_org_access(organization_id, user)
+def _require_ops_access(user, organization_id: Optional[str]) -> str:
+    """Ops endpoints are restricted to admin/ops role within the org.
+
+    Returns the verified session-bound organization id. Falls back to
+    the user's session org when ``organization_id`` is missing or the
+    legacy ``"default"`` placeholder; rejects cross-tenant requests.
+    """
+    org_id = require_org(user, requested=organization_id)
     role = str(getattr(user, "role", "") or "").lower()
     if role not in {"admin", "ops", "owner"}:
         raise HTTPException(
             status_code=403,
             detail=f"role {role!r} cannot access outbox ops endpoints",
         )
+    return org_id
 
 
 # ─── Reads ──────────────────────────────────────────────────────────
@@ -76,13 +82,13 @@ def _require_ops_access(user, organization_id: str) -> None:
 
 @router.get("")
 def list_outbox_events(
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     status: Optional[str] = Query(default=None),
     event_type: Optional[str] = Query(default=None),
     limit: int = Query(default=50, ge=1, le=500),
     user=Depends(get_current_user),
 ) -> Dict[str, Any]:
-    _require_ops_access(user, organization_id)
+    organization_id = _require_ops_access(user, organization_id)
     try:
         events = list_events(
             organization_id=organization_id,
@@ -104,10 +110,10 @@ def list_outbox_events(
 @router.get("/{event_id}")
 def get_outbox_event(
     event_id: str,
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     user=Depends(get_current_user),
 ) -> Dict[str, Any]:
-    _require_ops_access(user, organization_id)
+    organization_id = _require_ops_access(user, organization_id)
     from clearledgr.services.outbox import _fetch_event_by_id
     event = _fetch_event_by_id(event_id)
     if event is None or event.organization_id != organization_id:
@@ -121,7 +127,7 @@ def get_outbox_event(
 @router.post("/{event_id}/retry")
 def retry_outbox_event(
     event_id: str,
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     _require_ops_access(user, organization_id)
@@ -143,7 +149,7 @@ class SkipRequest(BaseModel):
 def skip_outbox_event(
     event_id: str,
     body: SkipRequest = Body(default_factory=SkipRequest),
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     _require_ops_access(user, organization_id)

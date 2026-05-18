@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from clearledgr.core.auth import TokenData, get_current_user
 from clearledgr.core.database import get_db
+from clearledgr.core.org_utils import require_org
 from clearledgr.services import paddle_billing as paddle_svc
 
 logger = logging.getLogger(__name__)
@@ -81,7 +82,7 @@ def create_checkout(
             detail={"reason": "paddle_not_configured",
                     "message": "Paddle is not yet configured. Reach out to support to enable card billing."},
         )
-    org_id = getattr(user, "organization_id", None) or "default"
+    org_id = require_org(user)
     email = getattr(user, "email", None) or ""
     if not email:
         raise HTTPException(status_code=400, detail="email_required")
@@ -103,7 +104,7 @@ def get_portal_url(
 ):
     """Redirect URL into Paddle's hosted customer portal."""
     _require_admin(user)
-    org_id = getattr(user, "organization_id", None) or "default"
+    org_id = require_org(user)
     state = _get_subscription_paddle_state(get_db(), org_id)
     paddle_customer_id = state.get("paddle_customer_id")
     if not paddle_customer_id:
@@ -134,7 +135,7 @@ def patch_collection_mode(
     isn't reissued.
     """
     _require_admin(user)
-    org_id = getattr(user, "organization_id", None) or "default"
+    org_id = require_org(user)
     state = _get_subscription_paddle_state(get_db(), org_id)
     paddle_sub_id = state.get("paddle_subscription_id")
     if not paddle_sub_id:
@@ -155,7 +156,7 @@ def list_billing_invoices(
 ):
     """Return the org's invoice history snapshot (last 50)."""
     _require_admin(user)
-    org_id = getattr(user, "organization_id", None) or "default"
+    org_id = require_org(user)
     state = _get_subscription_paddle_state(get_db(), org_id)
     paddle_sub_id = state.get("paddle_subscription_id")
     if not paddle_sub_id:

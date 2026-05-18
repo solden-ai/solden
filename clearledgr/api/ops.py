@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from clearledgr.core.auth import TokenData, get_current_user
 from clearledgr.core.database import get_db
+from clearledgr.core.org_utils import assert_org_id
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +137,7 @@ def _runtime_health_snapshot() -> Dict[str, Any]:
     return snapshot
 
 
-def _assert_org_access(user: TokenData, organization_id: str) -> str:
+def _assert_org_access(user: TokenData, organization_id: Optional[str]) -> str:
     """Assert the caller's session org matches ``organization_id``
     and return the canonical org id (the user's session org).
 
@@ -217,7 +218,8 @@ def _build_slack_digest_blocks(kpis: Dict[str, Any], organization_id: str) -> Li
     ]
 
 
-def _approval_sla_minutes(organization_id: str = "default") -> int:
+def _approval_sla_minutes(organization_id: str) -> int:
+    organization_id = assert_org_id(organization_id, context="_approval_sla_minutes")
     try:
         reminder_hours = int(
             get_approval_automation_policy(organization_id=organization_id).get("reminder_hours") or 4
@@ -309,7 +311,7 @@ def _resolve_runtime_surface_contract(request: Request) -> Dict[str, Any] | None
 
 @router.get("/tenant-health")
 async def get_tenant_health(
-    organization_id: str = Query("default"),
+    organization_id: Optional[str] = Query(default=None),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
     organization_id = _assert_org_access(user, organization_id)
@@ -324,7 +326,7 @@ async def get_tenant_health(
 
 @router.get("/box-health")
 async def get_box_health(
-    organization_id: str = Query("default"),
+    organization_id: Optional[str] = Query(default=None),
     limit: int = Query(default=500, ge=1, le=2000),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
@@ -346,7 +348,7 @@ async def get_box_health(
 
 @router.get("/llm-cost-summary")
 async def get_llm_cost_summary(
-    organization_id: str = Query("default"),
+    organization_id: Optional[str] = Query(default=None),
     window_days: int = Query(default=30, ge=1, le=365),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
@@ -479,7 +481,7 @@ async def get_llm_cost_summary(
 
 @router.get("/ap-kpis")
 async def get_ap_kpis(
-    organization_id: str = Query("default"),
+    organization_id: Optional[str] = Query(default=None),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
     organization_id = _assert_org_access(user, organization_id)
@@ -493,7 +495,7 @@ async def get_ap_kpis(
 
 @router.get("/ap-kpis/digest")
 async def get_ap_kpi_digest(
-    organization_id: str = Query("default"),
+    organization_id: Optional[str] = Query(default=None),
     surface: str = Query("all"),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
@@ -517,7 +519,7 @@ async def get_ap_kpi_digest(
 
 @router.get("/ap-aggregation")
 async def get_ap_aggregation(
-    organization_id: str = Query("default"),
+    organization_id: Optional[str] = Query(default=None),
     limit: int = Query(10000, ge=100, le=50000),
     vendor_limit: int = Query(10, ge=1, le=50),
     user: TokenData = Depends(get_current_user),
@@ -534,7 +536,7 @@ async def get_ap_aggregation(
 
 @router.get("/erp-routing-strategy")
 async def get_erp_routing_strategy(
-    organization_id: str = Query("default"),
+    organization_id: Optional[str] = Query(default=None),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
     organization_id = _assert_org_access(user, organization_id)
@@ -558,9 +560,7 @@ async def get_all_tenant_health(
 ) -> Dict[str, List[Dict[str, Any]]]:
     _require_admin(user)
     db = get_db()
-    orgs = db.list_organizations_with_ap_items()
-    if not orgs:
-        orgs = ["default"]
+    orgs = db.list_organizations_with_ap_items() or []
     health = [
         db.get_operational_metrics(
             org_id,
@@ -728,7 +728,7 @@ async def get_autopilot_status(
 
 @router.get("/extraction-quality")
 async def get_extraction_quality(
-    organization_id: str = Query("default"),
+    organization_id: Optional[str] = Query(default=None),
     window_hours: int = Query(default=168, ge=1, le=8760, description="Look-back window in hours (default 7 days)"),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
@@ -1103,7 +1103,7 @@ def _evaluate_monitoring_thresholds(
 
 @router.get("/ap-decision-health")
 async def get_ap_decision_health(
-    organization_id: str = Query("default"),
+    organization_id: Optional[str] = Query(default=None),
     window_hours: int = Query(default=168, ge=1, le=8760),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
@@ -1202,7 +1202,7 @@ async def get_ap_decision_health(
 
 @router.get("/monitoring-thresholds")
 async def get_monitoring_thresholds(
-    organization_id: str = Query("default"),
+    organization_id: Optional[str] = Query(default=None),
     window_hours: int = Query(default=24, ge=1, le=168),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
@@ -1227,7 +1227,7 @@ async def get_monitoring_thresholds(
 
 @router.post("/monitoring-thresholds/check")
 async def check_and_alert_thresholds(
-    organization_id: str = Query("default"),
+    organization_id: Optional[str] = Query(default=None),
     window_hours: int = Query(default=24, ge=1, le=168),
     push_slack: bool = Query(default=False, description="Push alert summary to Slack digest channel if alerts are found"),
     user: TokenData = Depends(get_current_user),
@@ -1279,7 +1279,7 @@ async def check_and_alert_thresholds(
 
 @router.get("/monitoring-health")
 async def get_monitoring_health(
-    organization_id: str = Query("default"),
+    organization_id: Optional[str] = Query(default=None),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """Run all monitoring health checks (dead letters, auth, autopilot, overdue, posting).
@@ -1326,7 +1326,7 @@ def _serialize_retry_job(job: Dict[str, Any]) -> Dict[str, Any]:
 
 @router.get("/retry-queue")
 async def get_retry_queue(
-    organization_id: str = Query("default"),
+    organization_id: Optional[str] = Query(default=None),
     status: str = Query(
         default="dead_letter",
         description="Job status filter: 'dead_letter', 'pending', 'all'",

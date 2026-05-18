@@ -29,6 +29,7 @@ from pydantic import BaseModel
 
 from clearledgr.core.auth import TokenData, get_current_user
 from clearledgr.core.database import get_db
+from clearledgr.core.org_utils import require_org
 from clearledgr.integrations.erp_router import ERPConnection, set_erp_connection, get_erp_connection
 
 logger = logging.getLogger(__name__)
@@ -202,16 +203,16 @@ def _audit_erp_admin_action(
         )
 
 
-def _resolve_org_id(user: TokenData, requested_org: str) -> str:
+def _resolve_org_id(user: TokenData, requested_org: Optional[str]) -> str:
     """Resolve + enforce tenant scope.
 
     Admin/owner role elevates WHAT the user can do within their org,
     never WHICH org they can access. No cross-tenant access via role.
+    Delegates to ``require_org`` so the session org is the source of
+    truth and ``"default"``/``"_unprovisioned"`` placeholders are
+    rejected uniformly.
     """
-    org_id = str(requested_org or user.organization_id or "default").strip() or "default"
-    if org_id != str(user.organization_id or "").strip():
-        raise HTTPException(status_code=403, detail="org_mismatch")
-    return org_id
+    return require_org(user, requested=requested_org)
 
 
 # ==================== CONFIGURATION ====================
@@ -997,7 +998,7 @@ class GLAccountMapRequest(BaseModel):
 
 @router.get("/gl-map")
 async def get_gl_account_map(
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     user: TokenData = Depends(get_current_user),
 ):
     """Return the per-tenant GL account code mapping stored in org settings.
@@ -1026,7 +1027,7 @@ async def get_gl_account_map(
 @router.put("/gl-map")
 async def update_gl_account_map(
     body: GLAccountMapRequest,
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     user: TokenData = Depends(get_current_user),
 ):
     """Store a per-tenant GL account code mapping in org settings.

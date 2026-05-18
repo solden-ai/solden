@@ -21,20 +21,19 @@ _ADMIN_ROLES = {"admin", "owner"}
 
 
 class UpsertAPPolicyRequest(BaseModel):
-    organization_id: str = Field(default="default", min_length=1)
+    organization_id: Optional[str] = Field(default=None, min_length=1)
     updated_by: str = Field(default="system", min_length=1)
     enabled: bool = True
     config: Dict[str, Any] = {}
 
 
-def _resolve_org_id(user: TokenData, requested_org: str) -> str:
+def _resolve_org_id(user: TokenData, requested_org: Optional[str]) -> str:
     """Resolve + enforce tenant scope. Admin role does NOT grant
     cross-tenant access — it only widens what the user can do within
-    their own org."""
-    org = str(requested_org or user.organization_id or "default").strip() or "default"
-    if org != str(user.organization_id or "").strip():
-        raise HTTPException(status_code=403, detail="org_mismatch")
-    return org
+    their own org. Delegates to ``require_org`` so the session org is
+    the source of truth and legacy ``"default"`` placeholders are
+    rejected uniformly."""
+    return require_org(user, requested=requested_org)
 
 
 def _get_effective_payload(organization_id: str, policy_name: str) -> Dict[str, Any]:
@@ -51,7 +50,7 @@ def _get_effective_payload(organization_id: str, policy_name: str) -> Dict[str, 
 
 @router.get("")
 def get_ap_policy(
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     policy_name: str = Query(default=AP_POLICY_NAME),
     include_versions: bool = Query(default=False),
     versions_limit: int = Query(default=20, ge=1, le=200),
@@ -77,7 +76,7 @@ def get_ap_policy(
 @router.get("/{policy_name}")
 def get_named_ap_policy(
     policy_name: str,
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     user: TokenData = Depends(get_current_user),
 ):
     org_id = _resolve_org_id(user, organization_id)
@@ -159,7 +158,7 @@ def upsert_ap_policy(
 @router.get("/{policy_name}/versions")
 def list_ap_policy_versions(
     policy_name: str,
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     limit: int = Query(default=50, ge=1, le=500),
     user: TokenData = Depends(get_current_user),
 ):
@@ -179,7 +178,7 @@ def list_ap_policy_versions(
 @router.get("/{policy_name}/audit")
 def list_ap_policy_audit(
     policy_name: str,
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     limit: int = Query(default=100, ge=1, le=1000),
     user: TokenData = Depends(get_current_user),
 ):

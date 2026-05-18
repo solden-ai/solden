@@ -43,7 +43,7 @@ from clearledgr.api.gmail_extension_common import (
     build_finance_runtime as _build_finance_runtime,
     resolve_org_id_for_user as _resolve_org_id_for_user,
 )
-from clearledgr.core.org_utils import require_org
+from clearledgr.core.org_utils import assert_org_id, require_org
 from clearledgr.api.gmail_extension_support_routes import router as support_routes_router
 from clearledgr.core.auth import get_current_user, require_ops_user, create_access_token, get_user_by_email, has_admin_access
 from clearledgr.core.database import get_db
@@ -553,7 +553,7 @@ async def process_email(
                 "user_id": getattr(user, "user_id", ""),
                 **{k: v for k, v in payload.items() if k in ("subject", "sender", "body", "snippet")},
             },
-            organization_id=payload.get("organization_id", "default"),
+            organization_id=payload["organization_id"],
             idempotency_key=request.email_id,
         )
         result = queue.enqueue(event)
@@ -978,10 +978,7 @@ async def register_gmail_token(request: RegisterGmailTokenRequest):
             profile_email, org_id,
         )
 
-    resolved_org_id = str(getattr(user, "organization_id", None) or "default").strip() or "default"
-    requested_org = str(request.organization_id or "").strip()
-    if requested_org and requested_org != resolved_org_id:
-        raise HTTPException(status_code=403, detail="org_mismatch")
+    resolved_org_id = require_org(user, requested=request.organization_id)
 
     expires_in = int(request.expires_in or 3600)
     expires_in = max(60, min(expires_in, 86400))
@@ -1114,7 +1111,10 @@ async def exchange_gmail_code(request: ExchangeCodeRequest):
         )
 
     user_id = str(getattr(user, "id", "") or "").strip() or profile_email
-    resolved_org_id = str(getattr(user, "organization_id", None) or "default").strip()
+    resolved_org_id = assert_org_id(
+        getattr(user, "organization_id", None),
+        context="exchange_gmail_code",
+    )
     token_store = _token_store()
     existing_token = token_store.get(user_id)
     if not refresh_token and existing_token and existing_token.refresh_token:
@@ -2010,7 +2010,10 @@ def explain_ap_item(
     item = db.get_ap_item(ap_item_id) if hasattr(db, "get_ap_item") else None
     if not item:
         raise HTTPException(status_code=404, detail="ap_item_not_found")
-    _assert_user_org_access(user, str(item.get("organization_id") or "default"))
+    _assert_user_org_access(
+        user,
+        assert_org_id(item.get("organization_id"), context="ap_item.organization_id"),
+    )
     if item.get("organization_id") and org_id and item["organization_id"] != org_id:
         raise HTTPException(status_code=403, detail="org_mismatch")
 
@@ -2140,10 +2143,7 @@ async def record_field_correction(
         or getattr(user, "user_id", None)
         or "operator"
     )
-    runtime = _build_finance_runtime(
-        user,
-        str(getattr(user, "organization_id", None) or "default"),
-    )
+    runtime = _build_finance_runtime(user, require_org(user))
     try:
         return runtime.record_field_correction(
             ap_item_id=request.ap_item_id,

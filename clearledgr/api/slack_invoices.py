@@ -16,6 +16,7 @@ from clearledgr.core.ap_item_resolution import (
     resolve_ap_correlation_id,
 )
 from clearledgr.core.database import get_db
+from clearledgr.core.org_utils import assert_org_id
 
 router = APIRouter(prefix="/slack/invoices", tags=["slack-invoices"])
 legacy_router = APIRouter(prefix="/slack", tags=["slack-invoices"])
@@ -388,7 +389,9 @@ def _slack_stale_response() -> Dict[str, str]:
 
 async def _dispatch_slack_action(action: Any) -> Dict[str, Any]:
     runtime = _build_channel_runtime(
-        organization_id=action.organization_id or "default",
+        organization_id=assert_org_id(
+            action.organization_id, context="_dispatch_slack_action"
+        ),
         actor_id=action.actor_id or "slack_user",
         actor_email=action.actor_email or action.actor_id or "slack_user",
         db=get_db(),
@@ -702,7 +705,10 @@ async def _complete_slack_action_via_response_url(normalized: Any, processed_key
     await _post_to_response_url(
         response_url,
         final_reply,
-        organization_id=normalized.organization_id or "default",
+        organization_id=assert_org_id(
+            normalized.organization_id,
+            context="_complete_slack_action_via_response_url",
+        ),
         ap_item_id=normalized.ap_item_id,
     )
 
@@ -1072,7 +1078,10 @@ async def handle_invoice_interactive(request: Request, background_tasks: Backgro
                 "override_reason": normalized.override_reason if hasattr(normalized, "override_reason") else "",
                 "gmail_id": normalized.gmail_id or "",
             },
-            organization_id=normalized.organization_id or "default",
+            organization_id=assert_org_id(
+                normalized.organization_id,
+                context="slack_callback_event_enqueue",
+            ),
             idempotency_key=normalized.idempotency_key,
         )
         get_event_queue().enqueue(approval_event)

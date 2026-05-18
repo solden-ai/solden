@@ -148,16 +148,6 @@ _M19_OR_DEFAULT_ALLOWLIST: frozenset[str] = frozenset({
     # and the application layer (require_org / assert_org_id) — this
     # allowlist holds the punchlist visible so the sweep resumes
     # without losing track of which files still need work.
-    "clearledgr/api/ap_item_detail.py",
-    "clearledgr/api/ap_policies.py",
-    "clearledgr/api/erp_connections.py",
-    "clearledgr/api/gmail_extension.py",
-    "clearledgr/api/ops.py",
-    "clearledgr/api/outbox_ops.py",
-    "clearledgr/api/paddle_billing.py",
-    "clearledgr/api/pipelines.py",
-    "clearledgr/api/policies.py",
-    "clearledgr/api/slack_invoices.py",
     "clearledgr/core/ap_confidence.py",
     "clearledgr/core/events.py",
     "clearledgr/core/finance_contracts.py",

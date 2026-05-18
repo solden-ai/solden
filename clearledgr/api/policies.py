@@ -29,7 +29,6 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from clearledgr.api.deps import verify_org_access
 from clearledgr.core.auth import get_current_user
 from clearledgr.core.org_utils import require_org
 from clearledgr.services.policy_service import (
@@ -41,7 +40,7 @@ from clearledgr.services.policy_service import (
 router = APIRouter(prefix="/api/policies", tags=["policies"])
 
 
-def _service(organization_id: str, user) -> PolicyService:
+def _service(organization_id: Optional[str], user) -> PolicyService:
     # M19+: route helper. Use require_org so missing/mismatched org
     # surfaces as HTTPException(403) instead of a ValueError -> 500.
     org = require_org(user, requested=organization_id)
@@ -70,7 +69,7 @@ def _version_to_dict(v) -> Dict[str, Any]:
 @router.get("/{kind}/active")
 def get_active_policy(
     kind: str,
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     service = _service(organization_id, user)
@@ -84,7 +83,7 @@ def get_active_policy(
 @router.get("/{kind}/versions")
 def list_policy_versions(
     kind: str,
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     limit: int = Query(default=50, ge=1, le=500),
     user=Depends(get_current_user),
 ) -> Dict[str, Any]:
@@ -104,7 +103,7 @@ def list_policy_versions(
 @router.get("/versions/{version_id}")
 def get_policy_version(
     version_id: str,
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     service = _service(organization_id, user)
@@ -127,7 +126,7 @@ class PolicyVersionCreateRequest(BaseModel):
 def create_policy_version(
     kind: str,
     body: PolicyVersionCreateRequest,
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     service = _service(organization_id, user)
@@ -152,7 +151,7 @@ class PolicyRollbackRequest(BaseModel):
 def rollback_policy(
     version_id: str,
     body: PolicyRollbackRequest,
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     service = _service(organization_id, user)
@@ -181,7 +180,7 @@ class PolicyReplayRequest(BaseModel):
 @router.post("/replay")
 def replay_policy(
     body: PolicyReplayRequest,
-    organization_id: str = Query(default="default"),
+    organization_id: Optional[str] = Query(default=None),
     user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     service = _service(organization_id, user)
