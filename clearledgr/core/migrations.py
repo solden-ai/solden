@@ -5056,3 +5056,62 @@ def _v86_customer_agent_connection(cur, db):
     cur.execute(
         "ALTER TABLE audit_events ADD COLUMN IF NOT EXISTS agent_version TEXT"
     )
+
+
+@migration(
+    87,
+    "intent_responses: response cache for /v1/intents/execute "
+    "idempotency-key replay (Stripe pattern; plan §Step 7)",
+)
+def _v87_intent_responses(cur, db):
+    """Cache table that lets /v1/intents/execute honour the
+    ``Idempotency-Key`` header.
+
+    Stripe-style: client passes ``Idempotency-Key: <uuid>``. Server
+    hashes the request payload and stores the response. On retry:
+
+    * same key + same payload_hash → return the cached response.
+    * same key + different payload_hash → 409 idempotency_conflict
+      (protects against buggy clients accidentally reusing a key
+      for a different request).
+
+    The audit_events table already has its own idempotency_key
+    column with a UNIQUE constraint, which keeps the audit chain
+    free of duplicates at the substrate level. This table sits on
+    top so the API can return the *original* 200 response body
+    instead of replaying the intent and risking partial work.
+
+    Schema:
+
+    * ``idempotency_key`` — caller-supplied UUID-shaped token.
+      Scoped per ``organization_id`` (one org's keys can't collide
+      with another's).
+    * ``payload_hash`` — SHA-256 over the canonical-JSON
+      serialisation of the request body (intent + input + idempotency_key).
+    * ``response_json`` — the JSON body we returned, verbatim.
+    * ``http_status`` — original status code.
+    * ``ts`` — when we cached it.
+    * ``expires_at`` — TTL marker (24h after ts). A periodic cleanup
+      task prunes; query-time filter (``WHERE expires_at > now()``)
+      also works as defence in depth.
+
+    UNIQUE(organization_id, idempotency_key) so the cache is per-org.
+    """
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS intent_responses (
+            organization_id TEXT NOT NULL,
+            idempotency_key TEXT NOT NULL,
+            payload_hash TEXT NOT NULL,
+            response_json TEXT NOT NULL,
+            http_status INTEGER NOT NULL,
+            ts TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            PRIMARY KEY (organization_id, idempotency_key)
+        )
+        """
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_intent_responses_expires "
+        "ON intent_responses (expires_at)"
+    )

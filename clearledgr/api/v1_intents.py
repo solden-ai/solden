@@ -35,6 +35,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from clearledgr.api.v1_auth import AgentIdentity, require_agent_key
+from clearledgr.api.v1_idempotency import (
+    extract_idempotency_key,
+    hash_payload,
+    lookup_cached_response,
+    store_response,
+)
 from clearledgr.services.agent_command_dispatch import build_channel_runtime
 
 logger = logging.getLogger(__name__)
@@ -129,7 +135,7 @@ async def preview_intent(
     """Dry-run an intent. Returns what would happen without side
     effects. Agents call this before /execute when they want to
     confirm a plan with a human approver first."""
-    runtime = _runtime_for_agent_simple(agent)
+    runtime = _runtime_for_agent(agent)
     try:
         result = runtime.preview_intent(payload.intent, payload.input)
         return {"ok": True, "preview": result}
@@ -148,20 +154,66 @@ async def execute_intent(
 ):
     """Commit an intent. Writes an ``audit_events`` row with
     ``actor_type='agent'``, ``actor_id=<agent_id>``, and
-    ``agent_version=<key.agent_version>``."""
-    runtime = _runtime_for_agent_simple(agent)
+    ``agent_version=<key.agent_version>``.
+
+    Idempotency: if the caller passes ``Idempotency-Key`` (header
+    preferred, body field fallback), the same key + same payload
+    replays the cached response; the same key with a different payload
+    returns 409 ``idempotency_conflict``. TTL on cached responses is
+    24 hours.
+    """
+    idem_key = extract_idempotency_key(request, payload.idempotency_key)
+
+    payload_hash: Optional[str] = None
+    if idem_key:
+        payload_hash = hash_payload(payload.intent, payload.input)
+        cached = lookup_cached_response(
+            organization_id=agent.organization_id,
+            idempotency_key=idem_key,
+            payload_hash=payload_hash,
+        )
+        if cached["status"] == "replay":
+            response = JSONResponse(
+                status_code=cached["http_status"],
+                content=cached["response"],
+            )
+            response.headers["Solden-Idempotent-Replay"] = "true"
+            return response
+        if cached["status"] == "conflict":
+            return _error_response(
+                status_code=409,
+                error_code="idempotency_conflict",
+                message=(
+                    "Idempotency-Key already used for a different payload. "
+                    "Use a fresh key."
+                ),
+                request=request,
+            )
+
+    runtime = _runtime_for_agent(agent)
     try:
         result = await runtime.execute_intent(
             payload.intent,
             payload.input,
-            idempotency_key=payload.idempotency_key,
+            idempotency_key=idem_key,
         )
-        return {"ok": True, "result": result}
+        response_body: Dict[str, Any] = {"ok": True, "result": result}
     except Exception as exc:
         code, msg = _translate_runtime_error(exc)
         return _error_response(
             status_code=code, error_code=msg[0], message=msg[1], request=request
         )
+
+    if idem_key and payload_hash:
+        store_response(
+            organization_id=agent.organization_id,
+            idempotency_key=idem_key,
+            payload_hash=payload_hash,
+            response=response_body,
+            http_status=200,
+        )
+
+    return response_body
 
 
 @router.get("")
@@ -175,7 +227,7 @@ async def list_intents(
     sees (the runtime's ``supported_intents``). Future scope-aware
     filtering can narrow this per the agent's scopes.
     """
-    runtime = _runtime_for_agent_simple(agent)
+    runtime = _runtime_for_agent(agent)
     return {
         "agent_id": agent.actor_label,
         "agent_version": agent.agent_version,
