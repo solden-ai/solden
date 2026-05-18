@@ -1785,7 +1785,6 @@ body.theme-light-landing .section-eyebrow::before {
 }
 .runtime__bullet[data-state="past"] .runtime__bullet-body p {
   transform: scale(0.85);
-  width: calc(100% / 0.85);
 }
 
 /* ── Anchor visual: per-bullet glyphs (intake / cascade /
@@ -2032,11 +2031,11 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 .scope__cell {
-  padding: 32px 28px 0 28px;
+  padding: 24px 22px 0 22px;
   border-right: 1px solid rgba(31, 27, 22, 0.12);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 .scope__cell:first-child { padding-left: 0; }
 .scope__cell:last-child {
@@ -2046,8 +2045,8 @@ body.theme-light-landing .section-eyebrow::before {
 
 .scope__cell-title {
   font-family: "Iowan Old Style", "Georgia", serif;
-  font-size: clamp(22px, 2.2vw, 28px);
-  line-height: 1.1;
+  font-size: clamp(18px, 1.7vw, 22px);
+  line-height: 1.15;
   letter-spacing: -0.014em;
   font-weight: 500;
   color: #1F1B16;
@@ -2056,8 +2055,8 @@ body.theme-light-landing .section-eyebrow::before {
 
 .scope__cell-body {
   font-family: "Iowan Old Style", "Georgia", serif;
-  font-size: 15px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.5;
   color: rgba(31, 27, 22, 0.7);
   margin: 0;
 }

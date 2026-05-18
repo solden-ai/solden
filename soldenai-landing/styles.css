@@ -739,6 +739,14 @@ body:not(.theme-dark) .footer-cta {
   letter-spacing: 0.04em;
   color: rgba(31, 27, 22, 0.55);
 }
+.footer__copyright a {
+  color: rgba(31, 27, 22, 0.55);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.footer__copyright a:hover {
+  color: #1F1B16;
+}
 .footer__social {
   display: flex;
   gap: 16px;
