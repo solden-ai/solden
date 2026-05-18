@@ -85,6 +85,17 @@ body.theme-manifesto-light .btn--primary:hover {
   .essay__cover-grid { padding: 0 24px; }
 }
 
+/* Text-only cover variant: no figure column, just the title block.
+   Single centered column, narrower max-width so the title doesn't
+   stretch into oversized line-lengths. */
+.essay__cover-grid--text-only {
+  grid-template-columns: 1fr;
+  max-width: 720px;
+}
+@media (max-width: 860px) {
+  .essay__cover-grid--text-only { max-width: 660px; }
+}
+
 .essay__cover-figure { margin: 0; }
 @media (max-width: 860px) {
   .essay__cover-figure { max-width: 360px; }
