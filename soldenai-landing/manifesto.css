@@ -86,14 +86,11 @@ body.theme-manifesto-light .btn--primary:hover {
 }
 
 /* Text-only cover variant: no figure column, just the title block.
-   Single centered column, narrower max-width so the title doesn't
-   stretch into oversized line-lengths. */
+   Single column, max-width matched to .essay__shell (920px) so the
+   cover and the body of the manifesto share the same column. */
 .essay__cover-grid--text-only {
   grid-template-columns: 1fr;
-  max-width: 720px;
-}
-@media (max-width: 860px) {
-  .essay__cover-grid--text-only { max-width: 660px; }
+  max-width: 920px;
 }
 
 .essay__cover-figure { margin: 0; }
