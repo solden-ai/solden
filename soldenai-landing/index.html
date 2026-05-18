@@ -24,7 +24,7 @@
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/Geist-Variable.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/GeistMono-Variable.woff2" crossorigin />
     <link rel="stylesheet" href="/styles.css?v=29" />
-    <link rel="stylesheet" href="/manifesto.css?v=58" />
+    <link rel="stylesheet" href="/manifesto.css?v=59" />
   </head>
   <body class="theme-light-landing">
 
@@ -247,72 +247,298 @@
           </ol>
 
           <aside class="runtime__anchor" aria-hidden="true">
-            <svg class="runtime__record" width="320" height="460" viewBox="0 0 320 460" xmlns="http://www.w3.org/2000/svg">
-              <!-- card outline -->
-              <rect x="10" y="20" width="300" height="420" rx="6"/>
+            <div class="runtime__glyph-stack">
 
-              <!-- header strip -->
-              <line x1="10" y1="60" x2="310" y2="60"/>
-              <text x="22" y="46" class="runtime__record-tag">ap_item</text>
-              <circle cx="290" cy="40" r="3"/>
-              <text x="280" y="46" text-anchor="end" class="runtime__record-tag-tiny">01h8k</text>
+              <!-- Glyph 1 — INTAKE: artifacts → typed record -->
+              <svg class="runtime__glyph" data-glyph="0" viewBox="0 0 360 460" xmlns="http://www.w3.org/2000/svg">
+                <text x="14" y="16" class="runtime__glyph-cap">intake</text>
+                <!-- sources column (left) -->
+                <rect x="14" y="30" width="60" height="34" rx="3"/>
+                <path d="M14 30 L44 52 L74 30"/>
+                <rect x="14" y="74" width="60" height="42" rx="3"/>
+                <g class="runtime__glyph-detail">
+                  <circle cx="22" cy="86" r="1.5"/>
+                  <line x1="28" y1="86" x2="66" y2="86"/>
+                  <circle cx="22" cy="96" r="1.5"/>
+                  <line x1="28" y1="96" x2="66" y2="96"/>
+                  <circle cx="22" cy="106" r="1.5"/>
+                  <line x1="28" y1="106" x2="54" y2="106"/>
+                </g>
+                <path d="M14 128 L60 128 L74 142 L74 168 L14 168 Z"/>
+                <path d="M60 128 L60 142 L74 142"/>
+                <g class="runtime__glyph-detail">
+                  <line x1="22" y1="150" x2="64" y2="150"/>
+                  <line x1="22" y1="156" x2="58" y2="156"/>
+                  <line x1="22" y1="162" x2="48" y2="162"/>
+                </g>
+                <path d="M44 178 L66 184 L66 208 L44 214 L22 208 L22 184 Z"/>
+                <text x="44" y="199" text-anchor="middle" class="runtime__glyph-cap-tiny">UBL</text>
+                <!-- flow lines (dashed-feel via lighter detail stroke) -->
+                <g class="runtime__glyph-detail">
+                  <path d="M74 46 Q104 46 130 80"/>
+                  <path d="M74 96 Q104 96 130 110"/>
+                  <path d="M74 150 Q104 150 130 140"/>
+                  <path d="M74 196 Q104 196 130 170"/>
+                </g>
+                <!-- record card (right) -->
+                <rect x="130" y="30" width="220" height="310" rx="4"/>
+                <line x1="130" y1="52" x2="350" y2="52"/>
+                <text x="138" y="46" class="runtime__glyph-cap">ap_item</text>
+                <circle cx="340" cy="41" r="3"/>
+                <text x="138" y="68" class="runtime__glyph-cap-tiny">vendor</text>
+                <line x1="186" y1="65" x2="340" y2="65"/>
+                <text x="138" y="84" class="runtime__glyph-cap-tiny">amount</text>
+                <line x1="186" y1="81" x2="340" y2="81"/>
+                <text x="138" y="100" class="runtime__glyph-cap-tiny">issue_date</text>
+                <line x1="200" y1="97" x2="340" y2="97"/>
+                <text x="138" y="116" class="runtime__glyph-cap-tiny">due_date</text>
+                <line x1="200" y1="113" x2="340" y2="113"/>
+                <text x="138" y="132" class="runtime__glyph-cap-tiny">ref</text>
+                <line x1="186" y1="129" x2="340" y2="129"/>
+                <text x="138" y="148" class="runtime__glyph-cap-tiny">po</text>
+                <line x1="186" y1="145" x2="340" y2="145"/>
+                <line x1="138" y1="162" x2="342" y2="162"/>
+                <text x="138" y="176" class="runtime__glyph-cap-tiny">line items</text>
+                <g class="runtime__glyph-detail">
+                  <line x1="138" y1="186" x2="342" y2="186"/>
+                  <line x1="138" y1="196" x2="320" y2="196"/>
+                  <line x1="138" y1="206" x2="296" y2="206"/>
+                  <line x1="138" y1="216" x2="310" y2="216"/>
+                </g>
+                <line x1="130" y1="310" x2="350" y2="310"/>
+                <text x="138" y="326" class="runtime__glyph-cap-tiny">typed · stored · queryable</text>
+              </svg>
 
-              <!-- field rows: label + value-line pairs -->
-              <text x="22" y="86" class="runtime__record-label">vendor</text>
-              <line x1="118" y1="83" x2="298" y2="83"/>
+              <!-- Glyph 2 — CASCADE: rule gates evaluate -->
+              <svg class="runtime__glyph" data-glyph="1" viewBox="0 0 360 460" xmlns="http://www.w3.org/2000/svg">
+                <text x="14" y="16" class="runtime__glyph-cap">cascade · v23</text>
+                <!-- record (left) -->
+                <rect x="14" y="110" width="94" height="120" rx="3"/>
+                <line x1="14" y1="128" x2="108" y2="128"/>
+                <text x="22" y="124" class="runtime__glyph-cap-tiny">ap_item</text>
+                <circle cx="100" cy="119" r="2.5"/>
+                <g class="runtime__glyph-detail">
+                  <line x1="22" y1="140" x2="100" y2="140"/>
+                  <line x1="22" y1="152" x2="100" y2="152"/>
+                  <line x1="22" y1="164" x2="100" y2="164"/>
+                  <line x1="22" y1="176" x2="88" y2="176"/>
+                  <line x1="22" y1="188" x2="96" y2="188"/>
+                  <line x1="22" y1="200" x2="72" y2="200"/>
+                </g>
+                <!-- connectors -->
+                <g class="runtime__glyph-detail">
+                  <path d="M108 140 Q124 140 134 70"/>
+                  <path d="M108 160 Q124 160 134 158"/>
+                  <path d="M108 180 Q124 180 134 246"/>
+                  <path d="M108 200 Q124 200 134 334"/>
+                </g>
+                <!-- 4 gate cards stacked on right -->
+                <rect x="134" y="40" width="216" height="68" rx="3"/>
+                <line x1="134" y1="58" x2="350" y2="58"/>
+                <text x="142" y="54" class="runtime__glyph-cap-tiny">3-way match</text>
+                <text x="312" y="54" class="runtime__glyph-cap-tiny">v17</text>
+                <rect x="142" y="70" width="14" height="14" rx="2"/>
+                <path d="M146 77 L150 81 L156 73"/>
+                <g class="runtime__glyph-detail">
+                  <line x1="164" y1="78" x2="340" y2="78"/>
+                  <line x1="164" y1="94" x2="320" y2="94"/>
+                </g>
+                <rect x="134" y="128" width="216" height="60" rx="3"/>
+                <line x1="134" y1="146" x2="350" y2="146"/>
+                <text x="142" y="142" class="runtime__glyph-cap-tiny">sanctions screen</text>
+                <text x="312" y="142" class="runtime__glyph-cap-tiny">v04</text>
+                <rect x="142" y="158" width="14" height="14" rx="2"/>
+                <path d="M146 165 L150 169 L156 161"/>
+                <g class="runtime__glyph-detail">
+                  <line x1="164" y1="166" x2="340" y2="166"/>
+                  <line x1="164" y1="180" x2="316" y2="180"/>
+                </g>
+                <rect x="134" y="208" width="216" height="60" rx="3"/>
+                <line x1="134" y1="226" x2="350" y2="226"/>
+                <text x="142" y="222" class="runtime__glyph-cap-tiny">duplicate scan</text>
+                <text x="312" y="222" class="runtime__glyph-cap-tiny">v11</text>
+                <rect x="142" y="238" width="14" height="14" rx="2"/>
+                <path d="M146 245 L150 249 L156 241"/>
+                <g class="runtime__glyph-detail">
+                  <line x1="164" y1="246" x2="340" y2="246"/>
+                  <line x1="164" y1="260" x2="322" y2="260"/>
+                </g>
+                <rect x="134" y="288" width="216" height="60" rx="3"/>
+                <line x1="134" y1="306" x2="350" y2="306"/>
+                <text x="142" y="302" class="runtime__glyph-cap-tiny">budget tolerance</text>
+                <text x="312" y="302" class="runtime__glyph-cap-tiny">v22</text>
+                <rect x="142" y="318" width="14" height="14" rx="2"/>
+                <path d="M146 325 L150 329 L156 321"/>
+                <g class="runtime__glyph-detail">
+                  <line x1="164" y1="326" x2="340" y2="326"/>
+                  <line x1="164" y1="340" x2="314" y2="340"/>
+                </g>
+                <line x1="14" y1="368" x2="350" y2="368"/>
+                <text x="14" y="382" class="runtime__glyph-cap-tiny">rules decide · model writes the why</text>
+              </svg>
 
-              <text x="22" y="108" class="runtime__record-label">vendor_id</text>
-              <line x1="118" y1="105" x2="234" y2="105"/>
+              <!-- Glyph 3 — SURFACES: record renders to approver tools -->
+              <svg class="runtime__glyph" data-glyph="2" viewBox="0 0 360 460" xmlns="http://www.w3.org/2000/svg">
+                <text x="14" y="16" class="runtime__glyph-cap">surfaces</text>
+                <!-- connectors first (drawn under cards) -->
+                <g class="runtime__glyph-detail">
+                  <path d="M160 180 Q110 130 60 80"/>
+                  <path d="M180 168 Q180 124 180 88"/>
+                  <path d="M200 180 Q250 130 300 80"/>
+                  <path d="M160 240 Q110 290 60 340"/>
+                  <path d="M200 240 Q250 290 300 340"/>
+                </g>
+                <g class="runtime__glyph-ghost">
+                  <path d="M204 210 Q252 218 300 230"/>
+                </g>
+                <!-- record at center -->
+                <rect x="152" y="170" width="56" height="66" rx="3"/>
+                <line x1="152" y1="186" x2="208" y2="186"/>
+                <text x="158" y="182" class="runtime__glyph-cap-tiny">ap_item</text>
+                <g class="runtime__glyph-detail">
+                  <line x1="160" y1="196" x2="200" y2="196"/>
+                  <line x1="160" y1="204" x2="200" y2="204"/>
+                  <line x1="160" y1="212" x2="200" y2="212"/>
+                  <line x1="160" y1="220" x2="192" y2="220"/>
+                </g>
+                <!-- NW Gmail -->
+                <rect x="14" y="54" width="76" height="46" rx="3"/>
+                <line x1="14" y1="66" x2="90" y2="66"/>
+                <text x="20" y="63" class="runtime__glyph-cap-tiny">gmail</text>
+                <rect x="20" y="74" width="22" height="14" rx="1.5"/>
+                <path d="M20 74 L31 83 L42 74"/>
+                <g class="runtime__glyph-detail">
+                  <line x1="48" y1="78" x2="84" y2="78"/>
+                  <line x1="48" y1="86" x2="76" y2="86"/>
+                  <line x1="48" y1="94" x2="80" y2="94"/>
+                </g>
+                <!-- N Slack -->
+                <rect x="146" y="44" width="68" height="42" rx="3"/>
+                <line x1="146" y1="56" x2="214" y2="56"/>
+                <text x="152" y="53" class="runtime__glyph-cap-tiny">slack</text>
+                <g>
+                  <line x1="156" y1="62" x2="162" y2="82"/>
+                  <line x1="168" y1="62" x2="174" y2="82"/>
+                  <line x1="154" y1="68" x2="176" y2="68"/>
+                  <line x1="152" y1="76" x2="174" y2="76"/>
+                </g>
+                <g class="runtime__glyph-detail">
+                  <line x1="184" y1="66" x2="208" y2="66"/>
+                  <line x1="184" y1="74" x2="204" y2="74"/>
+                  <line x1="184" y1="82" x2="206" y2="82"/>
+                </g>
+                <!-- NE Teams -->
+                <rect x="270" y="54" width="76" height="46" rx="3"/>
+                <line x1="270" y1="66" x2="346" y2="66"/>
+                <text x="276" y="63" class="runtime__glyph-cap-tiny">teams</text>
+                <line x1="278" y1="74" x2="298" y2="74"/>
+                <line x1="288" y1="74" x2="288" y2="92"/>
+                <g class="runtime__glyph-detail">
+                  <line x1="306" y1="78" x2="340" y2="78"/>
+                  <line x1="306" y1="86" x2="334" y2="86"/>
+                  <line x1="306" y1="94" x2="338" y2="94"/>
+                </g>
+                <!-- SW NetSuite -->
+                <rect x="14" y="308" width="76" height="42" rx="3"/>
+                <line x1="14" y1="320" x2="90" y2="320"/>
+                <text x="20" y="317" class="runtime__glyph-cap-tiny">netsuite</text>
+                <line x1="22" y1="326" x2="40" y2="326"/>
+                <line x1="22" y1="334" x2="40" y2="334"/>
+                <line x1="22" y1="342" x2="40" y2="342"/>
+                <line x1="22" y1="326" x2="22" y2="342"/>
+                <line x1="40" y1="326" x2="40" y2="342"/>
+                <line x1="31" y1="326" x2="31" y2="342"/>
+                <g class="runtime__glyph-detail">
+                  <line x1="48" y1="330" x2="84" y2="330"/>
+                  <line x1="48" y1="338" x2="76" y2="338"/>
+                </g>
+                <!-- SE SAP -->
+                <rect x="270" y="308" width="76" height="42" rx="3"/>
+                <line x1="270" y1="320" x2="346" y2="320"/>
+                <text x="276" y="317" class="runtime__glyph-cap-tiny">sap fiori</text>
+                <path d="M280 338 L290 332 L300 338 L290 344 Z"/>
+                <path d="M280 338 L280 344 L290 350 L290 344"/>
+                <path d="M300 338 L300 344 L290 350"/>
+                <g class="runtime__glyph-detail">
+                  <line x1="306" y1="330" x2="340" y2="330"/>
+                  <line x1="306" y1="338" x2="332" y2="338"/>
+                </g>
+                <!-- E ghost (+ next) -->
+                <g class="runtime__glyph-ghost">
+                  <rect x="282" y="190" width="64" height="44" rx="3"/>
+                  <line x1="282" y1="202" x2="346" y2="202"/>
+                  <text x="288" y="199" class="runtime__glyph-cap-tiny">+ next</text>
+                  <line x1="290" y1="212" x2="332" y2="212"/>
+                  <line x1="290" y1="220" x2="324" y2="220"/>
+                  <line x1="290" y1="228" x2="328" y2="228"/>
+                </g>
+                <line x1="14" y1="390" x2="346" y2="390"/>
+                <text x="14" y="404" class="runtime__glyph-cap-tiny">one record · wherever the approver works</text>
+              </svg>
 
-              <text x="22" y="130" class="runtime__record-label">amount</text>
-              <line x1="118" y1="127" x2="226" y2="127"/>
+              <!-- Glyph 4 — AUDIT: hash chain seals every move -->
+              <svg class="runtime__glyph" data-glyph="3" viewBox="0 0 360 460" xmlns="http://www.w3.org/2000/svg">
+                <text x="14" y="16" class="runtime__glyph-cap">audit chain · sha256</text>
+                <!-- 4 hash blocks vertically stacked, linked by 'prev' arrows -->
+                <rect x="40" y="36" width="200" height="66" rx="3"/>
+                <line x1="40" y1="54" x2="240" y2="54"/>
+                <text x="48" y="50" class="runtime__glyph-cap-tiny">captured</text>
+                <text x="206" y="50" class="runtime__glyph-cap-tiny">t+00:00</text>
+                <g class="runtime__glyph-detail">
+                  <line x1="48" y1="66" x2="232" y2="66"/>
+                  <line x1="48" y1="76" x2="218" y2="76"/>
+                  <line x1="48" y1="86" x2="226" y2="86"/>
+                  <line x1="48" y1="96" x2="196" y2="96"/>
+                </g>
+                <line x1="140" y1="102" x2="140" y2="118"/>
+                <path d="M134 112 L140 118 L146 112"/>
+                <text x="152" y="114" class="runtime__glyph-cap-tiny">prev</text>
+                <rect x="40" y="118" width="200" height="66" rx="3"/>
+                <line x1="40" y1="136" x2="240" y2="136"/>
+                <text x="48" y="132" class="runtime__glyph-cap-tiny">validated</text>
+                <text x="206" y="132" class="runtime__glyph-cap-tiny">t+00:08</text>
+                <g class="runtime__glyph-detail">
+                  <line x1="48" y1="148" x2="232" y2="148"/>
+                  <line x1="48" y1="158" x2="216" y2="158"/>
+                  <line x1="48" y1="168" x2="224" y2="168"/>
+                  <line x1="48" y1="178" x2="200" y2="178"/>
+                </g>
+                <line x1="140" y1="184" x2="140" y2="200"/>
+                <path d="M134 194 L140 200 L146 194"/>
+                <text x="152" y="196" class="runtime__glyph-cap-tiny">prev</text>
+                <rect x="40" y="200" width="200" height="66" rx="3"/>
+                <line x1="40" y1="218" x2="240" y2="218"/>
+                <text x="48" y="214" class="runtime__glyph-cap-tiny">decided</text>
+                <text x="206" y="214" class="runtime__glyph-cap-tiny">t+04:12</text>
+                <g class="runtime__glyph-detail">
+                  <line x1="48" y1="230" x2="232" y2="230"/>
+                  <line x1="48" y1="240" x2="220" y2="240"/>
+                  <line x1="48" y1="250" x2="228" y2="250"/>
+                  <line x1="48" y1="260" x2="204" y2="260"/>
+                </g>
+                <line x1="140" y1="266" x2="140" y2="282"/>
+                <path d="M134 276 L140 282 L146 276"/>
+                <text x="152" y="278" class="runtime__glyph-cap-tiny">prev</text>
+                <rect x="40" y="282" width="200" height="66" rx="3"/>
+                <line x1="40" y1="300" x2="240" y2="300"/>
+                <text x="48" y="296" class="runtime__glyph-cap-tiny">posted</text>
+                <text x="206" y="296" class="runtime__glyph-cap-tiny">t+04:13</text>
+                <g class="runtime__glyph-detail">
+                  <line x1="48" y1="312" x2="232" y2="312"/>
+                  <line x1="48" y1="322" x2="218" y2="322"/>
+                  <line x1="48" y1="332" x2="222" y2="332"/>
+                  <line x1="48" y1="342" x2="196" y2="342"/>
+                </g>
+                <line x1="140" y1="348" x2="140" y2="376"/>
+                <path d="M134 370 L140 376 L146 370"/>
+                <!-- seal medallion -->
+                <circle cx="140" cy="402" r="22"/>
+                <circle cx="140" cy="402" r="16"/>
+                <path d="M128 402 L137 411 L152 396"/>
+                <text x="140" y="446" text-anchor="middle" class="runtime__glyph-cap-tiny">sealed · tamper-evident</text>
+              </svg>
 
-              <text x="22" y="152" class="runtime__record-label">currency</text>
-              <line x1="118" y1="149" x2="172" y2="149"/>
-
-              <text x="22" y="174" class="runtime__record-label">issue_date</text>
-              <line x1="118" y1="171" x2="218" y2="171"/>
-
-              <text x="22" y="196" class="runtime__record-label">due_date</text>
-              <line x1="118" y1="193" x2="218" y2="193"/>
-
-              <text x="22" y="218" class="runtime__record-label">ref</text>
-              <line x1="118" y1="215" x2="262" y2="215"/>
-
-              <text x="22" y="240" class="runtime__record-label">po_number</text>
-              <line x1="118" y1="237" x2="252" y2="237"/>
-
-              <text x="22" y="262" class="runtime__record-label">terms</text>
-              <line x1="118" y1="259" x2="196" y2="259"/>
-
-              <!-- subheader divider + caption -->
-              <line x1="22" y1="278" x2="298" y2="278"/>
-              <text x="22" y="294" class="runtime__record-label">line items</text>
-
-              <!-- line item rows -->
-              <g class="runtime__record-detail">
-                <line x1="22" y1="308" x2="298" y2="308"/>
-                <line x1="22" y1="324" x2="278" y2="324"/>
-                <line x1="22" y1="340" x2="262" y2="340"/>
-                <line x1="22" y1="356" x2="290" y2="356"/>
-              </g>
-
-              <!-- footer strip with audit + policy mark -->
-              <line x1="22" y1="378" x2="298" y2="378"/>
-              <text x="22" y="394" class="runtime__record-label">audit</text>
-              <g class="runtime__record-detail">
-                <rect x="118" y="384" width="20" height="14" rx="2"/>
-                <rect x="142" y="384" width="20" height="14" rx="2"/>
-                <rect x="166" y="384" width="20" height="14" rx="2"/>
-                <rect x="190" y="384" width="20" height="14" rx="2"/>
-                <line x1="214" y1="391" x2="244" y2="391"/>
-              </g>
-              <circle cx="270" cy="391" r="6"/>
-              <path d="M266 391 L269 394 L274 388"/>
-
-              <text x="22" y="420" class="runtime__record-label">policy</text>
-              <text x="118" y="420" class="runtime__record-label">v23 &middot; sealed</text>
-            </svg>
+            </div>
           </aside>
             </div>
           </div>
@@ -419,6 +645,6 @@
       </div>
     </footer>
 
-    <script src="/site.js?v=9" defer></script>
+    <script src="/site.js?v=10" defer></script>
   </body>
 </html>

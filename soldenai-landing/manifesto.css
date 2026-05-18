@@ -1785,9 +1785,11 @@ body.theme-light-landing .section-eyebrow::before {
   width: calc(100% / 0.85);
 }
 
-/* ── Anchor visual: typed-record card ───────────────────────── */
-/* Pinned indirectly via the parent .runtime__sticky-frame; no
-   need for its own sticky positioning. */
+/* ── Anchor visual: per-bullet glyphs (intake / cascade /
+       surfaces / audit). All four glyphs stack in the same slot;
+       only the one matching the active bullet renders. JS toggles
+       a .is-active class on the glyph whose data-glyph matches
+       the active bullet index. */
 .runtime__anchor {
   align-self: start;
 }
@@ -1799,13 +1801,27 @@ body.theme-light-landing .section-eyebrow::before {
   }
 }
 
-.runtime__record {
+.runtime__glyph-stack {
+  position: relative;
   width: 100%;
-  max-width: 320px;
-  height: auto;
-  display: block;
+  max-width: 360px;
+  aspect-ratio: 360 / 460;
 }
-.runtime__record * {
+
+.runtime__glyph {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+.runtime__glyph.is-active {
+  opacity: 1;
+}
+
+.runtime__glyph * {
   fill: none;
   stroke: #1F1B16;
   stroke-opacity: 0.78;
@@ -1814,31 +1830,33 @@ body.theme-light-landing .section-eyebrow::before {
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
 }
-.runtime__record text {
+.runtime__glyph text {
   stroke: none;
   fill: #1F1B16;
 }
-.runtime__record .runtime__record-detail,
-.runtime__record .runtime__record-detail * {
+.runtime__glyph .runtime__glyph-detail,
+.runtime__glyph .runtime__glyph-detail * {
   stroke-width: 0.9;
   stroke-opacity: 0.5;
 }
-.runtime__record .runtime__record-tag {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  fill: rgba(31, 27, 22, 0.6);
+.runtime__glyph .runtime__glyph-ghost,
+.runtime__glyph .runtime__glyph-ghost * {
+  stroke-width: 1;
+  stroke-opacity: 0.3;
 }
-.runtime__record .runtime__record-tag-tiny {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 9px;
-  letter-spacing: 0.04em;
-  fill: rgba(31, 27, 22, 0.5);
+.runtime__glyph .runtime__glyph-ghost text {
+  fill: rgba(31, 27, 22, 0.32);
 }
-.runtime__record .runtime__record-label {
+.runtime__glyph .runtime__glyph-cap {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: rgba(31, 27, 22, 0.55);
+}
+.runtime__glyph .runtime__glyph-cap-tiny {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 8px;
   letter-spacing: 0.04em;
   fill: rgba(31, 27, 22, 0.55);
 }

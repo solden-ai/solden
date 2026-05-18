@@ -268,12 +268,18 @@
   function initRuntimeBullets() {
     var track = document.querySelector('.runtime__scroll-track');
     var bullets = document.querySelectorAll('.runtime__bullet');
+    var glyphs = document.querySelectorAll('.runtime__glyph');
     if (!track || !bullets.length) return;
 
     function setStates(activeIdx) {
       for (var i = 0; i < bullets.length; i++) {
         var state = i < activeIdx ? 'past' : (i === activeIdx ? 'active' : 'future');
         bullets[i].setAttribute('data-state', state);
+      }
+      // Per-bullet anchor glyph: only the matching one renders.
+      for (var j = 0; j < glyphs.length; j++) {
+        var gIdx = parseInt(glyphs[j].getAttribute('data-glyph'), 10);
+        glyphs[j].classList.toggle('is-active', gIdx === activeIdx);
       }
     }
 
