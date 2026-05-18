@@ -59,7 +59,7 @@ def list_audit_events(
         description="Filter to a specific event_type.",
     ),
     limit: int = Query(default=100, ge=1, le=500),
-    agent: AgentIdentity = Depends(require_agent_key("read:audit")),
+    agent: AgentIdentity = Depends(require_agent_key("audit:read")),
 ):
     """Read the audit chain for the caller's organisation.
 

@@ -53,6 +53,26 @@ __all__ = [
 ]
 
 
+# Legacy → new scope synonym map. A key minted under the old Module-11
+# vocabulary (verb:noun, AP-pinned) still satisfies a /v1 scope check
+# expressed in the new vocabulary (noun:verb, Box-type-agnostic).
+#
+# Keys are NEW scope tokens; values are the legacy tokens that satisfy
+# them. Order doesn't matter — has_scope() walks the tuple.
+#
+# 6-month deprecation window: keep accepting both until 2026-11. Then
+# this map can be pared down (or removed) and warning logs added for
+# the few keys still on legacy tokens.
+_LEGACY_SCOPE_SYNONYMS: dict[str, tuple[str, ...]] = {
+    "records:read": ("read:ap_items", "read:vendors"),
+    "records:write": ("write:ap_items", "write:vendors"),
+    "intents:execute": ("write:ap_items",),
+    "intents:preview": ("read:ap_items",),
+    "audit:read": ("read:audit", "read:reports"),
+    "webhooks:manage": ("manage:webhooks",),
+}
+
+
 @dataclass
 class AgentIdentity:
     """The resolved identity behind a /v1 caller.
@@ -91,10 +111,26 @@ class AgentIdentity:
         return self.agent_id or self.user_id or "unknown_agent"
 
     def has_scope(self, scope: str) -> bool:
-        """Scope check with the migration-74 NULL = full-access contract."""
+        """Scope check with the migration-74 NULL = full-access contract.
+
+        Also accepts legacy AP-pinned scope tokens as synonyms for the
+        new Box-type-agnostic vocab during the 6-month deprecation
+        window. A key minted with ``read:ap_items`` still passes a
+        ``records:read`` check; ``write:ap_items`` covers
+        ``records:write`` and ``intents:execute``. Lets existing
+        customer integrations keep working through the rename day
+        without a coordinated key rotation.
+        """
         if self.scopes is None:
             return True  # legacy unscoped key
-        return scope in self.scopes
+        if scope in self.scopes:
+            return True
+        # Walk the synonym map: each new-vocab scope lists the legacy
+        # scopes that satisfy it.
+        for legacy in _LEGACY_SCOPE_SYNONYMS.get(scope, ()):
+            if legacy in self.scopes:
+                return True
+        return False
 
 
 def _extract_raw_key(request: Request) -> Optional[str]:

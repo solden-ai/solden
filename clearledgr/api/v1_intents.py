@@ -124,7 +124,7 @@ def _runtime_for_agent(agent: AgentIdentity) -> Any:
 async def preview_intent(
     payload: V1IntentRequest,
     request: Request,
-    agent: AgentIdentity = Depends(require_agent_key("read:ap_items")),
+    agent: AgentIdentity = Depends(require_agent_key("intents:preview")),
 ):
     """Dry-run an intent. Returns what would happen without side
     effects. Agents call this before /execute when they want to
@@ -144,7 +144,7 @@ async def preview_intent(
 async def execute_intent(
     payload: V1IntentRequest,
     request: Request,
-    agent: AgentIdentity = Depends(require_agent_key("write:ap_items")),
+    agent: AgentIdentity = Depends(require_agent_key("intents:execute")),
 ):
     """Commit an intent. Writes an ``audit_events`` row with
     ``actor_type='agent'``, ``actor_id=<agent_id>``, and

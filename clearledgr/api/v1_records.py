@@ -263,7 +263,7 @@ async def list_records(
         default=None, description="Opaque pagination cursor"
     ),
     limit: int = Query(default=50, ge=1, le=200, description="Page size"),
-    agent: AgentIdentity = Depends(require_agent_key("read:ap_items")),
+    agent: AgentIdentity = Depends(require_agent_key("records:read")),
 ):
     """List records the caller's organisation owns, filtered by
     ``box_type`` and optionally ``state``."""
@@ -313,7 +313,7 @@ async def read_record(
     box_id: str,
     request: Request,
     box_type: str = Query(..., description="Box type, e.g. 'ap_item'"),
-    agent: AgentIdentity = Depends(require_agent_key("read:ap_items")),
+    agent: AgentIdentity = Depends(require_agent_key("records:read")),
 ):
     """Read a single record by id. ``box_type`` is required so the
     router never has to guess from the id shape (every Box type owns

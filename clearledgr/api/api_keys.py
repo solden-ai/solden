@@ -72,6 +72,26 @@ def _generate_raw_key() -> str:
 # pass through untouched (the customer-side scopes are explicitly an
 # API-key-only mechanism).
 _SCOPE_CATALOG: List[str] = [
+    # ── /v1 public-surface vocabulary (Box-type-agnostic) ──
+    # The runtime claim is workflow-type-agnostic, so the public scope
+    # vocabulary is too. Customer-issued keys for /v1 should use these.
+    "records:read",
+    "records:write",
+    "intents:execute",
+    "intents:preview",
+    "audit:read",
+    "webhooks:manage",
+    # ── legacy AP-pinned vocabulary (Module 11, pre-/v1) ──
+    # Still in the catalog so existing keys validate and existing
+    # internal routes keep working. The /v1 auth dep's has_scope()
+    # accepts these as synonyms for the new vocab during the 6-month
+    # deprecation window:
+    #   read:ap_items   → records:read
+    #   write:ap_items  → records:write + intents:execute
+    #   read:vendors    → records:read (vendor Box type when shipped)
+    #   write:vendors   → records:write
+    #   read:reports    → audit:read (closest semantic neighbour)
+    #   manage:webhooks → webhooks:manage  (already the new spelling)
     "read:ap_items",
     "write:ap_items",
     "read:vendors",

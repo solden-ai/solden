@@ -107,6 +107,77 @@ def test_agent_identity_scope_check_empty_list_is_zero_perms() -> None:
     assert not ai.has_scope("write:ap_items")
 
 
+# ─── Legacy → new scope synonym map ──────────────────────────────
+
+
+def test_legacy_read_ap_items_satisfies_records_read() -> None:
+    """A key minted under Module 11's verb:noun vocab still passes
+    a /v1 scope check expressed in the noun:verb vocab."""
+    ai = AgentIdentity(
+        key_id="k1",
+        organization_id="org_x",
+        agent_id="agent:cs",
+        agent_version=None,
+        scopes=["read:ap_items"],
+    )
+    assert ai.has_scope("records:read")
+    assert ai.has_scope("intents:preview")  # also covered by read:ap_items
+    # But write checks fail — only read scope present
+    assert not ai.has_scope("records:write")
+    assert not ai.has_scope("intents:execute")
+
+
+def test_legacy_write_ap_items_covers_intents_execute_and_records_write() -> None:
+    ai = AgentIdentity(
+        key_id="k1",
+        organization_id="org_x",
+        agent_id="agent:cs",
+        agent_version=None,
+        scopes=["write:ap_items"],
+    )
+    assert ai.has_scope("records:write")
+    assert ai.has_scope("intents:execute")
+    # Doesn't grant read-only scopes — those need an explicit read token
+    assert not ai.has_scope("records:read")
+
+
+def test_legacy_read_audit_satisfies_audit_read() -> None:
+    ai = AgentIdentity(
+        key_id="k1",
+        organization_id="org_x",
+        agent_id="agent:cs",
+        agent_version=None,
+        scopes=["read:audit"],
+    )
+    assert ai.has_scope("audit:read")
+
+
+def test_legacy_manage_webhooks_satisfies_webhooks_manage() -> None:
+    ai = AgentIdentity(
+        key_id="k1",
+        organization_id="org_x",
+        agent_id="agent:cs",
+        agent_version=None,
+        scopes=["manage:webhooks"],
+    )
+    assert ai.has_scope("webhooks:manage")
+
+
+def test_new_vocab_works_directly() -> None:
+    """A key already minted under the new vocab passes its own check."""
+    ai = AgentIdentity(
+        key_id="k1",
+        organization_id="org_x",
+        agent_id="agent:cs",
+        agent_version=None,
+        scopes=["records:read", "intents:execute"],
+    )
+    assert ai.has_scope("records:read")
+    assert ai.has_scope("intents:execute")
+    # But unrelated scopes still fail
+    assert not ai.has_scope("webhooks:manage")
+
+
 # ─── _parse_scopes ──────────────────────────────────────────────
 
 
