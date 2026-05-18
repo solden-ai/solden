@@ -1414,13 +1414,8 @@ body.theme-subpage {
 
 /* Contact page — aside + form together */
 .contact-shell {
-  display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
-  gap: 32px;
-  align-items: start;
-}
-@media (max-width: 920px) {
-  .contact-shell { grid-template-columns: 1fr; gap: 24px; }
+  max-width: 720px;
+  margin: 0 auto;
 }
 
 .contact-aside {
