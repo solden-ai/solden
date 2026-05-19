@@ -51,14 +51,49 @@ SLACK_REQUIRED_BOT_SCOPES = (
 SLACK_REQUIRED_USER_SCOPES: tuple[str, ...] = ()
 
 
-def _public_app_base_url() -> str:
+# Hosts the same backend serves during the Clearledgr → Solden rename
+# window. When a request lands on one of these, OAuth redirect URIs +
+# Slack install URLs are generated against the request's own hostname
+# (so a user who arrives at workspace.soldenai.com is redirected back
+# through api.soldenai.com, not the env-configured clearledgr host).
+_PUBLIC_BASE_URL_KNOWN_SUFFIXES = (".soldenai.com", ".clearledgr.com")
+
+
+def _request_origin_base_url(request: Optional["Request"]) -> Optional[str]:
+    if request is None:
+        return None
+    host = (getattr(request.url, "hostname", None) or "").lower()
+    if not host:
+        return None
+    for suffix in _PUBLIC_BASE_URL_KNOWN_SUFFIXES:
+        apex = suffix.lstrip(".")
+        if host == apex or host.endswith(suffix):
+            scheme = getattr(request.url, "scheme", "https") or "https"
+            netloc = getattr(request.url, "netloc", host) or host
+            return f"{scheme}://{netloc}".rstrip("/")
+    return None
+
+
+def _public_app_base_url(request: Optional["Request"] = None) -> str:
+    derived = _request_origin_base_url(request)
+    if derived:
+        return derived
     base = str(
         os.getenv("APP_BASE_URL", os.getenv("API_BASE_URL", "http://127.0.0.1:8010")) or ""
     ).strip().rstrip("/")
     return base or "http://127.0.0.1:8010"
 
 
-def _slack_redirect_uri() -> str:
+def _slack_redirect_uri(request: Optional["Request"] = None) -> str:
+    # When the request matches a known Solden-family host, the redirect
+    # URI is generated against THAT host so Slack returns the user to
+    # the same brand they started on. Only fall back to the static env
+    # override when the request host is unknown (local dev, custom
+    # deployments) — otherwise a stale SLACK_REDIRECT_URI=api.clearledgr.com
+    # would break installs initiated from workspace.soldenai.com.
+    derived = _request_origin_base_url(request)
+    if derived:
+        return f"{derived}/api/workspace/integrations/slack/install/callback"
     return str(
         os.getenv(
             "SLACK_REDIRECT_URI",
@@ -907,7 +942,11 @@ def _teams_status_for_org(organization_id: str) -> Dict[str, Any]:
     }
 
 
-def _build_health(organization_id: str, user: TokenData) -> Dict[str, Any]:
+def _build_health(
+    organization_id: str,
+    user: TokenData,
+    http_request: Optional[Request] = None,
+) -> Dict[str, Any]:
     db = get_db()
     org = db.ensure_organization(organization_id, organization_name=_default_org_name(user, organization_id))
     settings = _load_org_settings(org)
@@ -986,7 +1025,7 @@ def _build_health(organization_id: str, user: TokenData) -> Dict[str, Any]:
             {"code": "configure_slack_oauth_env", "message": "Set SLACK_CLIENT_ID and SLACK_CLIENT_SECRET"}
         )
 
-    slack_redirect_uri = _slack_redirect_uri()
+    slack_redirect_uri = _slack_redirect_uri(http_request)
 
     return {
         "organization_id": organization_id,
@@ -1267,7 +1306,7 @@ async def get_admin_bootstrap(
     org = db.ensure_organization(org_id, organization_name=_default_org_name(user, org_id))
     org_settings = _load_org_settings(org)
     subscription = _get_subscription_service().get_subscription(org_id).to_dict()
-    health = _build_health(org_id, user)
+    health = _build_health(org_id, user, request)
 
     current_user = db.get_user(user.user_id) or {}
     integrations = [
@@ -1618,6 +1657,7 @@ def disconnect_outlook(
 @router.post("/integrations/slack/install/start")
 def start_slack_install(
     request: SlackInstallStartRequest,
+    http_request: Request,
     user: TokenData = Depends(get_current_user),
 ):
     _require_admin(user)
@@ -1627,7 +1667,7 @@ def start_slack_install(
     if not client_id or not client_secret:
         raise HTTPException(status_code=503, detail="slack_oauth_not_configured")
 
-    redirect_uri = _slack_redirect_uri()
+    redirect_uri = _slack_redirect_uri(http_request)
     scopes = _configured_slack_oauth_scopes()
     user_scopes = _configured_slack_user_oauth_scopes()
     state = _sign_state(
@@ -1655,6 +1695,7 @@ def start_slack_install(
 
 @router.get("/integrations/slack/install/callback")
 async def slack_install_callback(
+    http_request: Request,
     code: Optional[str] = Query(default=None),
     state: Optional[str] = Query(default=None),
     error: Optional[str] = Query(default=None),
@@ -1678,7 +1719,7 @@ async def slack_install_callback(
 
     client_id = os.getenv("SLACK_CLIENT_ID", "").strip()
     client_secret = os.getenv("SLACK_CLIENT_SECRET", "").strip()
-    redirect_uri = _slack_redirect_uri()
+    redirect_uri = _slack_redirect_uri(http_request)
     if not client_id or not client_secret:
         raise HTTPException(status_code=503, detail="slack_oauth_not_configured")
 
@@ -2015,12 +2056,13 @@ def test_teams_webhook(
 
 @router.get("/integrations/slack/manifest")
 def slack_manifest_template(
+    http_request: Request,
     organization_id: Optional[str] = Query(default=None),
     user: TokenData = Depends(get_current_user),
 ):
     org_id = _resolve_org_id(user, organization_id)
-    redirect_uri = _slack_redirect_uri()
-    app_base = _public_app_base_url()
+    redirect_uri = _slack_redirect_uri(http_request)
+    app_base = _public_app_base_url(http_request)
     bot_scopes = [scope for scope in _configured_slack_oauth_scopes().split(",") if scope]
     user_scopes = [scope for scope in _configured_slack_user_oauth_scopes().split(",") if scope]
     return {
@@ -4835,11 +4877,12 @@ def get_spend_analysis(
 
 @router.get("/health")
 def get_admin_health(
+    http_request: Request,
     organization_id: Optional[str] = Query(default=None),
     user: TokenData = Depends(get_current_user),
 ):
     org_id = _resolve_org_id(user, organization_id)
-    health = _build_health(org_id, user)
+    health = _build_health(org_id, user, http_request)
     evidence = _get_ga_readiness(org_id)
     rollback_controls = _get_rollback_controls(org_id)
     health["launch_controls"] = {

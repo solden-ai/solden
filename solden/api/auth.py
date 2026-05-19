@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from fastapi import APIRouter, HTTPException, Depends, Query, Response
+from fastapi import APIRouter, HTTPException, Depends, Query, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, EmailStr, Field
 
@@ -43,12 +43,39 @@ def _session_cookie_secure() -> bool:
     return env_name in {"prod", "production", "staging", "stage"}
 
 
-def _session_cookie_domain() -> Optional[str]:
-    raw = str(os.getenv("WORKSPACE_SESSION_COOKIE_DOMAIN", "")).strip()
-    return raw or None
+# Registrable-domain suffixes we serve from the same backend. When the
+# incoming request matches one of these, the session cookie is scoped
+# to that suffix so workspace.* + api.* on the same registrable domain
+# share the cookie. This list expands during the Clearledgr → Solden
+# rename window; drop ``.clearledgr.com`` after Pass D retires it.
+_SESSION_COOKIE_KNOWN_SUFFIXES = (".soldenai.com", ".clearledgr.com")
 
 
-def _set_workspace_session_cookies(response: Response, access_token: str) -> None:
+def _session_cookie_domain(request: Optional[Request] = None) -> Optional[str]:
+    """Pick the cookie domain attribute for session cookies.
+
+    Prefers a registrable-domain suffix matching the incoming request
+    host (".soldenai.com" / ".clearledgr.com") so the same backend can
+    serve api.clearledgr.com AND api.soldenai.com without one host's
+    stale env override blocking the other. Falls back to the explicit
+    WORKSPACE_SESSION_COOKIE_DOMAIN override only when the request
+    host is unknown (local dev, custom deployments).
+    """
+    if request is not None:
+        host = (getattr(request.url, "hostname", None) or "").lower()
+        for suffix in _SESSION_COOKIE_KNOWN_SUFFIXES:
+            apex = suffix.lstrip(".")
+            if host == apex or host.endswith(suffix):
+                return suffix
+    override = str(os.getenv("WORKSPACE_SESSION_COOKIE_DOMAIN", "")).strip()
+    return override or None
+
+
+def _set_workspace_session_cookies(
+    response: Response,
+    access_token: str,
+    request: Optional[Request] = None,
+) -> None:
     """Set the short-lived access cookie + CSRF cookie.
 
     Streak-aligned model: there is no Solden-issued refresh token.
@@ -57,9 +84,13 @@ def _set_workspace_session_cookies(response: Response, access_token: str) -> Non
     via /auth/google/exchange to get a new access JWT. Google's grant
     is the source of truth for "is this user still allowed in" — we
     don't keep our own long-lived refresh credential around.
+
+    The cookie domain is derived from the incoming request host so
+    api.{brand}.com sets cookies on .{brand}.com — see
+    :func:`_session_cookie_domain` for the registrable-domain logic.
     """
     secure = _session_cookie_secure()
-    domain = _session_cookie_domain()
+    domain = _session_cookie_domain(request)
     csrf_token = secrets.token_urlsafe(32)
     cookie_kwargs = {
         "path": "/",
@@ -83,8 +114,11 @@ def _set_workspace_session_cookies(response: Response, access_token: str) -> Non
     )
 
 
-def _clear_workspace_session_cookies(response: Response) -> None:
-    domain = _session_cookie_domain()
+def _clear_workspace_session_cookies(
+    response: Response,
+    request: Optional[Request] = None,
+) -> None:
+    domain = _session_cookie_domain(request)
     for name in (WORKSPACE_ACCESS_COOKIE_NAME, WORKSPACE_CSRF_COOKIE_NAME):
         response.delete_cookie(name, path="/", domain=domain)
 
@@ -104,7 +138,22 @@ def _oauth_secret() -> str:
     return require_secret("SOLDEN_SECRET_KEY")
 
 
-def _google_oauth_redirect_uri() -> str:
+_GOOGLE_OAUTH_KNOWN_HOST_SUFFIXES = (".soldenai.com", ".clearledgr.com")
+
+
+def _google_oauth_redirect_uri(request: Optional[Request] = None) -> str:
+    # When the request matches a known Solden-family host, derive the
+    # redirect URI from THAT host so the OAuth round-trip lands the
+    # user back on the same brand they started on. Otherwise honour
+    # the static env override (used in local dev + custom deployments).
+    if request is not None:
+        host = (getattr(request.url, "hostname", None) or "").lower()
+        for suffix in _GOOGLE_OAUTH_KNOWN_HOST_SUFFIXES:
+            apex = suffix.lstrip(".")
+            if host == apex or host.endswith(suffix):
+                scheme = getattr(request.url, "scheme", "https") or "https"
+                netloc = getattr(request.url, "netloc", host) or host
+                return f"{scheme}://{netloc}/auth/google/callback"
     return os.getenv(
         "GOOGLE_CONSOLE_REDIRECT_URI",
         f"{os.getenv('API_BASE_URL', 'http://127.0.0.1:8010').rstrip('/')}/auth/google/callback",
@@ -241,7 +290,11 @@ class PasswordLoginRequest(BaseModel):
 
 
 @router.post("/login")
-async def login_with_password(request: PasswordLoginRequest, response: Response):
+async def login_with_password(
+    request: PasswordLoginRequest,
+    response: Response,
+    http_request: Request,
+):
     """Verify email + password, issue workspace session cookies.
 
     Generic 401 on every failure mode — never reveal whether an email
@@ -271,7 +324,7 @@ async def login_with_password(request: PasswordLoginRequest, response: Response)
         raise HTTPException(status_code=401, detail="invalid_credentials")
 
     access = create_access_token(user.id, user.email, user.organization_id, user.role)
-    _set_workspace_session_cookies(response, access)
+    _set_workspace_session_cookies(response, access, http_request)
     return {
         "success": True,
         "user": user,
@@ -297,6 +350,7 @@ async def get_me(current_user: TokenData = Depends(get_current_user)):
 @router.post("/logout")
 async def logout(
     response: Response,
+    http_request: Request,
     current_user: Optional[TokenData] = Depends(get_optional_user),
 ):
     """
@@ -310,7 +364,7 @@ async def logout(
     # - Log the logout event
     # - Invalidate refresh tokens
     
-    _clear_workspace_session_cookies(response)
+    _clear_workspace_session_cookies(response, http_request)
     return {"message": "Logged out successfully", "user_id": getattr(current_user, "user_id", None)}
 
 
@@ -638,6 +692,7 @@ async def invite_user(
 
 @router.get("/google/start")
 async def start_google_web_auth(
+    http_request: Request,
     organization_id: Optional[str] = Query(default=None),
     redirect_path: str = Query(default="/"),
     invite_token: Optional[str] = Query(default=None),
@@ -669,7 +724,7 @@ async def start_google_web_auth(
     )
     params = {
         "client_id": client_id,
-        "redirect_uri": _google_oauth_redirect_uri(),
+        "redirect_uri": _google_oauth_redirect_uri(http_request),
         "response_type": "code",
         "scope": "openid email profile",
         "state": state,
@@ -693,6 +748,7 @@ async def start_google_web_auth(
 
 @router.get("/google/callback")
 async def google_web_auth_callback(
+    http_request: Request,
     code: Optional[str] = Query(default=None),
     state: Optional[str] = Query(default=None),
     error: Optional[str] = Query(default=None),
@@ -716,7 +772,7 @@ async def google_web_auth_callback(
             "code": code,
             "client_id": client_id,
             "client_secret": client_secret,
-            "redirect_uri": _google_oauth_redirect_uri(),
+            "redirect_uri": _google_oauth_redirect_uri(http_request),
             "grant_type": "authorization_code",
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
@@ -733,7 +789,7 @@ async def google_web_auth_callback(
             "client_id=%s scope_in_state=%s state_iat=%s",
             token_resp.status_code,
             token_payload,
-            _google_oauth_redirect_uri(),
+            _google_oauth_redirect_uri(http_request),
             (code or "")[:8],
             len(code or ""),
             client_id[:20] + "..." if client_id else "MISSING",
@@ -1072,12 +1128,16 @@ async def microsoft_web_auth_callback(
 
 
 @router.post("/google/exchange", response_model=TokenResponse)
-async def exchange_google_auth_code(request: GoogleAuthCodeExchangeRequest, response: Response):
+async def exchange_google_auth_code(
+    request: GoogleAuthCodeExchangeRequest,
+    response: Response,
+    http_request: Request,
+):
     payload = _consume_google_auth_code(request.auth_code)
     access_token = str(payload.get("access_token") or "").strip()
     if not access_token:
         raise HTTPException(status_code=400, detail="invalid_auth_code_payload")
-    _set_workspace_session_cookies(response, access_token)
+    _set_workspace_session_cookies(response, access_token, http_request)
     return TokenResponse(
         access_token=SESSION_TOKEN_PLACEHOLDER,
         refresh_token=SESSION_TOKEN_PLACEHOLDER,
@@ -1232,7 +1292,11 @@ async def preview_invite(token: str = Query(..., min_length=1)) -> Dict[str, Any
 
 
 @router.post("/invites/accept")
-async def accept_invite(request: InviteAcceptRequest, response: Response):
+async def accept_invite(
+    request: InviteAcceptRequest,
+    response: Response,
+    http_request: Request,
+):
     """Accept an invite-link and create/join user account."""
     from solden.core.database import get_db
     from solden.core.auth import get_user_by_email
@@ -1327,7 +1391,7 @@ async def accept_invite(request: InviteAcceptRequest, response: Response):
             pass
 
     access = create_access_token(user.id, user.email, user.organization_id, user.role)
-    _set_workspace_session_cookies(response, access)
+    _set_workspace_session_cookies(response, access, http_request)
     return {
         "success": True,
         "user": user,

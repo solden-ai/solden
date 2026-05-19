@@ -1574,6 +1574,21 @@ def _resolve_cors_policy(configured_origins_raw: str, configured_regex_raw: str)
     )
 
     if normalized_origins:
+        # Rebrand rename window (Clearledgr → Solden): every origin
+        # that references one brand is auto-mirrored to the other so
+        # the same Railway deployment can serve workspace.clearledgr.com
+        # and workspace.soldenai.com from a single CORS_ALLOW_ORIGINS
+        # env value. Drop this block after Pass D retires the legacy
+        # clearledgr.com hostnames.
+        for origin in list(normalized_origins):
+            mirror = None
+            if "clearledgr.com" in origin:
+                mirror = origin.replace("clearledgr.com", "soldenai.com")
+            elif "soldenai.com" in origin:
+                mirror = origin.replace("soldenai.com", "clearledgr.com")
+            if mirror and mirror not in seen:
+                seen.add(mirror)
+                normalized_origins.append(mirror)
         # Explicit origin list ADDS to the dynamic regex coverage rather
         # than replacing it. Two consumers depend on this: the Gmail
         # extension's per-install chrome-extension://<32-char-id> origin
@@ -1592,12 +1607,20 @@ def _resolve_cors_policy(configured_origins_raw: str, configured_regex_raw: str)
     return _default_cors_origins, default_regex
 
 
+# Both clearledgr.com and soldenai.com are first-class origins during
+# the rename window — Railway serves the same backend on api.clearledgr.com
+# AND api.soldenai.com, and the workspace SPA is reachable via either
+# workspace.* hostname. CORS must accept either, otherwise users
+# visiting workspace.soldenai.com would be blocked from calling the API.
 _default_cors_origins = [
     "https://mail.google.com",
     "https://gmail.google.com",
     "https://clearledgr.com",
     "https://www.clearledgr.com",
     "https://workspace.clearledgr.com",
+    "https://soldenai.com",
+    "https://www.soldenai.com",
+    "https://workspace.soldenai.com",
     "http://localhost:8010",
     "http://127.0.0.1:8010",
 ]
