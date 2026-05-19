@@ -141,45 +141,28 @@ def _oauth_secret() -> str:
 _GOOGLE_OAUTH_KNOWN_HOST_SUFFIXES = (".soldenai.com", ".clearledgr.com")
 
 
-def _google_oauth_redirect_uri(request: Optional[Request] = None) -> str:
-    # When the request matches a known Solden-family host, derive the
-    # redirect URI from THAT host so the OAuth round-trip lands the
-    # user back on the same brand they started on. Otherwise honour
-    # the static env override (used in local dev + custom deployments).
-    #
-    # X-Forwarded-Host wins over the Host header. The workspace SPA
-    # proxies /auth/* to the api service with changeOrigin:true (which
-    # rewrites Host to the api host) + xfwd:true (which preserves the
-    # original host in X-Forwarded-Host). Reading the forwarded value
-    # means redirect URIs are generated for workspace.soldenai.com (the
-    # host the user is actually on) rather than api.soldenai.com (the
-    # upstream the proxy is pointing at) — so the OAuth round-trip
-    # happens entirely on the product domain.
-    if request is not None:
-        forwarded_host = (
-            request.headers.get("x-forwarded-host", "").split(",")[0].strip().lower()
-        )
-        host = forwarded_host or (getattr(request.url, "hostname", None) or "").lower()
-        for suffix in _GOOGLE_OAUTH_KNOWN_HOST_SUFFIXES:
-            apex = suffix.lstrip(".")
-            if host == apex or host.endswith(suffix):
-                # Production hosts always run behind Railway TLS edge
-                # termination — the upstream sees HTTP. Honour
-                # X-Forwarded-Proto, else force HTTPS because these
-                # hostnames are HTTPS-only in every deployed environment.
-                # Google rejects http://... redirect URIs even when
-                # registered as https://... so getting this scheme right
-                # is the difference between working OAuth and a
-                # redirect_uri_mismatch error.
-                forwarded_proto = (
-                    request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
-                )
-                scheme = forwarded_proto or "https"
-                return f"{scheme}://{host}/auth/google/callback"
-    return os.getenv(
-        "GOOGLE_CONSOLE_REDIRECT_URI",
-        f"{os.getenv('API_BASE_URL', 'http://127.0.0.1:8010').rstrip('/')}/auth/google/callback",
-    ).strip()
+def _google_oauth_redirect_uri(request: Optional[Request] = None) -> str:  # noqa: ARG001
+    # Redirect URI is generated against APP_BASE_URL (set on Railway
+    # to https://workspace.soldenai.com) so the entire OAuth round-trip
+    # happens on the product domain, never flashing the api subdomain
+    # in the URL bar. The earlier request-host-derivation strategy
+    # didn't survive Railway's Envoy edge, which strips client-supplied
+    # X-Forwarded-Host headers for security. APP_BASE_URL is the
+    # canonical workspace-base env var; GOOGLE_CONSOLE_REDIRECT_URI
+    # is honoured as an explicit override for environments that need
+    # to point Google somewhere else (legacy api.* path, staging, etc).
+    # The ``request`` arg is kept for back-compat with the call sites
+    # but no longer participates in derivation.
+    explicit = os.getenv("GOOGLE_CONSOLE_REDIRECT_URI", "").strip()
+    if explicit:
+        return explicit
+    base = os.getenv("APP_BASE_URL", "").strip().rstrip("/")
+    if not base:
+        # Local dev fallback — keeps test fixtures pointing at the
+        # uvicorn dev server when neither APP_BASE_URL nor
+        # GOOGLE_CONSOLE_REDIRECT_URI is set.
+        base = os.getenv("API_BASE_URL", "http://127.0.0.1:8010").rstrip("/")
+    return f"{base}/auth/google/callback"
 
 
 def _sign_google_state(payload: dict) -> str:

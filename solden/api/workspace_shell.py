@@ -60,40 +60,21 @@ SLACK_REQUIRED_USER_SCOPES: tuple[str, ...] = ()
 _PUBLIC_BASE_URL_KNOWN_SUFFIXES = (".soldenai.com", ".clearledgr.com")
 
 
-def _request_origin_base_url(request: Optional["Request"]) -> Optional[str]:
-    if request is None:
-        return None
-    # The workspace SPA reverse-proxies /auth, /api/*, /slack etc to
-    # the api service with changeOrigin:true + xfwd:true (see
-    # ui/web-app/server.js). After the proxy hop the Host header on
-    # the upstream request is the api host (api.soldenai.com), but the
-    # *original* host the user's browser is talking to lives in
-    # X-Forwarded-Host. Honouring it means we generate OAuth redirect
-    # URIs that match where the user actually is, not where the proxy
-    # forwarded the request to — so OAuth round-trips happen entirely
-    # on workspace.soldenai.com and the user never sees the api
-    # subdomain flash in the URL bar.
-    forwarded_host = (
-        request.headers.get("x-forwarded-host", "").split(",")[0].strip().lower()
-    )
-    host = forwarded_host or (getattr(request.url, "hostname", None) or "").lower()
-    if not host:
-        return None
-    for suffix in _PUBLIC_BASE_URL_KNOWN_SUFFIXES:
-        apex = suffix.lstrip(".")
-        if host == apex or host.endswith(suffix):
-            # Production hosts (*.soldenai.com / *.clearledgr.com) are
-            # always behind Railway TLS termination, so the request seen
-            # by the app is HTTP even when the customer's browser made an
-            # HTTPS request. Honour ``X-Forwarded-Proto`` when present,
-            # otherwise force ``https`` because we know these hostnames
-            # are HTTPS-only in every environment that serves them.
-            forwarded_proto = (
-                request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
-            )
-            scheme = forwarded_proto or "https"
-            return f"{scheme}://{host}".rstrip("/")
-    return None
+def _request_origin_base_url(request: Optional["Request"]) -> Optional[str]:  # noqa: ARG001
+    # Canonical workspace base URL — APP_BASE_URL on Railway is set to
+    # https://workspace.soldenai.com, which is what OAuth redirect URIs
+    # should point at so the round-trip happens entirely on the
+    # product domain (never the api subdomain).
+    #
+    # An earlier iteration tried to derive this from the incoming
+    # request's host (via X-Forwarded-Host through the SPA proxy) so
+    # the backend could serve multiple brands from a single deployment.
+    # Railway's Envoy edge proxy strips client-supplied X-Forwarded-Host
+    # headers, so the value never reached the app. With the full
+    # cutover to soldenai.com the multi-brand derivation is no longer
+    # needed and APP_BASE_URL is the cleaner single source of truth.
+    base = os.getenv("APP_BASE_URL", "").strip().rstrip("/")
+    return base or None
 
 
 def _public_app_base_url(request: Optional["Request"] = None) -> str:
