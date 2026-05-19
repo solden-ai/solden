@@ -202,6 +202,8 @@ def _fire_single(
 def _build_email(
     policy: Dict[str, Any], exception_row: Dict[str, Any],
 ) -> tuple:
+    import os as _os
+    app_base = _os.getenv("APP_BASE_URL", "https://workspace.soldenai.com").rstrip("/")
     threshold = policy.get("threshold_hours") or 24
     exc_type = exception_row.get("exception_type") or "exception"
     severity = exception_row.get("severity") or "medium"
@@ -225,7 +227,7 @@ def _build_email(
         f"Reason:\n{reason}\n"
         "\n"
         "Open the dashboard to resolve:\n"
-        f"  https://workspace.soldenai.com/records/{box_id}\n"
+        f"  {app_base}/records/{box_id}\n"
         "\n"
         "Once the underlying exception is resolved, no further escalations "
         "fire for this item."

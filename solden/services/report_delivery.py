@@ -191,9 +191,11 @@ def _build_email_body_text(
             lines.append(f"  {key}: {value}")
         lines.append("")
 
+    import os as _os
+    _base = _os.getenv("APP_BASE_URL", "https://workspace.soldenai.com").rstrip("/")
     lines.append(
         "The full data is attached as a CSV. Open the dashboard for the "
-        "interactive view: https://workspace.soldenai.com/reports"
+        f"interactive view: {_base}/reports"
     )
     lines.append("")
     lines.append(
@@ -206,6 +208,8 @@ def _build_email_body_text(
 def _build_email_body_html(
     label: str, payload: Dict[str, Any], subscription: Dict[str, Any],
 ) -> str:
+    import os as _os
+    base = _os.getenv("APP_BASE_URL", "https://workspace.soldenai.com").rstrip("/")
     summary = payload.get("summary") or {}
     params = payload.get("params") or {}
     cadence = subscription.get("cadence", "")
@@ -227,7 +231,7 @@ def _build_email_body_html(
     {f'<table style="border-collapse:collapse;margin:0 0 24px"><tbody>{summary_rows}</tbody></table>' if summary_rows else ''}
     <p style="margin:0 0 16px;color:#475569;font-size:13px">
       Full data is attached as a CSV.
-      <a href="https://workspace.soldenai.com/reports" style="color:#00B86B;text-decoration:none;font-weight:500">
+      <a href="{base}/reports" style="color:#00B86B;text-decoration:none;font-weight:500">
         Open the dashboard
       </a>
       for the interactive view.

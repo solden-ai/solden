@@ -328,14 +328,14 @@ app = FastAPI(
     version="1.0.0",
     contact={
         "name": "Solden Support",
-        "email": "support@clearledgr.com",
+        "email": "support@soldenai.com",
     },
     license_info={
         "name": "Proprietary",
     },
     servers=[
         {"url": "http://localhost:8010", "description": "Development server"},
-        {"url": "https://api.clearledgr.com", "description": "Production server"},
+        {"url": "https://api.soldenai.com", "description": "Production server"},
     ],
     # Gate the interactive schema browser in production. /docs, /redoc
     # and /openapi.json render the entire API surface (route paths,
