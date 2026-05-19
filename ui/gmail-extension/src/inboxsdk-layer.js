@@ -1753,7 +1753,7 @@ function _showOnboardingFlow(bootstrapData, oauthBridgeRef) {
   document.body.appendChild(container);
 
   const backendUrl = String(
-    queueManager?.runtimeConfig?.backendUrl || 'https://api.clearledgr.com'
+    queueManager?.runtimeConfig?.backendUrl || 'https://api.soldenai.com'
   ).replace(/\/+$/, '');
 
   const api = async (path, options = {}) => {
@@ -1918,7 +1918,7 @@ function registerAppMenuAndRoutes() {
 bootstrap();
 
 console.log(
-  '\n%cSolden\n%cThe Gmail AP Workspace\nfor Finance Teams\n\n%cYou found us in the console.\nThat means you care how things work.\nSo do we.\n\n%chttps://clearledgr.com\n',
+  '\n%cSolden\n%cThe back-office runtime,\nin your inbox\n\n%cYou found us in the console.\nThat means you care how things work.\nSo do we.\n\n%chttps://soldenai.com\n',
   'font-size:28px;font-weight:800;color:#00D67E;line-height:1.2;',
   'font-size:18px;font-weight:600;color:#0A1628;line-height:1.3;',
   'font-size:14px;color:#6B7280;line-height:1.5;',

@@ -1,4 +1,4 @@
-/* clearledgr-source-fingerprint:4c3f9dd261abe4f615192bf8f4618df5a71ce811a4d6c57813c471acc465f719 */
+/* clearledgr-source-fingerprint:5129e1f5bfd5eca4c6a49b59f83d9f08b46f75591731adfc9493fde955fc99d5 */
 (() => {
   var __create = Object.create;
   var __getProtoOf = Object.getPrototypeOf;
@@ -53701,7 +53701,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
         ], resolve);
       });
       const nested = data.settings || {};
-      const globalDebugDefault = Boolean(typeof window !== "undefined" && window.CLEARLEDGR_CONFIG?.AP_DEBUG_UI) || Boolean(typeof globalThis !== "undefined" && globalThis.CLEARLEDGR_CONFIG?.AP_DEBUG_UI);
+      const globalDebugDefault = Boolean(typeof window !== "undefined" && window.SOLDEN_CONFIG?.AP_DEBUG_UI) || Boolean(typeof globalThis !== "undefined" && globalThis.SOLDEN_CONFIG?.AP_DEBUG_UI);
       const raw = {
         ...nested,
         backendUrl: data.backendUrl || nested.backendUrl || nested.apiEndpoint || null,
@@ -53726,7 +53726,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
           authEntryMode: String(raw.authEntryMode || "routed").trim().toLowerCase() === "inline" ? "inline" : "routed"
         };
       }
-      const extensionConfig = typeof window !== "undefined" && (window.CLEARLEDGR_CONFIG || window.CONFIG) || typeof globalThis !== "undefined" && (globalThis.CLEARLEDGR_CONFIG || globalThis.CONFIG) || {};
+      const extensionConfig = typeof window !== "undefined" && (window.SOLDEN_CONFIG || window.CONFIG) || typeof globalThis !== "undefined" && (globalThis.SOLDEN_CONFIG || globalThis.CONFIG) || {};
       const configuredBackendUrl = String(extensionConfig.API_URL || extensionConfig.BACKEND_URL || "").trim();
       const configuredApiKey = String(extensionConfig.BACKEND_API_KEY || extensionConfig.API_KEY || "").trim();
       const configuredAuthEntryMode = String(extensionConfig.AUTH_ENTRY_MODE || extensionConfig.SIDEBAR_AUTH_ENTRY_MODE || "").trim().toLowerCase();
@@ -58655,8 +58655,8 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 
   // src/utils/workspace-link.js
   var WORKSPACE_URL = (() => {
-    const fromConfig = typeof self !== "undefined" && self.CLEARLEDGR_CONFIG?.WORKSPACE_URL || typeof globalThis !== "undefined" && globalThis.CLEARLEDGR_CONFIG?.WORKSPACE_URL;
-    return String(fromConfig || "https://workspace.clearledgr.com").replace(/\/+$/, "");
+    const fromConfig = typeof self !== "undefined" && self.SOLDEN_CONFIG?.WORKSPACE_URL || typeof globalThis !== "undefined" && globalThis.SOLDEN_CONFIG?.WORKSPACE_URL;
+    return String(fromConfig || "https://workspace.soldenai.com").replace(/\/+$/, "");
   })();
   function workspaceItemUrl(itemId) {
     const id = String(itemId || "").trim();
@@ -61233,7 +61233,7 @@ Reason (required — logged to the audit trail):`);
   var APP_ID = "sdk_Solden2026_dc12c60472";
   var INIT_KEY = "__clearledgr_ap_v1_inboxsdk_initialized";
   var LOGO_PATH2 = "icons/icon48.png";
-  var STORAGE_ACTIVE_AP_ITEM_ID = "clearledgr_active_ap_item_id";
+  var STORAGE_ACTIVE_AP_ITEM_ID = "solden_active_ap_item_id";
   var sdk = null;
   var queueManager = null;
   var sidebarContainer = null;
@@ -62489,13 +62489,15 @@ Reason (required — logged to the audit trail):`);
   bootstrap();
   console.log(`
 %cSolden
-%cThe Gmail AP Workspace
-for Finance Teams
+%cThe back-office runtime,
+in your inbox
 
 %cYou found us in the console.
 That means you care how things work.
 So do we.
 
-%chttps://clearledgr.com
+%chttps://soldenai.com
 `, "font-size:28px;font-weight:800;color:#00D67E;line-height:1.2;", "font-size:18px;font-weight:600;color:#0A1628;line-height:1.3;", "font-size:14px;color:#6B7280;line-height:1.5;", "font-size:13px;color:#00D67E;font-weight:600;");
 })();
+
+//# debugId=194CD6F91FC7877164756E2164756E21

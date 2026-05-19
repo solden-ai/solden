@@ -1,21 +1,21 @@
 // Solden Configuration
 const CONFIG = {
-  BACKEND_URL: 'https://api.clearledgr.com',
+  BACKEND_URL: 'https://api.soldenai.com',
   // Hub-and-spoke: the Gmail extension is the contextual companion;
   // the workspace SPA at WORKSPACE_URL is the system of record
   // (admin surfaces — Pipeline, Exceptions, Vendors, Reconciliation).
   // "Open in Console" deep-links from the sidebar/banners point here.
-  WORKSPACE_URL: 'https://workspace.clearledgr.com',
+  WORKSPACE_URL: 'https://workspace.soldenai.com',
   APP_ID: 'sdk_Solden2026_dc12c60472',
   VERSION: '1.2026.002 Phoenix'
 };
 
 if (typeof self !== 'undefined') {
   self.CONFIG = CONFIG;
-  self.CLEARLEDGR_CONFIG = CONFIG;
+  self.SOLDEN_CONFIG = CONFIG;
 }
 
 if (typeof globalThis !== 'undefined') {
   globalThis.CONFIG = CONFIG;
-  globalThis.CLEARLEDGR_CONFIG = CONFIG;
+  globalThis.SOLDEN_CONFIG = CONFIG;
 }

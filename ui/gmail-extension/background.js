@@ -148,8 +148,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Settings helpers
 function getConfiguredBackendUrl() {
   const globalConfig =
-    (typeof self !== 'undefined' && self.CLEARLEDGR_CONFIG)
-    || (typeof globalThis !== 'undefined' && globalThis.CLEARLEDGR_CONFIG)
+    (typeof self !== 'undefined' && self.SOLDEN_CONFIG)
+    || (typeof globalThis !== 'undefined' && globalThis.SOLDEN_CONFIG)
     || (typeof self !== 'undefined' && self.CONFIG)
     || (typeof globalThis !== 'undefined' && globalThis.CONFIG)
     || null;
@@ -192,7 +192,7 @@ function selectBackendUrl(storedUrl, configuredUrl) {
       storedHost === 'localhost' ||
       storedHost.endsWith('.trycloudflare.com') ||
       storedHost.endsWith('.up.railway.app');
-    if (configuredSecure && configuredHost === 'api.clearledgr.com' && looksEphemeralStoredHost) {
+    if (configuredSecure && configuredHost === 'api.soldenai.com' && looksEphemeralStoredHost) {
       return configured;
     }
   } catch (_) {
@@ -210,7 +210,7 @@ function shouldClearStoredBackendOverride(storedUrl, configuredUrl) {
     const storedParsed = new URL(stored);
     const configuredHost = configuredParsed.hostname.toLowerCase();
     const storedHost = storedParsed.hostname.toLowerCase();
-    return configuredParsed.protocol === 'https:' && configuredHost === 'api.clearledgr.com' && (
+    return configuredParsed.protocol === 'https:' && configuredHost === 'api.soldenai.com' && (
       storedHost === '127.0.0.1' ||
       storedHost === 'localhost' ||
       storedHost.endsWith('.trycloudflare.com') ||

@@ -2,15 +2,15 @@
  * Hub deep-links — the Gmail extension is the contextual companion;
  * the workspace SPA at WORKSPACE_URL is the system of record.
  * "Open in Console" buttons across the extension funnel through here
- * so we have one place to swap the host if workspace.clearledgr.com
+ * so we have one place to swap the host if workspace.soldenai.com
  * ever moves.
  */
 
 export const WORKSPACE_URL = (() => {
   const fromConfig =
-    (typeof self !== 'undefined' && self.CLEARLEDGR_CONFIG?.WORKSPACE_URL) ||
-    (typeof globalThis !== 'undefined' && globalThis.CLEARLEDGR_CONFIG?.WORKSPACE_URL);
-  return String(fromConfig || 'https://workspace.clearledgr.com').replace(/\/+$/, '');
+    (typeof self !== 'undefined' && self.SOLDEN_CONFIG?.WORKSPACE_URL) ||
+    (typeof globalThis !== 'undefined' && globalThis.SOLDEN_CONFIG?.WORKSPACE_URL);
+  return String(fromConfig || 'https://workspace.soldenai.com').replace(/\/+$/, '');
 })();
 
 export function workspaceItemUrl(itemId) {

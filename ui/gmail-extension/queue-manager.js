@@ -392,8 +392,8 @@ class SoldenQueueManager {
     });
     const nested = data.settings || {};
     const globalDebugDefault =
-      Boolean((typeof window !== 'undefined' && window.CLEARLEDGR_CONFIG?.AP_DEBUG_UI)) ||
-      Boolean((typeof globalThis !== 'undefined' && globalThis.CLEARLEDGR_CONFIG?.AP_DEBUG_UI));
+      Boolean((typeof window !== 'undefined' && window.SOLDEN_CONFIG?.AP_DEBUG_UI)) ||
+      Boolean((typeof globalThis !== 'undefined' && globalThis.SOLDEN_CONFIG?.AP_DEBUG_UI));
 
     const raw = {
       ...nested,
@@ -427,8 +427,8 @@ class SoldenQueueManager {
     }
 
     const extensionConfig =
-      (typeof window !== 'undefined' && (window.CLEARLEDGR_CONFIG || window.CONFIG))
-      || (typeof globalThis !== 'undefined' && (globalThis.CLEARLEDGR_CONFIG || globalThis.CONFIG))
+      (typeof window !== 'undefined' && (window.SOLDEN_CONFIG || window.CONFIG))
+      || (typeof globalThis !== 'undefined' && (globalThis.SOLDEN_CONFIG || globalThis.CONFIG))
       || {};
     const configuredBackendUrl = String(
       extensionConfig.API_URL || extensionConfig.BACKEND_URL || ''
