@@ -343,7 +343,6 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
   const rolesRef = useRef(null);
   const billingRef = useRef(null);
   // Module 11 — three new sections.
-  const apiKeysRef = useRef(null);
   const escalationRef = useRef(null);
   const notificationsRef = useRef(null);
   // Module 9 — FX rates section.
@@ -362,14 +361,6 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
   const erpType = erpKind.charAt(0).toUpperCase() + erpKind.slice(1);
 
   const [activeSection, setActiveSection] = useState('workspace');
-  const scrollToSection = (ref, key) => {
-    if (key) setActiveSection(key);
-    try {
-      ref?.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-    } catch {
-      ref?.current?.scrollIntoView?.();
-    }
-  };
 
   const goToConnections = () => {
     if (typeof navigate === 'function') navigate('connections');
@@ -735,29 +726,25 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
   ];
 
   return html`
-    <div class=${`secondary-banner ${canManageAny ? '' : 'warning'}`}>
-      <div class="secondary-banner-copy">
-        <h3>Settings</h3>
-        <p class="muted">
-          ERP, policies, approvals, team, and billing.
-        </p>
-      </div>
+    <div class="settings-tabs-strip">
       <div class="secondary-banner-actions" style="flex-wrap:wrap">
-        <button class=${`segmented-button btn-sm${activeSection === 'workspace' ? ' is-active' : ''}`} onClick=${() => scrollToSection(workspaceRef, 'workspace')}>Workspace</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'erp' ? ' is-active' : ''}`} onClick=${() => scrollToSection(erpRef, 'erp')}>ERP Connection</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'gl' ? ' is-active' : ''}`} onClick=${() => scrollToSection(glMappingRef, 'gl')}>GL Mapping</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'policy' ? ' is-active' : ''}`} onClick=${() => scrollToSection(policyRef, 'policy')}>AP Policy</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'matching' ? ' is-active' : ''}`} onClick=${() => scrollToSection(matchingRef, 'matching')}>Matching</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'approval' ? ' is-active' : ''}`} onClick=${() => scrollToSection(approvalRef, 'approval')}>Approval Routing</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'vendor' ? ' is-active' : ''}`} onClick=${() => scrollToSection(vendorPolicyRef, 'vendor')}>Vendor Onboarding</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'autonomy' ? ' is-active' : ''}`} onClick=${() => scrollToSection(autonomyRef, 'autonomy')}>Autonomy</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'team' ? ' is-active' : ''}`} onClick=${() => scrollToSection(teamRef, 'team')}>Team</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'roles' ? ' is-active' : ''}`} onClick=${() => scrollToSection(rolesRef, 'roles')}>Roles</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'billing' ? ' is-active' : ''}`} onClick=${() => scrollToSection(billingRef, 'billing')}>Billing</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'api-keys' ? ' is-active' : ''}`} onClick=${() => scrollToSection(apiKeysRef, 'api-keys')}>API keys</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'escalation' ? ' is-active' : ''}`} onClick=${() => scrollToSection(escalationRef, 'escalation')}>Escalation</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'notifications' ? ' is-active' : ''}`} onClick=${() => scrollToSection(notificationsRef, 'notifications')}>Notifications</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'fx' ? ' is-active' : ''}`} onClick=${() => scrollToSection(fxRatesRef, 'fx')}>FX rates</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'workspace' ? ' is-active' : ''}`} onClick=${() => setActiveSection('workspace')}>Workspace</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'erp' ? ' is-active' : ''}`} onClick=${() => setActiveSection('erp')}>ERP Connection</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'gl' ? ' is-active' : ''}`} onClick=${() => setActiveSection('gl')}>GL Mapping</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'policy' ? ' is-active' : ''}`} onClick=${() => setActiveSection('policy')}>AP Policy</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'matching' ? ' is-active' : ''}`} onClick=${() => setActiveSection('matching')}>Matching</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'approval' ? ' is-active' : ''}`} onClick=${() => setActiveSection('approval')}>Approval Routing</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'vendor' ? ' is-active' : ''}`} onClick=${() => setActiveSection('vendor')}>Vendor Onboarding</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'autonomy' ? ' is-active' : ''}`} onClick=${() => setActiveSection('autonomy')}>Autonomy</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'team' ? ' is-active' : ''}`} onClick=${() => setActiveSection('team')}>Team</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'roles' ? ' is-active' : ''}`} onClick=${() => setActiveSection('roles')}>Roles</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'billing' ? ' is-active' : ''}`} onClick=${() => setActiveSection('billing')}>Billing</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'sso' ? ' is-active' : ''}`} onClick=${() => setActiveSection('sso')}>SSO</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'escalation' ? ' is-active' : ''}`} onClick=${() => setActiveSection('escalation')}>Escalation</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'notifications' ? ' is-active' : ''}`} onClick=${() => setActiveSection('notifications')}>Notifications</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'fraud' ? ' is-active' : ''}`} onClick=${() => setActiveSection('fraud')}>Fraud</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'fx' ? ' is-active' : ''}`} onClick=${() => setActiveSection('fx')}>FX rates</button>
+        <button class=${`segmented-button btn-sm${activeSection === 'export' ? ' is-active' : ''}`} onClick=${() => setActiveSection('export')}>Export</button>
       </div>
     </div>
 
@@ -828,7 +815,8 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
            bootstrap.organization.name; without this panel the auto-
            provisioned default ("default") sticks because the rename
            UI was previously hidden in a summary card. -->
-      <div class="panel" ref=${workspaceRef}>
+      ${activeSection === 'workspace' ? html`
+      <div class="panel">
         <div class="panel-head compact">
           <div>
             <h3>Workspace</h3>
@@ -917,9 +905,11 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           <span><strong style="color:var(--cl-ink-secondary)">Mode</strong> · ${org.integration_mode === 'per_org' ? 'Per organization' : 'Shared workspace'}</span>
         </div>
       </div>
+      ` : null}
 
       <!-- §16.1 ERP Connection -->
-      <div class="panel" ref=${erpRef}>
+      ${activeSection === 'erp' ? html`
+      <div class="panel">
         <div class="panel-head compact">
           <div>
             <h3 >ERP Connection</h3>
@@ -961,9 +951,11 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           </div>
         </div>
       </div>
+      ` : null}
 
       <!-- §16.1b GL Account Mapping -->
-      <div class="panel" ref=${glMappingRef}>
+      ${activeSection === 'gl' ? html`
+      <div class="panel">
         <div class="panel-head compact">
           <div>
             <h3 >GL Account Mapping</h3>
@@ -1049,9 +1041,11 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           </div>
         `}
       </div>
+      ` : null}
 
       <!-- §16.2 AP Policy -->
-      <div class="panel" ref=${policyRef}>
+      ${activeSection === 'policy' ? html`
+      <div class="panel">
         <div class="panel-head compact">
           <div>
             <h3 >AP Policy</h3>
@@ -1088,18 +1082,22 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           </div>
         </div>
       </div>
+      ` : null}
 
       <!-- §16.3 Matching mode + tolerances -->
-      <div class="panel" ref=${matchingRef}>
+      ${activeSection === 'matching' ? html`
+      <div class="panel">
         <${MatchingSection}
           api=${api}
           toast=${toast}
           canManage=${canManageCompany}
         />
       </div>
+      ` : null}
 
       <!-- §16.4 Vendor Onboarding Policy -->
-      <div class="panel" ref=${vendorPolicyRef}>
+      ${activeSection === 'vendor' ? html`
+      <div class="panel">
         <div class="panel-head compact">
           <div>
             <h3 >Vendor Onboarding Policy</h3>
@@ -1129,9 +1127,11 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           </div>
         </div>
       </div>
+      ` : null}
 
       <!-- §16.5 Autonomy Configuration -->
-      <div class="panel" ref=${autonomyRef}>
+      ${activeSection === 'autonomy' ? html`
+      <div class="panel">
         <div class="panel-head compact">
           <div>
             <h3 >Autonomy Configuration</h3>
@@ -1173,8 +1173,10 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           </div>
         </div>
       </div>
+      ` : null}
 
-      <div class="panel" ref=${teamRef}>
+      ${activeSection === 'team' ? html`
+      <div class="panel">
         <div class="panel-head compact">
           <div>
             <h3 >Team${!canManageTeam ? html`<span class="status-badge" style="font-size:10px;margin-left:8px">Read-only</span>` : null}</h3>
@@ -1222,8 +1224,10 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           actorEmail=${(bootstrap?.current_user?.email || '').toLowerCase()}
           canManage=${canManageTeam} />
       </div>
+      ` : null}
 
-      <div class="panel" ref=${billingRef}>
+      ${activeSection === 'billing' ? html`
+      <div class="panel">
         <div class="panel-head compact">
           <div>
             <h3 >Billing${!canManagePlan ? html`<span class="status-badge" style="font-size:10px;margin-left:8px">Read-only</span>` : null}</h3>
@@ -1298,95 +1302,69 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           </div>
         ` : ''}
       </div>
+      ` : null}
 
-      <${CustomRolesPanel}
-        api=${api}
-        orgId=${orgId}
-        toast=${toast}
-        canManage=${canManageTeam}
-        panelRef=${rolesRef} />
+      ${activeSection === 'roles' ? html`
+        <${CustomRolesPanel}
+          api=${api}
+          orgId=${orgId}
+          toast=${toast}
+          canManage=${canManageTeam}
+          panelRef=${rolesRef} />
 
-      <${EntityRolesPanel}
-        api=${api}
-        orgId=${orgId}
-        toast=${toast}
-        canManage=${canManageTeam} />
+        <${EntityRolesPanel}
+          api=${api}
+          orgId=${orgId}
+          toast=${toast}
+          canManage=${canManageTeam} />
+      ` : null}
 
-      <${SAMLPanel}
-        api=${api}
-        orgId=${orgId}
-        toast=${toast}
-        canManage=${canManageCompany} />
+      ${activeSection === 'sso' ? html`
+        <${SAMLPanel}
+          api=${api}
+          orgId=${orgId}
+          toast=${toast}
+          canManage=${canManageCompany} />
+      ` : null}
 
-      <${ApiKeysPanel}
-        api=${api}
-        toast=${toast}
-        panelRef=${apiKeysRef} />
+      ${activeSection === 'escalation' ? html`
+        <${EscalationPoliciesPanel}
+          api=${api}
+          toast=${toast}
+          panelRef=${escalationRef} />
+      ` : null}
 
-      <${EscalationPoliciesPanel}
-        api=${api}
-        toast=${toast}
-        panelRef=${escalationRef} />
+      ${activeSection === 'notifications' ? html`
+        <${NotificationPreferencesPanel}
+          api=${api}
+          toast=${toast}
+          panelRef=${notificationsRef} />
+      ` : null}
 
-      <${NotificationPreferencesPanel}
-        api=${api}
-        toast=${toast}
-        panelRef=${notificationsRef} />
+      ${activeSection === 'fraud' ? html`
+        <${FraudThresholdsPanel}
+          api=${api}
+          orgId=${orgId}
+          toast=${toast}
+          canManage=${canManageCompany} />
+      ` : null}
 
-      <${FraudThresholdsPanel}
-        api=${api}
-        orgId=${orgId}
-        toast=${toast}
-        canManage=${canManageCompany} />
+      ${activeSection === 'export' ? html`
+        <${DataExportPanel}
+          orgId=${orgId}
+          toast=${toast}
+          canManage=${canManageCompany} />
+      ` : null}
 
-      <${DataExportPanel}
-        orgId=${orgId}
-        toast=${toast}
-        canManage=${canManageCompany} />
+      ${activeSection === 'fx' ? html`
+        <${FxRatesPanel}
+          api=${api}
+          toast=${toast}
+          panelRef=${fxRatesRef} />
+      ` : null}
 
-      <${FxRatesPanel}
-        api=${api}
-        toast=${toast}
-        panelRef=${fxRatesRef} />
-
-      ${implStatus?.steps ? html`
-        <div class="panel">
-          <div class="panel-head compact">
-            <div>
-              <h3 >Implementation checklist</h3>
-              <p class="muted" >${implStatus.completed_count || 0} of ${implStatus.total_count || 0} steps complete</p>
-            </div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            ${(implStatus.steps || []).map((step) => html`
-              <div key=${step.key} style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${step.completed ? '#ECFDF5' : '#FBFCFD'};border:1px solid ${step.completed ? '#BBF7D0' : '#E2E8F0'};border-radius:6px;">
-                <span style="font-size:14px;">${step.completed ? '\u2705' : '\u2B1C'}</span>
-                <div style="flex:1;">
-                  <div style="font:500 13px/1.3 'DM Sans',sans-serif;color:#0A1628;">${step.label}</div>
-                  ${step.description ? html`<div style="font:400 11px/1.3 'DM Sans',sans-serif;color:#5C6B7A;">${step.description}</div>` : ''}
-                </div>
-                ${!step.completed && canManageCompany ? html`
-                  <button class="btn-outline btn-sm" onClick=${() => {
-                    api('/api/workspace/implementation/complete-step', {
-                      method: 'POST',
-                      body: JSON.stringify({ step_key: step.key, organization_id: orgId }),
-                    }).then(() => {
-                      setImplStatus((prev) => ({
-                        ...prev,
-                        completed_count: (prev?.completed_count || 0) + 1,
-                        steps: (prev?.steps || []).map((s) => s.key === step.key ? { ...s, completed: true } : s),
-                      }));
-                      toast?.('Step completed', 'success');
-                    }).catch(() => toast?.('Failed to mark step', 'error'));
-                  }}>Mark done</button>
-                ` : ''}
-              </div>
-            `)}
-          </div>
-        </div>
-      ` : ''}
-
-      <div class="panel" ref=${approvalRef}>
+      ${activeSection === 'approval' ? html`
+      <div class="panel">
         <div class="panel-head compact">
           <div>
             <h3 >Approval rules${!canManageCompany ? html`<span class="status-badge" style="font-size:10px;margin-left:8px">Read-only</span>` : null}</h3>
@@ -1471,6 +1449,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           Rules are evaluated in order. The first rule whose amount range, GL codes, departments, and vendors match the invoice will be used to route the approval request.
         </div>
       </div>
+      ` : null}
     </div>
   `;
 }
