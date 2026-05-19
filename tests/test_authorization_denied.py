@@ -169,7 +169,13 @@ def test_emit_falls_back_to_organization_box_when_no_resource() -> None:
 
 def test_emit_handles_unknown_org() -> None:
     """If neither resource nor org is known (e.g., unauthenticated probe),
-    the audit row still fires with box_id='unknown'."""
+    the audit row still fires with box_id='unknown' and
+    organization_id='_unknown'.
+
+    The fallback sentinel was 'default' pre-M19, but migration v79's
+    CHECK constraint rejects that literal at the DB level — '_unknown'
+    is the canonical replacement for "no resolved org" on audit rows.
+    """
     stub = _StubDB()
     with patch("clearledgr.core.authorization._get_db", return_value=stub):
         emit_authorization_denied_audit(
@@ -181,7 +187,7 @@ def test_emit_handles_unknown_org() -> None:
     assert event["box_type"] == "organization"
     assert event["box_id"] == "unknown"
     assert event["actor_id"] == "unknown"
-    assert event["organization_id"] == "default"
+    assert event["organization_id"] == "_unknown"
 
 
 def test_emit_never_raises_when_db_fails() -> None:

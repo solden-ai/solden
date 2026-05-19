@@ -22,8 +22,12 @@ logger = logging.getLogger(__name__)
 class SpendAnalysisService:
     """Spend analysis across the AP portfolio for a single tenant."""
 
-    def __init__(self, organization_id: str = "default") -> None:
-        self.organization_id = organization_id
+    def __init__(self, organization_id: Optional[str] = None) -> None:
+        from clearledgr.core.org_utils import assert_org_id
+
+        self.organization_id = assert_org_id(
+            organization_id, context="SpendAnalysisService"
+        )
         from clearledgr.core.database import get_db
         self.db = get_db()
 
@@ -419,7 +423,7 @@ class SpendAnalysisService:
 
 
 def get_spend_analysis_service(
-    organization_id: str = "default",
+    organization_id: Optional[str] = None,
 ) -> SpendAnalysisService:
     """Factory — returns a new SpendAnalysisService for the given org."""
     return SpendAnalysisService(organization_id=organization_id)

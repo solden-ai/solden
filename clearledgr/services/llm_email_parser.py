@@ -962,7 +962,7 @@ class LLMEmailParser:
         sender: str,
         attachments: Optional[List[Dict[str, Any]]] = None,
         *,
-        organization_id: str = "default",
+        organization_id: Optional[str] = None,
         thread_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Extract structured AP data from an email using Claude.
@@ -976,6 +976,11 @@ class LLMEmailParser:
 
         Falls back to regex EmailParser if Claude is unavailable or fails.
         """
+        from clearledgr.core.org_utils import assert_org_id
+
+        organization_id = assert_org_id(
+            organization_id, context="LLMEmailParser.parse_email"
+        )
         attachments = attachments or []
         local_result: Optional[Dict[str, Any]] = None
         if attachments:
@@ -1077,9 +1082,14 @@ class LLMEmailParser:
         attachments: List[Dict[str, Any]],
         *,
         local_result: Optional[Dict[str, Any]] = None,
-        organization_id: str = "default",
+        organization_id: Optional[str] = None,
         thread_id: Optional[str] = None,
     ) -> Dict[str, Any]:
+        from clearledgr.core.org_utils import assert_org_id
+
+        organization_id = assert_org_id(
+            organization_id, context="LLMEmailParser._extract_with_llm"
+        )
         visual_atts, text_att_content = _categorize_attachments(attachments)
 
         # Build vendor context from history + corrections
@@ -1193,7 +1203,7 @@ def parse_email_with_llm(
     sender: str,
     attachments: Optional[List[Dict[str, Any]]] = None,
     *,
-    organization_id: str = "default",
+    organization_id: Optional[str] = None,
     thread_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Convenience function — drop-in replacement for EmailParser().parse_email()."""

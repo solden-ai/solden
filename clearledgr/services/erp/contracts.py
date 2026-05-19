@@ -145,7 +145,9 @@ class RouterBackedERPBillAdapter:
         organization_id: str,
         external_ref: str,
     ) -> Dict[str, Any]:
-        org_id = str(organization_id or "default").strip() or "default"
+        from clearledgr.core.org_utils import assert_org_id
+
+        org_id = assert_org_id(organization_id, context="ERPContract.get_status")
         reference = str(external_ref or "").strip()
         connection = get_erp_connection(org_id)
         if not connection:
@@ -200,7 +202,9 @@ class RouterBackedERPBillAdapter:
         organization_id: str,
         entity_id: str,
     ) -> Dict[str, Any]:
-        org_id = str(organization_id or "default").strip() or "default"
+        from clearledgr.core.org_utils import assert_org_id
+
+        org_id = assert_org_id(organization_id, context="ERPContract.reconcile")
         ap_item_id = str(entity_id or "").strip()
         connection = get_erp_connection(org_id)
         if not connection:

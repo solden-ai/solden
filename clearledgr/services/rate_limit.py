@@ -240,7 +240,7 @@ def check_daily_quota(scope: str, identity: str, limit: int) -> Tuple[bool, int,
     """
     if not RATE_LIMIT_ENABLED or limit <= 0:
         return True, limit, _DAILY_WINDOW_SECONDS
-    safe_scope = (scope or "default").strip() or "default"
+    safe_scope = (scope or "default").strip() or "default"  # noqa: org-default
     safe_identity = (identity or "anon").strip() or "anon"
     key = f"quota:{safe_scope}:{safe_identity}"
     if _redis_client is not None:

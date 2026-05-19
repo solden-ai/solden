@@ -33,7 +33,7 @@ class FinanceLearningService:
 
     def __init__(
         self,
-        organization_id: Optional[str] = "default",
+        organization_id: Optional[str] = "default",  # noqa: org-default — platform-mode sentinel; see _init_ body for None handling
         *,
         db: Optional[ClearledgrDB] = None,
     ) -> None:
@@ -940,12 +940,12 @@ class FinanceLearningService:
 
 
 def get_finance_learning_service(
-    organization_id: Optional[str] = "default",
+    organization_id: Optional[str] = "default",  # noqa: org-default — platform-mode sentinel; mirrors FinanceLearningService.__init__
     *,
     db: Optional[ClearledgrDB] = None,
 ) -> FinanceLearningService:
     if organization_id is None:
-        organization_id = "default"
+        organization_id = "default"  # noqa: org-default — platform-mode sentinel for None/unset
     org_key = str(organization_id).strip()
     if not org_key:
         raise ValueError(

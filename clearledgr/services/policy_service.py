@@ -199,7 +199,11 @@ class PolicyService:
     """
 
     def __init__(self, organization_id: str) -> None:
-        self.organization_id = str(organization_id or "default").strip() or "default"
+        from clearledgr.core.org_utils import assert_org_id
+
+        self.organization_id = assert_org_id(
+            organization_id, context="PolicyService"
+        )
         self.db = get_db()
 
     # ─── Reads ───────────────────────────────────────────────────

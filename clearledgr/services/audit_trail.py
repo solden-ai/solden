@@ -278,10 +278,14 @@ class AuditTrailService:
         print(trail.format_timeline())
     """
     
-    def __init__(self, organization_id: str = "default"):
-        self.organization_id = organization_id
+    def __init__(self, organization_id: Optional[str] = None):
+        from clearledgr.core.org_utils import assert_org_id
+
+        self.organization_id = assert_org_id(
+            organization_id, context="AuditTrailService"
+        )
         self.db = get_db()
-        
+
         # In-memory storage (would be database in production)
         self._trails: Dict[str, AuditTrail] = {}
     
@@ -890,7 +894,7 @@ class AuditTrailService:
 
 
 # Convenience function
-def get_audit_trail(organization_id: str = "default") -> AuditTrailService:
+def get_audit_trail(organization_id: Optional[str] = None) -> AuditTrailService:
     """Get an audit trail service instance."""
     return AuditTrailService(organization_id=organization_id)
 
@@ -940,9 +944,14 @@ def record_audit_event(
     entity_id: str = None,
     source_type: str = "system",
     metadata: Dict[str, Any] = None,
-    organization_id: str = "default",
+    organization_id: Optional[str] = None,
 ) -> str:
     """Record an audit event (legacy function)."""
+    from clearledgr.core.org_utils import assert_org_id
+
+    organization_id = assert_org_id(
+        organization_id, context="record_audit_event"
+    )
     service = get_audit_trail(organization_id)
     
     # Map to new event type
@@ -969,8 +978,13 @@ def record_audit_event(
     return str(uuid.uuid4())
 
 
-def get_entity_history(entity_type: str, entity_id: str, organization_id: str = "default") -> Dict[str, Any]:
+def get_entity_history(entity_type: str, entity_id: str, organization_id: Optional[str] = None) -> Dict[str, Any]:
     """Get history for an entity (legacy function)."""
+    from clearledgr.core.org_utils import assert_org_id
+
+    organization_id = assert_org_id(
+        organization_id, context="get_entity_history"
+    )
     service = get_audit_trail(organization_id)
     trail = service.get_trail(entity_id)
     
@@ -984,8 +998,13 @@ def get_entity_history(entity_type: str, entity_id: str, organization_id: str = 
     }
 
 
-def get_user_activity(user_email: str, limit: int = 50, organization_id: str = "default") -> Dict[str, Any]:
+def get_user_activity(user_email: str, limit: int = 50, organization_id: Optional[str] = None) -> Dict[str, Any]:
     """Get activity for a user (legacy function)."""
+    from clearledgr.core.org_utils import assert_org_id
+
+    organization_id = assert_org_id(
+        organization_id, context="get_user_activity"
+    )
     service = get_audit_trail(organization_id)
     
     # Collect events from all trails for this user

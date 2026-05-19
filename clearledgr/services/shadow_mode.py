@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ async def run_shadow_decision(
     invoice_data: Dict[str, Any],
     production_decision: Dict[str, Any],
     shadow_model: str = "",
-    organization_id: str = "default",
+    organization_id: Optional[str] = None,
     db: Any = None,
 ) -> Dict[str, Any]:
     """Run the shadow model's decision alongside production.
@@ -40,6 +40,11 @@ async def run_shadow_decision(
     Called from the invoice workflow AFTER the production decision is made.
     Shadow output is stored in AP item metadata but never used for routing.
     """
+    from clearledgr.core.org_utils import assert_org_id
+
+    organization_id = assert_org_id(
+        organization_id, context="run_shadow_decision"
+    )
     if db is None:
         from clearledgr.core.database import get_db
         db = get_db()
@@ -104,12 +109,17 @@ async def run_shadow_decision(
 
 def get_shadow_mode_report(
     db: Any,
-    organization_id: str = "default",
+    organization_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Generate shadow mode agreement report.
 
     Called to check if shadow model is ready for promotion.
     """
+    from clearledgr.core.org_utils import assert_org_id
+
+    organization_id = assert_org_id(
+        organization_id, context="get_shadow_mode_report"
+    )
     items = db.list_ap_items(organization_id=organization_id, limit=1000)
 
     shadow_items = []

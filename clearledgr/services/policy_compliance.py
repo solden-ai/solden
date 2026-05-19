@@ -94,10 +94,15 @@ def parse_approval_automation_config(config: Dict[str, Any]) -> Tuple[Dict[str, 
 
 
 def get_approval_automation_policy(
-    organization_id: str = "default",
+    organization_id: Optional[str] = None,
     policy_name: str = AP_POLICY_NAME,
 ) -> Dict[str, Any]:
     """Return normalized approval automation settings for an organization."""
+    from clearledgr.core.org_utils import assert_org_id
+
+    organization_id = assert_org_id(
+        organization_id, context="get_approval_automation_policy"
+    )
     db = get_db()
     config: Dict[str, Any] = {}
     try:
@@ -565,8 +570,12 @@ class PolicyComplianceService:
             pass
     """
     
-    def __init__(self, organization_id: str = "default", policy_name: str = AP_POLICY_NAME):
-        self.organization_id = organization_id
+    def __init__(self, organization_id: Optional[str] = None, policy_name: str = AP_POLICY_NAME):
+        from clearledgr.core.org_utils import assert_org_id
+
+        self.organization_id = assert_org_id(
+            organization_id, context="PolicyComplianceService"
+        )
         self.policy_name = policy_name
         self.db = get_db()
         self.policies = self._load_policies()
@@ -990,7 +999,7 @@ class PolicyComplianceService:
 
 # Convenience function
 def get_policy_compliance(
-    organization_id: str = "default",
+    organization_id: Optional[str] = None,
     policy_name: str = AP_POLICY_NAME,
 ) -> PolicyComplianceService:
     """Get a policy compliance service instance."""

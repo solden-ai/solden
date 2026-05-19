@@ -188,8 +188,12 @@ class AgentReasoningService:
         "document_quality": 0.10,
     }
     
-    def __init__(self, organization_id: str = "default"):
-        self.organization_id = organization_id
+    def __init__(self, organization_id: Optional[str] = None):
+        from clearledgr.core.org_utils import assert_org_id
+
+        self.organization_id = assert_org_id(
+            organization_id, context="AgentReasoningService"
+        )
         self.llm = MultiModalLLMService()
         self._learning = None
         self._memory = None
@@ -829,11 +833,11 @@ class AgentReasoningService:
 
 
 # Convenience function
-def get_agent(organization_id: str = "default") -> AgentReasoningService:
+def get_agent(organization_id: Optional[str] = None) -> AgentReasoningService:
     """Get an agent reasoning service instance."""
     return AgentReasoningService(organization_id=organization_id)
 
 
-def get_reasoning_agent(organization_id: str = "default") -> AgentReasoningService:
+def get_reasoning_agent(organization_id: Optional[str] = None) -> AgentReasoningService:
     """Backward-compatible alias used by older planning entry points."""
     return get_agent(organization_id=organization_id)

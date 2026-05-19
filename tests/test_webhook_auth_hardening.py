@@ -131,48 +131,26 @@ def _find_default_coercions(src: str) -> list[str]:
 # + workflows/ (Phase C). Each phase removes its files from this
 # list as they're swept.
 _M19_OR_DEFAULT_ALLOWLIST: frozenset[str] = frozenset({
-    # M20 tenant-rename closed api/auth.py and core/auth.py by replacing
-    # the literal ``"default"`` placeholder with the ``"_unprovisioned"``
-    # sentinel. Migration v79 renamed any extant ``"default"`` org row
-    # to ``org_legacy_default`` and added CHECK constraints across every
-    # tenant-bound table.
+    # M19 sweep is COMPLETE. The entire ``clearledgr/`` tree is now
+    # pinned against M4-class regressions by
+    # ``test_no_default_org_coercion_anywhere_in_clearledgr``. Any
+    # new file that re-introduces an executable ``or "default"`` /
+    # ``organization_id: str = "default"`` / ``.get("organization_id",
+    # "default")`` (or syntactic equivalent) coercion fails that test
+    # at CI time. The canonical replacement is
+    # ``assert_org_id(value, context=...)`` from
+    # ``clearledgr/core/org_utils.py`` — raises ``OrgIdMissing`` on
+    # empty / None / 'default' / '_unprovisioned' instead of binding
+    # rows to a legacy / sentinel bucket.
     #
-    # The 2026-05-10 disk corruption caught the M19 Phase B (services/)
-    # and Phase C (core/ + workflows/) source sweeps mid-flight. The
-    # files below still carry ``organization_id: str = "default"``
-    # parameter defaults and similar shapes. Tracked as deferred
-    # follow-up: each entry is removed as the corresponding function
-    # signature is rewritten to require an explicit org id (which
-    # forces callers to plumb require_org / assert_org_id through).
-    # Defense in depth is in place at the DB layer (v79+v80 CHECKs)
-    # and the application layer (require_org / assert_org_id) — this
-    # allowlist holds the punchlist visible so the sweep resumes
-    # without losing track of which files still need work.
-    "clearledgr/services/agent_memory.py",
-    "clearledgr/services/agent_reasoning.py",
-    "clearledgr/services/ap_item_service.py",
-    "clearledgr/services/audit_trail.py",
-    "clearledgr/services/correction_learning.py",
-    "clearledgr/services/erp/contracts.py",
-    "clearledgr/services/finance_learning.py",
-    "clearledgr/services/finance_skills/ap_intent_handlers.py",
-    "clearledgr/services/learning_calibration.py",
-    "clearledgr/services/llm_email_parser.py",
-    "clearledgr/services/outbox.py",
-    "clearledgr/services/payment_request.py",
-    "clearledgr/services/period_close.py",
-    "clearledgr/services/policy_compliance.py",
-    "clearledgr/services/policy_service.py",
-    "clearledgr/services/priority_detection.py",
-    "clearledgr/services/proactive_insights.py",
-    "clearledgr/services/purchase_orders.py",
-    "clearledgr/services/rate_limit.py",
-    "clearledgr/services/scheduled_reports.py",
-    "clearledgr/services/shadow_mode.py",
-    "clearledgr/services/spend_analysis.py",
-    "clearledgr/services/tax_compliance.py",
-    "clearledgr/services/vendor_dedup.py",
-    "clearledgr/services/vendor_statement_recon.py",
+    # Defense in depth: migration v79+v80 added CHECK constraints
+    # across every tenant-bound table rejecting the same literals at
+    # the DB layer, so even a regression that slips past the source
+    # check fails closed at write time.
+    #
+    # Do NOT re-add entries here. If a legitimate non-org "default"
+    # literal arises (cache-key namespace, theme name, etc.), add the
+    # per-line ``# noqa: org-default`` marker instead.
 })
 
 

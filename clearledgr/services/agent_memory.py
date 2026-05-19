@@ -63,7 +63,7 @@ class AgentMemoryService:
 
     def __init__(
         self,
-        organization_id: Optional[str] = "default",
+        organization_id: Optional[str] = "default",  # noqa: org-default — platform-mode sentinel; see _init_ body for None handling
         *,
         db: Optional[ClearledgrDB] = None,
     ) -> None:
@@ -1588,14 +1588,14 @@ class AgentMemoryService:
 
 
 def get_agent_memory_service(
-    organization_id: Optional[str] = "default",
+    organization_id: Optional[str] = "default",  # noqa: org-default — platform-mode sentinel; mirrors AgentMemoryService.__init__
     *,
     db: Optional[ClearledgrDB] = None,
 ) -> AgentMemoryService:
     if db is None:
         db = get_db()
     if organization_id is None:
-        organization_id = "default"
+        organization_id = "default"  # noqa: org-default — platform-mode sentinel for None/unset
     org_key = str(organization_id).strip()
     if not org_key:
         raise ValueError(

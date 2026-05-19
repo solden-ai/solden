@@ -86,7 +86,7 @@ class PaymentRequest:
     updated_at: datetime = field(default_factory=datetime.now)
     
     # Organization
-    organization_id: str = "default"
+    organization_id: Optional[str] = None
     
     # Metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -122,8 +122,12 @@ class PaymentRequestService:
     Service for managing payment requests from all sources.
     """
     
-    def __init__(self, organization_id: str = "default"):
-        self.organization_id = organization_id
+    def __init__(self, organization_id: Optional[str] = None):
+        from clearledgr.core.org_utils import assert_org_id
+
+        self.organization_id = assert_org_id(
+            organization_id, context="PaymentRequestService"
+        )
         self._requests: Dict[str, PaymentRequest] = {}
     
     # =========================================================================
@@ -471,8 +475,11 @@ class PaymentRequestService:
 _instances: Dict[str, PaymentRequestService] = {}
 
 
-def get_payment_request_service(organization_id: str = "default") -> PaymentRequestService:
+def get_payment_request_service(organization_id: Optional[str] = None) -> PaymentRequestService:
     """Get or create PaymentRequestService instance."""
-    if organization_id not in _instances:
-        _instances[organization_id] = PaymentRequestService(organization_id)
-    return _instances[organization_id]
+    from clearledgr.core.org_utils import assert_org_id
+
+    org = assert_org_id(organization_id, context="get_payment_request_service")
+    if org not in _instances:
+        _instances[org] = PaymentRequestService(org)
+    return _instances[org]

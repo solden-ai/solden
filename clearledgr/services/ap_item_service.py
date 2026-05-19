@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import HTTPException
 
 from clearledgr.api.deps import verify_org_access
+from clearledgr.core.org_utils import assert_org_id
 from clearledgr.core.utils import safe_int
 from clearledgr.core.ap_confidence import evaluate_critical_field_confidence
 from clearledgr.core.ap_entity_routing import (
@@ -147,7 +148,10 @@ def _build_agent_memory_projection(
     payload: Dict[str, Any],
 ) -> Dict[str, Any]:
     ap_item_id = str(payload.get("id") or "").strip()
-    organization_id = str(payload.get("organization_id") or "default").strip() or "default"
+    organization_id = assert_org_id(
+        payload.get("organization_id"),
+        context="_build_agent_memory_projection",
+    )
     if not ap_item_id:
         return {
             "profile": {},
@@ -308,7 +312,11 @@ def _enrich_approval_row(approval: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _approval_followup_policy(organization_id: str) -> Dict[str, Any]:
-    return get_approval_automation_policy(organization_id=organization_id or "default")
+    return get_approval_automation_policy(
+        organization_id=assert_org_id(
+            organization_id, context="_approval_followup_policy"
+        )
+    )
 
 
 def _approval_followup_sla_minutes(approval_policy: Optional[Dict[str, Any]] = None) -> int:
@@ -359,10 +367,10 @@ def _build_approval_followup(
         return {}
 
     now_utc = now or datetime.now(timezone.utc)
-    _raw_org = payload.get("organization_id")
-    if not _raw_org:
-        logger.warning("organization_id missing in _check_approval_followup payload (ap_item_id=%s), falling back to 'default'", payload.get("id"))
-    organization_id = str(_raw_org or "default").strip() or "default"
+    organization_id = assert_org_id(
+        payload.get("organization_id"),
+        context="_build_approval_followup",
+    )
     policy = (
         approval_policy
         if isinstance(approval_policy, dict)
@@ -1940,9 +1948,10 @@ def build_worklist_item(
     try:
         from clearledgr.services.finance_learning import get_finance_learning_service
         _vendor = payload.get("vendor_name") or payload.get("vendor")
-        _org = payload.get("organization_id") or "default"
-        if _org == "default":
-            logger.warning("organization_id is 'default' during GL suggestion lookup (ap_item_id=%s)", payload.get("id"))
+        _org = assert_org_id(
+            payload.get("organization_id"),
+            context="enrich_ap_item_payload.gl_suggestion",
+        )
         learning = get_finance_learning_service(_org, db=db)
         if _vendor:
             payload["gl_suggestion"] = learning.suggest_field_correction("gl_code", {"vendor": _vendor})
@@ -1966,7 +1975,10 @@ def build_worklist_item(
     # §5.5 Agent Columns: enrich with IBAN Verified from vendor profile
     try:
         _vendor_name = payload.get("vendor_name") or payload.get("vendor")
-        _org_id = payload.get("organization_id") or "default"
+        _org_id = assert_org_id(
+            payload.get("organization_id"),
+            context="enrich_ap_item_payload.iban_verified",
+        )
         if _vendor_name and hasattr(db, "get_vendor_profile"):
             _vp = db.get_vendor_profile(_vendor_name, _org_id)
             if _vp:
@@ -2519,9 +2531,9 @@ def _build_context_payload(db: ClearledgrDB, item: Dict[str, Any]) -> Dict[str, 
         source_types[source_type] = source_types.get(source_type, 0) + 1
     distribution = ", ".join(f"{k}:{v}" for k, v in sorted(source_types.items()))
 
-    organization_id = str(item.get("organization_id") or "default")
-    if organization_id == "default":
-        logger.warning("organization_id is 'default' in _enrich_item_context (ap_item_id=%s) — cross-tenant data risk", item.get("id"))
+    organization_id = assert_org_id(
+        item.get("organization_id"), context="_enrich_item_context"
+    )
     all_items = db.list_ap_items(organization_id, limit=5000)
     vendor_name = str(item.get("vendor_name") or "").strip()
     vendor_key = vendor_name.lower()
@@ -2823,7 +2835,13 @@ async def _execute_field_review_resolution(
     # ``/field-review/bulk-resolve`` lost their tenant-scope guard.
     # Restore by passing the expected_organization_id through.
     item = _require_item(db, ap_item_id, expected_organization_id=organization_id)
-    verify_org_access(item.get("organization_id") or organization_id or "default", user)
+    verify_org_access(
+        assert_org_id(
+            item.get("organization_id") or organization_id,
+            context="_execute_field_review_resolution.verify_org_access",
+        ),
+        user,
+    )
 
     normalized_field = _normalize_field_review_field(request.field)
     normalized_source = _normalize_field_review_source(request.source)
@@ -2889,7 +2907,10 @@ async def _execute_field_review_resolution(
             "event_type": "field_correction",
             "actor_type": "user",
             "actor_id": actor_id,
-            "organization_id": str(item.get("organization_id") or organization_id or "default"),
+            "organization_id": assert_org_id(
+                item.get("organization_id") or organization_id,
+                context="_execute_field_review_resolution.audit_event",
+            ),
             "source": "ap_item_field_review_resolution",
             "reason": "field_review_resolved",
             "metadata": {
@@ -2933,7 +2954,13 @@ async def _execute_field_review_resolution(
             expected_fields=expected_fields,
         )
         truth_context["confidence_profile_id"] = confidence_profile_id
-        learning_svc = get_finance_learning_service(str(item.get("organization_id") or organization_id or "default"), db=db)
+        learning_svc = get_finance_learning_service(
+            assert_org_id(
+                item.get("organization_id") or organization_id,
+                context="_execute_field_review_resolution.learning_svc",
+            ),
+            db=db,
+        )
         learning_svc.record_manual_field_correction(
             field=normalized_field,
             original_value=blocker.get("selected_value") if isinstance(blocker, dict) else item.get(normalized_field),
@@ -2956,7 +2983,12 @@ async def _execute_field_review_resolution(
         from clearledgr.services.confidence_calibration import get_confidence_calibrator
         vendor = item.get("vendor_name") or ""
         if vendor:
-            calibrator = get_confidence_calibrator(str(item.get("organization_id") or organization_id or "default"))
+            calibrator = get_confidence_calibrator(
+                assert_org_id(
+                    item.get("organization_id") or organization_id,
+                    context="_execute_field_review_resolution.calibrator",
+                )
+            )
             calibrator.record_correction(vendor, normalized_field)
     except Exception:
         pass
@@ -2968,7 +3000,10 @@ async def _execute_field_review_resolution(
 
     if request.auto_resume and _should_auto_resume_after_field_resolution(normalized_item):
         runtime = _finance_agent_runtime_cls()(
-            organization_id=str(refreshed.get("organization_id") or organization_id or "default"),
+            organization_id=assert_org_id(
+                refreshed.get("organization_id") or organization_id,
+                context="_execute_field_review_resolution.auto_resume",
+            ),
             actor_id=actor_id,
             actor_email=getattr(user, "email", None),
             db=db,

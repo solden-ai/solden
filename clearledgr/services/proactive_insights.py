@@ -94,8 +94,12 @@ class ProactiveInsightsService:
         alerts = service.check_for_alerts(invoice_data)
     """
     
-    def __init__(self, organization_id: str = "default"):
-        self.organization_id = organization_id
+    def __init__(self, organization_id: Optional[str] = None):
+        from clearledgr.core.org_utils import assert_org_id
+
+        self.organization_id = assert_org_id(
+            organization_id, context="ProactiveInsightsService"
+        )
         self.db = get_db()
     
     def analyze_after_invoice(
@@ -518,7 +522,7 @@ class ProactiveInsightsService:
 
 
 # Convenience function
-def get_proactive_insights(organization_id: str = "default") -> ProactiveInsightsService:
+def get_proactive_insights(organization_id: Optional[str] = None) -> ProactiveInsightsService:
     """Get a proactive insights service instance."""
     return ProactiveInsightsService(organization_id=organization_id)
 
@@ -565,7 +569,7 @@ Constraints:
 async def narrate_insights(
     insights: List[Insight],
     *,
-    organization_id: str = "default",
+    organization_id: Optional[str] = None,
     period: str = "current",
 ) -> List[Insight]:
     """Augment a list of rule-detected insights with LLM-rendered copy.
@@ -577,6 +581,10 @@ async def narrate_insights(
     """
     if not insights:
         return insights
+
+    from clearledgr.core.org_utils import assert_org_id
+
+    organization_id = assert_org_id(organization_id, context="narrate_insights")
 
     # Project to the minimum the LLM needs — keep the prompt cheap and
     # guard against accidentally leaking data the operator hasn't seen.

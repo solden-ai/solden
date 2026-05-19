@@ -25,8 +25,12 @@ DEFAULT_CLOSE_DAY_OFFSET = 5
 class PeriodCloseService:
     """Manage period close and accrual cutoff for a single tenant."""
 
-    def __init__(self, organization_id: str = "default") -> None:
-        self.organization_id = organization_id
+    def __init__(self, organization_id: Optional[str] = None) -> None:
+        from clearledgr.core.org_utils import assert_org_id
+
+        self.organization_id = assert_org_id(
+            organization_id, context="PeriodCloseService"
+        )
         from clearledgr.core.database import get_db
         self.db = get_db()
 
@@ -289,5 +293,5 @@ class PeriodCloseService:
         return {"allowed": True, "period": period}
 
 
-def get_period_close_service(organization_id: str = "default") -> PeriodCloseService:
+def get_period_close_service(organization_id: Optional[str] = None) -> PeriodCloseService:
     return PeriodCloseService(organization_id=organization_id)

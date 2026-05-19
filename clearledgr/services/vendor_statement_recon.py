@@ -30,8 +30,12 @@ AMOUNT_TOLERANCE_PCT = 0.01  # 1%
 class VendorStatementRecon:
     """Reconcile a vendor statement against Clearledgr AP items."""
 
-    def __init__(self, organization_id: str = "default") -> None:
-        self.organization_id = organization_id
+    def __init__(self, organization_id: Optional[str] = None) -> None:
+        from clearledgr.core.org_utils import assert_org_id
+
+        self.organization_id = assert_org_id(
+            organization_id, context="VendorStatementRecon"
+        )
         from clearledgr.core.database import get_db
         self.db = get_db()
 
@@ -244,5 +248,5 @@ class VendorStatementRecon:
             return None
 
 
-def get_vendor_statement_recon(organization_id: str = "default") -> VendorStatementRecon:
+def get_vendor_statement_recon(organization_id: Optional[str] = None) -> VendorStatementRecon:
     return VendorStatementRecon(organization_id=organization_id)

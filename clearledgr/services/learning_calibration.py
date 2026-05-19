@@ -30,8 +30,12 @@ def _now_iso() -> str:
 class LearningCalibrationService:
     """Compute and persist calibration snapshots from real operator outcomes."""
 
-    def __init__(self, organization_id: str = "default", *, db: Optional[ClearledgrDB] = None) -> None:
-        self.organization_id = str(organization_id or "default").strip() or "default"
+    def __init__(self, organization_id: Optional[str] = None, *, db: Optional[ClearledgrDB] = None) -> None:
+        from clearledgr.core.org_utils import assert_org_id
+
+        self.organization_id = assert_org_id(
+            organization_id, context="LearningCalibrationService"
+        )
         self.db = db or get_db()
         self._init_table()
 
@@ -397,7 +401,7 @@ class LearningCalibrationService:
 
 
 def get_learning_calibration_service(
-    organization_id: str = "default",
+    organization_id: Optional[str] = None,
     *,
     db: Optional[ClearledgrDB] = None,
 ) -> LearningCalibrationService:

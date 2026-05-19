@@ -114,7 +114,7 @@ class CorrectionLearningService:
     _RULES_TTL_SECONDS: int = 300  # refresh in-memory cache every 5 minutes
     _REFRESH_INTERVAL: int = 300   # full refresh interval in seconds (5 minutes)
 
-    def __init__(self, organization_id: Optional[str] = "default"):
+    def __init__(self, organization_id: Optional[str] = "default"):  # noqa: org-default — platform-mode sentinel; see _init_ body for None handling
         if organization_id is None:
             organization_id = "default"  # noqa: org-default — platform-mode sentinel for None/unset
         normalized = str(organization_id).strip()
@@ -1777,17 +1777,17 @@ class CorrectionLearningService:
 
 
 # Convenience function
-def get_correction_learning(organization_id: str = "default") -> CorrectionLearningService:
+def get_correction_learning(organization_id: str = "default") -> CorrectionLearningService:  # noqa: org-default — platform-mode sentinel; mirrors CorrectionLearningService.__init__
     """Get a correction learning service instance."""
     return CorrectionLearningService(organization_id=organization_id)
 
 
 def get_correction_learning_service(
-    organization_id: Optional[str] = "default",
+    organization_id: Optional[str] = "default",  # noqa: org-default — platform-mode sentinel; mirrors CorrectionLearningService.__init__
 ) -> CorrectionLearningService:
     """Get a cached correction learning service instance."""
     if organization_id is None:
-        organization_id = "default"
+        organization_id = "default"  # noqa: org-default — platform-mode sentinel for None/unset
     normalized_org = str(organization_id).strip()
     if not normalized_org:
         raise ValueError(

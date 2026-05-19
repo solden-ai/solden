@@ -122,8 +122,12 @@ class PriorityDetectionService:
         "salesforce",
     ]
     
-    def __init__(self, organization_id: str = "default"):
-        self.organization_id = organization_id
+    def __init__(self, organization_id: Optional[str] = None):
+        from clearledgr.core.org_utils import assert_org_id
+
+        self.organization_id = assert_org_id(
+            organization_id, context="PriorityDetectionService"
+        )
         self.db = get_db()
     
     def assess(self, invoice: Dict[str, Any]) -> PriorityAssessment:
@@ -577,6 +581,6 @@ class PriorityDetectionService:
 
 
 # Convenience function
-def get_priority_detection(organization_id: str = "default") -> PriorityDetectionService:
+def get_priority_detection(organization_id: Optional[str] = None) -> PriorityDetectionService:
     """Get a priority detection service instance."""
     return PriorityDetectionService(organization_id=organization_id)

@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from clearledgr.services.fuzzy_matching import (
     match_probability,
@@ -44,8 +44,12 @@ MIN_RRF_SCORE_GATE = 0.05  # ~3 mid-ranked appearances across modes
 class VendorDedupService:
     """Detect and merge duplicate vendor profiles for a single tenant."""
 
-    def __init__(self, organization_id: str = "default") -> None:
-        self.organization_id = organization_id
+    def __init__(self, organization_id: Optional[str] = None) -> None:
+        from clearledgr.core.org_utils import assert_org_id
+
+        self.organization_id = assert_org_id(
+            organization_id, context="VendorDedupService"
+        )
         from clearledgr.core.database import get_db
         self.db = get_db()
 
@@ -529,5 +533,5 @@ class VendorDedupService:
             return False
 
 
-def get_vendor_dedup_service(organization_id: str = "default") -> VendorDedupService:
+def get_vendor_dedup_service(organization_id: Optional[str] = None) -> VendorDedupService:
     return VendorDedupService(organization_id=organization_id)

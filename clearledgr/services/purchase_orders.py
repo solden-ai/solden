@@ -151,8 +151,8 @@ class PurchaseOrder:
     # Tracking
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
-    organization_id: str = "default"
-    
+    organization_id: Optional[str] = None
+
     # ERP Integration
     erp_po_id: str = ""
     
@@ -250,7 +250,7 @@ class GoodsReceipt:
     # Metadata
     notes: str = ""
     created_at: datetime = field(default_factory=datetime.now)
-    organization_id: str = "default"
+    organization_id: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -540,8 +540,12 @@ class PurchaseOrderService:
         POStatus.PARTIALLY_INVOICED,
     )
 
-    def __init__(self, organization_id: str = "default"):
-        self.organization_id = organization_id
+    def __init__(self, organization_id: Optional[str] = None):
+        from clearledgr.core.org_utils import assert_org_id
+
+        self.organization_id = assert_org_id(
+            organization_id, context="PurchaseOrderService"
+        )
         from clearledgr.core.database import get_db
         self._db = get_db()
 
@@ -1238,8 +1242,11 @@ class PurchaseOrderService:
 _instances: Dict[str, PurchaseOrderService] = {}
 
 
-def get_purchase_order_service(organization_id: str = "default") -> PurchaseOrderService:
+def get_purchase_order_service(organization_id: Optional[str] = None) -> PurchaseOrderService:
     """Get or create PO service for organization."""
-    if organization_id not in _instances:
-        _instances[organization_id] = PurchaseOrderService(organization_id)
-    return _instances[organization_id]
+    from clearledgr.core.org_utils import assert_org_id
+
+    org = assert_org_id(organization_id, context="get_purchase_order_service")
+    if org not in _instances:
+        _instances[org] = PurchaseOrderService(org)
+    return _instances[org]

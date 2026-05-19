@@ -187,8 +187,12 @@ def get_vat_rate(country_code: str) -> Optional[float]:
 class TaxComplianceService:
     """Tax compliance reporting for a single tenant."""
 
-    def __init__(self, organization_id: str = "default") -> None:
-        self.organization_id = organization_id
+    def __init__(self, organization_id: Optional[str] = None) -> None:
+        from clearledgr.core.org_utils import assert_org_id
+
+        self.organization_id = assert_org_id(
+            organization_id, context="TaxComplianceService"
+        )
         from clearledgr.core.database import get_db
         self.db = get_db()
 
@@ -324,5 +328,5 @@ class TaxComplianceService:
         }
 
 
-def get_tax_compliance_service(organization_id: str = "default") -> TaxComplianceService:
+def get_tax_compliance_service(organization_id: Optional[str] = None) -> TaxComplianceService:
     return TaxComplianceService(organization_id=organization_id)

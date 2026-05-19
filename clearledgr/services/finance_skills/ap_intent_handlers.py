@@ -8,6 +8,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from clearledgr.core.ap_entity_routing import resolve_entity_routing
+from clearledgr.core.org_utils import assert_org_id
 from clearledgr.core.utils import safe_int
 
 logger = logging.getLogger(__name__)
@@ -1846,11 +1847,11 @@ class ReverseInvoicePostHandler(APIntentHandler):
         from clearledgr.services.override_window import get_override_window_service
 
         actor = _resolve_actor_fields(runtime, payload, fallback="workspace_spa")
-        org_id = (
+        org_id = assert_org_id(
             window.get("organization_id")
             or ap_item.get("organization_id")
-            or runtime.organization_id
-            or "default"
+            or runtime.organization_id,
+            context="ap_intent_handlers.reverse_decision",
         )
         service = get_override_window_service(org_id, db=runtime.db)
         try:
@@ -2489,7 +2490,10 @@ class SplitInvoiceHandler(APIntentHandler):
                 "state": "needs_info",
                 "confidence": ap_item.get("confidence") or 0,
                 "approval_required": bool(ap_item.get("approval_required", True)),
-                "organization_id": ap_item.get("organization_id") or "default",
+                "organization_id": assert_org_id(
+                    ap_item.get("organization_id"),
+                    context="split_invoice.child_payload",
+                ),
                 "user_id": ap_item.get("user_id"),
                 "metadata": {
                     **parent_meta,
@@ -2584,7 +2588,10 @@ class SplitInvoiceHandler(APIntentHandler):
         # Track split items against subscription quota (best-effort).
         try:
             from clearledgr.services.subscription import get_subscription_service
-            split_org_id = ap_item.get("organization_id") or "default"
+            split_org_id = assert_org_id(
+                ap_item.get("organization_id"),
+                context="split_invoice.subscription_usage",
+            )
             get_subscription_service().increment_usage(
                 split_org_id, "invoices_this_month", amount=len(created_items),
             )
@@ -2602,7 +2609,10 @@ class SplitInvoiceHandler(APIntentHandler):
                     db,
                     item,
                     approval_policy=svc._approval_followup_policy(
-                        str(item.get("organization_id") or ap_item.get("organization_id") or "default")
+                        assert_org_id(
+                            item.get("organization_id") or ap_item.get("organization_id"),
+                            context="split_invoice.approval_policy",
+                        )
                     ),
                 )
                 for item in created_items
@@ -2654,7 +2664,9 @@ class MergeInvoicesHandler(APIntentHandler):
             if not source_item:
                 reason_codes.append("source_not_found")
             else:
-                if str(target.get("organization_id") or "default") != str(source_item.get("organization_id") or "default"):
+                target_org = str(target.get("organization_id") or "").strip()
+                source_org = str(source_item.get("organization_id") or "").strip()
+                if not target_org or not source_org or target_org != source_org:
                     reason_codes.append("organization_mismatch")
         if not reason:
             reason_codes.append("reason_required")
@@ -2935,7 +2947,10 @@ class ResolveNonInvoiceReviewHandler(APIntentHandler):
         metadata = context.get("_metadata") or svc._parse_json(ap_item.get("metadata"))
         correlation_id = runtime.correlation_id_for_item(ap_item)
         db = runtime.db
-        organization_id = str(ap_item.get("organization_id") or runtime.organization_id or "default")
+        organization_id = assert_org_id(
+            ap_item.get("organization_id") or runtime.organization_id,
+            context="ap_intent_handlers.execute",
+        )
 
         if not precheck.get("eligible"):
             reason_codes = set(precheck.get("reason_codes") or [])
@@ -3201,7 +3216,10 @@ class ResolveEntityRouteHandler(APIntentHandler):
         metadata = context.get("_metadata") or svc._parse_json(ap_item.get("metadata"))
         correlation_id = runtime.correlation_id_for_item(ap_item)
         db = runtime.db
-        organization_id = str(ap_item.get("organization_id") or runtime.organization_id or "default")
+        organization_id = assert_org_id(
+            ap_item.get("organization_id") or runtime.organization_id,
+            context="ap_intent_handlers.execute",
+        )
 
         if not precheck.get("eligible"):
             reason_codes = set(precheck.get("reason_codes") or [])

@@ -44,8 +44,12 @@ DEFAULT_SCHEDULES = [
 class ScheduledReportService:
     """Generate and deliver scheduled reports."""
 
-    def __init__(self, organization_id: str = "default") -> None:
-        self.organization_id = organization_id
+    def __init__(self, organization_id: Optional[str] = None) -> None:
+        from clearledgr.core.org_utils import assert_org_id
+
+        self.organization_id = assert_org_id(
+            organization_id, context="ScheduledReportService"
+        )
         from clearledgr.core.database import get_db
         self.db = get_db()
 
@@ -266,5 +270,5 @@ class ScheduledReportService:
             )
 
 
-def get_scheduled_report_service(organization_id: str = "default") -> ScheduledReportService:
+def get_scheduled_report_service(organization_id: Optional[str] = None) -> ScheduledReportService:
     return ScheduledReportService(organization_id=organization_id)
