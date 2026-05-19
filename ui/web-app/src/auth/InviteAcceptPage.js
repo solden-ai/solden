@@ -4,7 +4,6 @@ import { html } from '../utils/htm.js';
 import { api, ApiError } from '../api/client.js';
 import { logout, refreshSession, useSession } from './useSession.js';
 import { GoogleMark, MicrosoftMark } from './OAuthIcons.js';
-import { SoldenMark } from './SoldenMark.js';
 
 /**
  * /signup/accept?token=<invite-token>
@@ -273,7 +272,8 @@ export function InviteAcceptPage() {
     <main class="cl-auth-shell">
       <div class="cl-auth-card">
         <div class="cl-auth-brand">
-          <${SoldenMark} size=${36} />
+          <img src="/favicon.png?v=7" alt="Solden" height="36" width="36"
+               style="display:block;width:36px;height:36px" />
         </div>
         <h1 class="cl-auth-title">Join ${orgLabel}</h1>
         <p class="cl-auth-sub">
