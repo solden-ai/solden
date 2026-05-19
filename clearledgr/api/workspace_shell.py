@@ -771,6 +771,105 @@ def _resolve_erp_deep_link_id(conn_row: Dict[str, Any]) -> Optional[str]:
     return None
 
 
+def _outlook_status_for_org(organization_id: str, user: TokenData) -> Dict[str, Any]:
+    """Outlook intake status for the workspace bootstrap response.
+
+    Mirrors ``_gmail_status_for_org`` shape so the Connections page can
+    treat Gmail + Outlook symmetrically — they're peer intake channels.
+
+    When ``FEATURE_OUTLOOK_ENABLED`` is off, returns a terminal
+    "disabled_in_v1" payload so the SPA can show a "post-launch" label
+    instead of a Connect button that would 404 on click. Mirrors the
+    teams helper below.
+    """
+    from clearledgr.core.feature_flags import is_outlook_enabled
+    if not is_outlook_enabled():
+        return {
+            "name": "outlook",
+            "connected": False,
+            "status": "disabled_in_v1",
+            "mode": "oauth",
+            "email": None,
+            "durable": False,
+            "has_refresh_token": False,
+            "requires_reconnect": False,
+            "last_sync_at": None,
+            "watch_status": "disabled",
+            "watch_expires_soon": False,
+            "invoices_processed": 0,
+            "reason": (
+                "FEATURE_OUTLOOK_ENABLED is off. Flip the env var on "
+                "api/worker/beat once MICROSOFT_CLIENT_ID + SECRET are "
+                "configured to enable the Outlook intake channel."
+            ),
+        }
+
+    db = get_db()
+    # Resolve the Outlook token in the same order of specificity as
+    # the Gmail helper: exact user_id → exact email → any token in
+    # this org. Mirrors GmailTokenStore.get() lookup semantics.
+    token_row = db.get_oauth_token(user.user_id, "outlook")
+    if not token_row:
+        user_email = str(getattr(user, "email", "") or "").strip().lower()
+        if user_email:
+            token_row = db.get_oauth_token_by_email(user_email, "outlook")
+    if not token_row:
+        user_ids = {str(item.get("id")) for item in db.get_users(organization_id, include_inactive=False)}
+        for candidate in db.list_oauth_tokens(provider="outlook"):
+            if str(candidate.get("user_id")) in user_ids:
+                token_row = candidate
+                break
+
+    connected = bool(token_row)
+    has_refresh_token = bool(token_row and str(token_row.get("refresh_token") or "").strip())
+    durable = connected and has_refresh_token
+    ap_state = db.get_outlook_autopilot_state(user.user_id) or {}
+
+    # Microsoft Graph subscriptions expire after ~3 days unless renewed.
+    # Surface the subscription state so the operator sees the same
+    # "Watch active / polling / reconnect required / disconnected"
+    # progression Gmail uses, just keyed on Graph subscription state.
+    subscription_id = ap_state.get("subscription_id")
+    subscription_exp = ap_state.get("subscription_expiration")
+    watch_active = False
+    watch_expires_soon = False
+    if subscription_id and subscription_exp:
+        try:
+            exp_dt = datetime.fromisoformat(str(subscription_exp).replace("Z", "+00:00"))
+            now = _utcnow()
+            watch_active = exp_dt > now
+            watch_expires_soon = watch_active and (exp_dt - now) < timedelta(hours=24)
+        except (ValueError, TypeError):
+            pass
+
+    if watch_active:
+        watch_status = "active"
+    elif durable:
+        watch_status = "polling"
+    elif connected:
+        watch_status = "reconnect_required"
+    else:
+        watch_status = "disconnected"
+
+    status = "connected" if durable else ("reconnect_required" if connected else "disconnected")
+    return {
+        "name": "outlook",
+        "connected": connected,
+        "status": status,
+        "mode": "oauth",
+        "email": token_row.get("email") if token_row else None,
+        "durable": durable,
+        "has_refresh_token": has_refresh_token,
+        "requires_reconnect": connected and not durable,
+        "last_sync_at": ap_state.get("last_scan_at"),
+        "subscription_id": subscription_id,
+        "subscription_expiration": subscription_exp,
+        "watch_status": watch_status,
+        "watch_expires_soon": watch_expires_soon,
+        "last_error": ap_state.get("last_error"),
+    }
+
+
 def _teams_status_for_org(organization_id: str) -> Dict[str, Any]:
     # §12 / §6.8 — when Teams is disabled in V1, the bootstrap
     # response reports a terminal "disabled_in_v1" status so the
@@ -1117,6 +1216,15 @@ class GmailConnectStartRequest(BaseModel):
     redirect_path: str = Field(default="/gmail/connected", max_length=512)
 
 
+class OutlookConnectStartRequest(BaseModel):
+    organization_id: Optional[str] = None
+    redirect_path: str = Field(default="/connections", max_length=512)
+
+
+class OutlookDisconnectRequest(BaseModel):
+    organization_id: Optional[str] = None
+
+
 class SubscriptionPlanPatchRequest(BaseModel):
     organization_id: Optional[str] = None
     plan: str = Field(..., pattern="^(free|trial|pro|enterprise)$")
@@ -1438,6 +1546,75 @@ def start_gmail_connect(
     }
 
 
+@router.post("/integrations/outlook/connect/start")
+def start_outlook_connect(
+    request: OutlookConnectStartRequest,
+    user: TokenData = Depends(get_current_user),
+):
+    """Workspace-shell wrapper for the Outlook OAuth start flow.
+
+    The canonical Outlook routes live under ``/outlook/*``; this
+    endpoint mirrors the workspace-shell shape the SPA's Connections
+    page already uses for Gmail / Slack so the frontend can talk to
+    one ``/api/workspace/integrations/<provider>/connect/start`` API
+    surface across every intake channel.
+
+    Behind ``FEATURE_OUTLOOK_ENABLED``; returns 404 when off so the
+    UI's Connect CTA can fall back to the "post-launch" copy that
+    ``_outlook_status_for_org`` already emits.
+    """
+    from clearledgr.core.feature_flags import is_outlook_enabled, outlook_disabled_payload
+    if not is_outlook_enabled():
+        raise HTTPException(status_code=404, detail=outlook_disabled_payload())
+
+    _require_admin(user)
+    org_id = _resolve_org_id(user, request.organization_id)
+    redirect_path = str(request.redirect_path or "/connections").strip()
+    if not redirect_path.startswith("/"):
+        raise HTTPException(status_code=400, detail="invalid_redirect_path")
+
+    from clearledgr.services.outlook_api import (
+        is_outlook_configured,
+        generate_auth_url,
+    )
+    if not is_outlook_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="outlook_oauth_not_configured",
+        )
+
+    # State carries the user_id + org_id back through the Microsoft
+    # OAuth callback so we can bind the resulting token correctly.
+    # The Outlook callback already parses ``state.split(":", 1)`` —
+    # match that shape exactly so the existing handler keeps working.
+    state = f"{user.user_id}:{org_id}"
+    auth_url = generate_auth_url(state=state)
+    return {
+        "auth_url": auth_url,
+        "state": state,
+        "organization_id": org_id,
+        "redirect_path": redirect_path,
+    }
+
+
+@router.post("/integrations/outlook/disconnect")
+def disconnect_outlook(
+    request: OutlookDisconnectRequest,
+    user: TokenData = Depends(get_current_user),
+):
+    """Workspace-shell wrapper for the Outlook disconnect flow."""
+    from clearledgr.core.feature_flags import is_outlook_enabled, outlook_disabled_payload
+    if not is_outlook_enabled():
+        raise HTTPException(status_code=404, detail=outlook_disabled_payload())
+
+    _require_admin(user)
+    org_id = _resolve_org_id(user, request.organization_id)
+
+    from clearledgr.services.outlook_api import outlook_token_store
+    outlook_token_store.delete(user.user_id)
+    return {"success": True, "organization_id": org_id}
+
+
 @router.post("/integrations/slack/install/start")
 def start_slack_install(
     request: SlackInstallStartRequest,
@@ -1635,6 +1812,121 @@ async def test_slack_channel(
         "team": auth_context.get("team"),
         "bot_user_id": auth_context.get("user_id"),
     }
+
+
+@router.get("/integrations/teams/manifest")
+def download_teams_manifest_package(
+    organization_id: Optional[str] = Query(default=None),
+    user: TokenData = Depends(get_current_user),
+):
+    """Return the Teams app .zip ready for sideload into a customer tenant.
+
+    Mirrors ``ui/teams/manifest/build_package.sh`` but runs in-process
+    so an admin can download the package straight from the workspace
+    Connections page once ``MICROSOFT_APP_ID`` is configured.
+
+    The package contains the rendered ``manifest.json`` + the two icons,
+    flat-pathed (Teams rejects nested directories). The bot ID is read
+    from the ``MICROSOFT_APP_ID`` env var; the helper 503s when it's
+    missing so the admin sees a useful error instead of an opaque zip
+    with placeholder text.
+
+    Gated behind ``FEATURE_TEAMS_ENABLED`` for the same reason every
+    Teams route is — until Microsoft-side registrations land, the
+    download would produce a manifest the customer can't use.
+    """
+    from clearledgr.core.feature_flags import is_teams_enabled, teams_disabled_payload
+    if not is_teams_enabled():
+        raise HTTPException(status_code=404, detail=teams_disabled_payload())
+
+    _require_admin(user)
+    _resolve_org_id(user, organization_id)
+
+    import io
+    import json as _json
+    import re
+    import zipfile
+    from pathlib import Path
+    from fastapi.responses import Response
+
+    app_id = os.getenv("MICROSOFT_APP_ID", "").strip()
+    if not app_id:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "reason": "microsoft_app_id_not_configured",
+                "message": (
+                    "Set MICROSOFT_APP_ID on api/worker/beat with the Bot "
+                    "Framework registration ID. See ui/teams/INSTALL.md "
+                    "Part A.2 / A.3 for the Microsoft-side steps."
+                ),
+            },
+        )
+    if not re.fullmatch(
+        r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+        app_id,
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "reason": "microsoft_app_id_invalid",
+                "message": "MICROSOFT_APP_ID must be a hyphenated UUID.",
+            },
+        )
+
+    manifest_dir = (
+        Path(__file__).resolve().parent.parent.parent
+        / "ui" / "teams" / "manifest"
+    )
+    manifest_path = manifest_dir / "manifest.json"
+    color_path = manifest_dir / "color.png"
+    outline_path = manifest_dir / "outline.png"
+
+    for required in (manifest_path, color_path, outline_path):
+        if not required.is_file():
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "reason": "teams_manifest_assets_missing",
+                    "missing": str(required),
+                },
+            )
+
+    app_version = os.getenv("TEAMS_APP_VERSION", "1.0.0").strip() or "1.0.0"
+    raw_manifest = manifest_path.read_text(encoding="utf-8")
+    rendered_manifest = (
+        raw_manifest
+        .replace("${MICROSOFT_APP_ID}", app_id)
+        .replace('"version": "1.0.0"', f'"version": "{app_version}"', 1)
+    )
+
+    try:
+        _json.loads(rendered_manifest)
+    except _json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "reason": "teams_manifest_invalid_after_render",
+                "error": str(exc),
+            },
+        ) from exc
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("manifest.json", rendered_manifest)
+        zf.write(color_path, arcname="color.png")
+        zf.write(outline_path, arcname="outline.png")
+    buf.seek(0)
+
+    filename = f"solden-teams-{app_version}.zip"
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @router.post("/integrations/teams/webhook")

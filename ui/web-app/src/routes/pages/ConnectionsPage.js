@@ -61,12 +61,31 @@ function getRoutingModeSummary(slack = {}, teams = {}) {
   return 'Set after approval setup';
 }
 
-function getSetupSummary({ gmail, gmailReconnectRequired, approvalConnected, slack, erp }) {
+function getSetupSummary({
+  gmail,
+  gmailReconnectRequired,
+  outlook,
+  outlookReconnectRequired,
+  outlookEnabled,
+  inboxConnected,
+  inboxReconnectRequired,
+  approvalConnected,
+  slack,
+  erp,
+}) {
   const missing = [];
-  if (!gmail.connected || gmailReconnectRequired) missing.push('Gmail');
-  if (!approvalConnected || slack.requires_reauthorization) missing.push('Slack or Teams approvals');
+  // Inbox side: either Gmail or Outlook satisfies the intake-channel
+  // requirement. Only surface the reconnect language when at least
+  // one is connected but stale.
+  if (!inboxConnected) {
+    missing.push(outlookEnabled ? 'Gmail or Outlook' : 'Gmail');
+  } else if (inboxReconnectRequired) {
+    if (gmail.connected && gmailReconnectRequired) missing.push('Gmail (reconnect)');
+    if (outlook.connected && outlookReconnectRequired) missing.push('Outlook (reconnect)');
+  }
+  if (!approvalConnected || slack?.requires_reauthorization) missing.push('Slack or Teams approvals');
   if (!erp.connected) missing.push('ERP');
-  if (missing.length === 0) return 'Gmail, approvals, and ERP are ready for this workspace.';
+  if (missing.length === 0) return 'Inbox, approvals, and ERP are ready for this workspace.';
   if (missing.length === 1) return `Finish ${missing[0]} before Solden can run the full AP flow.`;
   return `Finish ${missing.slice(0, -1).join(', ')}, and ${missing[missing.length - 1]} before Solden can run the full AP flow.`;
 }
@@ -86,10 +105,19 @@ function getSlackConnectionDetail(slack = {}) {
 
 export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefresh, oauthBridge, navigate }) {
   const gmail = integrationByName(bootstrap, 'gmail');
+  const outlook = integrationByName(bootstrap, 'outlook');
   const erp = integrationByName(bootstrap, 'erp');
   const slack = integrationByName(bootstrap, 'slack');
   const teams = integrationByName(bootstrap, 'teams');
   const gmailReconnectRequired = Boolean(gmail.requires_reconnect);
+  const outlookReconnectRequired = Boolean(outlook.requires_reconnect);
+  // The Outlook + Teams surfaces are gated behind backend feature
+  // flags. When off, the bootstrap status payload reports
+  // ``disabled_in_v1`` and the SPA shows a "post-launch" pill instead
+  // of a Connect CTA that would 404. Mirrors the pattern for any
+  // other gated surface.
+  const outlookEnabled = String(outlook.status || '').toLowerCase() !== 'disabled_in_v1';
+  const teamsEnabled = String(teams.status || '').toLowerCase() !== 'disabled_in_v1';
   // Capability comes directly from the authenticated bootstrap response
   // (workspace_shell._workspace_capabilities).  The previous code probed
   // /api/workspace/team/invites with silent:true to infer admin status
@@ -107,7 +135,30 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
       oauthBridge.startOAuth(payload.auth_url, 'gmail');
       return;
     }
-    navigate?.('clearledgr/invoices');
+    navigate?.('/records');
+  });
+
+  const [connectOutlook, outlookPending] = useAction(async () => {
+    if (!canEditConnections || !outlookEnabled) return;
+    const payload = await api('/api/workspace/integrations/outlook/connect/start', {
+      method: 'POST',
+      body: JSON.stringify({ organization_id: orgId, redirect_path: '/connections' }),
+    });
+    if (payload?.auth_url) {
+      oauthBridge.startOAuth(payload.auth_url, 'outlook');
+      return;
+    }
+    navigate?.('/records');
+  });
+
+  const [disconnectOutlook, outlookDisconnectPending] = useAction(async () => {
+    if (!canEditConnections) return;
+    await api('/api/workspace/integrations/outlook/disconnect', {
+      method: 'POST',
+      body: JSON.stringify({ organization_id: orgId }),
+    });
+    toast('Outlook disconnected.');
+    onRefresh?.();
   });
 
   const [connectSlack, slackPending] = useAction(async () => {
@@ -139,7 +190,23 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
   });
 
   const approvalConnected = Boolean(slack.connected || teams.connected);
-  const setupMode = getSetupSummary({ gmail, gmailReconnectRequired, approvalConnected, slack, erp });
+  // Gmail or Outlook satisfies the intake-channel side of onboarding.
+  // ``setupMode`` reports whichever is missing or needs a reconnect.
+  const inboxConnected = Boolean(gmail.connected || outlook.connected);
+  const inboxReconnectRequired = (gmail.connected && gmailReconnectRequired)
+    || (outlook.connected && outlookReconnectRequired);
+  const setupMode = getSetupSummary({
+    gmail,
+    gmailReconnectRequired,
+    outlook,
+    outlookReconnectRequired,
+    outlookEnabled,
+    inboxConnected,
+    inboxReconnectRequired,
+    approvalConnected,
+    slack,
+    erp,
+  });
   const [erpType, setErpType] = useState(String(erp.erp_type || 'quickbooks').trim().toLowerCase() || 'quickbooks');
   const [erpFormSpec, setErpFormSpec] = useState(null);
   const [erpFormValues, setErpFormValues] = useState({});
@@ -154,7 +221,7 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
         ${gmail.connected || gmailReconnectRequired
           ? html`<button class="btn-primary btn-sm" onClick=${connectGmail} disabled=${gmailPending || !canEditConnections}>${gmailPending ? 'Working…' : (gmailReconnectRequired ? 'Reconnect Gmail' : 'Refresh Gmail auth')}</button>`
           : html`<button class="btn-primary btn-sm" onClick=${connectGmail} disabled=${gmailPending || !canEditConnections}>${gmailPending ? 'Working…' : 'Connect Gmail'}</button>`}
-        <button class="btn-secondary btn-sm" onClick=${() => navigate?.('clearledgr/health')}>Open system status</button>
+        <button class="btn-secondary btn-sm" onClick=${() => navigate?.('/health')}>Open system status</button>
       </div>
     </div>
 
@@ -180,6 +247,25 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
               disabled=${!canEditConnections}
             />
             <${ConnectionRow}
+              label="Outlook"
+              status=${outlook.status || (outlook.connected ? 'connected' : 'disconnected')}
+              detail=${!outlookEnabled
+                ? 'Outlook intake is gated behind FEATURE_OUTLOOK_ENABLED. Flip the env var on api/worker/beat once the Entra app is registered (MICROSOFT_CLIENT_ID + SECRET).'
+                : outlook.connected
+                  ? (outlookReconnectRequired
+                    ? 'Reconnect Outlook to keep this inbox connected.'
+                    : `Outlook is connected${outlook.email ? ` as ${outlook.email}` : ''}.`)
+                  : 'Connect Outlook to ingest invoices arriving in your Microsoft 365 mailbox.'}
+              actionLabel=${!outlookEnabled
+                ? ''
+                : outlook.connected
+                  ? (outlookReconnectRequired ? 'Reconnect Outlook' : 'Disconnect Outlook')
+                  : 'Connect Outlook'}
+              onAction=${outlook.connected && !outlookReconnectRequired ? disconnectOutlook : connectOutlook}
+              pending=${outlookPending || outlookDisconnectPending}
+              disabled=${!canEditConnections || !outlookEnabled}
+            />
+            <${ConnectionRow}
               label="Slack"
               status=${slack.status || (slack.connected ? 'connected' : 'disconnected')}
               detail=${getSlackConnectionDetail(slack)}
@@ -191,9 +277,11 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
             <${ConnectionRow}
               label="Teams"
               status=${teams.status || (teams.connected ? 'connected' : 'disconnected')}
-              detail=${teams.connected
-                ? 'Teams approvals are connected.'
-                : 'Save a Teams webhook to send approval requests there.'}
+              detail=${!teamsEnabled
+                ? 'Teams approvals are gated behind FEATURE_TEAMS_ENABLED. Flip the env var on api/worker/beat once the Entra app + Bot Framework registrations are complete. See ui/teams/INSTALL.md for the full Microsoft-side runbook.'
+                : teams.connected
+                  ? `Teams approvals are connected${teams.webhook_configured ? ' via webhook' : ' via bot'}.`
+                  : 'Configure a Teams webhook below for notifications, or install the Teams bot for interactive approve / reject cards. See the Teams panel below.'}
             />
             <${ConnectionRow}
               label="ERP"
@@ -254,14 +342,42 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
         <${ApprovalSurfaceCard}
           title="Teams approval routing"
           status=${teams.status || (teams.connected ? 'connected' : 'disconnected')}
-          detail="Use Teams instead when approval requests belong there."
+          detail=${teamsEnabled
+            ? 'Two install paths. Pick interactive bot for full Approve / Reject cards, or webhook for notification-only.'
+            : 'Teams approvals are gated behind FEATURE_TEAMS_ENABLED.'}
         >
-          <div class="secondary-inline-actions">
-            <input id="cl-teams-webhook" placeholder="https://.../incomingwebhook/..." value=${teams.webhook_url || ''} disabled=${!canEditConnections} style="flex:1;min-width:240px" />
-            <button class="btn-primary btn-sm" onClick=${saveWebhook} disabled=${saveWebhookPending || !canEditConnections}>${saveWebhookPending ? 'Saving…' : 'Save webhook'}</button>
-            <button class="btn-ghost btn-sm" onClick=${testTeamsMsg} disabled=${testTeamsPending || !teams.connected || !canEditConnections}>${testTeamsPending ? 'Sending…' : 'Send test'}</button>
-          </div>
-          <div class="secondary-note" style="margin-top:12px">Mode: ${humanizeMode(teams.mode || '-')}</div>
+          ${!teamsEnabled ? html`
+            <div class="secondary-note">
+              Set <code>FEATURE_TEAMS_ENABLED=true</code> on api/worker/beat once the Microsoft-side registrations are complete. The full runbook is in <a href="https://github.com/clearledgr/Clearledgr/blob/main/ui/teams/INSTALL.md" target="_blank" rel="noreferrer">ui/teams/INSTALL.md</a>.
+            </div>
+          ` : html`
+            <div class="secondary-section" style="margin-top:6px">
+              <strong style="font-size:13px">Interactive bot (Approve / Reject cards)</strong>
+              <p class="muted" style="margin:4px 0 8px;font-size:12px">
+                Requires an Entra app + Bot Framework registration and the
+                Teams app package sideloaded into your tenant. End state:
+                Adaptive Cards in any channel with working Approve / Reject
+                buttons that round-trip through Solden's audit chain. Full
+                steps in <a href="https://github.com/clearledgr/Clearledgr/blob/main/ui/teams/INSTALL.md" target="_blank" rel="noreferrer">ui/teams/INSTALL.md</a>.
+              </p>
+              <div class="secondary-inline-actions">
+                <a class="btn-secondary btn-sm" href="/api/workspace/integrations/teams/manifest?organization_id=${encodeURIComponent(orgId)}" target="_blank" rel="noreferrer">Download Teams app package</a>
+                <span class="secondary-chip">${teams.bot_configured ? 'Bot configured' : 'Bot not configured'}</span>
+              </div>
+            </div>
+            <div class="secondary-section" style="margin-top:14px">
+              <strong style="font-size:13px">Webhook (notifications only)</strong>
+              <p class="muted" style="margin:4px 0 8px;font-size:12px">
+                Paste an Incoming Webhook URL to receive approval card notifications. The Approve / Reject buttons render but don't post back without the full bot — use this as a quick-start while you wait for Microsoft-side registrations.
+              </p>
+              <div class="secondary-inline-actions">
+                <input id="cl-teams-webhook" placeholder="https://.../incomingwebhook/..." value=${teams.webhook_url || ''} disabled=${!canEditConnections} style="flex:1;min-width:240px" />
+                <button class="btn-primary btn-sm" onClick=${saveWebhook} disabled=${saveWebhookPending || !canEditConnections}>${saveWebhookPending ? 'Saving…' : 'Save webhook'}</button>
+                <button class="btn-ghost btn-sm" onClick=${testTeamsMsg} disabled=${testTeamsPending || !teams.connected || !canEditConnections}>${testTeamsPending ? 'Sending…' : 'Send test'}</button>
+              </div>
+              <div class="secondary-note" style="margin-top:8px;font-size:12px">Mode: ${humanizeMode(teams.mode || '-')}</div>
+            </div>
+          `}
         </${ApprovalSurfaceCard}>
       </div>
 

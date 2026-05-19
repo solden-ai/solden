@@ -667,6 +667,9 @@ STRICT_PROFILE_ALLOWED_WORKSPACE_PATHS = {
     "/api/workspace/integrations/slack/test",
     "/api/workspace/integrations/teams/test",
     "/api/workspace/integrations/teams/webhook",
+    "/api/workspace/integrations/teams/manifest",
+    "/api/workspace/integrations/outlook/connect/start",
+    "/api/workspace/integrations/outlook/disconnect",
     "/api/workspace/onboarding/status",
     "/api/workspace/onboarding/step",
     "/api/workspace/onboarding/integration-health-gate",
@@ -914,11 +917,15 @@ _OUTLOOK_GATED_PATHS = frozenset({
     "/outlook/disconnect",
     "/outlook/status",
     "/outlook/webhook",
+    # Workspace-shell wrappers used by the SPA Connections page.
+    "/api/workspace/integrations/outlook/connect/start",
+    "/api/workspace/integrations/outlook/disconnect",
 })
 
 _TEAMS_GATED_PATHS = frozenset({
     "/api/workspace/integrations/teams/test",
     "/api/workspace/integrations/teams/webhook",
+    "/api/workspace/integrations/teams/manifest",
     "/teams/invoices/interactive",
 })
 
