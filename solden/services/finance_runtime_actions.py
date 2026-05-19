@@ -271,9 +271,11 @@ async def share_finance_summary(
             audit_events = []
     summary = build_finance_lead_summary_payload(runtime, ap_item, audit_events=audit_events)
 
+    from solden.core.secrets import optional_secret
+
     resolved_recipient = (
         str(recipient_email or "").strip()
-        or os.getenv("CLEARLEDGR_FINANCE_LEAD_EMAIL", "").strip()
+        or optional_secret("SOLDEN_FINANCE_LEAD_EMAIL").strip()
         or os.getenv("FINANCE_LEAD_EMAIL", "").strip()
         or ""
     )

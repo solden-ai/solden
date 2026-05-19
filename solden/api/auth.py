@@ -101,7 +101,7 @@ class GoogleAuthCodeExchangeRequest(BaseModel):
 
 def _oauth_secret() -> str:
     from solden.core.secrets import require_secret
-    return require_secret("CLEARLEDGR_SECRET_KEY")
+    return require_secret("SOLDEN_SECRET_KEY")
 
 
 def _google_oauth_redirect_uri() -> str:

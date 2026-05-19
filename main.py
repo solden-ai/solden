@@ -381,14 +381,20 @@ if _sentry_dsn:
 
 
 def _env_flag(name: str, default: bool = False) -> bool:
-    raw = os.getenv(name)
-    if raw is None:
+    # Dual-read window for the Clearledgr → Solden rename: optional_secret
+    # honours both SOLDEN_X and CLEARLEDGR_X with the new prefix winning.
+    from solden.core.secrets import optional_secret
+
+    raw = optional_secret(name, default="")
+    if raw == "":
         return default
     return str(raw).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _process_role() -> str:
-    raw = str(os.getenv("CLEARLEDGR_PROCESS_ROLE", "all") or "").strip().lower()
+    from solden.core.secrets import optional_secret
+
+    raw = str(optional_secret("SOLDEN_PROCESS_ROLE", default="all") or "").strip().lower()
     if raw in {"api"}:
         return "web"
     if raw in {"web", "worker", "all"}:
@@ -397,7 +403,7 @@ def _process_role() -> str:
 
 
 def _should_skip_deferred_startup() -> bool:
-    if _env_flag("CLEARLEDGR_SKIP_DEFERRED_STARTUP", default=False):
+    if _env_flag("SOLDEN_SKIP_DEFERRED_STARTUP", default=False):
         return True
     return _process_role() == "web"
 
@@ -405,7 +411,7 @@ def _should_skip_deferred_startup() -> bool:
 def _runtime_surface_contract() -> Dict[str, Any]:
     env_name = str(os.getenv("ENV", "dev")).strip().lower()
     prod_like = env_name in {"production", "prod", "staging", "stage"}
-    legacy_override_requested = _env_flag("CLEARLEDGR_ENABLE_LEGACY_SURFACES", default=False)
+    legacy_override_requested = _env_flag("SOLDEN_ENABLE_LEGACY_SURFACES", default=False)
     allow_legacy_in_production = _env_flag("AP_V1_ALLOW_LEGACY_SURFACES_IN_PRODUCTION", default=False)
     strict_requested = _env_flag("AP_V1_STRICT_SURFACES", default=True)
 

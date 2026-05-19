@@ -93,7 +93,7 @@ def _bcrypt_lib():
 def _secret_key() -> str:
     from solden.core.secrets import require_secret
 
-    return require_secret("CLEARLEDGR_SECRET_KEY")
+    return require_secret("SOLDEN_SECRET_KEY")
 
 
 def _get_db():

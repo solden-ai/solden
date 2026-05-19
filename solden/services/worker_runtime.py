@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 from dotenv import load_dotenv
 
+from solden.core.secrets import optional_secret
 from solden.services.app_startup import run_deferred_startup
 from solden.services.logging import logger
 
@@ -14,7 +15,7 @@ load_dotenv()
 
 
 def _process_role() -> str:
-    raw = str(os.getenv("CLEARLEDGR_PROCESS_ROLE", "worker") or "").strip().lower()
+    raw = str(optional_secret("SOLDEN_PROCESS_ROLE", default="worker") or "").strip().lower()
     if raw in {"api"}:
         return "web"
     if raw in {"web", "worker", "all"}:
@@ -48,7 +49,7 @@ async def _shutdown(app) -> None:
 async def run_worker() -> None:
     role = _process_role()
     if role == "web":
-        raise RuntimeError("CLEARLEDGR_PROCESS_ROLE=web cannot run worker_runtime")
+        raise RuntimeError("SOLDEN_PROCESS_ROLE=web cannot run worker_runtime")
 
     app = SimpleNamespace(state=SimpleNamespace())
     await run_deferred_startup(app)

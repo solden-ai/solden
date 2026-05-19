@@ -101,12 +101,16 @@ def list_vendor_onboarding_sessions(
 def _portal_base_url() -> str:
     """Return the public base URL the magic link should embed.
 
-    Read from the ``CLEARLEDGR_PORTAL_BASE_URL`` env var. Defaults to
-    the production portal hostname so an unset env var in prod still
-    produces a vendor-friendly link rather than an api.* URL. Local
-    dev should set this to ``http://localhost:8000`` in its .env.
+    Read from the ``SOLDEN_PORTAL_BASE_URL`` env var (legacy
+    ``CLEARLEDGR_PORTAL_BASE_URL`` honoured during the rename window).
+    Defaults to the production portal hostname so an unset env var
+    in prod still produces a vendor-friendly link rather than an api.*
+    URL. Local dev should set this to ``http://localhost:8000`` in
+    its .env. The portal hostname is swept in Pass D.
     """
-    return os.getenv("CLEARLEDGR_PORTAL_BASE_URL", "https://onboard.clearledgr.com").rstrip("/")
+    from solden.core.secrets import optional_secret
+
+    return optional_secret("SOLDEN_PORTAL_BASE_URL", default="https://onboard.clearledgr.com").rstrip("/")
 
 
 def _build_magic_link(token: str) -> str:

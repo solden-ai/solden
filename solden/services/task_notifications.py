@@ -32,7 +32,9 @@ except ImportError as exc:
 # Bot tokens from environment (set during app installation)
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
 SLACK_DEFAULT_CHANNEL = os.environ.get("SLACK_DEFAULT_CHANNEL", "#finance")
-INVITE_URL = os.environ.get("CLEARLEDGR_INVITE_URL")
+from solden.core.secrets import optional_secret as _optional_secret  # noqa: E402
+
+INVITE_URL = _optional_secret("SOLDEN_INVITE_URL") or None
 
 
 def send_task_notification(

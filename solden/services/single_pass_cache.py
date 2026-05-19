@@ -56,7 +56,9 @@ _CACHE_KEY_PREFIX = "solden:single_pass:v1:"
 
 # Default TTL: vendor / org context can move within a day so an hour
 # is a safe ceiling. Overridable via env for tests + cost-tuning.
-_DEFAULT_TTL_SECONDS = int(os.getenv("CLEARLEDGR_SINGLE_PASS_CACHE_TTL", "3600"))
+from solden.core.secrets import optional_secret as _optional_secret  # noqa: E402
+
+_DEFAULT_TTL_SECONDS = int(_optional_secret("SOLDEN_SINGLE_PASS_CACHE_TTL", default="3600") or "3600")
 
 # In-memory fallback for dev / tests / no-REDIS_URL deployments.
 # Maps cache_key → (expires_at_monotonic, value_dict).

@@ -1325,7 +1325,9 @@ class CorrectionLearningService:
             source_event_id=normalized_event_id,
         )
         export_result = None
-        export_path = str(os.getenv("CLEARLEDGR_REVIEWED_EXTRACTION_EXPORT_PATH") or "").strip()
+        from solden.core.secrets import optional_secret
+
+        export_path = optional_secret("SOLDEN_REVIEWED_EXTRACTION_EXPORT_PATH").strip()
         if export_path:
             try:
                 export_result = self.export_reviewed_extraction_cases(export_path)

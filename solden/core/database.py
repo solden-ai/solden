@@ -257,7 +257,7 @@ class _SoldenDBBase:
                 f"DATABASE_URL must point at Postgres, got: {self.dsn!r}"
             )
         from solden.core.secrets import require_secret
-        self._secret_key = require_secret("CLEARLEDGR_SECRET_KEY")
+        self._secret_key = require_secret("SOLDEN_SECRET_KEY")
         self._fernet = None
         self._initialized = False
         self._pg_pool = None

@@ -213,7 +213,9 @@ def get_bank_verifier(organization_id: str, db: Any = None) -> BankVerifier:
         logger.debug("[bank_verifier] get_organization failed for %s: %s", organization_id, exc)
 
     if not configured:
-        configured = os.getenv("CLEARLEDGR_DEFAULT_BANK_VERIFIER", "").strip().lower() or None
+        from solden.core.secrets import optional_secret
+
+        configured = optional_secret("SOLDEN_DEFAULT_BANK_VERIFIER").strip().lower() or None
 
     if configured and configured in _ADAPTERS_REGISTRY:
         try:

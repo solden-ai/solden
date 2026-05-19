@@ -7,14 +7,15 @@ relay without code changes. When SMTP is not configured the service
 short-circuits to a no-op + log line, so dev environments and tests
 don't fall over.
 
-Required environment for live delivery:
+Required environment for live delivery (SOLDEN_* preferred; legacy
+CLEARLEDGR_* honoured during the rename window):
 
-  CLEARLEDGR_SMTP_HOST       e.g. smtp.sendgrid.net
-  CLEARLEDGR_SMTP_PORT       e.g. 587
-  CLEARLEDGR_SMTP_USERNAME   e.g. apikey
-  CLEARLEDGR_SMTP_PASSWORD   the password / API key
-  CLEARLEDGR_SMTP_FROM       From: header, e.g. reports@clearledgr.com
-  CLEARLEDGR_SMTP_USE_TLS    "true" / "false" (default true on port 587)
+  SOLDEN_SMTP_HOST       e.g. smtp.sendgrid.net
+  SOLDEN_SMTP_PORT       e.g. 587
+  SOLDEN_SMTP_USERNAME   e.g. apikey
+  SOLDEN_SMTP_PASSWORD   the password / API key
+  SOLDEN_SMTP_FROM       From: header, e.g. reports@soldenai.com
+  SOLDEN_SMTP_USE_TLS    "true" / "false" (default true on port 587)
 
 Failures are surfaced to the caller so the worker can record + retry.
 The function never raises across the public boundary; it returns a
@@ -29,6 +30,8 @@ import ssl
 from dataclasses import dataclass
 from email.message import EmailMessage
 from typing import List, Optional, Tuple
+
+from solden.core.secrets import optional_secret
 
 logger = logging.getLogger(__name__)
 
@@ -48,12 +51,12 @@ class EmailDeliveryResult:
 
 
 def _smtp_config() -> Tuple[Optional[str], int, Optional[str], Optional[str], Optional[str], bool]:
-    host = os.environ.get("CLEARLEDGR_SMTP_HOST", "").strip() or None
-    port = int(os.environ.get("CLEARLEDGR_SMTP_PORT", "587") or "587")
-    username = os.environ.get("CLEARLEDGR_SMTP_USERNAME", "").strip() or None
-    password = os.environ.get("CLEARLEDGR_SMTP_PASSWORD", "")
-    from_addr = os.environ.get("CLEARLEDGR_SMTP_FROM", "").strip() or None
-    use_tls_raw = os.environ.get("CLEARLEDGR_SMTP_USE_TLS", "").strip().lower()
+    host = optional_secret("SOLDEN_SMTP_HOST").strip() or None
+    port = int(optional_secret("SOLDEN_SMTP_PORT", default="587") or "587")
+    username = optional_secret("SOLDEN_SMTP_USERNAME").strip() or None
+    password = optional_secret("SOLDEN_SMTP_PASSWORD")
+    from_addr = optional_secret("SOLDEN_SMTP_FROM").strip() or None
+    use_tls_raw = optional_secret("SOLDEN_SMTP_USE_TLS").strip().lower()
     if use_tls_raw in ("false", "0", "no"):
         use_tls = False
     else:

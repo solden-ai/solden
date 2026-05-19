@@ -266,7 +266,9 @@ def get_kyc_provider(organization_id: str, db: Any = None) -> KYCProvider:
         logger.debug("[kyc_provider] get_organization failed for %s: %s", organization_id, exc)
 
     if not configured:
-        configured = os.getenv("CLEARLEDGR_DEFAULT_KYC_PROVIDER", "").strip().lower() or None
+        from solden.core.secrets import optional_secret
+
+        configured = optional_secret("SOLDEN_DEFAULT_KYC_PROVIDER").strip().lower() or None
 
     if configured and configured in _ADAPTERS_REGISTRY:
         try:

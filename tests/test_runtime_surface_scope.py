@@ -240,7 +240,17 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         #   * report subscriptions CRUD
         #   * additional bank-match + bank-statement read paths
         #   * field-review batch + audit-export hooks
-        assert len(paths) <= 340
+        # 2026-05-19: v89 two-axis auth + Outlook+Teams full ship +
+        # coordination-layer workspace audit. Cap raised 340 → 380:
+        #   * Outlook intake: /api/workspace/integrations/outlook/
+        #     {connect/start,disconnect} (2)
+        #   * Teams interactive bot: /api/workspace/integrations/teams/
+        #     {manifest,webhook} (2)
+        #   * v89 audit + RBAC: api-keys + scopes catalog + rotate (4),
+        #     audit chain-status + exports + retention (5), delegation
+        #     rules + escalation policies (5)
+        #   * Records read API + intervention surface
+        assert len(paths) <= 380
         assert not any(path.startswith("/config/") for path in paths)
         assert "/erp/status/{organization_id}" not in paths
         assert "/erp/quickbooks/connect" not in paths
@@ -386,7 +396,7 @@ def test_ap_runtime_registers_sidebar_core_intents():
 
 
 def test_gmail_extension_mutations_delegate_to_runtime_owned_ap_contract():
-    source = (ROOT / "clearledgr/api/gmail_extension.py").read_text(encoding="utf-8")
+    source = (ROOT / "solden/api/gmail_extension.py").read_text(encoding="utf-8")
 
     assert 'async def post_to_erp(' in source
     assert 'result = await runtime.execute_intent(' in source

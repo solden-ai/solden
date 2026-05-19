@@ -276,7 +276,7 @@ def _resolve_vendor_name(value: Any, sender: str) -> str:
 def _oauth_state_secret() -> str:
     try:
         from solden.core.secrets import require_secret
-        return require_secret("CLEARLEDGR_SECRET_KEY")
+        return require_secret("SOLDEN_SECRET_KEY")
     except Exception as exc:
         raise HTTPException(status_code=503, detail="oauth_state_signing_unavailable") from exc
 

@@ -10,7 +10,8 @@ Architectural rules:
     ``ap_items.metadata`` blob). They live in dedicated
     ``bank_details_encrypted`` columns containing Fernet ciphertext.
   - The encryption key is the same one ``_SoldenDBBase._get_fernet``
-    derives from ``CLEARLEDGR_SECRET_KEY`` — already in production use
+    derives from ``SOLDEN_SECRET_KEY`` (legacy ``CLEARLEDGR_SECRET_KEY``
+    honoured during the rename window) — already in production use
     for ERP OAuth tokens.
   - API responses ALWAYS return masked shapes via ``mask_bank_details``.
     There is no "show me the raw value" toggle exposed to clients.
