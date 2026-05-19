@@ -1,4 +1,4 @@
-# Clearledgr Agentic Autonomy Next Program (HITL-Preserved)
+# Solden Agentic Autonomy Next Program (HITL-Preserved)
 
 ## Objective
 Maximize safe agentic autonomy for AP workflows while preserving non-negotiable human-in-the-loop controls for risky actions.

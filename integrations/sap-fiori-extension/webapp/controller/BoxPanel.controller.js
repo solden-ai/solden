@@ -1,4 +1,4 @@
-/* Clearledgr — BoxPanel controller.
+/* Solden — BoxPanel controller.
  *
  * Lifecycle on the supplier-invoice display screen:
  *
@@ -8,7 +8,7 @@
  *      Launchpad tile).
  *   2. _bootstrapSession exchanges the BTP-issued XSUAA JWT — forwarded
  *      to us via Approuter in the Authorization header — for a 5-minute
- *      Clearledgr access token. Approuter strips the original XSUAA
+ *      Solden access token. Approuter strips the original XSUAA
  *      JWT and re-injects its own header, so we look at document.cookie
  *      for the session, fall through to a same-origin POST that the
  *      backend recognizes and signs against XSUAA's JWKS.
@@ -122,7 +122,7 @@ sap.ui.define([
         _handleBootstrapFailure: function (err) {
             // eslint-disable-next-line no-console
             console.error("[clearledgr] bootstrap failed", err);
-            this._showError("Could not authenticate with Clearledgr (" + (err.message || err) + ").");
+            this._showError("Could not authenticate with Solden (" + (err.message || err) + ").");
         },
 
         /* ─── Box load ──────────────────────────────────────────────── */
@@ -162,7 +162,7 @@ sap.ui.define([
             } catch (err) {
                 // eslint-disable-next-line no-console
                 console.error("[clearledgr] load box failed", err);
-                this._showError("Could not load Clearledgr Box (" + (err.message || err) + ").");
+                this._showError("Could not load Solden Box (" + (err.message || err) + ").");
             } finally {
                 oBoxModel.setProperty("/_loading", false);
             }
@@ -281,7 +281,7 @@ sap.ui.define([
             }
         },
 
-        onOpenInClearledgrPress: function () {
+        onOpenInSoldenPress: function () {
             const sApItemId = this.getOwnerComponent().getModel("box").getProperty("/ap_item_id");
             if (!sApItemId) return;
             window.open("https://app.clearledgr.com/ap-items/" + encodeURIComponent(sApItemId), "_blank", "noopener");

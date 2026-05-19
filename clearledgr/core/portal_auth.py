@@ -1,6 +1,6 @@
 """Portal magic-link auth dependency — Phase 3.1.b.
 
-The vendor onboarding portal is the **only** part of Clearledgr that
+The vendor onboarding portal is the **only** part of Solden that
 serves unauthenticated traffic. Vendors don't have user accounts with
 the customer — they just hold a one-time URL emailed to them. This
 module is the auth primitive that translates that URL's token segment

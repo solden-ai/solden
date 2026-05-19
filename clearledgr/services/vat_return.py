@@ -4,7 +4,7 @@ Rolls bills into the periodic 9-box VAT return shape (HMRC + EU
 domestic returns share a near-identical structure).
 
 This is the AP-side projection. Box 1 (output VAT) and Box 6 (sales)
-are populated from the AR/sales side (out of scope for Clearledgr).
+are populated from the AR/sales side (out of scope for Solden).
 We populate:
 
   Box 1 += vat on reverse_charge bills (RC self-assessed output is

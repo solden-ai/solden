@@ -1,6 +1,6 @@
 # Sub-Processors
 
-Authoritative list of every third party that processes Clearledgr
+Authoritative list of every third party that processes Solden
 customer data. Every sub-processor is bound by a Data Processing
 Agreement and an SCC for any cross-border transfer outside the EU.
 

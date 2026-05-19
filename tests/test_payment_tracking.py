@@ -19,7 +19,7 @@ import tempfile
 
 
 def _fresh_db(tmp_path=None):
-    """Return a fresh ClearledgrDB backed by a temp file."""
+    """Return a fresh SoldenDB backed by a temp file."""
     if tmp_path is None:
         fd, path = tempfile.mkstemp(suffix=".db")
         os.close(fd)

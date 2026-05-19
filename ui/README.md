@@ -1,6 +1,6 @@
-# Clearledgr UI Surfaces (AP-first)
+# Solden UI Surfaces (AP-first)
 
-Clearledgr is an embedded finance execution agent.
+Solden is an embedded finance execution agent.
 
 Current product priority is AP v1 with Gmail as the primary operator surface, Slack/Teams as approval surfaces, and ERP write-back via backend runtime contracts.
 

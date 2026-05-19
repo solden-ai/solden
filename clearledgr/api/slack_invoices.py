@@ -699,7 +699,7 @@ async def _complete_slack_action_via_response_url(normalized: Any, processed_key
     except HTTPException as exc:
         final_reply = {
             "response_type": "ephemeral",
-            "text": str(exc.detail or "Action failed. Open the invoice in Clearledgr and try again."),
+            "text": str(exc.detail or "Action failed. Open the invoice in Solden and try again."),
             "replace_original": False,
         }
     await _post_to_response_url(
@@ -802,7 +802,7 @@ async def handle_invoice_interactive(request: Request, background_tasks: Backgro
         # On failure, surface whether the ERP was already mutated so the
         # operator knows whether to retry or whether they need a manual
         # reconciliation. The reject path can leave the ERP voided but
-        # the Clearledgr Box stuck (rare; only on DB write failure
+        # the Solden Box stuck (rare; only on DB write failure
         # between void and state transition).
         reason = str(result.get("reason") or "action_failed")
         if result.get("erp_voided") and decision == "reject":
@@ -810,7 +810,7 @@ async def handle_invoice_interactive(request: Request, background_tasks: Backgro
             return {
                 "response_type": "ephemeral",
                 "text": (
-                    f"Bill voided in {erp_label} but Clearledgr state update failed ({reason}). "
+                    f"Bill voided in {erp_label} but Solden state update failed ({reason}). "
                     "Engineering should reconcile."
                 ),
             }
@@ -1098,7 +1098,7 @@ async def handle_invoice_interactive(request: Request, background_tasks: Backgro
         )
         return {
             "response_type": "ephemeral",
-            "text": "Clearledgr is processing this action…",
+            "text": "Solden is processing this action…",
             "replace_original": False,
         }
 
@@ -1431,7 +1431,7 @@ async def _answer_query_with_context(
         from clearledgr.core.llm_gateway import get_llm_gateway, LLMAction
 
         system_prompt = (
-            "You are Clearledgr's AP agent answering finance questions from the AP team in Slack.\n\n"
+            "You are Solden's AP agent answering finance questions from the AP team in Slack.\n\n"
             "DATA FORMAT:\n"
             "AP ITEMS: vendor | invoice_ref | state | currency amount | due:date | match:status | exception:reason | erp:ref\n"
             "ONBOARDING: vendor | state | invited:date | chases:count\n"

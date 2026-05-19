@@ -62,7 +62,7 @@ class ClarifyingQuestion:
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": "Clearledgr needs your input"
+                    "text": "Solden needs your input"
                 }
             },
             {
@@ -373,7 +373,7 @@ class ConversationalAgent:
         try:
             message = await self.slack_client.send_message(
                 channel=channel,
-                text=f"Clearledgr needs input: {question.question_text}",
+                text=f"Solden needs input: {question.question_text}",
                 blocks=blocks,
             )
             

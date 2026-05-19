@@ -12,9 +12,9 @@ Content-Type: application/json
 X-Solden-Event: invoice.approved
 X-Solden-Delivery: whd_8f2c…
 X-Solden-Signature: sha256=4f5a…hex
-X-Clearledgr-Event: invoice.approved
-X-Clearledgr-Delivery: whd_8f2c…
-X-Clearledgr-Signature: sha256=4f5a…hex
+X-Solden-Event: invoice.approved
+X-Solden-Delivery: whd_8f2c…
+X-Solden-Signature: sha256=4f5a…hex
 ```
 
 ```json
@@ -33,7 +33,7 @@ X-Clearledgr-Signature: sha256=4f5a…hex
 }
 ```
 
-The `X-Clearledgr-*` headers are legacy aliases — both sets carry the
+The `X-Solden-*` headers are legacy aliases — both sets carry the
 same values. New integrations should read `X-Solden-*` and ignore the
 legacy ones.
 

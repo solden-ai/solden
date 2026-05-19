@@ -263,7 +263,7 @@ class DeterministicPlanningEngine:
                    "Detect emails from internal senders instructing payment actions"),
             # Step 4: Apply received label
             Action("apply_label", "DET",
-                   {"label": "Clearledgr/Invoice/Received"},
+                   {"label": "Solden/Invoice/Received"},
                    "Apply Received stage label to Gmail thread"),
             # Step 5: Create Box
             Action("create_box", "DET",
@@ -320,7 +320,7 @@ class DeterministicPlanningEngine:
                    "Execute deterministic 3-way match algorithm"),
             # Step 16: Apply matched label
             Action("apply_label", "DET",
-                   {"label": "Clearledgr/Invoice/Matched"},
+                   {"label": "Solden/Invoice/Matched"},
                    "Apply Matched stage label"),
             # Step 17: Move stage
             Action("move_box_stage", "DET",
@@ -377,7 +377,7 @@ class DeterministicPlanningEngine:
                        {"target": "approved"},
                        "Advance Box to approved stage"),
                 Action("apply_label", "DET",
-                       {"label": "Clearledgr/Invoice/Approved"},
+                       {"label": "Solden/Invoice/Approved"},
                        "Apply Approved stage label"),
                 Action("schedule_payment", "DET", {},
                        "Create payment schedule entry in ERP"),
@@ -403,7 +403,7 @@ class DeterministicPlanningEngine:
                        {"target": "exception"},
                        "Move Box to exception stage"),
                 Action("apply_label", "DET",
-                       {"label": "Clearledgr/Invoice/Exception"},
+                       {"label": "Solden/Invoice/Exception"},
                        "Apply Exception stage label"),
                 Action("post_timeline_entry", "DET",
                        {"reason": event.payload.get("override_reason", "Rejected")},
@@ -588,7 +588,7 @@ class DeterministicPlanningEngine:
                        {"target": "paid"},
                        "Advance Box to paid (terminal) stage"),
                 Action("apply_label", "DET",
-                       {"label": "Clearledgr/Invoice/Paid"},
+                       {"label": "Solden/Invoice/Paid"},
                        "Apply Paid stage label"),
                 Action("post_timeline_entry", "DET",
                        {"summary": f"Payment settled. Ref: {event.payload.get('payment_reference', '')}"},
@@ -611,7 +611,7 @@ class DeterministicPlanningEngine:
         )
 
     def _plan_label_changed(self, event: AgentEvent, box_state: dict) -> Plan:
-        """Phase 2: user applies a Clearledgr/* label in Gmail → drive workflow.
+        """Phase 2: user applies a Solden/* label in Gmail → drive workflow.
 
         Payload: {box_id, label_name, intent, actor_email, thread_id}.
 
@@ -648,7 +648,7 @@ class DeterministicPlanningEngine:
                     Action("pre_post_validate", "DET", {}, "Pre-post validation before ERP"),
                     Action("post_bill", "DET", {"via_label": True}, "Post bill to ERP"),
                     Action("move_box_stage", "DET", {"target": "approved"}, "Move to approved"),
-                    Action("apply_label", "DET", {"label": "Clearledgr/Invoice/Approved"},
+                    Action("apply_label", "DET", {"label": "Solden/Invoice/Approved"},
                            "Confirm approval label"),
                     Action("schedule_payment", "DET", {}, "Schedule payment"),
                     Action("post_timeline_entry", "DET",
@@ -666,7 +666,7 @@ class DeterministicPlanningEngine:
                 actions=[
                     Action("clear_waiting_condition", "DET", {}, "Clear waiting condition"),
                     Action("move_box_stage", "DET", {"target": "exception"}, "Move to exception"),
-                    Action("apply_label", "DET", {"label": "Clearledgr/Invoice/Exception"},
+                    Action("apply_label", "DET", {"label": "Solden/Invoice/Exception"},
                            "Apply Exception label"),
                     Action("post_timeline_entry", "DET",
                            {"summary": f"Rejected via Gmail label by {actor_email}",
@@ -682,7 +682,7 @@ class DeterministicPlanningEngine:
                 actions=[
                     Action("move_box_stage", "DET", {"target": "needs_info"}, "Move to needs_info"),
                     Action("apply_label", "DET",
-                           {"label": label_name or "Clearledgr/Review Required"},
+                           {"label": label_name or "Solden/Review Required"},
                            "Apply Review Required label"),
                     Action("post_timeline_entry", "DET",
                            {"summary": f"Flagged for review via Gmail label by {actor_email}",
@@ -703,7 +703,7 @@ class DeterministicPlanningEngine:
                 event_type="manual_classification",
                 actions=[
                     Action("apply_label", "DET",
-                           {"label": "Clearledgr/Invoice/Received"},
+                           {"label": "Solden/Invoice/Received"},
                            "Apply Received label after manual classification"),
                     Action("create_box", "DET",
                            {"pipeline": "ap_invoices"},
@@ -721,7 +721,7 @@ class DeterministicPlanningEngine:
                 event_type="manual_classification",
                 actions=[
                     Action("apply_label", "DET",
-                           {"label": f"Clearledgr/{classification.replace('_', ' ').title()}"},
+                           {"label": f"Solden/{classification.replace('_', ' ').title()}"},
                            f"Apply {classification} label"),
                 ],
             )

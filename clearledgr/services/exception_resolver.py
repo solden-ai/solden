@@ -582,7 +582,7 @@ Respond in ONE sentence with the most likely explanation and whether this needs 
     async def _resolve_erp_sync_mismatch(
         self, ap_item: Dict[str, Any], exception_code: str
     ) -> Dict[str, Any]:
-        """Bill posted in Clearledgr but not found in ERP.
+        """Bill posted in Solden but not found in ERP.
 
         Attempts to re-post the bill. If re-post succeeds, clears the
         exception. If it fails, surfaces the error for manual review.

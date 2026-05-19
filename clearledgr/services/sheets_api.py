@@ -1,8 +1,8 @@
-"""Google Sheets API client for Clearledgr.
+"""Google Sheets API client for Solden.
 
 Reuses Gmail OAuth tokens (same Google account, expanded scopes) so there
 is no additional authentication step. Finance teams use spreadsheets as
-the operational interface — Clearledgr reads from and writes to them.
+the operational interface — Solden reads from and writes to them.
 
 Used by:
 - Reconciliation skill: import bank statements, write matched results

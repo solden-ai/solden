@@ -1,7 +1,7 @@
 """
-Clearledgr v1 - FastAPI Backend
+Solden v1 - FastAPI Backend
 
-Clearledgr is the embedded coordination layer for finance operations.
+Solden is the embedded coordination layer for finance operations.
 Each workflow instance gets a Box (one persistent home with state
 machine + timeline + outcome + exception queue) rendered into
 whichever tool the user is already in. AP is the wedge — the only
@@ -210,7 +210,7 @@ from clearledgr.core.authorization import (
 from clearledgr.core.errors import safe_error
 from clearledgr.services.auth import get_api_key_optional
 from clearledgr.services.app_startup import cancel_deferred_startup, schedule_deferred_startup
-from clearledgr.services.errors import ClearledgrError
+from clearledgr.services.errors import SoldenError
 from clearledgr.services.logging import log_request, log_error, logger
 from clearledgr.services.metrics import record_request, record_error, get_metrics
 from clearledgr.services.rate_limit import RateLimitMiddleware
@@ -235,7 +235,7 @@ async def app_lifespan(app: FastAPI):
     """Canonical app lifecycle — fires slow startup in background so server binds fast."""
     _apply_runtime_surface_profile()
 
-    # Eager background init: kick off ClearledgrDB.initialize() in a
+    # Eager background init: kick off SoldenDB.initialize() in a
     # thread without blocking lifespan. The port binds immediately
     # (so /health and Railway's 30s healthcheck window are never
     # impacted) but each worker warms its schema state in parallel.
@@ -292,9 +292,9 @@ async def app_lifespan(app: FastAPI):
             logger.warning(f"Shared HTTP client close failed: {e}")
 
 app = FastAPI(
-    title="Clearledgr API",
+    title="Solden API",
     description="""
-    Clearledgr API v1 — embedded coordination layer for finance operations.
+    Solden API v1 — embedded coordination layer for finance operations.
 
     **Each workflow instance gets a Box: one persistent home (state machine + append-only timeline + outcome + exception queue) rendered into whichever tool the user is already in.** AP is the wedge in v1; the runtime + intent contract + Box primitive are not AP-specific.
 
@@ -327,7 +327,7 @@ app = FastAPI(
     """,
     version="1.0.0",
     contact={
-        "name": "Clearledgr Support",
+        "name": "Solden Support",
         "email": "support@clearledgr.com",
     },
     license_info={
@@ -1299,10 +1299,10 @@ def custom_openapi():
 app.openapi = custom_openapi
 
 
-# Global exception handler for ClearledgrErrors
-@app.exception_handler(ClearledgrError)
-async def clearledgr_exception_handler(request: Request, exc: ClearledgrError):
-    """Handle all ClearledgrErrors with structured responses."""
+# Global exception handler for SoldenErrors
+@app.exception_handler(SoldenError)
+async def clearledgr_exception_handler(request: Request, exc: SoldenError):
+    """Handle all SoldenErrors with structured responses."""
     from fastapi.responses import JSONResponse
     
     status_map = {
@@ -1552,7 +1552,7 @@ def _resolve_cors_policy(configured_origins_raw: str, configured_regex_raw: str)
     # Default origin pattern matches:
     #   - Gmail extension (chrome-extension://<32-char-id>) — original Streak-style integration
     #   - NetSuite-hosted Suitelets (https://<account>.app.netsuite.com) — embedded panel iframe
-    #     served by the Clearledgr SuiteApp under integrations/netsuite-suiteapp/
+    #     served by the Solden SuiteApp under integrations/netsuite-suiteapp/
     #   - SAP BTP-hosted Approuter (https://<approuter>-<account>.<region>.hana.ondemand.com)
     #     — the SAP Fiori extension under integrations/sap-fiori-extension/
     #   - SAP S/4HANA Fiori Launchpad (https://<host>.s4hana.cloud.sap or *.fiori.cloud.sap)
@@ -1914,13 +1914,13 @@ if os.path.exists(static_dir):
 
 @app.get("/workspace", tags=["Workspace"], include_in_schema=False)
 async def workspace_page():
-    """Standalone workspace shell UI — Clearledgr internal ops only.
+    """Standalone workspace shell UI — Solden internal ops only.
 
     DESIGN_THESIS.md §4 Principle 01: "There is no separate web application
     in V1. There is no new tab. There is no dashboard the AP team checks."
 
     The workspace shell is disabled by default. It is available only when
-    explicitly enabled via WORKSPACE_SHELL_ENABLED=true for Clearledgr
+    explicitly enabled via WORKSPACE_SHELL_ENABLED=true for Solden
     internal operations (§14 Backoffice). Customer-facing AP work happens
     entirely inside Gmail via the extension.
     """

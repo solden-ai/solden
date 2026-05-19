@@ -1,12 +1,12 @@
 # A Memo from Mo
 
-*Clearledgr · April 2026*
+*Solden · April 2026*
 
 ---
 
 ## The short version
 
-Clearledgr is the stateful coordination layer for finance operations. We started with accounts payable because it is the highest-volume, most painful coordination problem in the finance function. We will expand across every finance workflow because every finance workflow has the same shape — long-running, multi-participant, exception-prone, and held together by human memory because no system holds it.
+Solden is the stateful coordination layer for finance operations. We started with accounts payable because it is the highest-volume, most painful coordination problem in the finance function. We will expand across every finance workflow because every finance workflow has the same shape — long-running, multi-participant, exception-prone, and held together by human memory because no system holds it.
 
 This memo exists to state, plainly, what we are building, why we believe it is worth building, how we intend to operate while we build it, and what we will not compromise on to get there. It is the reference I want every person who joins this company to read before their first day. It is the reference I expect to be held to by our investors, our customers, and the people I work with every day.
 
@@ -22,7 +22,7 @@ What has changed is that the agent piece — the mechanism for advancing workflo
 
 ## What we are building
 
-Clearledgr is the stateful coordination layer for finance operations. Every workflow instance gets a Box — a persistent, attributable, queryable home for its state, its timeline, its exceptions, and its outcome. An agent advances each workflow autonomously where it can. Humans decide on the exceptions the agent surfaces. The finance team interacts with the workflow through the tools they already use — Gmail, Slack, and their ERP — but the coordination itself lives in Clearledgr.
+Solden is the stateful coordination layer for finance operations. Every workflow instance gets a Box — a persistent, attributable, queryable home for its state, its timeline, its exceptions, and its outcome. An agent advances each workflow autonomously where it can. Humans decide on the exceptions the agent surfaces. The finance team interacts with the workflow through the tools they already use — Gmail, Slack, and their ERP — but the coordination itself lives in Solden.
 
 The wedge is accounts payable. Invoice ingestion, data extraction, three-way matching, exception flagging, approval routing, ERP posting, payment scheduling — all handled inside the Box, with the agent acting and the finance team approving exceptions. Alongside AP we ship vendor onboarding because you cannot pay a vendor who is not in your system. In V1.2 we add commission clawback for our design partner Booking.com — a workflow with nothing to do with AP invoicing but exactly the same shape, which is the cleanest demonstration of the platform thesis.
 
@@ -64,21 +64,21 @@ We will not become a system of record for financial data. Your financial data li
 
 We will not let performance degrade silently. If a surface starts failing its performance budget, it is treated as a P0. If the agent's override rate spikes, we page the on-call engineer. We do not ship fixes; we ship reliability.
 
-We will not underinvest in the vendor-facing experience. When a new vendor is onboarded, their interaction with Clearledgr's portal is the only thing they will ever see of our product. That portal reflects on our customer's reputation, not ours. We build it accordingly.
+We will not underinvest in the vendor-facing experience. When a new vendor is onboarded, their interaction with Solden's portal is the only thing they will ever see of our product. That portal reflects on our customer's reputation, not ours. We build it accordingly.
 
 ## Who we are
 
-I am Mo Mbalam. I spent three years as an accounting associate at the University of Ghana before moving into fintech, where I led go-to-market for Paystack in Ghana and led business development for Anchor, a YC-backed banking-as-a-service company. I founded two earlier ventures in Ghana before Clearledgr. I relocated to the Netherlands in 2024. I have spent most of my career close to the distribution layer of African and European fintech, which is where the instinct for this product came from.
+I am Mo Mbalam. I spent three years as an accounting associate at the University of Ghana before moving into fintech, where I led go-to-market for Paystack in Ghana and led business development for Anchor, a YC-backed banking-as-a-service company. I founded two earlier ventures in Ghana before Solden. I relocated to the Netherlands in 2024. I have spent most of my career close to the distribution layer of African and European fintech, which is where the instinct for this product came from.
 
-I am building Clearledgr with Joseph Isiramen, our CRO, who spent his formative years in enterprise sales at Datadog and brings the go-to-market depth this category demands. And with Suleiman Mohammed, our CTO, a repeat founder with the agent architecture and engineering judgment to deliver on the technical bet the company is making. We believe we are the right team for this problem: distribution credibility in the fintech surface we grew up in, enterprise sales experience for the mid-market and enterprise buyer, and the technical ambition to build the coordination infrastructure we believe the finance function has been waiting for.
+I am building Solden with Joseph Isiramen, our CRO, who spent his formative years in enterprise sales at Datadog and brings the go-to-market depth this category demands. And with Suleiman Mohammed, our CTO, a repeat founder with the agent architecture and engineering judgment to deliver on the technical bet the company is making. We believe we are the right team for this problem: distribution credibility in the fintech surface we grew up in, enterprise sales experience for the mid-market and enterprise buyer, and the technical ambition to build the coordination infrastructure we believe the finance function has been waiting for.
 
 The team will grow. The memo will age. But the discipline will not.
 
 ## What this is and is not
 
-This memo is the reference document for what Clearledgr is at its core. It is not the pitch deck. It is not the investor memo. It is not the product spec. It is the commitment the company makes to itself — the principles that govern decisions when the decisions get hard, and the articulation of what we are trying to build that every other document in the company should reconcile with.
+This memo is the reference document for what Solden is at its core. It is not the pitch deck. It is not the investor memo. It is not the product spec. It is the commitment the company makes to itself — the principles that govern decisions when the decisions get hard, and the articulation of what we are trying to build that every other document in the company should reconcile with.
 
-If you are joining Clearledgr, this is what you are joining. If you are investing in Clearledgr, this is what you are backing. If you are buying from Clearledgr, this is what you are buying.
+If you are joining Solden, this is what you are joining. If you are investing in Solden, this is what you are backing. If you are buying from Solden, this is what you are buying.
 
 The thesis is specific. The commitment is specific. The bet is specific. The work is the work.
 

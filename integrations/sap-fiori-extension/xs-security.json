@@ -1,7 +1,7 @@
 {
     "xsappname": "clearledgr-boxpanel",
     "tenant-mode": "dedicated",
-    "description": "Clearledgr Box panel — XSUAA scopes for read + action on AP items inside the SAP Fiori extension",
+    "description": "Solden Box panel — XSUAA scopes for read + action on AP items inside the SAP Fiori extension",
     "scopes": [
         {
             "name": "$XSAPPNAME.User",
@@ -15,7 +15,7 @@
     "role-templates": [
         {
             "name": "BoxPanelUser",
-            "description": "View the Clearledgr Box for any supplier invoice in the user's company codes",
+            "description": "View the Solden Box for any supplier invoice in the user's company codes",
             "scope-references": [
                 "$XSAPPNAME.User"
             ]
@@ -31,14 +31,14 @@
     ],
     "role-collections": [
         {
-            "name": "Clearledgr Box Panel — Reader",
+            "name": "Solden Box Panel — Reader",
             "description": "Assign to AP team members who need read access to the panel",
             "role-template-references": [
                 "$XSAPPNAME.BoxPanelUser"
             ]
         },
         {
-            "name": "Clearledgr Box Panel — Approver",
+            "name": "Solden Box Panel — Approver",
             "description": "Assign to designated approvers (per-amount routing also applies in Slack)",
             "role-template-references": [
                 "$XSAPPNAME.BoxPanelApprover"

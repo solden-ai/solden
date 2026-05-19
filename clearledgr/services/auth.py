@@ -1,5 +1,5 @@
 """
-Authentication and Authorization for Clearledgr Reconciliation API.
+Authentication and Authorization for Solden Reconciliation API.
 """
 import os
 from fastapi import Security, HTTPException, status

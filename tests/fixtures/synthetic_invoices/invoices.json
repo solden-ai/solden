@@ -282,7 +282,7 @@
     },
     "expected": {
       "document_type": "statement",
-      "notes": "Should be classified as Clearledgr/Finance/Statement, not processed as invoice"
+      "notes": "Should be classified as Solden/Finance/Statement, not processed as invoice"
     },
     "validation": {
       "should_pass_gate": false,

@@ -1,5 +1,5 @@
 """
-Shared pytest fixtures and hooks for the Clearledgr test suite.
+Shared pytest fixtures and hooks for the Solden test suite.
 """
 
 import os
@@ -95,7 +95,7 @@ def reset_service_singletons():
     # Under Postgres we keep the session-scoped singleton alive so the
     # shared psycopg_pool isn't torn down mid-suite (which would force
     # thread-joins and deadlock). The pre-C.3 SQLite-taint detection is
-    # gone now: ClearledgrDB.__init__ raises on non-PG DSNs, so a stale
+    # gone now: SoldenDB.__init__ raises on non-PG DSNs, so a stale
     # SQLite singleton can no longer exist.
     yield
     if _TEST_DB_ENGINE != "postgres":
@@ -249,7 +249,7 @@ def _reset_postgres_test_db_between_tests(request, postgres_test_db):
     Some tests in the suite set ``DATABASE_URL`` to a ``sqlite:///...``
     URL directly (not via monkeypatch) and then ``os.environ.pop()`` it
     in their finally — permanently removing it. Without this restore,
-    any downstream test that triggers a fresh ``ClearledgrDB()``
+    any downstream test that triggers a fresh ``SoldenDB()``
     construction reads ``DATABASE_URL=None`` → locks
     ``use_postgres=False`` → silently uses SQLite, and hits the
     ``sqlite3.IntegrityError: UNIQUE constraint failed`` cascade in
@@ -265,7 +265,7 @@ def _reset_postgres_test_db_between_tests(request, postgres_test_db):
     Uses a direct ``psycopg.connect()`` rather than ``get_db().connect()``
     on purpose. Many tests (``tmp_db`` fixtures in
     ``test_iban_change_freeze``, ``test_override_window``, etc.)
-    monkeypatch ``_DB_INSTANCE`` to a fresh ``ClearledgrDB`` that
+    monkeypatch ``_DB_INSTANCE`` to a fresh ``SoldenDB`` that
     opens its OWN psycopg_pool against the same session PG DB.
     Going through ``get_db()`` here could land on an exhausted or
     monkeypatch-reverted pool depending on fixture teardown order,

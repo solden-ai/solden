@@ -1,7 +1,7 @@
 {
     "name": "clearledgr-sap-fiori-extension",
     "version": "0.1.0",
-    "description": "Clearledgr Fiori extension for SAP S/4HANA — Manage Supplier Invoices Box panel + BTP Approuter.",
+    "description": "Solden Fiori extension for SAP S/4HANA — Manage Supplier Invoices Box panel + BTP Approuter.",
     "private": true,
     "workspaces": [
         "webapp",

@@ -1,9 +1,9 @@
 /**
- * Clearledgr Outlook Add-in — Office.js entry point.
+ * Solden Outlook Add-in — Office.js entry point.
  *
  * This replaces InboxSDK from the Gmail extension. It:
  * 1. Reads the current email context via Office.js mailbox API
- * 2. Authenticates with the Clearledgr backend
+ * 2. Authenticates with the Solden backend
  * 3. Renders the sidebar UI (Preact, shared components)
  * 4. Handles actions (approve, reject, escalate, etc.)
  */
@@ -117,7 +117,7 @@ async function ensureAuth() {
   // Try to get token from Office SSO
   try {
     const ssoToken = await Office.auth.getAccessToken({ allowSignInPrompt: true });
-    // Exchange SSO token for Clearledgr backend token
+    // Exchange SSO token for Solden backend token
     const data = await fetch(`${API_BASE}/outlook/callback?code=${encodeURIComponent(ssoToken)}&state=outlook_sso`, {
       method: 'GET',
     });
@@ -126,7 +126,7 @@ async function ensureAuth() {
     _authTokenExpiry = Date.now() + 3600 * 1000;
     return true;
   } catch (err) {
-    console.warn('Clearledgr: SSO auth failed, falling back to manual connect', err);
+    console.warn('Solden: SSO auth failed, falling back to manual connect', err);
     return false;
   }
 }
@@ -140,7 +140,7 @@ function Header({ connected, email }) {
     <div class="cl-header">
       <div class="cl-header-logo">
         <span class="cl-status-dot ${connected ? '' : 'error'}"></span>
-        <span>Clearledgr</span>
+        <span>Solden</span>
       </div>
       <span style="font-size:11px;opacity:0.7">${email || ''}</span>
     </div>
@@ -150,7 +150,7 @@ function Header({ connected, email }) {
 function AuthPrompt({ onConnect }) {
   return html`
     <div class="cl-auth-prompt">
-      <h3>Connect Clearledgr</h3>
+      <h3>Connect Solden</h3>
       <p>Link your Microsoft 365 account to start processing invoices from your inbox.</p>
       <button class="cl-btn-primary" onClick=${onConnect}>
         Connect Microsoft 365

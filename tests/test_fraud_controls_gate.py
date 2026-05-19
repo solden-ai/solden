@@ -32,7 +32,7 @@ from fastapi.testclient import TestClient
 
 
 def _make_db(tmp_path, name: str = "fc_test.db"):
-    """Create a fresh temp-file ClearledgrDB and wire it as the singleton."""
+    """Create a fresh temp-file SoldenDB and wire it as the singleton."""
     from clearledgr.core.database import get_db
     from clearledgr.core import database as db_module
 

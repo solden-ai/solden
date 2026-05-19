@@ -1,11 +1,11 @@
 """
 Implementation Service — DESIGN_THESIS.md §13
 
-"Clearledgr's Implementation Service follows the Streak model —
+"Solden's Implementation Service follows the Streak model —
 five hours of dedicated setup work."
 
 This module provides the implementation checklist and validation
-for the Clearledgr team delivering Enterprise onboarding. Each
+for the Solden team delivering Enterprise onboarding. Each
 step has automated validation that confirms the step is complete
 before the implementation engineer can proceed.
 
@@ -68,7 +68,7 @@ IMPLEMENTATION_STEPS = [
         "description": (
             "Process the first 20 invoices live with the finance team present. "
             "Review every agent action, every exception, every match result. Tune "
-            "policy settings based on what is found. Clearledgr does not leave "
+            "policy settings based on what is found. Solden does not leave "
             "until the first batch runs cleanly."
         ),
         "validation_fn": "_validate_first_batch",

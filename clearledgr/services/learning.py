@@ -1,4 +1,4 @@
-"""Learning service for Clearledgr.
+"""Learning service for Solden.
 
 Learns from user actions to improve:
 - Vendor → GL code mappings
@@ -6,7 +6,7 @@ Learns from user actions to improve:
 - Confidence scoring
 - Auto-approval thresholds
 
-This is the "feedback loop" that makes Clearledgr smarter over time.
+This is the "feedback loop" that makes Solden smarter over time.
 """
 from __future__ import annotations
 

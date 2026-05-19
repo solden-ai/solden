@@ -1,4 +1,4 @@
-"""Outgoing webhook delivery — notifies external systems of Clearledgr events.
+"""Outgoing webhook delivery — notifies external systems of Solden events.
 
 Event types (DESIGN_THESIS.md §3 — The Developer Platform):
 
@@ -100,20 +100,20 @@ async def deliver_webhook(
     body_bytes = body.encode("utf-8")
 
     # Send both X-Solden-* (canonical, brand-aligned for public /v1
-    # receivers) and X-Clearledgr-* (legacy — kept during the
+    # receivers) and X-Solden-* (legacy — kept during the
     # deprecation window so existing internal handlers don't break).
     # Both carry the same delivery_id, event name, and HMAC signature.
     headers: Dict[str, str] = {
         "Content-Type": "application/json",
         "X-Solden-Event": event_type,
         "X-Solden-Delivery": delivery_id,
-        "X-Clearledgr-Event": event_type,
-        "X-Clearledgr-Delivery": delivery_id,
+        "X-Solden-Event": event_type,
+        "X-Solden-Delivery": delivery_id,
     }
     if secret:
         sig = compute_signature(body_bytes, secret)
         headers["X-Solden-Signature"] = f"sha256={sig}"
-        headers["X-Clearledgr-Signature"] = f"sha256={sig}"
+        headers["X-Solden-Signature"] = f"sha256={sig}"
 
     try:
         client = get_http_client()

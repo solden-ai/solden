@@ -1,7 +1,7 @@
 """
-Clearledgr Slack App - Thin Client
+Solden Slack App - Thin Client
 
-This Slack app connects to the central Clearledgr backend.
+This Slack app connects to the central Solden backend.
 All intelligence lives in the backend. Slack is just an interface.
 
 Architecture:
@@ -43,7 +43,7 @@ DEFAULT_ORG_ID = os.getenv("DEFAULT_ORGANIZATION_ID", "default")
 # ==================== BACKEND API CLIENT ====================
 
 async def api(method: str, endpoint: str, body: Optional[Dict] = None) -> Optional[Dict]:
-    """Call the Clearledgr backend API."""
+    """Call the Solden backend API."""
     url = f"{API_BASE_URL}{endpoint}"
     headers = {
         "Content-Type": "application/json",
@@ -374,7 +374,7 @@ async def handle_command(action: str, args: str, user_id: str, channel_id: str) 
     """Handle /clearledgr commands."""
     
     if action == "help":
-        return """*Clearledgr Commands:*
+        return """*Solden Commands:*
 
 *Setup & Config:*
 - `/clearledgr setup` - Onboarding checklist and integration status
@@ -455,11 +455,11 @@ async def get_status() -> str:
     result = await api("GET", f"/engine/dashboard?organization_id={DEFAULT_ORG_ID}")
     
     if not result:
-        return "Could not fetch status from Clearledgr backend."
+        return "Could not fetch status from Solden backend."
     
     stats = result.get("stats", {})
     
-    return f"""*Clearledgr Status*
+    return f"""*Solden Status*
 Finance Emails: {stats.get('email_count', 0)}
 Matched Transactions: {stats.get('matched_transactions', 0)}
 Open Exceptions: {stats.get('open_exceptions', 0)}
@@ -718,7 +718,7 @@ async def handle_setup(user_id: str) -> str:
     approval_ch = channels.get("invoices", "#finance-approvals")
     channel_icon = ":white_check_mark:" if channels else ":warning:"
 
-    return f"""*Clearledgr Setup*
+    return f"""*Solden Setup*
 
 {gmail_icon} *Gmail:* {gmail_status}
 {slack_icon} *Slack:* {slack_status}
@@ -828,7 +828,7 @@ Once you have the credentials, an admin can enter them at:
                 "state": state,
             }
             auth_url = f"{QUICKBOOKS_AUTH_URL}?{_urlencode(params)}"
-            return f"*Connect QuickBooks*\n\nClick the link below to authorize Clearledgr:\n{auth_url}"
+            return f"*Connect QuickBooks*\n\nClick the link below to authorize Solden:\n{auth_url}"
 
         if erp_type == "xero":
             if not XERO_CLIENT_ID:
@@ -841,7 +841,7 @@ Once you have the credentials, an admin can enter them at:
                 "state": state,
             }
             auth_url = f"{XERO_AUTH_URL}?{_urlencode(params)}"
-            return f"*Connect Xero*\n\nClick the link below to authorize Clearledgr:\n{auth_url}"
+            return f"*Connect Xero*\n\nClick the link below to authorize Solden:\n{auth_url}"
 
     except ImportError:
         return f"ERP connection module not available. Ensure `clearledgr.api.erp_connections` is installed."
@@ -953,7 +953,7 @@ async def handle_mention(event: Dict):
     message = re.sub(r"<@\w+>", "", text).strip()
     
     if not message:
-        await send_message(channel, "Hi! I'm Clearledgr. Ask me anything about your finances.\n\nTry:\n• \"Show pending invoices\"\n• \"Approve all AWS under $500\"\n• \"What's my budget status?\"\n• \"Forecast next 30 days\"")
+        await send_message(channel, "Hi! I'm Solden. Ask me anything about your finances.\n\nTry:\n• \"Show pending invoices\"\n• \"Approve all AWS under $500\"\n• \"What's my budget status?\"\n• \"Forecast next 30 days\"")
         return
     
     # First try NLP processing for action commands
@@ -1243,7 +1243,7 @@ async def check_for_expense(event: Dict):
                     thread_ts=message_ts
                 )
     except Exception as e:
-        print(f"[Clearledgr] Error checking expense: {e}")
+        print(f"[Solden] Error checking expense: {e}")
 
 
 async def handle_expense_approve(expense_id: str, user_id: str, channel: str, message_ts: str):

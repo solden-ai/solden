@@ -1,4 +1,4 @@
-"""Approval chain persistence mixin for ClearledgrDB.
+"""Approval chain persistence mixin for SoldenDB.
 
 Follows the exact VendorStore mixin pattern:
 - No __init__ of its own

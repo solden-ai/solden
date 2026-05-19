@@ -93,7 +93,7 @@ The four P0 architectural items in this audit (#1 LLM-bound-to-gate, #2 override
 - §7: Agent communication (tone in prompts), confidence (medium window shortening), trust arc (Home banner), guardrails (amount cross-validation, currency consistency), testing (shadow mode, replay, deployment freeze, circuit breaker), model improvement (50-signal, closed-loop)
 - §8: All 7 fraud primitives as architectural blocking gates
 - §9: Vendor onboarding 4-stage pipeline with chase preview + Hold/Send
-- §10: Thesis color semantics + Clearledgr icon as agent signature
+- §10: Thesis color semantics + Solden icon as agent signature
 - §13: Metered billing (seats, volume bands, credits), implementation service, Streak-style plan upgrade inside Gmail
 - §15: Streak-pattern onboarding modal (auth → ERP picker → pipeline creation)
 - §16: Settings with real controls (AP policy, vendor policy, autonomy, ERP scope)
@@ -162,7 +162,7 @@ Post-full-audit (2026-04-11):
 These are commitments where the codebase matches the thesis and can be cited as ship-ready:
 
 - **InboxSDK MV3 extension** ([ui/gmail-extension/package.json:15](ui/gmail-extension/package.json)) — Built on `@inboxsdk/core` v2.2.11, Manifest V3 compliant. Not custom DOM.
-- **Clearledgr Home** (custom route via `sdk.Router.handleCustomRoute`) — [inboxsdk-layer.js:2144](ui/gmail-extension/dist/inboxsdk-layer.js)
+- **Solden Home** (custom route via `sdk.Router.handleCustomRoute`) — [inboxsdk-layer.js:2144](ui/gmail-extension/dist/inboxsdk-layer.js)
 - **NavMenu** (`sdk.NavMenu.addNavItem()`) — [inboxsdk-layer.js:1916-1927](ui/gmail-extension/dist/inboxsdk-layer.js)
 - **Inbox stage labels** (`sdk.Lists.registerThreadRowViewHandler()`) — [inboxsdk-layer.js:888-890](ui/gmail-extension/dist/inboxsdk-layer.js)
 - **Gmail label hierarchy** via Gmail API — [clearledgr/services/gmail_labels.py:23-38](clearledgr/services/gmail_labels.py)
@@ -279,7 +279,7 @@ This section was the ship-blocker cluster for enterprise onboarding. Every item 
 
 **Resolution:** Phase 2.1.a shipped a pure-helper tokenisation layer plus a hard-cutover migration:
 
-- **[clearledgr/core/stores/bank_details.py](clearledgr/core/stores/bank_details.py)** — new helper module with `BANK_DETAIL_FIELDS`, `normalize_bank_details`, `encrypt_bank_details`, `decrypt_bank_details`, `mask_bank_details`, `diff_bank_details_field_names`. Encryption uses the same Fernet key derivation as `_ClearledgrDBBase._encrypt_secret` / `_decrypt_secret`. Masking produces `GB82 **** **** **** 5432` (IBAN), `**-**-00` (sort code), `A*** T****** L**` (holder name).
+- **[clearledgr/core/stores/bank_details.py](clearledgr/core/stores/bank_details.py)** — new helper module with `BANK_DETAIL_FIELDS`, `normalize_bank_details`, `encrypt_bank_details`, `decrypt_bank_details`, `mask_bank_details`, `diff_bank_details_field_names`. Encryption uses the same Fernet key derivation as `_SoldenDBBase._encrypt_secret` / `_decrypt_secret`. Masking produces `GB82 **** **** **** 5432` (IBAN), `**-**-00` (sort code), `A*** T****** L**` (holder name).
 - **Migration v13** — adds `bank_details_encrypted` columns to both `ap_items` and `vendor_profiles`, backfills from existing `metadata` JSON plaintext, then **strips the plaintext in the same transaction**. No dual-write window.
 - **Store accessors** — `VendorStore` gained `get_vendor_bank_details` (authenticated full read), `get_vendor_bank_details_masked` (default UI read — always masked), `set_vendor_bank_details` (encrypts then writes). `APStore` matches for invoice-scoped bank details.
 - **Silence-tolerant diff** — `diff_bank_details_field_names` only flags fields where both sides have a value, preventing false-positive freezes on first-time bank detail capture. This is the primitive that powers check 4c in the validation gate for IBAN change detection (#5).
@@ -384,7 +384,7 @@ Current: basic channel/role routing. Thesis: DMs for personal approvals (not cha
 
 ### 18. ✅ DONE — Box/Pipeline/SavedView (2026-04-11 `08eb9f8`) (§5)
 
-Thesis positions Clearledgr as Streak-like with Boxes, Pipelines, Stages, Columns, Timelines, Saved Views as first-class domain objects. Codebase uses flat `ap_items` table ([clearledgr/core/database.py:618](clearledgr/core/database.py)) with no Box linking structure, no Pipeline concept, no Saved Views.
+Thesis positions Solden as Streak-like with Boxes, Pipelines, Stages, Columns, Timelines, Saved Views as first-class domain objects. Codebase uses flat `ap_items` table ([clearledgr/core/database.py:618](clearledgr/core/database.py)) with no Box linking structure, no Pipeline concept, no Saved Views.
 
 **Scope:** This is a substantial refactor. The fix is to introduce a `boxes` table with polymorphic `box_type` (invoice / vendor_onboarding), a `pipelines` table, and a `box_links` table. Current `ap_items` becomes a view on `boxes WHERE box_type='invoice'`.
 

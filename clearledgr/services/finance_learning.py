@@ -15,7 +15,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-from clearledgr.core.database import ClearledgrDB
+from clearledgr.core.database import SoldenDB
 from clearledgr.core.utils import safe_float
 from clearledgr.services.compounding_learning import (
     get_learning_service as get_compounding_learning_service,
@@ -35,7 +35,7 @@ class FinanceLearningService:
         self,
         organization_id: Optional[str] = "default",  # noqa: org-default — platform-mode sentinel; see _init_ body for None handling
         *,
-        db: Optional[ClearledgrDB] = None,
+        db: Optional[SoldenDB] = None,
     ) -> None:
         # None / unset → platform mode ("default"). Empty string is a
         # programming error and must raise to prevent cross-tenant
@@ -942,7 +942,7 @@ class FinanceLearningService:
 def get_finance_learning_service(
     organization_id: Optional[str] = "default",  # noqa: org-default — platform-mode sentinel; mirrors FinanceLearningService.__init__
     *,
-    db: Optional[ClearledgrDB] = None,
+    db: Optional[SoldenDB] = None,
 ) -> FinanceLearningService:
     if organization_id is None:
         organization_id = "default"  # noqa: org-default — platform-mode sentinel for None/unset

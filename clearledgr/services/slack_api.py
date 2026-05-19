@@ -1,5 +1,5 @@
 """
-Slack API Client for Clearledgr
+Slack API Client for Solden
 
 Provides server-side access to Slack for:
 - Sending notifications

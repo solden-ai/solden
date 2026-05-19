@@ -76,7 +76,7 @@ def _dispatch_mention_notifications(
     """§5.3 @Mentions — parse @email from note/comment body and bridge to
     the workspace's configured approval surface.
 
-    "When a Box timeline @mention happens in Gmail, Clearledgr also sends a
+    "When a Box timeline @mention happens in Gmail, Solden also sends a
     Slack or Teams DM to the mentioned person with the comment and a direct
     link to the thread."
 
@@ -223,7 +223,7 @@ def _dispatch_mention_teams_channel(
                     "version": "1.4",
                     "body": [
                         {"type": "TextBlock", "size": "Medium", "weight": "Bolder",
-                         "text": "Clearledgr — you were mentioned"},
+                         "text": "Solden — you were mentioned"},
                         {"type": "TextBlock", "wrap": True, "text": text},
                         {"type": "TextBlock", "isSubtle": True, "spacing": "Small",
                          "text": f"AP item: {ap_item_id} · Org: {org_id}"},

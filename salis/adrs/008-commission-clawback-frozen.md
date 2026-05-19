@@ -6,7 +6,7 @@ Author: Mo
 
 ## Context
 
-Commission clawback is the spec'd second workflow class for Clearledgr. Origin: Booking.com design partnership surfaced "we chase hotel sales teams to return overpaid commissions" as a real pain — a Box-shaped workflow where the customer is an enterprise on SAP SD.
+Commission clawback is the spec'd second workflow class for Solden. Origin: Booking.com design partnership surfaced "we chase hotel sales teams to return overpaid commissions" as a real pain — a Box-shaped workflow where the customer is an enterprise on SAP SD.
 
 The spec is written (`commission-clawback-spec.md`). Some infrastructure work has been pre-committed:
 - Box abstraction (ADR-001) was partly motivated by clawback landing as a second Box type cleanly.

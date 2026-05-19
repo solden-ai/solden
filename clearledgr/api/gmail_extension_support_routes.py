@@ -964,7 +964,7 @@ def _build_sidebar_context(
 
 def _build_system_prompt() -> str:
     return (
-        "You are Clearledgr's AP agent answering a finance teammate's question about "
+        "You are Solden's AP agent answering a finance teammate's question about "
         "a SPECIFIC invoice they have open in Gmail. You are NOT running a dashboard "
         "query — you are explaining ONE invoice and what should happen with it.\n\n"
         "GROUNDING:\n"

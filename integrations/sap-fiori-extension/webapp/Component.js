@@ -1,6 +1,6 @@
-/* Clearledgr — Fiori extension component.
+/* Solden — Fiori extension component.
  *
- * Boots a single-view SAPUI5 application that renders the Clearledgr
+ * Boots a single-view SAPUI5 application that renders the Solden
  * Box (state, timeline, exceptions, outcome) for a supplier invoice
  * the user is looking at in S/4HANA. The invoice's composite key
  * (CompanyCode + SupplierInvoice + FiscalYear) arrives via URL params
@@ -10,7 +10,7 @@
  * sap.app.crossNavigation).
  *
  * On boot, the controller hits POST /clearledgr-api/extension/sap/exchange
- * to swap the BTP-issued XSUAA JWT for a 5-minute Clearledgr access
+ * to swap the BTP-issued XSUAA JWT for a 5-minute Solden access
  * token, then GET /clearledgr-api/extension/ap-items/by-sap-invoice
  * with the composite key to fetch the Box payload.
  */
@@ -46,7 +46,7 @@ sap.ui.define([
             });
             this.setModel(oBoxModel, "box");
 
-            // Session model — holds the Clearledgr access token after the
+            // Session model — holds the Solden access token after the
             // XSUAA exchange. Kept in memory (no localStorage) so a stale
             // tab doesn't carry credentials past the next page load.
             const oSessionModel = new JSONModel({

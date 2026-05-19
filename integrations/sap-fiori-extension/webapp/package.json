@@ -1,7 +1,7 @@
 {
     "name": "clearledgr-boxpanel-app",
     "version": "0.1.0",
-    "description": "SAPUI5 application — embedded Clearledgr Box panel for the S/4HANA Manage Supplier Invoices Fiori app.",
+    "description": "SAPUI5 application — embedded Solden Box panel for the S/4HANA Manage Supplier Invoices Fiori app.",
     "private": true,
     "scripts": {
         "start": "ui5 serve --open index.html",

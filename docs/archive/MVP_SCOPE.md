@@ -5,7 +5,7 @@
 > This file captures an earlier MVP concept and market framing iteration.
 > It is **not** the canonical source of truth for AP v1.
 > 
-> Use `/Users/mombalam/Desktop/Clearledgr.v1/PLAN.md` for current doctrine, contracts, and launch gates.
+> Use `/Users/mombalam/Desktop/Solden.v1/PLAN.md` for current doctrine, contracts, and launch gates.
 
 ---
 
@@ -58,7 +58,7 @@ Late payment → damaged vendor relationship
 
 ---
 
-## Clearledgr V1: The Solution
+## Solden V1: The Solution
 
 ### Core Value Proposition
 
@@ -205,7 +205,7 @@ NETSUITE_TOKEN_SECRET=
 
 | Differentiator | Implementation |
 |----------------|----------------|
-| **Audit-Link Generation** | Unique `Clearledgr_Audit_ID` in ERP memo, traces back to email |
+| **Audit-Link Generation** | Unique `Solden_Audit_ID` in ERP memo, traces back to email |
 | **Human-in-the-Loop** | If confidence < 95%, show "Review" not "Post" |
 | **Multi-System Routing** | Approve in Gmail → Post to ERP + Update Slack thread |
 

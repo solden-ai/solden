@@ -7,7 +7,7 @@ Subcommands:
   ``settings_json.onboarding`` snapshot, integration-mode flag, and
   parent-organization link.
 
-Talks directly to ``ClearledgrDB`` (operator-local v0.1).
+Talks directly to ``SoldenDB`` (operator-local v0.1).
 """
 from __future__ import annotations
 

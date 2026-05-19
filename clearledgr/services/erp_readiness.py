@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List, Optional
 
-from clearledgr.core.database import ClearledgrDB, get_db
+from clearledgr.core.database import SoldenDB, get_db
 from clearledgr.core.launch_controls import get_ga_readiness, get_rollback_controls
 from clearledgr.services.erp_connector_strategy import get_erp_connector_strategy
 
@@ -36,7 +36,7 @@ def _safe_list(value: Any) -> List[Any]:
 def evaluate_erp_connector_readiness(
     organization_id: str,
     *,
-    db: Optional[ClearledgrDB] = None,
+    db: Optional[SoldenDB] = None,
     connector_scope: Optional[Iterable[str]] = None,
     require_full_ga_scope: bool = False,
 ) -> Dict[str, Any]:

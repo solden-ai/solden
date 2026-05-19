@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from clearledgr.core.database import ClearledgrDB
+from clearledgr.core.database import SoldenDB
 
 
 def test_create_task_run_resets_failed_idempotent_runs(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
 
-    db = ClearledgrDB(str(tmp_path / "task-store.db"))
+    db = SoldenDB(str(tmp_path / "task-store.db"))
     first = db.create_task_run(
         id="task-1",
         org_id="org-test",

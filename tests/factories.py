@@ -1,4 +1,4 @@
-"""Test data builders for Clearledgr.
+"""Test data builders for Solden.
 
 Test files used to hand-roll the same setup boilerplate over and over:
 
@@ -16,7 +16,7 @@ Test files used to hand-roll the same setup boilerplate over and over:
 This module wraps that into composable builders so each test is just
 the *meaningful* deviation from a sane default. The helpers are
 deliberately thin — no factory_boy dependency, no hidden magic. Each
-function takes a ``db`` (a ``ClearledgrDB``) plus the fields a test
+function takes a ``db`` (a ``SoldenDB``) plus the fields a test
 actually cares about, fills in defaults, and returns the canonical row
 dict so tests can read back the id.
 

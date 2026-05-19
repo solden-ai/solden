@@ -1,11 +1,11 @@
-# Clearledgr — SAP S/4HANA Fiori Extension
+# Solden — SAP S/4HANA Fiori Extension
 
-Two-way bridge between SAP S/4HANA and Clearledgr's coordination layer
+Two-way bridge between SAP S/4HANA and Solden's coordination layer
 — the SAP-side equivalent of the NetSuite SuiteApp under
 [`integrations/netsuite-suiteapp/`](../netsuite-suiteapp/README.md).
 
 * **Read direction** — a native SAPUI5 application deployed via SAP
-  BTP (HTML5 Apps Repo + Approuter) that renders the Clearledgr Box
+  BTP (HTML5 Apps Repo + Approuter) that renders the Solden Box
   (state, timeline, exceptions, outcome) for the supplier invoice the
   user is viewing in S/4HANA. Phase 1-3 ships as a side-by-side Fiori
   app launched from a button on **Manage Supplier Invoices**; Phase 4
@@ -31,7 +31,7 @@ Two-way bridge between SAP S/4HANA and Clearledgr's coordination layer
                 ┌────────────────────────────────────────┐
        AP user ▶│  Manage Supplier Invoices (F0859)      │
                 │     ┌──────────────────────────────┐   │
-                │     │ Clearledgr Box panel         │◀──┤── side-by-side Fiori app
+                │     │ Solden Box panel         │◀──┤── side-by-side Fiori app
                 │     │ (SAPUI5 component)           │   │   in BTP HTML5 Repo
                 │     └──────────────────────────────┘   │
                 └────────────────┬───────────────────────┘
@@ -43,7 +43,7 @@ Two-way bridge between SAP S/4HANA and Clearledgr's coordination layer
                 └─────────────────────────────────────┼──┘
                                                       │
                                                       ▼
-                                  Clearledgr backend (api.clearledgr.com)
+                                  Solden backend (api.clearledgr.com)
                                   ├─ /extension/sap/exchange         (XSUAA → CL JWT)
                                   ├─ /extension/ap-items/by-sap-invoice
                                   ├─ /extension/route-low-risk-approval
@@ -59,7 +59,7 @@ Two-way bridge between SAP S/4HANA and Clearledgr's coordination layer
 | Phase | What it does | Done? | Hours |
 |-------|--------------|-------|-------|
 | 1 (read) | SAPUI5 app boots, reads invoice from URL params, shows "Hello" panel | ✅ scaffolded | 3 |
-| 2 (read) | XSUAA→Clearledgr token exchange + Box render (state, timeline, exceptions) | ✅ scaffolded | 3.5 |
+| 2 (read) | XSUAA→Solden token exchange + Box render (state, timeline, exceptions) | ✅ scaffolded | 3.5 |
 | 3 (read) | Real BTP deploy: MTA + Approuter + Destination + HTML5 Repo | ✅ scaffolded | 5 |
 | 1 (write) | Webhook dispatcher accepts BTP Event Mesh CloudEvents + ABAP-BAdI shapes; creates/advances Boxes | ✅ scaffolded | 3 |
 | 2 (write) | Slack approval card on payment block (reuses NetSuite path); approve clears block via OData; reject cancels via OData action | ✅ scaffolded | 3 |
@@ -130,7 +130,7 @@ integrations/sap-fiori-extension/
    - Type: HTTP
    - ProxyType: Internet
    - Authentication: NoAuthentication (Approuter forwards the
-     XSUAA JWT in the Authorization header; the Clearledgr exchange
+     XSUAA JWT in the Authorization header; the Solden exchange
      endpoint pulls the JWT from the request body, not the header,
      so we don't need OAuth2 token-exchange auth at the Destination
      layer in Phase 1-3).
@@ -169,9 +169,9 @@ https://<approuter-url>/?CompanyCode=1010&SupplierInvoice=5105600123&FiscalYear=
 ```
 
 You'll be redirected to BTP login; after signing in, the panel
-renders the Clearledgr Box for that invoice.
+renders the Solden Box for that invoice.
 
-### Backend per-tenant config (Clearledgr side) — **multi-tenant by default**
+### Backend per-tenant config (Solden side) — **multi-tenant by default**
 
 Each SAP customer has their own BTP subaccount with their own XSUAA
 service, JWKS URL, and `xsappname`. The `/extension/sap/exchange`
@@ -244,9 +244,9 @@ event source. Two paths depending on their S/4HANA flavour:
 
 ## Backend dependencies
 
-This integration expects on the Clearledgr side:
+This integration expects on the Solden side:
 
-* **`POST /extension/sap/exchange`** — XSUAA → Clearledgr JWT bridge.
+* **`POST /extension/sap/exchange`** — XSUAA → Solden JWT bridge.
   Implemented in [`clearledgr/api/sap_extension.py`](../../clearledgr/api/sap_extension.py).
 * **`GET /extension/ap-items/by-sap-invoice`** — Box read by composite
   key (`?company_code=&supplier_invoice=&fiscal_year=`).
@@ -277,14 +277,14 @@ This integration expects on the Clearledgr side:
 * Trust their corporate IDP via SAP IAS in the BTP subaccount.
 * Configure the Destination in their subaccount pointing at
   `api.clearledgr.com`.
-* Assign role collections (`Clearledgr Box Panel — Reader` / `Approver`)
+* Assign role collections (`Solden Box Panel — Reader` / `Approver`)
   to their AP team in BTP cockpit.
 * For the Manifest Extension upgrade: enable UI5 flexibility services
   on their S/4HANA tenant and deploy the extension as an ABAP transport.
 
-Realistic elapsed: 3-6 weeks from "Clearledgr has a working BTP demo"
+Realistic elapsed: 3-6 weeks from "Solden has a working BTP demo"
 to "Booking.com's AP team uses it on their real S/4HANA tenant." That's
-not Clearledgr writing code — it's their IT change-management.
+not Solden writing code — it's their IT change-management.
 
 ## Why this exists
 
@@ -292,7 +292,7 @@ Per the deck:
 
 > *"ONE TRUTH · MANY WINDOWS"*
 
-The Clearledgr Box is the source of truth. Gmail (sidebar), Slack
+The Solden Box is the source of truth. Gmail (sidebar), Slack
 (approvals), NetSuite (panel + intake), and now SAP S/4HANA (panel +
 intake) are the windows. A bill that arrives via EDI in Booking.com's
 S/4HANA never touches Gmail, but flows through the same coordination

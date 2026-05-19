@@ -1,8 +1,8 @@
-# Clearledgr AP Wedge Quality Scorecard
+# Solden AP Wedge Quality Scorecard
 
 ## Purpose
 
-This document defines the standard Clearledgr must meet before it can honestly claim to be better than existing AP tools in its current wedge.
+This document defines the standard Solden must meet before it can honestly claim to be better than existing AP tools in its current wedge.
 
 That wedge is narrow and specific:
 
@@ -18,7 +18,7 @@ This is not a broad AP-suite scorecard. It is the quality bar for the current bu
 
 ## Wedge Claim
 
-Clearledgr is only winning the wedge if the following statement is true in live customer use:
+Solden is only winning the wedge if the following statement is true in live customer use:
 
 `A finance manager can run AP from Gmail with less context switching, less approval chasing, and less ERP re-entry than with incumbent tools.`
 
@@ -30,7 +30,7 @@ If this is not true, the wedge is not yet won.
 
 ### 1. Reliability beats alternatives in live use
 
-Clearledgr must be safer and more trustworthy than the manual workflow it replaces.
+Solden must be safer and more trustworthy than the manual workflow it replaces.
 
 Minimum standard:
 
@@ -43,7 +43,7 @@ Minimum standard:
 
 ### 2. Context switching is materially reduced
 
-Clearledgr must remove tab and tool thrash, not just add another layer.
+Solden must remove tab and tool thrash, not just add another layer.
 
 Minimum standard:
 
@@ -176,7 +176,7 @@ This box is checked only if all of these are true:
 
 ## Claim Gate
 
-Do not claim Clearledgr is better in the wedge until these conditions are met on live traffic:
+Do not claim Solden is better in the wedge until these conditions are met on live traffic:
 
 1. `>= 95%` AP triage correctness
 2. `>= 90%` correct entity routing for known vendors
@@ -195,26 +195,26 @@ These areas should back the scorecard with code-level evidence:
 
 ### Runtime and workflow correctness
 
-1. [`tests/test_invoice_workflow_runtime_state_transitions.py`](/Users/mombalam/Desktop/Clearledgr.v1/tests/test_invoice_workflow_runtime_state_transitions.py)
-2. [`tests/test_finance_agent_runtime.py`](/Users/mombalam/Desktop/Clearledgr.v1/tests/test_finance_agent_runtime.py)
-3. [`tests/test_e2e_ap_flow.py`](/Users/mombalam/Desktop/Clearledgr.v1/tests/test_e2e_ap_flow.py)
+1. [`tests/test_invoice_workflow_runtime_state_transitions.py`](/Users/mombalam/Desktop/Solden.v1/tests/test_invoice_workflow_runtime_state_transitions.py)
+2. [`tests/test_finance_agent_runtime.py`](/Users/mombalam/Desktop/Solden.v1/tests/test_finance_agent_runtime.py)
+3. [`tests/test_e2e_ap_flow.py`](/Users/mombalam/Desktop/Solden.v1/tests/test_e2e_ap_flow.py)
 
 ### Failed-post and operator surface quality
 
-1. [`tests/test_ap_record_surfaces.py`](/Users/mombalam/Desktop/Clearledgr.v1/tests/test_ap_record_surfaces.py)
-2. [`clearledgr/api/ap_items.py`](/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/ap_items.py)
-3. [`clearledgr/services/ap_operator_audit.py`](/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/ap_operator_audit.py)
+1. [`tests/test_ap_record_surfaces.py`](/Users/mombalam/Desktop/Solden.v1/tests/test_ap_record_surfaces.py)
+2. [`clearledgr/api/ap_items.py`](/Users/mombalam/Desktop/Solden.v1/clearledgr/api/ap_items.py)
+3. [`clearledgr/services/ap_operator_audit.py`](/Users/mombalam/Desktop/Solden.v1/clearledgr/services/ap_operator_audit.py)
 
 ### Approval execution quality
 
-1. [`tests/test_channel_approval_contract.py`](/Users/mombalam/Desktop/Clearledgr.v1/tests/test_channel_approval_contract.py)
-2. [`clearledgr/api/slack_invoices.py`](/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/slack_invoices.py)
-3. [`clearledgr/api/teams_invoices.py`](/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/teams_invoices.py)
+1. [`tests/test_channel_approval_contract.py`](/Users/mombalam/Desktop/Solden.v1/tests/test_channel_approval_contract.py)
+2. [`clearledgr/api/slack_invoices.py`](/Users/mombalam/Desktop/Solden.v1/clearledgr/api/slack_invoices.py)
+3. [`clearledgr/api/teams_invoices.py`](/Users/mombalam/Desktop/Solden.v1/clearledgr/api/teams_invoices.py)
 
 ### Live/pilot evidence
 
-1. [`docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/PILOT_E2E_EVIDENCE.md`](/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/PILOT_E2E_EVIDENCE.md)
-2. [`docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md`](/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md)
+1. [`docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/PILOT_E2E_EVIDENCE.md`](/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/PILOT_E2E_EVIDENCE.md)
+2. [`docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md`](/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md)
 3. real pilot metrics from `Reports`, `Pipeline`, and audit exports
 
 ---

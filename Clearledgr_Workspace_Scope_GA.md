@@ -1,4 +1,4 @@
-# Clearledgr Dashboard — GA Scope
+# Solden Dashboard — GA Scope
 
 **Status:** Build spec — GA target
 **Revision:** v2 — 2026-04-28
@@ -10,7 +10,7 @@
 
 ## What's different
 
-Five things separate the Clearledgr dashboard from Tipalti, Stampli, AP Genius, Bill.com, and Avidxchange. Every module decision should be traceable to one of these.
+Five things separate the Solden dashboard from Tipalti, Stampli, AP Genius, Bill.com, and Avidxchange. Every module decision should be traceable to one of these.
 
 1. **The agent does the work, not the team.** No leaderboards. No invoices-per-person metrics. No productivity rankings. The dashboard surfaces system performance and operational logistics; it never scores people on judgment work. Competitors treat the team as the unit of throughput; we treat the agent as the unit of throughput and the team as the judgment layer.
 
@@ -28,9 +28,9 @@ The dashboard is the proof of all five. Build accordingly.
 
 ## Purpose
 
-The dashboard is the **control plane** for Clearledgr's coordination layer. It is where finance leaders configure how the agent works, see whether it is working, and resolve exceptions the agent cannot handle alone.
+The dashboard is the **control plane** for Solden's coordination layer. It is where finance leaders configure how the agent works, see whether it is working, and resolve exceptions the agent cannot handle alone.
 
-It is NOT where finance teams do their daily work. The dashboard is where **leaders** work daily; **operators** work in Gmail, Slack, Teams, and the customer's ERP. Building operator UI into the dashboard would undermine the surface architecture and turn Clearledgr into another finance portal. The dashboard's value is in what only a leader needs.
+It is NOT where finance teams do their daily work. The dashboard is where **leaders** work daily; **operators** work in Gmail, Slack, Teams, and the customer's ERP. Building operator UI into the dashboard would undermine the surface architecture and turn Solden into another finance portal. The dashboard's value is in what only a leader needs.
 
 This is the GA scope. We ship a dashboard that handles mid-market customers self-serve, lands enterprise customers without a "wait until v2" conversation, and gives the agent the configuration depth it needs to actually do the work.
 
@@ -50,7 +50,7 @@ Authoritative data lives in the customer's ERP. The dashboard reads from and wri
 The dashboard's primary value is letting the leader configure agent behavior. Reports are secondary infrastructure. We ship five standard reports (Volume, Agent Performance, Cycle Time, Exception Breakdown, Vendor Quality) and ship them well. We do not build a custom report builder. We do not ship AI-generated commentary on reports. We do not ship customer-configurable dashboards in v1.
 
 **4. Every action has an audit trail. Every audit entry is tamper-evident at the DB level today; cryptographic hash chain + WORM mirror is Module 7's hardening pass.**
-Today: append-only Postgres triggers, idempotency-key dedupe, `governance_verdict` + `agent_confidence` queryable columns. Aspirational target: hash-chained ledger + WORM-backed retention so even Clearledgr engineering cannot edit history. Module 7 covers the design.
+Today: append-only Postgres triggers, idempotency-key dedupe, `governance_verdict` + `agent_confidence` queryable columns. Aspirational target: hash-chained ledger + WORM-backed retention so even Solden engineering cannot edit history. Module 7 covers the design.
 
 **5. Built for AP, architected for everything.**
 The dashboard ships with AP active. The rule engine, exception types, and surface architecture are workflow-agnostic. AR / Recon / Close turn on in the UI when each workflow ships, without re-architecture.
@@ -147,11 +147,11 @@ Where the leader teaches the agent how to route work. This is where the customer
 
 ### Module 4 — Vendor Management
 
-The vendor list, with what the agent needs to know about each. Vendor data lives in the customer's ERP. The dashboard reflects that data and adds Clearledgr-specific attributes the ERP does not track.
+The vendor list, with what the agent needs to know about each. Vendor data lives in the customer's ERP. The dashboard reflects that data and adds Solden-specific attributes the ERP does not track.
 
 **Components:**
 - Vendor list: all vendors, with status, payment terms, last bill, exception rate, IBAN verification status
-- Vendor detail: ERP data (name, address, tax ID, terms) plus Clearledgr layer (verified IBANs, fraud flags, custom routing rules, agent confidence with this vendor)
+- Vendor detail: ERP data (name, address, tax ID, terms) plus Solden layer (verified IBANs, fraud flags, custom routing rules, agent confidence with this vendor)
 - Bulk import: from ERP on connection, refreshable, handles 10,000+ vendors without blocking
 - Verification: agent attempts auto-verification on creation (IBAN check, business registry lookup, prior payment match). Surfaces unverified vendors for human review.
 - **Basic fraud signals** (rule-based, not ML): new IBAN doesn't match prior payments; unusually large invoice from low-frequency vendor; vendor created within last 30 days with first invoice over $X. Configurable per customer. Surfaced as exception types.
@@ -174,8 +174,8 @@ Connect, test, and maintain the integrations. The leader sets up integrations du
 
 **Components:**
 - Connection list: every integration (NetSuite, SAP, QuickBooks, Xero, Gmail, Slack, Teams), status, last sync, account or workspace identifier
-- Connect flow: OAuth or credential-based per integration. Per ERP, configure GL mapping (which Clearledgr field maps to which ERP field), default GL accounts, default approval routing
-- **Custom field mapping UI**: for non-standard NetSuite or SAP setups, the leader maps additional ERP fields to Clearledgr fields through a structured UI. Not infinitely flexible — bounded set of mappable Clearledgr fields with dropdowns. Prevents customer-onboarding bottlenecks.
+- Connect flow: OAuth or credential-based per integration. Per ERP, configure GL mapping (which Solden field maps to which ERP field), default GL accounts, default approval routing
+- **Custom field mapping UI**: for non-standard NetSuite or SAP setups, the leader maps additional ERP fields to Solden fields through a structured UI. Not infinitely flexible — bounded set of mappable Solden fields with dropdowns. Prevents customer-onboarding bottlenecks.
 - Connection health: per integration, recent sync log, error count, latency
 - Credential rotation: refresh tokens, rotate API keys without re-onboarding
 - Test action: run a test transaction that verifies the agent can read and write to the ERP
@@ -249,7 +249,7 @@ Every workflow action, logged, searchable, exportable, append-only at the DB lev
 - WORM-backed mirror (S3 Object Lock or equivalent) for the canonical chain
 - Standalone verification tool: customer or auditor verifies the chain independently
 - Migration plan: how do we backfill the chain over an existing `audit_events` table without breaking idempotency?
-- "Even Clearledgr employees cannot edit" only becomes true once both hash chain + WORM mirror ship.
+- "Even Solden employees cannot edit" only becomes true once both hash chain + WORM mirror ship.
 
 **Acceptance criteria:**
 - v1: All workflow actions write an audit entry within 5 seconds; search returns within 3 seconds for date ranges up to 1 year + 100K events; export of full year completes within 60 seconds; SIEM webhook has retry; failed deliveries surface to admin within 1 hour.
@@ -314,7 +314,7 @@ A new customer goes from contract signed to first invoice processed in days, not
 
 **Components:**
 - Onboarding checklist: every step from connecting integrations to going live, with clear status
-- Self-serve setup: customer can complete most steps without Clearledgr intervention
+- Self-serve setup: customer can complete most steps without Solden intervention
 - Sample data mode: customer can run sample invoices through the system before going live with real data
 - Integration health checks: confirms each integration is correctly configured before allowing go-live
 - Default rule sets: pre-built starter rules for common patterns
@@ -323,7 +323,7 @@ A new customer goes from contract signed to first invoice processed in days, not
 
 **Acceptance criteria:**
 - Mid-market customer (Cowrywise class) self-serves end-to-end onboarding in under 4 hours of leader time
-- Enterprise customer (Booking.com class) onboards in under 5 days with one Clearledgr-guided session
+- Enterprise customer (Booking.com class) onboards in under 5 days with one Solden-guided session
 - Sample data mode does not contaminate production data
 - Health checks catch 90% of common misconfigurations before go-live
 - Staging tier (when enabled) provisions in under 30 minutes from "request access"
@@ -635,7 +635,7 @@ Twelve unanswered design questions surfaced now so they don't surprise mid-build
 | 8 | Module 4 fraud signal default thresholds — ship customer-blank or with sane defaults (and which)? | Mo | Phase 2a start |
 | 9 | Module 6 custom role limit (10 per customer) — is this enforceable across self-serve, or does Enterprise tier remove the cap? | Mo | Phase 1 start |
 | 10 | Module 7 retention — indefinite by default? Or 7-year default with opt-in extension? Compliance counsel input needed. | Mo | Phase 1 start |
-| 11 | Module 8 scheduled email — sent from Clearledgr's mail infrastructure or via the customer's connected Gmail? Ownership of failed delivery? | Mo | Phase 4 start |
+| 11 | Module 8 scheduled email — sent from Solden's mail infrastructure or via the customer's connected Gmail? Ownership of failed delivery? | Mo | Phase 4 start |
 | 12 | Module 10 staging tier — separate Railway environment per Enterprise customer, or namespace-based partition in production? | Suleiman | Phase 5 start |
 
 ---
@@ -656,7 +656,7 @@ Two sets: **engineering criteria** (build is done) and **buyer-side criteria** (
 
 ### Buyer-side criteria
 
-1. A mid-market customer (Cowrywise class) can self-serve onboard, configure rules, and run AP through the system without Clearledgr support beyond initial setup.
+1. A mid-market customer (Cowrywise class) can self-serve onboard, configure rules, and run AP through the system without Solden support beyond initial setup.
 2. An enterprise customer (Booking.com class) can deploy the SuiteApp or SAP integration, configure their multi-entity rules, federate identity via SAML, and stream audit logs to their SIEM.
 3. The 5-minute demo script (below) runs cleanly without engineering intervention.
 4. A first-time leader can find their daily-attention items within 30 seconds of landing on Module 1.
@@ -690,7 +690,7 @@ How we know the dashboard is doing its job post-GA.
 
 | Metric | Target | Measured how |
 |---|---|---|
-| **Activation**: % of customers self-serve-onboarded (vs. requiring Clearledgr-guided setup) | ≥70% by month 3 post-GA | Module 10 onboarding completion event in `audit_events` |
+| **Activation**: % of customers self-serve-onboarded (vs. requiring Solden-guided setup) | ≥70% by month 3 post-GA | Module 10 onboarding completion event in `audit_events` |
 | **Engagement**: % of leader users active weekly | ≥80% | Login + at-least-one-action event in last 7 days |
 | **Time-to-first-resolved-exception**: from first login to first Module 2 resolution | ≤24h for 75% of customers | Activity timestamps |
 | **Time-to-first-rule-saved**: from first login to first Module 3 rule save | ≤7 days for 60% of customers | Rule creation event |
@@ -815,7 +815,7 @@ One page per module. **Templates are filled in for Modules 1, 3, and 7 as worked
 3. Search for date range with 100K matching events returns first page in <3s.
 4. Export of full year completes within 60s and produces CSV that round-trips to PDF.
 5. SIEM webhook with retry on 5xx; delivery log surfaces failures within 1h.
-6. Even Clearledgr engineering cannot UPDATE an event row via the api (covered today; v2 strengthens at the storage layer).
+6. Even Solden engineering cannot UPDATE an event row via the api (covered today; v2 strengthens at the storage layer).
 
 **Dependencies:** none — Module 7 v1 is foundational; Modules 1–11 read from it.
 

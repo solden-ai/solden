@@ -55,7 +55,7 @@ patterns:
 NetSuite requires 5–8 screenshots showing the SuiteApp's UX. Take
 each in a clean sandbox demo tenant with realistic test data:
 
-1. **Vendor Bill record with the Clearledgr subtab visible, Box state badge "needs_approval"**.
+1. **Vendor Bill record with the Solden subtab visible, Box state badge "needs_approval"**.
    - Highlight the subtab in the screenshot annotation.
 2. **Subtab expanded showing the full panel: state badge, vendor +
    amount + invoice number summary, exception list, timeline, action buttons**.
@@ -63,7 +63,7 @@ each in a clean sandbox demo tenant with realistic test data:
    "approved", action buttons hidden, audit timeline shows the
    transition with the operator's email**.
 4. **Empty-state panel** ("This Bill was not processed through
-   Clearledgr") — for a vendor bill that bypassed Solden entirely.
+   Solden") — for a vendor bill that bypassed Solden entirely.
    Demonstrates the SuiteApp degrades gracefully on out-of-scope bills.
 5. **Tenant config record** (`customrecord_cl_settings`) showing the
    per-account API base + bundle secret + org ID fields blank-but-
@@ -89,7 +89,7 @@ NetSuite's marketplace listing has a strict character budget. Drafts:
 
 #### Short description (max 250 chars)
 
-> Solden brings the Clearledgr coordination layer into the NetSuite
+> Solden brings the Solden coordination layer into the NetSuite
 > Vendor Bill record. Approve, reject, or escalate AP exceptions
 > directly from NetSuite — every decision lands in the audit chain
 > with the operator's surface, the agent's reasoning, and the
@@ -106,7 +106,7 @@ NetSuite's marketplace listing has a strict character budget. Drafts:
 > buttons (Approve / Reject / Request info). For ERP-native bills
 > that arrive into NetSuite via EDI, vendor portal, or AP-clerk-
 > typed entry, Solden's afterSubmit hook fires an HMAC-signed
-> webhook to the Clearledgr coordination layer so the bill becomes
+> webhook to the Solden coordination layer so the bill becomes
 > a Box, runs through validation + exception detection, and routes
 > to Slack approval — without leaving NetSuite as the source of
 > truth for the GL. Every approval landed from inside the NetSuite
@@ -123,7 +123,7 @@ no fabricated pricing on marketing surfaces.)
 
 Optional but raises the listing's discovery rank. 90–120 seconds:
 
-1. (0–10s) Open Vendor Bill in NetSuite. Click Clearledgr subtab.
+1. (0–10s) Open Vendor Bill in NetSuite. Click Solden subtab.
 2. (10–30s) Panel loads, show state badge + summary + exceptions +
    timeline.
 3. (30–50s) Click Approve. Panel updates to show "approved" state.
@@ -151,8 +151,8 @@ intervention.
 
 | # | Scenario | Expected | Pass |
 |---|---|---|---|
-| B1 | Open a Vendor Bill **created via Clearledgr's email-arrival flow** (i.e., posted to NetSuite by Solden). Click Clearledgr subtab. | Panel loads in <2s. State badge shows current Solden state (e.g., `posted_to_erp`). Vendor + amount + invoice number match the NetSuite fields. Timeline shows >=1 audit event. Action buttons hidden (post-approval state). | ☐ |
-| B2 | Open a Vendor Bill that was **NOT processed through Clearledgr** (e.g., a manually-entered bill from before the SuiteApp was installed). Click subtab. | Panel renders the empty state: *"This Bill was not processed through Clearledgr."* No errors in the browser console. No 500 in the Solden API logs. | ☐ |
+| B1 | Open a Vendor Bill **created via Solden's email-arrival flow** (i.e., posted to NetSuite by Solden). Click Solden subtab. | Panel loads in <2s. State badge shows current Solden state (e.g., `posted_to_erp`). Vendor + amount + invoice number match the NetSuite fields. Timeline shows >=1 audit event. Action buttons hidden (post-approval state). | ☐ |
+| B2 | Open a Vendor Bill that was **NOT processed through Solden** (e.g., a manually-entered bill from before the SuiteApp was installed). Click subtab. | Panel renders the empty state: *"This Bill was not processed through Solden."* No errors in the browser console. No 500 in the Solden API logs. | ☐ |
 | B3 | Open a Vendor Bill where the underlying AP item is at `needs_approval`. | Action buttons (Approve / Reject / Request info) visible. | ☐ |
 | B4 | Click **Approve**. | Panel buttons disabled during dispatch. State badge updates to `approved` within 5s. Solden audit log records `state_transition` with `ui_surface=erp_native_netsuite`. NetSuite payment hold (if any) released via REST. | ☐ |
 | B5 | Click **Reject** with reason "duplicate". | State badge → `rejected`. Audit row carries the reason text + `ui_surface=erp_native_netsuite`. Bill in NetSuite voided (Phase 2 write-back). | ☐ |
@@ -160,13 +160,13 @@ intervention.
 | B7 | Toggle to **dark mode** in NetSuite (Setup → User Preferences). | Panel CSS still readable. State badge contrast meets WCAG AA. | ☐ |
 | B8 | Open the panel on a Vendor Bill in **EDIT** mode (not view). | Panel renders. Action buttons may be disabled (edit mode is for invoice fields, not approval workflow). No errors. | ☐ |
 | B9 | Open the panel on a Vendor Bill **CREATE** form (no record id yet). | Subtab is **not** present. (UE script's `beforeLoad` skips when `context.type === CREATE`.) | ☐ |
-| B10 | Wait until the JWT in the iframe expires (default 15 min in production). Click Approve. | Panel surfaces the auth error gracefully ("Could not reach Clearledgr"). Refreshing the bill page mints a new JWT. | ☐ |
+| B10 | Wait until the JWT in the iframe expires (default 15 min in production). Click Approve. | Panel surfaces the auth error gracefully ("Could not reach Solden"). Refreshing the bill page mints a new JWT. | ☐ |
 
 ### B.2 Write direction (afterSubmit webhook)
 
 | # | Scenario | Expected | Pass |
 |---|---|---|---|
-| W1 | **Create** a new Vendor Bill in NetSuite (without going through Clearledgr). | Solden receives `vendorbill.create` webhook with HMAC signature. New AP item created in `ap_items` with `state=needs_approval` (if NetSuite payment hold) or `posted_to_erp` (no hold). | ☐ |
+| W1 | **Create** a new Vendor Bill in NetSuite (without going through Solden). | Solden receives `vendorbill.create` webhook with HMAC signature. New AP item created in `ap_items` with `state=needs_approval` (if NetSuite payment hold) or `posted_to_erp` (no hold). | ☐ |
 | W2 | **Edit** an existing Vendor Bill — change the amount. | Solden receives `vendorbill.update` webhook with both the old and new bill summary. AP item's `amount` updated; audit row records the change. | ☐ |
 | W3 | **Mark a bill paid** in NetSuite (post a Vendor Payment against it). | Solden receives `vendorbill.paid` webhook. AP item state advances to `paid` / `closed` per the Box state machine. | ☐ |
 | W4 | **Delete** a Vendor Bill. | Solden receives `vendorbill.delete` webhook. AP item state advances to `closed` (Box marked terminal-not-paid). | ☐ |
@@ -213,7 +213,7 @@ Oracle's reviewer can move quickly.
 
 | Question | Solden's answer |
 |---|---|
-| What's the SuiteApp's failure mode if Solden's API is down? | The `beforeLoad` panel renders the error state ("Could not reach Clearledgr"). The Vendor Bill is fully usable in NetSuite — Clearledgr's read panel is purely additive. The `afterSubmit` webhook fires and logs on failure, but does **not** roll back the user's save. Solden's webhook-retry queue picks up missed events later. |
+| What's the SuiteApp's failure mode if Solden's API is down? | The `beforeLoad` panel renders the error state ("Could not reach Solden"). The Vendor Bill is fully usable in NetSuite — Solden's read panel is purely additive. The `afterSubmit` webhook fires and logs on failure, but does **not** roll back the user's save. Solden's webhook-retry queue picks up missed events later. |
 | Does the SuiteApp throttle / rate-limit anything in NetSuite? | **No.** The `afterSubmit` webhook is a single HTTPS POST per Vendor Bill event. The `beforeLoad` adds one Suitelet round-trip per bill view. Neither approaches NetSuite's governance limits. |
 | What's the audit chain shape? | Every state transition on a Solden AP item produces an immutable `audit_events` row capturing: actor (user / agent), source channel (slack / teams / gmail / **erp_native_netsuite** for panel decisions), decision context (validation gate verdict, agent recommendation, vendor profile snapshot), timestamp, correlation id. Append-only enforced by DB trigger. |
 | How do you handle PII in logs? | Solden's `safe_error()` helper redacts known PII patterns before logging. NetSuite-side, the `log.audit` calls record only the Vendor Bill internal id + the event type, not the bill's monetary fields. |

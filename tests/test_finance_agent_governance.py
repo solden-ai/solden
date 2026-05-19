@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
 
-from clearledgr.core.database import ClearledgrDB
+from clearledgr.core.database import SoldenDB
 from clearledgr.core.finance_contracts import ActionExecution, SkillRequest
 from clearledgr.services.agent_memory import AgentMemoryService
 from clearledgr.services.finance_agent_loop import FinanceAgentLoopService
 
 
 class _GovernanceRuntime:
-    def __init__(self, db: ClearledgrDB, *, autonomous_allowed: bool = True) -> None:
+    def __init__(self, db: SoldenDB, *, autonomous_allowed: bool = True) -> None:
         self.organization_id = "test-org"
         self.db = db
         self.actor_id = "tester"
@@ -65,7 +65,7 @@ class _GovernanceRuntime:
 
 def test_finance_agent_loop_blocks_doctrine_forbidden_action(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
-    db = ClearledgrDB(str(tmp_path / "governance-block.db"))
+    db = SoldenDB(str(tmp_path / "governance-block.db"))
     db.initialize()
     db.create_ap_item(
         {
@@ -114,7 +114,7 @@ def test_finance_agent_loop_blocks_doctrine_forbidden_action(tmp_path, monkeypat
 
 def test_finance_agent_loop_attempts_self_recovery_for_failed_post(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
-    db = ClearledgrDB(str(tmp_path / "governance-recovery.db"))
+    db = SoldenDB(str(tmp_path / "governance-recovery.db"))
     db.initialize()
     db.create_ap_item(
         {
@@ -167,7 +167,7 @@ def test_finance_agent_loop_attempts_self_recovery_for_failed_post(tmp_path, mon
 
 def test_finance_agent_loop_allows_manual_risky_action_to_reach_workflow(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
-    db = ClearledgrDB(str(tmp_path / "governance-manual.db"))
+    db = SoldenDB(str(tmp_path / "governance-manual.db"))
     db.initialize()
     db.create_ap_item(
         {

@@ -52,7 +52,7 @@ async def run_worker() -> None:
 
     app = SimpleNamespace(state=SimpleNamespace())
     await run_deferred_startup(app)
-    logger.info("Clearledgr worker runtime started (role=%s)", role)
+    logger.info("Solden worker runtime started (role=%s)", role)
 
     stop_event = asyncio.Event()
     loop = asyncio.get_running_loop()

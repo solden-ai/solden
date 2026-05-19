@@ -6,7 +6,7 @@ What ships, what's deferred, why. Written for engineers AND non-engineers — th
 
 ---
 
-## What is Clearledgr
+## What is Solden
 
 An **embedded coordination layer for finance teams.** The first workflow class is accounts payable: invoices arrive via email, need approval, get posted to the ERP.
 
@@ -49,7 +49,7 @@ Every Box renders across four surfaces, all reading the same source of truth:
 
 None of these are the system of record. All four read the Box. The Box is the product.
 
-**Note:** "Backoffice" in older docs refers to our internal Clearledgr-staff cross-tenant ops console, not a customer surface. That's a separate, future concern. Customer admin lives inside Gmail.
+**Note:** "Backoffice" in older docs refers to our internal Solden-staff cross-tenant ops console, not a customer surface. That's a separate, future concern. Customer admin lives inside Gmail.
 
 ---
 
@@ -112,8 +112,8 @@ Things that look relevant but we chose not to:
 
 Reference patterns we draw from:
 
-- **Streak** — CRM inside Gmail. The admin surface is native to the work surface. Clearledgr applies this to AP.
-- **Fyxer** — invisible AI. Email auto-replies drafted in the background, user keeps their existing workflow. Clearledgr applies this: the agent handles the mechanical work; the human makes the decisions at the right moments.
+- **Streak** — CRM inside Gmail. The admin surface is native to the work surface. Solden applies this to AP.
+- **Fyxer** — invisible AI. Email auto-replies drafted in the background, user keeps their existing workflow. Solden applies this: the agent handles the mechanical work; the human makes the decisions at the right moments.
 
 What we don't want to be:
 
@@ -137,7 +137,7 @@ The positioning story lives in `CLEARLEDGR_MEMO.md` and the pitch deck. This doc
 
 ## For new engineers: what the deck promises customers
 
-Short version (read the deck for full): "Clearledgr is where your AP runs. Every invoice becomes a Box with full state, timeline, exceptions, and outcome. Rules decide. Claude describes. Your team keeps working in Gmail and Slack; nothing changes except that the boring part takes care of itself."
+Short version (read the deck for full): "Solden is where your AP runs. Every invoice becomes a Box with full state, timeline, exceptions, and outcome. Rules decide. Claude describes. Your team keeps working in Gmail and Slack; nothing changes except that the boring part takes care of itself."
 
 If your code moves against any of those commitments, you're building the wrong thing. Flag it; don't hide it.
 

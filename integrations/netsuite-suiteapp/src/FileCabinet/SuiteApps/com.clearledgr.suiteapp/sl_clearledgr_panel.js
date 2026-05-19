@@ -1,5 +1,5 @@
 /**
- * Clearledgr — Suitelet that serves the panel HTML.
+ * Solden — Suitelet that serves the panel HTML.
  *
  * Stitches panel.html / panel.js / panel.css from the File Cabinet into
  * a single document, embeds the bill id + account id + minted JWT as
@@ -31,7 +31,7 @@ define(['N/file', 'N/runtime', 'N/log'], (fileMod, runtime, log) => {
             return fileMod.load({ id: path }).getContents();
         } catch (err) {
             log.error({
-                title: 'Clearledgr panel asset missing',
+                title: 'Solden panel asset missing',
                 details: 'File not found at ' + path + ' — did the SDF deploy include the FileCabinet folder?',
             });
             return '';

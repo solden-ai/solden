@@ -10,11 +10,11 @@ Finance execution layer, starting with AP
 
 ## 1-line description
 
-Clearledgr is an AI execution layer for finance teams; the first skill runs AP from Gmail.
+Solden is an AI execution layer for finance teams; the first skill runs AP from Gmail.
 
 ## What are you building?
 
-We are building an AI execution layer for finance teams. The first production skill runs AP from Gmail. Clearledgr reads invoice emails, triages them into the right workflow or entity, routes approvals, checks invoices against ERP, and writes approved invoices back. The goal is to remove approval chasing and duplicate ERP entry.
+We are building an AI execution layer for finance teams. The first production skill runs AP from Gmail. Solden reads invoice emails, triages them into the right workflow or entity, routes approvals, checks invoices against ERP, and writes approved invoices back. The goal is to remove approval chasing and duplicate ERP entry.
 
 ## What problem are you solving?
 
@@ -30,7 +30,7 @@ Mo Mbalam has worked with finance teams for 10 years and spent 4 years as an Acc
 
 ## How far along are you?
 
-We have a real product and the current wedge is already working in software. Clearledgr already supports Gmail-native AP intake, invoice processing, review surfaces, approval routing, ERP validation and writeback, and audit trail / workflow state control. The current work is pilot hardening and turning design-partner interest into repeatable proof.
+We have a real product and the current wedge is already working in software. Solden already supports Gmail-native AP intake, invoice processing, review surfaces, approval routing, ERP validation and writeback, and audit trail / workflow state control. The current work is pilot hardening and turning design-partner interest into repeatable proof.
 
 ## Do people want it?
 

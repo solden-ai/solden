@@ -189,7 +189,7 @@ def test_detail_endpoint_includes_agent_memory_surface(client, db):
             assert ap_item_id == item["id"]
             assert skill_id == "ap_v1"
             return {
-                "profile": {"name": "Clearledgr AP Agent", "autonomy_level": "assisted"},
+                "profile": {"name": "Solden AP Agent", "autonomy_level": "assisted"},
                 "belief": {"vendor_name": "Canonical Memory Co", "reason": "Awaiting approval response."},
                 "current_state": "validated",
                 "status": "pending_approval",
@@ -211,7 +211,7 @@ def test_detail_endpoint_includes_agent_memory_surface(client, db):
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["agent_profile"]["name"] == "Clearledgr AP Agent"
+    assert payload["agent_profile"]["name"] == "Solden AP Agent"
     assert payload["agent_next_action"]["type"] == "await_approval"
     assert payload["agent_memory"]["belief"]["vendor_name"] == "Canonical Memory Co"
     assert payload["next_action"] == "approve_or_reject"
@@ -286,7 +286,7 @@ def test_build_worklist_item_includes_agent_memory_projection(db):
             assert skill_id == "ap_v1"
             return {
                 "profile": {
-                    "name": "Clearledgr AP Agent",
+                    "name": "Solden AP Agent",
                     "mission": "Own the AP lane",
                     "autonomy_level": "assisted",
                 },

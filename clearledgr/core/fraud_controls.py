@@ -1,4 +1,4 @@
-"""Architectural fraud controls for Clearledgr AP.
+"""Architectural fraud controls for Solden AP.
 
 Per DESIGN_THESIS.md §8, fraud controls are *architectural*, not
 configurational. They cannot be disabled by the AP Manager. Their numeric

@@ -133,7 +133,7 @@ class InvoiceData:
     erp_native: bool = False
     """True when the intake source is the ERP itself (NetSuite SuiteScript
     afterSubmit, SAP Event Mesh / BAdI). Implies (a) the bill is
-    already posted in the ERP — Clearledgr must NOT call
+    already posted in the ERP — Solden must NOT call
     ``post_to_erp`` again, just track it, and (b) Gmail-specific
     side-effects (label sync, email parsing) are skipped."""
 

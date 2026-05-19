@@ -7,7 +7,7 @@ Per-organization settings for:
 - Currency and locale settings
 - Feature flags
 
-This is what makes Clearledgr work for different businesses.
+This is what makes Solden work for different businesses.
 A Nigerian fintech using Paystack needs different GL mappings than
 a European SaaS using Stripe.
 """
@@ -211,7 +211,7 @@ class OrganizationConfig:
     """
     Complete configuration for an organization.
     
-    This is the single source of truth for how Clearledgr behaves
+    This is the single source of truth for how Solden behaves
     for a specific organization.
     """
     organization_id: str

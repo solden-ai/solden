@@ -210,7 +210,7 @@ def _build_email(
     reason = exception_row.get("reason") or ""
 
     subject = (
-        f"[Clearledgr] Escalation: {exc_type} on {box_id} "
+        f"[Solden] Escalation: {exc_type} on {box_id} "
         f"older than {threshold}h"
     )
     body_text = (

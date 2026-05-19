@@ -1,6 +1,6 @@
 """FX rates store — Module 9 (multi-currency conversion).
 
-Mixed into ``ClearledgrDB``. Provides:
+Mixed into ``SoldenDB``. Provides:
 
   - CRUD over ``fx_rates`` rows.
   - The conversion-lookup query

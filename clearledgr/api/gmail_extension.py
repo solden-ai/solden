@@ -1,4 +1,4 @@
-"""API endpoints for the Clearledgr Gmail Extension.
+"""API endpoints for the Solden Gmail Extension.
 
 The Gmail surface is an operator entrypoint. User-triggered AP actions should
 enter through ``FinanceAgentRuntime`` so policy gates, idempotency, and audit
@@ -816,7 +816,7 @@ async def cleanup_gmail_labels(
     request: GmailLabelCleanupRequest,
     user=Depends(require_ops_user),
 ):
-    """Migrate legacy Clearledgr Gmail labels and delete obsolete label objects."""
+    """Migrate legacy Solden Gmail labels and delete obsolete label objects."""
     org_id = _resolve_org_id_for_user(user, request.organization_id)
     target_user = _resolve_invoice_repair_user(
         user,

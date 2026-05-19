@@ -2,11 +2,11 @@
 
 The 3-way-match path
 (``InvoiceValidationMixin._evaluate_deterministic_validation`` →
-``PurchaseOrderService.match_invoice_to_po``) reads from Clearledgr's
+``PurchaseOrderService.match_invoice_to_po``) reads from Solden's
 own ``purchase_orders`` and ``goods_receipts`` tables — it does NOT
 call back out to the ERP. So when an ERP-native bill arrives via
 NetSuite SuiteScript / SAP Event Mesh, the dispatcher must seed the
-linked PO + GRs into Clearledgr's stores **before** calling
+linked PO + GRs into Solden's stores **before** calling
 ``process_new_invoice``, or the validation pipeline will conclude
 "no PO found" and route every bill to ``needs_approval`` regardless
 of whether the underlying match would have succeeded.
@@ -22,7 +22,7 @@ Two public functions:
   associated item-receipt list, upserts both the PO and any GRs.
 * :func:`upsert_sap_po` — same shape, SAP S/4HANA payload.
 
-Each returns the Clearledgr ``po_id`` so the dispatcher can stamp
+Each returns the Solden ``po_id`` so the dispatcher can stamp
 the AP item with the linkage.
 """
 from __future__ import annotations
@@ -48,9 +48,9 @@ def upsert_netsuite_po(
     po_lines: List[Dict[str, Any]],
     item_receipts: List[Dict[str, Any]],
 ) -> Optional[str]:
-    """Upsert a NetSuite PO + its item receipts. Returns Clearledgr po_id.
+    """Upsert a NetSuite PO + its item receipts. Returns Solden po_id.
 
-    Idempotency: Clearledgr-side ``po_number`` is built from the
+    Idempotency: Solden-side ``po_number`` is built from the
     NetSuite tranId (``f"NS-{tranId}"``); if a row with that number
     already exists for the org we update rather than insert.
 
@@ -101,7 +101,7 @@ def upsert_netsuite_po(
             )
             po_id = po.po_id
             logger.info(
-                "erp_intake_po_sync: created Clearledgr PO %s from NetSuite %s for org %s",
+                "erp_intake_po_sync: created Solden PO %s from NetSuite %s for org %s",
                 po.po_number, ns_po_id, organization_id,
             )
         except Exception as exc:  # noqa: BLE001
@@ -243,7 +243,7 @@ def upsert_sap_po(
             )
             po_id = po.po_id
             logger.info(
-                "erp_intake_po_sync: created Clearledgr PO %s from SAP %s for org %s",
+                "erp_intake_po_sync: created Solden PO %s from SAP %s for org %s",
                 po.po_number, sap_po_number, organization_id,
             )
         except Exception as exc:  # noqa: BLE001

@@ -84,7 +84,7 @@ OVERRIDE_WINDOWS_INDEXES_SQL = [
 
 
 class OverrideWindowStore:
-    """Mixin providing override-window persistence for ClearledgrDB."""
+    """Mixin providing override-window persistence for SoldenDB."""
 
     OVERRIDE_WINDOWS_TABLE_SQL = OVERRIDE_WINDOWS_TABLE_SQL
     OVERRIDE_WINDOWS_INDEXES_SQL = OVERRIDE_WINDOWS_INDEXES_SQL

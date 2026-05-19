@@ -1,5 +1,5 @@
 """
-Rate limiting for Clearledgr Reconciliation API.
+Rate limiting for Solden Reconciliation API.
 
 Uses Redis when REDIS_URL is configured (production), falls back to
 in-memory storage for development. Logs a warning on startup when

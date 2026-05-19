@@ -2,14 +2,14 @@
 
 Date: 2026-03-25
 
-This is a working draft for a YC application based on the current Clearledgr story.
+This is a working draft for a YC application based on the current Solden story.
 It is optimized for clarity, specificity, and wedge-first framing.
 
-For compressed form-field answers, use [`YC_APPLICATION_SHORT_2026_03.md`](/Users/mombalam/Desktop/Clearledgr.v1/docs/fundraising/YC_APPLICATION_SHORT_2026_03.md).
+For compressed form-field answers, use [`YC_APPLICATION_SHORT_2026_03.md`](/Users/mombalam/Desktop/Solden.v1/docs/fundraising/YC_APPLICATION_SHORT_2026_03.md).
 
 ## Company
 
-Clearledgr
+Solden
 
 ## Founders
 
@@ -19,7 +19,7 @@ Clearledgr
 
 ## One-line description
 
-Clearledgr is an AI execution layer for finance teams. The first production skill runs AP from Gmail.
+Solden is an AI execution layer for finance teams. The first production skill runs AP from Gmail.
 
 ## What are you building?
 
@@ -27,7 +27,7 @@ We are building an AI execution layer for finance teams. The first production sk
 
 Today, invoices arrive in Gmail, approvals happen in Slack, exceptions get tracked in spreadsheets, and ERP only gets updated at the end. Finance teams still have to coordinate all of that manually.
 
-Clearledgr reads invoice emails, triages them into the right workflow or entity, routes approvals, checks invoices against ERP, and writes approved invoices back. The immediate wedge is AP from Gmail, but the company is broader than AP.
+Solden reads invoice emails, triages them into the right workflow or entity, routes approvals, checks invoices against ERP, and writes approved invoices back. The immediate wedge is AP from Gmail, but the company is broader than AP.
 
 ## What is the problem and why is it important?
 
@@ -134,7 +134,7 @@ That changed the product framing. We still handle invoice processing, but we no 
 
 AP is the first wedge because it is frequent, painful, inbox-native, and directly tied to ERP outcomes.
 
-But the same pattern exists across other finance workflows: work starts in email or chat, gets coordinated manually, and only gets recorded later in a system of record. If Clearledgr wins AP from Gmail, it can expand naturally into vendor issues, finance exceptions, reconciliation, and close workflow coordination.
+But the same pattern exists across other finance workflows: work starts in email or chat, gets coordinated manually, and only gets recorded later in a system of record. If Solden wins AP from Gmail, it can expand naturally into vendor issues, finance exceptions, reconciliation, and close workflow coordination.
 
 ## Revenue / pilots
 
@@ -154,7 +154,7 @@ Working pricing thesis:
 
 ## Anything else worth saying
 
-The sharpest way to understand Clearledgr right now is:
+The sharpest way to understand Solden right now is:
 
 - sell one painful workflow first: AP from Gmail
 - win by removing approval chasing and duplicate ERP entry
@@ -168,7 +168,7 @@ Finance execution layer, starting with AP
 
 ### 1-sentence version
 
-Clearledgr is an AI execution layer for finance teams whose first production skill runs AP from Gmail by processing invoices, routing approvals, validating against ERP, and writing approved work back without manual chasing or duplicate entry.
+Solden is an AI execution layer for finance teams whose first production skill runs AP from Gmail by processing invoices, routing approvals, validating against ERP, and writing approved work back without manual chasing or duplicate entry.
 
 ### Why now in one sentence
 

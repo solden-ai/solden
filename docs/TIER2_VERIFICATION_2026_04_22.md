@@ -68,7 +68,7 @@ Context: yesterday's audit produced a list of hypothesized gaps. Today's re-veri
 **Scope sketch for a real implementation:**
 1. New Celery task `export_organization_data(org_id, request_id)` that:
    - Streams rows from every org-scoped table (same discovery mechanism as `purge_organization_data`)
-   - Applies PII scrubbing policy (tokenize IBANs, redact internal system identifiers that belong to Clearledgr, not the customer)
+   - Applies PII scrubbing policy (tokenize IBANs, redact internal system identifiers that belong to Solden, not the customer)
    - Writes to a signed, expiring S3/GCS URL
    - Emits `organization_data_exported` audit event
 2. Enqueue from the endpoint instead of the fabricated response.

@@ -47,7 +47,7 @@ class IllegalBankMatchTransitionError(ValueError):
 
 
 class BankMatchStore:
-    """Mixin: bank_match Box CRUD. Combined into ClearledgrDB."""
+    """Mixin: bank_match Box CRUD. Combined into SoldenDB."""
 
     def create_bank_match(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Insert a new bank_match Box in state=proposed."""

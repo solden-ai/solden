@@ -595,7 +595,7 @@ async def start_parallel_mode(
 ):
     """§3 Migration: Start parallel running mode.
 
-    Clearledgr runs alongside the existing AP system. Autonomous actions
+    Solden runs alongside the existing AP system. Autonomous actions
     are suppressed — the agent provides suggestions only. The AP Manager
     compares results for a minimum of 2 weeks before deciding to go live.
     """
@@ -634,7 +634,7 @@ async def migration_cutover(
     organization_id: str,
     user: TokenData = Depends(get_current_user),
 ):
-    """§3 Migration: Go live — Clearledgr becomes the primary AP workflow.
+    """§3 Migration: Go live — Solden becomes the primary AP workflow.
 
     "The cutover decision is logged in Settings. It is timestamped,
     attributed to the AP Manager who made it, and recorded in the audit trail."
@@ -675,7 +675,7 @@ async def migration_cutover(
         "status": "live",
         "cutover_decision_at": now,
         "cutover_decision_by": actor_id,
-        "message": "Clearledgr is now the primary AP workflow. Autonomous actions enabled.",
+        "message": "Solden is now the primary AP workflow. Autonomous actions enabled.",
     }
 
 

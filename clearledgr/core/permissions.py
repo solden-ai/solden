@@ -1,8 +1,8 @@
 """Canonical permission catalog (Module 6 Pass A).
 
-The Clearledgr workspace exposes a bounded set of granular permissions
+The Solden workspace exposes a bounded set of granular permissions
 that compose into both the six standard roles
-(``Clearledgr_Workspace_Scope_GA.md`` §Module 6) and customer-defined
+(``Solden_Workspace_Scope_GA.md`` §Module 6) and customer-defined
 custom roles. Standard roles are hard-coded here as the canonical
 mapping; custom roles persist as ``custom_roles`` rows and override
 the standard mapping when assigned.

@@ -6,7 +6,7 @@ Author: Mo
 
 ## Context
 
-Early Clearledgr modeled the product as "AP invoice automation." The code treated AP invoices as the central domain object: tables were named for AP, methods were named for AP, the audit trail was keyed on `ap_item_id`.
+Early Solden modeled the product as "AP invoice automation." The code treated AP invoices as the central domain object: tables were named for AP, methods were named for AP, the audit trail was keyed on `ap_item_id`.
 
 Then a second workflow class showed up: vendor onboarding (a vendor goes through KYC, submits bank details, activates). Then a third was committed: commission clawback (driven by Booking.com's SAP SD direction).
 

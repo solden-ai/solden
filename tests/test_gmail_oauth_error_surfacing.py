@@ -43,7 +43,7 @@ class _FakeResponse:
 class _FakeHttpClient:
     """Drop-in for `get_http_client()` that records the post payload
     and returns a canned response. Tests assert on both the request
-    Google would have received AND the error Clearledgr surfaces.
+    Google would have received AND the error Solden surfaces.
     """
 
     def __init__(self, response: _FakeResponse) -> None:

@@ -169,7 +169,7 @@ class TestOutlookAPIClient:
             "bodyPreview": "Please find attached invoice...",
             "body": {"contentType": "html", "content": "<p>Invoice body</p>"},
             "hasAttachments": True,
-            "categories": ["Clearledgr/Processing"],
+            "categories": ["Solden/Processing"],
             "attachments": [
                 {
                     "@odata.type": "#microsoft.graph.fileAttachment",

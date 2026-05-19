@@ -224,7 +224,7 @@ def _check_ooo_and_get_backup(
         pass
 
     # Google Calendar freeBusy check — works for approvers who are
-    # Clearledgr users (their Google OAuth token is on file). External
+    # Solden users (their Google OAuth token is on file). External
     # approvers without tokens fall through fail-open. See
     # clearledgr/services/calendar_ooo.py for the fail-open rationale.
     try:

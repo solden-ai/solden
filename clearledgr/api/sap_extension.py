@@ -3,13 +3,13 @@
 Two routes:
 
 1. **`POST /extension/sap/exchange`** — exchanges a BTP XSUAA-issued
-   user JWT for a short-lived Clearledgr access JWT. The Fiori app
+   user JWT for a short-lived Solden access JWT. The Fiori app
    (deployed via SAP BTP HTML5 Repo + Approuter) hits this once on
    page load to bootstrap a session against api.clearledgr.com.
 
 2. **`GET /extension/ap-items/by-sap-invoice`** — given the supplier-
    invoice composite key (``CompanyCode`` + ``SupplierInvoice`` +
-   ``FiscalYear``) plus a Clearledgr Bearer JWT (from step 1), returns
+   ``FiscalYear``) plus a Solden Bearer JWT (from step 1), returns
    the Box state, timeline, exceptions, outcome, and a rendered
    summary block. Mirrors the NetSuite-side
    ``/extension/ap-items/by-netsuite-bill/{id}`` shape.
@@ -19,8 +19,8 @@ Auth model:
 * The Fiori app is wrapped by SAP Approuter. Approuter forwards the
   XSUAA-signed JWT to ``/extension/sap/exchange``.
 * We verify the JWT against XSUAA's JWKS (cached 1h), extract the
-  ``email`` claim, look up the matching Clearledgr user, and mint a
-  5-minute Clearledgr JWT via ``create_access_token``.
+  ``email`` claim, look up the matching Solden user, and mint a
+  5-minute Solden JWT via ``create_access_token``.
 * The Fiori app caches that token in memory and uses it as Bearer
   for the read endpoint + any action endpoints (approve / reject).
 
@@ -246,7 +246,7 @@ def _resolve_xsuaa_config_for_issuer(db: Any, issuer: str) -> Optional[Dict[str,
 async def exchange_xsuaa_for_clearledgr_jwt(
     body: Dict[str, Any] = Body(...),
 ) -> Dict[str, Any]:
-    """Exchange an XSUAA-signed user JWT for a short-lived Clearledgr JWT.
+    """Exchange an XSUAA-signed user JWT for a short-lived Solden JWT.
 
     Multi-tenant: each customer's BTP subaccount has its own XSUAA
     service with its own JWKS URL, issuer, and audience. We resolve
@@ -337,7 +337,7 @@ async def exchange_xsuaa_for_clearledgr_jwt(
     if not user_row:
         raise HTTPException(
             status_code=403,
-            detail=f"sap_xsuaa: no Clearledgr user matches email {user_email}",
+            detail=f"sap_xsuaa: no Solden user matches email {user_email}",
         )
 
     # Per-tenant config wins on org binding. Falls through to the
@@ -356,7 +356,7 @@ async def exchange_xsuaa_for_clearledgr_jwt(
         )
 
     # Cross-tenant guard: if a tenant config matched, the user's home
-    # org must be the same. Prevents a user from one Clearledgr org
+    # org must be the same. Prevents a user from one Solden org
     # impersonating into another via a captured JWT from a third org's BTP.
     if resolved_org_id_hint and str(user_row.get("organization_id") or "").strip() != resolved_org_id_hint:
         raise HTTPException(
@@ -364,7 +364,7 @@ async def exchange_xsuaa_for_clearledgr_jwt(
             detail="sap_xsuaa: user's home org does not match tenant resolved from JWT issuer",
         )
 
-    # Mint a 5-minute Clearledgr JWT scoped to this user/org.
+    # Mint a 5-minute Solden JWT scoped to this user/org.
     user_id = str(user_row.get("id") or user_email).strip()
     role = str(user_row.get("role") or "user").strip()
     access_token = create_access_token(
@@ -388,7 +388,7 @@ def get_ap_item_by_sap_invoice(
     fiscal_year: str = Query(..., min_length=1),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_security),
 ) -> Dict[str, Any]:
-    """Return the Clearledgr Box for the AP item linked to a SAP supplier invoice.
+    """Return the Solden Box for the AP item linked to a SAP supplier invoice.
 
     Lookup key: ``erp_reference == "{CompanyCode}/{SupplierInvoice}/{FiscalYear}"``
     against ``ap_items``. The composite key is set at intake by
@@ -475,7 +475,7 @@ def get_ap_item_by_sap_invoice(
 class SapPanelActionRequest(BaseModel):
     """Body for POST actions from the SAP Fiori Vendor Invoice panel.
 
-    The Clearledgr JWT carries the user identity + organization, and
+    The Solden JWT carries the user identity + organization, and
     the supplier-invoice composite key is in the query string, so the
     body only needs the optional reason text + idempotency key.
     """
@@ -497,7 +497,7 @@ async def _dispatch_sap_panel_action(
     """Shared pre-flight + runtime dispatch for the three SAP panel actions.
 
     The pre-flight is identical to the GET endpoint's: validate the
-    Clearledgr JWT (which the Fiori panel obtained via the XSUAA
+    Solden JWT (which the Fiori panel obtained via the XSUAA
     exchange), look up the AP item by the SAP composite key, verify
     org access. The dispatch wraps ``dispatch_runtime_intent`` with the
     canonical SAP source channel + the Fiori user's identity so the

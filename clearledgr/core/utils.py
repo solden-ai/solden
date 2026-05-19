@@ -1,4 +1,4 @@
-"""Shared utilities used across the Clearledgr codebase."""
+"""Shared utilities used across the Solden codebase."""
 from __future__ import annotations
 
 from typing import Any, Optional

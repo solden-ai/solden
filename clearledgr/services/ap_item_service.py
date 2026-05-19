@@ -29,7 +29,7 @@ from clearledgr.core.ap_confidence import evaluate_critical_field_confidence
 from clearledgr.core.ap_entity_routing import (
     resolve_entity_routing,
 )
-from clearledgr.core.database import ClearledgrDB
+from clearledgr.core.database import SoldenDB
 from clearledgr.core.ap_states import APState
 from clearledgr.core.utils import safe_float
 from clearledgr.services.ap_context_connectors import build_multi_system_context
@@ -106,7 +106,7 @@ from clearledgr.services.ap_vendor_analysis import (
 logger = logging.getLogger(__name__)
 
 
-def _load_org_settings_for_item(db: ClearledgrDB, organization_id: Any) -> Dict[str, Any]:
+def _load_org_settings_for_item(db: SoldenDB, organization_id: Any) -> Dict[str, Any]:
     org_id = str(organization_id or "").strip()
     if not org_id or not hasattr(db, "get_organization"):
         return {}
@@ -121,7 +121,7 @@ def _load_org_settings_for_item(db: ClearledgrDB, organization_id: Any) -> Dict[
 
 
 def _resolve_runtime_erp_connection_state(
-    db: ClearledgrDB,
+    db: SoldenDB,
     organization_id: Any,
     *,
     entity_id: Any = None,
@@ -144,7 +144,7 @@ def _resolve_runtime_erp_connection_state(
 
 
 def _build_agent_memory_projection(
-    db: ClearledgrDB,
+    db: SoldenDB,
     payload: Dict[str, Any],
 ) -> Dict[str, Any]:
     ap_item_id = str(payload.get("id") or "").strip()
@@ -337,7 +337,7 @@ def _approval_followup_escalation_minutes(approval_policy: Optional[Dict[str, An
     return max(60, min(escalation_hours * 60, 20160))
 
 
-def _pending_approver_ids(db: ClearledgrDB, ap_item_id: str, metadata: Dict[str, Any]) -> List[str]:
+def _pending_approver_ids(db: SoldenDB, ap_item_id: str, metadata: Dict[str, Any]) -> List[str]:
     if ap_item_id and hasattr(db, "get_pending_approver_ids"):
         try:
             rows = db.get_pending_approver_ids(ap_item_id)
@@ -355,7 +355,7 @@ def _pending_approver_ids(db: ClearledgrDB, ap_item_id: str, metadata: Dict[str,
 
 
 def _build_approval_followup(
-    db: ClearledgrDB,
+    db: SoldenDB,
     payload: Dict[str, Any],
     metadata: Dict[str, Any],
     *,
@@ -539,7 +539,7 @@ def _non_invoice_resolution_semantics(
 
 
 def _resolve_related_ap_item_for_non_invoice(
-    db: ClearledgrDB,
+    db: SoldenDB,
     *,
     organization_id: str,
     source_ap_item_id: str,
@@ -651,7 +651,7 @@ def _upsert_linked_finance_document(
 
 
 def _create_statement_reconciliation_artifact(
-    db: ClearledgrDB,
+    db: SoldenDB,
     *,
     item: Dict[str, Any],
     document_type: str,
@@ -713,7 +713,7 @@ def _create_statement_reconciliation_artifact(
 
 
 def _link_related_item_for_non_invoice_resolution(
-    db: ClearledgrDB,
+    db: SoldenDB,
     *,
     source_item: Dict[str, Any],
     source_document_type: str,
@@ -763,7 +763,7 @@ def _link_related_item_for_non_invoice_resolution(
 
 
 async def _execute_non_invoice_erp_follow_on(
-    db: ClearledgrDB,
+    db: SoldenDB,
     *,
     source_item: Dict[str, Any],
     related_item: Dict[str, Any],
@@ -1064,7 +1064,7 @@ def _resubmission_invoice_key(source: Dict[str, Any], request: ResubmitRejectedI
 
 
 def _copy_item_sources_for_resubmission(
-    db: ClearledgrDB,
+    db: SoldenDB,
     *,
     source_ap_item_id: str,
     target_ap_item_id: str,
@@ -1546,7 +1546,7 @@ def _build_primary_source(item: Dict[str, Any], sources: List[Dict[str, Any]]) -
 
 
 def build_worklist_item(
-    db: ClearledgrDB,
+    db: SoldenDB,
     item: Dict[str, Any],
     *,
     approval_policy: Optional[Dict[str, Any]] = None,
@@ -2097,7 +2097,7 @@ def _build_related_records_payload(
 # _sort_vendor_issue_items — imported from ap_vendor_analysis
 
 def _build_vendor_summary_rows(
-    db: ClearledgrDB,
+    db: SoldenDB,
     organization_id: str,
     *,
     search: str = "",
@@ -2110,7 +2110,7 @@ def _build_vendor_summary_rows(
 
 
 def _build_vendor_detail_payload(
-    db: ClearledgrDB,
+    db: SoldenDB,
     organization_id: str,
     vendor_name: str,
     *,
@@ -2225,7 +2225,7 @@ def _build_upcoming_task(item: Dict[str, Any], now: datetime) -> Optional[Dict[s
     }
 
 
-def _build_upcoming_tasks_payload(db: ClearledgrDB, organization_id: str, *, limit: int = 50) -> Dict[str, Any]:
+def _build_upcoming_tasks_payload(db: SoldenDB, organization_id: str, *, limit: int = 50) -> Dict[str, Any]:
     now = datetime.now(timezone.utc)
     approval_policy = _approval_followup_policy(organization_id)
     organization_settings = _load_org_settings_for_item(db, organization_id)
@@ -2265,7 +2265,7 @@ def _build_upcoming_tasks_payload(db: ClearledgrDB, organization_id: str, *, lim
 
 
 def _require_item(
-    db: ClearledgrDB,
+    db: SoldenDB,
     ap_item_id: str,
     *,
     expected_organization_id: Optional[str] = None,
@@ -2297,7 +2297,7 @@ def _require_item(
 
 
 def _resolve_item_for_detail(
-    db: ClearledgrDB,
+    db: SoldenDB,
     *,
     organization_id: str,
     ap_item_ref: str,
@@ -2332,7 +2332,7 @@ def _resolve_item_for_detail(
 
 
 def _preview_field_review_resolution(
-    db: ClearledgrDB,
+    db: SoldenDB,
     item: Dict[str, Any],
     *,
     metadata: Dict[str, Any],
@@ -2502,7 +2502,7 @@ def _preview_field_review_resolution(
 # _current_field_review_value — imported from ap_field_review
 # _derive_field_review_outcome — imported from ap_field_review
 
-def _build_context_payload(db: ClearledgrDB, item: Dict[str, Any]) -> Dict[str, Any]:
+def _build_context_payload(db: SoldenDB, item: Dict[str, Any]) -> Dict[str, Any]:
     metadata = _parse_json(item.get("metadata"))
     sources = db.list_ap_item_sources(item["id"])
     approvals = [_enrich_approval_row(row) for row in db.list_approvals_by_item(item["id"], limit=20)]
@@ -2819,7 +2819,7 @@ def _context_actions(item: Dict[str, Any], metadata: Dict[str, Any]) -> Dict[str
 
 
 async def _execute_field_review_resolution(
-    db: ClearledgrDB,
+    db: SoldenDB,
     *,
     ap_item_id: str,
     request: ResolveFieldReviewRequest,

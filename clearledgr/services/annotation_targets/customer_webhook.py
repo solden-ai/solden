@@ -3,7 +3,7 @@
 Fires the customer's outbound webhook subscriptions (existing
 ``webhook_subscriptions`` infrastructure) on every Box-state
 change. Lets customers wire their own admin tools / data warehouse /
-BI dashboards / Slack notifications / whatever to Clearledgr's
+BI dashboards / Slack notifications / whatever to Solden's
 state stream without polling.
 
 Per-target config:
@@ -73,12 +73,12 @@ class CustomerWebhookTarget:
             signature = self._sign(timestamp, body_bytes, secret) if secret else ""
             headers = {
                 "Content-Type": "application/json",
-                "X-Clearledgr-Event": f"state.{context.new_state}",
-                "X-Clearledgr-Timestamp": timestamp,
-                "X-Clearledgr-Subscription-Id": sub_id,
+                "X-Solden-Event": f"state.{context.new_state}",
+                "X-Solden-Timestamp": timestamp,
+                "X-Solden-Subscription-Id": sub_id,
             }
             if signature:
-                headers["X-Clearledgr-Signature"] = f"v1={signature}"
+                headers["X-Solden-Signature"] = f"v1={signature}"
             try:
                 response = await client.post(
                     url, headers=headers, content=body_bytes, timeout=15,

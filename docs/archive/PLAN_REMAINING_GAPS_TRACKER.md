@@ -3,7 +3,7 @@
 This tracker has been archived after completing the open `R01`-`R14` remaining-gap remediation set.
 
 - Archive date: `2026-02-25`
-- Archived file: `/Users/mombalam/Desktop/Clearledgr.v1/docs/archive/PLAN_REMAINING_GAPS_TRACKER_2026-02-25_COMPLETE.md`
+- Archived file: `/Users/mombalam/Desktop/Solden.v1/docs/archive/PLAN_REMAINING_GAPS_TRACKER_2026-02-25_COMPLETE.md`
 - SHA-256 (archived file): `70a3f91e1a90566c031e0949779a56ddb01d6604af48b04745b94702811d9eb1`
 - Archived lines: `615`
 

@@ -1,7 +1,7 @@
 """
-Clearledgr Core Data Models
+Solden Core Data Models
 
-This is the SINGLE SOURCE OF TRUTH for all data in Clearledgr.
+This is the SINGLE SOURCE OF TRUTH for all data in Solden.
 All surfaces (Gmail, Sheets, Slack) read and write through these models.
 
 Naming conventions for key identifiers:

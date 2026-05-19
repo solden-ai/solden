@@ -1,4 +1,4 @@
-# Clearledgr GA Gaps & Fixes Tracker
+# Solden GA Gaps & Fixes Tracker
 
 **Generated:** 2026-02-25
 **Source:** Codebase audit vs PLAN.md (canonical doctrine, 2026-02-25)

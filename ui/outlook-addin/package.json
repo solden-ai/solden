@@ -1,7 +1,7 @@
 {
   "name": "clearledgr-outlook-addin",
   "version": "1.2026.001",
-  "description": "Clearledgr Outlook Add-in — Finance execution agents in Outlook",
+  "description": "Solden Outlook Add-in — Finance execution agents in Outlook",
   "private": true,
   "scripts": {
     "dev": "npx http-server . -p 3000 -c-1 --cors",

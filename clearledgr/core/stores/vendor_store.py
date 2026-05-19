@@ -1,4 +1,4 @@
-"""Vendor intelligence store mixin for ClearledgrDB.
+"""Vendor intelligence store mixin for SoldenDB.
 
 Tracks vendor profiles (patterns, risk signals) and per-vendor invoice history
 so the AP reasoning layer can make context-aware decisions.

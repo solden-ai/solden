@@ -1,8 +1,8 @@
-# Clearledgr Investor Target List
+# Solden Investor Target List
 
 Date: 2026-03-29
 
-This is a best-fit outreach list for Clearledgr's current round:
+This is a best-fit outreach list for Solden's current round:
 
 - raise: $2M-$2.5M
 - instrument: post-money SAFE
@@ -35,7 +35,7 @@ Important:
 ### Europe
 
 1. `Seedcamp` — Europe — Best Europe-first fit; strong seed brand, real fintech pattern-matching, and founder-first reputation. Site: [seedcamp.com](https://seedcamp.com/)
-2. `QED Investors (Europe)` — Europe — Best specialist fit if Clearledgr is framed as finance infrastructure / finance execution, not just AP automation. Site: [qedinvestors.com](https://www.qedinvestors.com/)
+2. `QED Investors (Europe)` — Europe — Best specialist fit if Solden is framed as finance infrastructure / finance execution, not just AP automation. Site: [qedinvestors.com](https://www.qedinvestors.com/)
 3. `Speedinvest` — Europe — Strong fit for fintech plus cross-border operator workflows; especially useful if the Africa / Europe angle stays in the story. Site: [speedinvest.com](https://www.speedinvest.com/)
 4. `firstminute capital` — Europe — Good fit for an AI-native European software company with ambition to become a category leader. Site: [firstminute.capital](https://www.firstminute.capital/)
 5. `Point Nine` — Europe — Strong fit for AI-native workflow software and vertical software; less fintech-specialist, but excellent software judgment. Site: [pointnine.com](https://www.pointnine.com/)
@@ -47,7 +47,7 @@ Important:
 8. `Afore Capital` — US — Very strong fit for true pre-seed; comfortable backing founders before the full proof set is in. Site: [afore.vc](https://www.afore.vc/)
 9. `Village Global` — US — Good fit for an early global round with a strong operator network and pre-revenue comfort. Site: [villageglobal.vc](https://www.villageglobal.vc/)
 10. `BoxGroup` — US — Strong earliest-stage fit for software, fintech, and founder-market-fit stories. Site: [boxgroup.com](https://www.boxgroup.com/)
-11. `QED Investors (US)` — US — Strong specialist fit if the deck clearly sells Clearledgr as part of the future finance stack. Site: [qedinvestors.com](https://www.qedinvestors.com/)
+11. `QED Investors (US)` — US — Strong specialist fit if the deck clearly sells Solden as part of the future finance stack. Site: [qedinvestors.com](https://www.qedinvestors.com/)
 12. `Pear VC` — US — Strong fit for very early AI and SaaS companies; useful if you want a highly hands-on seed / pre-seed partner. Site: [pear.vc](https://pear.vc/)
 
 ## Tier B
@@ -67,7 +67,7 @@ Important:
 
 ### US
 
-23. `Nyca Partners` — US — Strong fintech specialist fit; especially good if Clearledgr is pitched as finance systems infrastructure. Site: [nyca.com](https://www.nyca.com/)
+23. `Nyca Partners` — US — Strong fintech specialist fit; especially good if Solden is pitched as finance systems infrastructure. Site: [nyca.com](https://www.nyca.com/)
 24. `Costanoa Ventures` — US — Strong for enterprise, fintech, and applied AI at seed. Site: [costanoa.vc](https://costanoa.vc/)
 25. `Precursor Ventures` — US — Good if the story is still early but the insight is strong and the market pain is obvious. Site: [precursorventures.com](https://www.precursorventures.com/)
 26. `Uncork Capital` — US — Good seed-stage software investor with long early-stage track record. Site: [uncork.com](https://uncork.com/)
@@ -88,7 +88,7 @@ Important:
 36. `Earlybird` — Europe — Broad European early-stage investor; worth testing if there is a good warm path. Site: [earlybird.com](https://earlybird.com/)
 37. `Balderton Capital` — Europe — More selective and more process-dependent, but plausible if the round gains momentum. Site: [balderton.com](https://www.balderton.com/)
 38. `Accel (Europe)` — Europe — More likely if there is heat and unusually strong early pull, but worth a top-intro if available. Site: [accel.com/europe](https://www.accel.com/europe)
-39. `Dawn Capital` — Europe — Better if Clearledgr is framed as serious B2B software infrastructure, not lightweight workflow tooling. Site: [dawncapital.com](https://dawncapital.com/)
+39. `Dawn Capital` — Europe — Better if Solden is framed as serious B2B software infrastructure, not lightweight workflow tooling. Site: [dawncapital.com](https://dawncapital.com/)
 40. `Dig Ventures` — Europe — Good fit for early enterprise AI / software if partner fit is strong. Site: [digventures.com](https://www.digventures.com/)
 41. `Anthemis Group` — Europe/US — Relevant if the story is positioned as fintech operating infrastructure. Site: [anthemis.com](https://www.anthemis.com/)
 

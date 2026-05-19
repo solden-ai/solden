@@ -1,4 +1,4 @@
-"""AP-policy data-access mixin for ClearledgrDB.
+"""AP-policy data-access mixin for SoldenDB.
 
 ``PolicyStore`` is a **mixin class** -- it has no ``__init__`` of its own and
 expects the concrete class that inherits it to provide:
@@ -7,7 +7,7 @@ expects the concrete class that inherits it to provide:
 * ``self.initialize()``   -- ensures tables exist
 
 All methods are copied verbatim from ``clearledgr/core/database.py`` so that
-``ClearledgrDB(PolicyStore, ...)`` inherits them without any behavioural change.
+``SoldenDB(PolicyStore, ...)`` inherits them without any behavioural change.
 """
 from __future__ import annotations
 

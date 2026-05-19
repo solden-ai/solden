@@ -1,4 +1,4 @@
-// Clearledgr Demo Mode
+// Solden Demo Mode
 // Pre-populated sample data for demonstrations
 // This file provides mock data and responses when DEMO_MODE is enabled
 
@@ -335,7 +335,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
 // Make available globally in browser
 if (typeof window !== 'undefined') {
-  window.ClearledgrDemo = {
+  window.SoldenDemo = {
     DEMO_MODE,
     DEMO_EMAILS,
     DEMO_DASHBOARD,

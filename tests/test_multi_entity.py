@@ -10,7 +10,7 @@ Covers:
 from __future__ import annotations
 
 
-from clearledgr.core.database import ClearledgrDB
+from clearledgr.core.database import SoldenDB
 from clearledgr.core.ap_entity_routing import (
     resolve_entity_routing,
     _db_entities_as_candidates,
@@ -25,7 +25,7 @@ from clearledgr.core.ap_entity_routing import (
 def test_create_entity(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     entity = db.create_entity(
         organization_id="org-1",
@@ -45,7 +45,7 @@ def test_create_entity(tmp_path, monkeypatch):
 def test_create_entity_with_gl_mapping_and_approval_rules(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     gl = {"expenses": "7000", "cash": "1100"}
     rules = {"max_auto_approve": 5000, "require_po": True}
@@ -63,7 +63,7 @@ def test_create_entity_with_gl_mapping_and_approval_rules(tmp_path, monkeypatch)
 def test_get_entity(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     created = db.create_entity(organization_id="org-1", name="Test Entity")
     fetched = db.get_entity(created["id"])
@@ -75,7 +75,7 @@ def test_get_entity(tmp_path, monkeypatch):
 def test_get_entity_not_found(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
     db.initialize()
 
     assert db.get_entity("nonexistent") is None
@@ -84,7 +84,7 @@ def test_get_entity_not_found(tmp_path, monkeypatch):
 def test_list_entities(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     db.create_entity(organization_id="org-1", name="Nigeria", code="NG")
     db.create_entity(organization_id="org-1", name="United States", code="US")
@@ -103,7 +103,7 @@ def test_list_entities(tmp_path, monkeypatch):
 def test_list_entities_empty(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
     db.initialize()
 
     assert db.list_entities("org-no-entities") == []
@@ -112,7 +112,7 @@ def test_list_entities_empty(tmp_path, monkeypatch):
 def test_get_entity_by_code(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     db.create_entity(organization_id="org-1", name="Nigeria", code="NG")
     result = db.get_entity_by_code("org-1", "NG")
@@ -125,7 +125,7 @@ def test_get_entity_by_code(tmp_path, monkeypatch):
 def test_update_entity(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     entity = db.create_entity(organization_id="org-1", name="Old Name", code="OLD")
     assert db.update_entity(entity["id"], name="New Name", code="NEW")
@@ -137,7 +137,7 @@ def test_update_entity(tmp_path, monkeypatch):
 def test_update_entity_gl_mapping(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     entity = db.create_entity(organization_id="org-1", name="Entity")
     db.update_entity(entity["id"], gl_mapping={"expenses": "8000"})
@@ -148,7 +148,7 @@ def test_update_entity_gl_mapping(tmp_path, monkeypatch):
 def test_update_entity_rejects_unknown_columns(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     entity = db.create_entity(organization_id="org-1", name="Entity")
     # Unknown column should be silently ignored
@@ -159,7 +159,7 @@ def test_update_entity_rejects_unknown_columns(tmp_path, monkeypatch):
 def test_delete_entity_soft(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     entity = db.create_entity(organization_id="org-1", name="To Delete", code="DEL")
     assert db.delete_entity(entity["id"])
@@ -181,7 +181,7 @@ def test_delete_entity_soft(tmp_path, monkeypatch):
 def test_ap_item_with_entity_id(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     entity = db.create_entity(organization_id="org-1", name="NG Entity", code="NG")
 
@@ -198,7 +198,7 @@ def test_ap_item_with_entity_id(tmp_path, monkeypatch):
 def test_ap_item_without_entity_id(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     # Should work fine without entity_id (backward compatible)
     item = db.create_ap_item({
@@ -213,7 +213,7 @@ def test_ap_item_without_entity_id(tmp_path, monkeypatch):
 def test_update_ap_item_entity_id(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     entity = db.create_entity(organization_id="org-1", name="US Entity", code="US")
     item = db.create_ap_item({
@@ -237,7 +237,7 @@ def test_update_ap_item_entity_id(tmp_path, monkeypatch):
 def test_entity_erp_connection(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     entity = db.create_entity(organization_id="org-1", name="NG Entity", code="NG")
 
@@ -259,7 +259,7 @@ def test_entity_erp_connection(tmp_path, monkeypatch):
 def test_get_erp_connection_by_id_not_found(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
     db.initialize()
 
     assert db.get_erp_connection_by_id("nonexistent") is None
@@ -359,7 +359,7 @@ def test_erp_connection_entity_resolution(tmp_path, monkeypatch):
     """Entity-specific ERP connection takes priority over org default."""
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     # Create org-level default connection
     db.save_erp_connection(
@@ -398,7 +398,7 @@ def test_erp_connection_entity_fallback_to_org(tmp_path, monkeypatch):
     """Entity without dedicated ERP connection falls back to org default."""
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     db.save_erp_connection(
         organization_id="org-1",
@@ -425,7 +425,7 @@ def test_erp_connection_entity_fallback_to_org(tmp_path, monkeypatch):
 def test_entity_unique_code_per_org(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     db.create_entity(organization_id="org-1", name="Entity A", code="NG")
     try:
@@ -448,7 +448,7 @@ def test_backward_compat_no_entities(tmp_path, monkeypatch):
     """Full backward compatibility: no entities configured, all AP flows work."""
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
-    db = ClearledgrDB(str(tmp_path / "entity.db"))
+    db = SoldenDB(str(tmp_path / "entity.db"))
 
     # Create AP item without entity
     item = db.create_ap_item({

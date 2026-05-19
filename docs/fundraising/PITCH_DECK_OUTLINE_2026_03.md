@@ -1,6 +1,6 @@
-# Clearledgr Pitch Deck Outline
+# Solden Pitch Deck Outline
 
-Note: working slide copy lives in [`PITCH_DECK_COPY_2026_03.md`](/Users/mombalam/Desktop/Clearledgr.v1/docs/fundraising/PITCH_DECK_COPY_2026_03.md), and the slide-ready draft lives in [`PITCH_DECK_PRESENTATION_DRAFT_2026_03.md`](/Users/mombalam/Desktop/Clearledgr.v1/docs/fundraising/PITCH_DECK_PRESENTATION_DRAFT_2026_03.md). This file remains the structural outline.
+Note: working slide copy lives in [`PITCH_DECK_COPY_2026_03.md`](/Users/mombalam/Desktop/Solden.v1/docs/fundraising/PITCH_DECK_COPY_2026_03.md), and the slide-ready draft lives in [`PITCH_DECK_PRESENTATION_DRAFT_2026_03.md`](/Users/mombalam/Desktop/Solden.v1/docs/fundraising/PITCH_DECK_PRESENTATION_DRAFT_2026_03.md). This file remains the structural outline.
 
 Date: 2026-03-23
 
@@ -14,7 +14,7 @@ This deck should stay concise. Aim for 12-14 slides.
 
 ## Slide 1 — Title
 
-Clearledgr
+Solden
 
 AI execution layer for finance teams
 
@@ -118,12 +118,12 @@ Visual:
 
 Title:
 
-How one invoice moves through Clearledgr
+How one invoice moves through Solden
 
 Step sequence:
 
 1. invoice arrives in Gmail
-2. Clearledgr classifies and routes it
+2. Solden classifies and routes it
 3. approver acts in chat
 4. exceptions move into review or follow-up
 5. approved invoice posts to ERP
@@ -176,7 +176,7 @@ Points:
 
 Title:
 
-Clearledgr is the execution layer. AP is the first skill.
+Solden is the execution layer. AP is the first skill.
 
 Message:
 
@@ -253,7 +253,7 @@ Use these deck rules:
 4. Do not present AP as the full company.
 5. Make the wedge-to-platform transition obvious.
 6. Do not let the deck become a single-customer story; use Cowrywise as the best proof anchor, not the whole company.
-7. Do not let the deck describe Clearledgr as just an AP product; the company is the finance execution layer and AP is the first skill.
+7. Do not let the deck describe Solden as just an AP product; the company is the finance execution layer and AP is the first skill.
 
 ## Required Founder Inputs
 
@@ -269,7 +269,7 @@ Before this deck is investor-ready, fill in:
 ## Suggested Demo Narrative To Pair With Deck
 
 1. Start in Gmail with an invoice thread.
-2. Show Clearledgr extracting and framing the work.
+2. Show Solden extracting and framing the work.
 3. Show how approval gets routed.
 4. Show how the item appears in Pipeline / Review.
 5. Show ERP outcome and audit trail.

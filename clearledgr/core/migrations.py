@@ -2510,7 +2510,7 @@ def _v50_agent_decision_reasoning(cur, db):
 def _v51_audit_exports(cur, db):
     """Async-export job tracking + content storage for the audit log.
 
-    Module 7 Pass 2 (docs/Clearledgr_Workspace_Scope_GA.md): the
+    Module 7 Pass 2 (docs/Solden_Workspace_Scope_GA.md): the
     leader hits "Export" with the same filters the search bar has,
     a Celery worker streams the matching ``audit_events`` rows into
     a CSV, and stores the rendered file inline on this table for the
@@ -2635,7 +2635,7 @@ def _v52_webhook_deliveries(cur, db):
 def _v53_custom_roles(cur, db):
     """Per-tenant custom-role table for Module 6 Pass A.
 
-    The scope spec (``Clearledgr_Workspace_Scope_GA.md`` §Module 6)
+    The scope spec (``Solden_Workspace_Scope_GA.md`` §Module 6)
     permits up to 10 custom roles per customer, each composed from the
     bounded permission catalog in ``clearledgr/core/permissions.py``.
     Standard roles stay code-defined; custom roles persist here.
@@ -3549,7 +3549,7 @@ def _v61_remittance_columns(cur, db):
         AP remittance advices specifically. Some vendors prefer
         ``ap@vendor.com`` for remittance, while their general
         correspondence contact is the AE.
-      * ``remittance_opt_out`` — INTEGER 0/1. When 1, Clearledgr does
+      * ``remittance_opt_out`` — INTEGER 0/1. When 1, Solden does
         not auto-send a remittance advice on payment confirmation.
         Used by vendors who pull from their own bank statement /
         portal feed and treat outbound remittance emails as noise.

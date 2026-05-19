@@ -1,4 +1,4 @@
-# ADR-006: Why Clearledgr does not move money
+# ADR-006: Why Solden does not move money
 
 Status: Accepted
 Date: 2026-04-11 (stated this session; earlier doctrine was implicit)
@@ -14,7 +14,7 @@ These are very different products with very different risk profiles.
 
 ## Decision
 
-**Clearledgr does not initiate payments. Not in V1. Not in V2.**
+**Solden does not initiate payments. Not in V1. Not in V2.**
 
 The agent's authority ends at "bill posted to ERP." From there, the customer's existing AP-payable process (ERP-side scheduling, bank transfer, whatever they already do) takes over.
 
@@ -34,9 +34,9 @@ Specifically:
 
 3. **SOC 2 scope.** Without money movement, our SOC 2 can stay Type 1 → Type 2 at a normal pace. Payment-moving companies typically need additional attestations (PCI-adjacent, bank-partner requirements).
 
-4. **Sales cycle.** Finance teams ask "does Clearledgr touch our bank account?" If the answer is "no, we only write to your ERP, same as your accountants do," the security-review conversation is dramatically shorter.
+4. **Sales cycle.** Finance teams ask "does Solden touch our bank account?" If the answer is "no, we only write to your ERP, same as your accountants do," the security-review conversation is dramatically shorter.
 
-5. **Clarity of job-to-be-done.** Clearledgr's value is coordination. Payment execution is a solved problem (every ERP does it, every bank does it). Adding ourselves to that layer doesn't add value proportional to the risk.
+5. **Clarity of job-to-be-done.** Solden's value is coordination. Payment execution is a solved problem (every ERP does it, every bank does it). Adding ourselves to that layer doesn't add value proportional to the risk.
 
 **Costs:**
 
@@ -56,6 +56,6 @@ Specifically:
 
 ## Reference
 
-Confirmed in `main.py` strict runtime profile (no payment-initiation endpoints in allow-lists), `DESIGN_THESIS.md` §4 ("Clearledgr writes, does not own money movement"), and `commission-clawback-spec.md` §Scope ("out-of-scope: initiating recovery transfers").
+Confirmed in `main.py` strict runtime profile (no payment-initiation endpoints in allow-lists), `DESIGN_THESIS.md` §4 ("Solden writes, does not own money movement"), and `commission-clawback-spec.md` §Scope ("out-of-scope: initiating recovery transfers").
 
 If this decision is ever reversed, the reversal ADR should address: regulatory licensing plan, PCI scope expansion, bank-partner contract, incident-response runbook for stuck/misrouted payments, insurance coverage expansion.

@@ -1,6 +1,6 @@
 # Railway deployment configuration — §11.2.1 Worker Pool Architecture
 #
-# Clearledgr runs 4 services on Railway:
+# Solden runs 4 services on Railway:
 #   - api:    FastAPI HTTP server (web)
 #   - worker: Celery worker fleet (scales horizontally)
 #   - beat:   Celery Beat scheduler (single instance)

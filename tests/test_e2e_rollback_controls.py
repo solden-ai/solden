@@ -36,7 +36,7 @@ from clearledgr.core.launch_controls import (
 
 @pytest.fixture()
 def db():
-    """Fresh isolated temp-file ClearledgrDB with a test org.
+    """Fresh isolated temp-file SoldenDB with a test org.
 
     Uses a file-based DB (not :memory:) so that set_rollback_controls()
     persists across calls within the same test.

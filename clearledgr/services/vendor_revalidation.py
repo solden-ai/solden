@@ -105,7 +105,7 @@ def revalidate_in_flight_ap_items(
     """Eagerly propagate a vendor change to in-flight AP items.
 
     Args:
-        db: ClearledgrDB handle.
+        db: SoldenDB handle.
         organization_id: Tenant scope.
         vendor_name: Canonical vendor name to match.
         reason: Stable token-style reason. Used as exception_code on

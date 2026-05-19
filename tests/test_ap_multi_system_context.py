@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from clearledgr.core.database import ClearledgrDB, get_db
+from clearledgr.core.database import SoldenDB, get_db
 from clearledgr.services.ap_item_service import _build_context_payload
 from clearledgr.services.purchase_orders import get_purchase_order_service
 
@@ -28,7 +28,7 @@ def _isolate_service_singletons(tmp_path: Path, monkeypatch):
     yield
 
 
-def _make_db(tmp_path: Path) -> ClearledgrDB:
+def _make_db(tmp_path: Path) -> SoldenDB:
     """Return the global DB singleton (the fixture already pointed it
     at the tmp-path). Callers that want the PurchaseOrderService to
     see the same DB must go through ``get_db()`` — keep this in sync.
@@ -38,7 +38,7 @@ def _make_db(tmp_path: Path) -> ClearledgrDB:
     return db
 
 
-def _create_item(db: ClearledgrDB, *, item_id: str, vendor: str, metadata: dict) -> dict:
+def _create_item(db: SoldenDB, *, item_id: str, vendor: str, metadata: dict) -> dict:
     return db.create_ap_item(
         {
             "id": item_id,

@@ -11,9 +11,9 @@ Two auth paths are supported:
 1. **HMAC-signed JWT (Phase 3, production):** Suitelet signs the panel
    token with a per-tenant ``panel_secret`` stored in the NetSuite
    custom record ``customrecord_cl_settings`` AND in the corresponding
-   Clearledgr ``erp_connections.credentials`` row. We verify the
+   Solden ``erp_connections.credentials`` row. We verify the
    signature server-side, check ``exp``, extract claims (``account_id``,
-   ``user_email``, ``bill_id``), and resolve a Clearledgr user.
+   ``user_email``, ``bill_id``), and resolve a Solden user.
 
 2. **Dev token (Phase 1-2 bootstrap):** if the env var
    ``NETSUITE_PANEL_DEV_TOKEN`` is set and the Bearer header matches
@@ -25,7 +25,7 @@ Two auth paths are supported:
 
 The endpoint reuses the existing Box read logic by looking up the AP
 item via ``erp_reference == ns_internal_id`` (the NetSuite bill's
-internal ID, persisted by ``post_bill_to_netsuite`` when Clearledgr
+internal ID, persisted by ``post_bill_to_netsuite`` when Solden
 posts the bill).
 """
 from __future__ import annotations
@@ -104,7 +104,7 @@ def _verify_panel_jwt(token: str, secret: str) -> Optional[Dict[str, Any]]:
 
 
 def _resolve_org_for_account_id(db, account_id: str) -> Optional[str]:
-    """Find the Clearledgr organization whose NetSuite connection matches
+    """Find the Solden organization whose NetSuite connection matches
     this account_id. Returns the org_id, or None if no active NetSuite
     connection has this account.
     """
@@ -155,11 +155,11 @@ def _resolve_panel_user(
     account_id: str,
     bill_id: str,
 ) -> TokenData:
-    """Validate the panel's auth and resolve to a Clearledgr TokenData.
+    """Validate the panel's auth and resolve to a Solden TokenData.
 
     Raises HTTPException(401) on any failure. Tries dev-token first
     (cheap), then JWT (requires DB lookup). Both paths require
-    ``account_id`` to map to an active Clearledgr ``erp_connections``
+    ``account_id`` to map to an active Solden ``erp_connections``
     row of type netsuite.
     """
     if credentials is None or not credentials.credentials:
@@ -247,7 +247,7 @@ def get_ap_item_by_netsuite_bill(
     account_id: str = Query(..., min_length=1, description="NetSuite account ID (e.g. '1234567' or '1234567_SB1')"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_security),
 ) -> Dict[str, Any]:
-    """Return the Clearledgr Box for an AP item linked to a NetSuite bill.
+    """Return the Solden Box for an AP item linked to a NetSuite bill.
 
     Auth: requires either a Suitelet-minted HMAC JWT (Phase 3) or the
     dev-token env-var (Phase 1-2).
@@ -258,7 +258,7 @@ def get_ap_item_by_netsuite_bill(
     Response shape mirrors ``GET /api/ap/items/{ap_item_id}/box`` plus
     a ``summary`` block the panel renders without a second round-trip,
     plus the ``ap_item_id`` (so the panel can deep-link to the
-    Clearledgr app).
+    Solden app).
     """
     user = _resolve_panel_user(credentials, account_id, ns_internal_id)
     db = _get_db()

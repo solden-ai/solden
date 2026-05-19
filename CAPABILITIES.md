@@ -1,4 +1,4 @@
-# Clearledgr — Product Capabilities
+# Solden — Product Capabilities
 
 Last verified against codebase: 2026-04-01
 
@@ -6,9 +6,9 @@ This document describes what the product can do today, based on shipped code. Ev
 
 ---
 
-## What Clearledgr Is
+## What Solden Is
 
-Clearledgr is an agentic AI execution layer for finance teams. It is not a rule-based automation tool. The system observes invoice context, reasons about what action to take, executes across Gmail, Slack, and ERP, and learns from every human correction.
+Solden is an agentic AI execution layer for finance teams. It is not a rule-based automation tool. The system observes invoice context, reasons about what action to take, executes across Gmail, Slack, and ERP, and learns from every human correction.
 
 The first production skill runs accounts payable from Gmail: triage invoices, route approvals, validate against ERP, and write approved invoices back without manual approval chasing or duplicate data entry.
 
@@ -248,7 +248,7 @@ Four ERPs fully integrated with posting, vendor management, and GL discovery:
 - Configurable poll concurrency and seed hours
 - Gmail push notification support (Pub/Sub)
 - Auto-labeling of processed emails
-- Label management (Clearledgr parent label with sub-labels)
+- Label management (Solden parent label with sub-labels)
 
 ### Gmail Authentication
 - Google OAuth flow (extension uses google-identity endpoint)

@@ -19,7 +19,7 @@ SENSITIVE_PREFIXES = (
 )
 
 # Public callbacks/health probes that are intentionally unauthenticated
-# OR use a non-Clearledgr auth scheme (NetSuite Suitelet HMAC, SAP XSUAA
+# OR use a non-Solden auth scheme (NetSuite Suitelet HMAC, SAP XSUAA
 # JWT). The latter group is enforced INSIDE the handler against
 # platform-specific signing keys, not via the standard ``get_current_user``
 # / ``require_ops_user`` deps this test scans for. Listing them here

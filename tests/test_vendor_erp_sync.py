@@ -1,4 +1,4 @@
-"""Tests for vendor master data sync from ERP to Clearledgr profiles.
+"""Tests for vendor master data sync from ERP to Solden profiles.
 
 Covers:
 - New vendor creation in profiles

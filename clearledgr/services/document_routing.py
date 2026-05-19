@@ -15,7 +15,7 @@ from typing import Optional
 
 @dataclass(frozen=True)
 class DocumentRoute:
-    """Defines how a document type flows through Clearledgr."""
+    """Defines how a document type flows through Solden."""
     type: str                          # Canonical type ID
     label: str                         # Human-readable label
     plural_label: str                  # Plural form
@@ -44,7 +44,7 @@ DOCUMENT_ROUTES = {
         needs_approval=True,
         needs_erp_posting=True,
         auto_close=False,
-        gmail_label="Clearledgr/Invoices",
+        gmail_label="Solden/Invoices",
         workflow_guidance="Vendor bill requiring approval and payment.",
     ),
     "payment_request": DocumentRoute(
@@ -56,7 +56,7 @@ DOCUMENT_ROUTES = {
         needs_approval=True,
         needs_erp_posting=True,
         auto_close=False,
-        gmail_label="Clearledgr/Payment Requests",
+        gmail_label="Solden/Payment Requests",
         workflow_guidance="Non-invoice payment request. Route to approval before payment.",
     ),
     "debit_note": DocumentRoute(
@@ -68,7 +68,7 @@ DOCUMENT_ROUTES = {
         needs_approval=True,
         needs_erp_posting=True,
         auto_close=False,
-        gmail_label="Clearledgr/Invoices",
+        gmail_label="Solden/Invoices",
         workflow_guidance="Additional charge from vendor. Link to original invoice if applicable.",
     ),
 
@@ -82,7 +82,7 @@ DOCUMENT_ROUTES = {
         needs_approval=False,
         needs_erp_posting=True,
         auto_close=False,
-        gmail_label="Clearledgr/Credit Notes",
+        gmail_label="Solden/Credit Notes",
         workflow_guidance="Vendor credit reducing your balance. Match to the original invoice.",
         match_to="invoice",
     ),
@@ -95,7 +95,7 @@ DOCUMENT_ROUTES = {
         needs_approval=False,
         needs_erp_posting=False,
         auto_close=True,
-        gmail_label="Clearledgr/Refunds",
+        gmail_label="Solden/Refunds",
         workflow_guidance="Refund confirmation. Record for reconciliation.",
         match_to="invoice",
     ),
@@ -110,7 +110,7 @@ DOCUMENT_ROUTES = {
         needs_approval=False,
         needs_erp_posting=False,
         auto_close=True,
-        gmail_label="Clearledgr/Processed",
+        gmail_label="Solden/Processed",
         workflow_guidance="SaaS subscription charge — card was already billed. Recorded for GL coding and expense tracking.",
     ),
 
@@ -124,7 +124,7 @@ DOCUMENT_ROUTES = {
         needs_approval=False,
         needs_erp_posting=False,
         auto_close=True,
-        gmail_label="Clearledgr/Receipts",
+        gmail_label="Solden/Receipts",
         workflow_guidance="Payment receipt. Transaction already completed.",
         match_to="invoice",
     ),
@@ -137,7 +137,7 @@ DOCUMENT_ROUTES = {
         needs_approval=False,
         needs_erp_posting=False,
         auto_close=True,
-        gmail_label="Clearledgr/Payments",
+        gmail_label="Solden/Payments",
         workflow_guidance="Proof of payment sent to vendor. Match to the original AP item.",
         match_to="invoice",
     ),
@@ -152,7 +152,7 @@ DOCUMENT_ROUTES = {
         needs_approval=False,
         needs_erp_posting=False,
         auto_close=True,
-        gmail_label="Clearledgr/Processed",
+        gmail_label="Solden/Processed",
         workflow_guidance="Vendor account summary. Use for statement reconciliation, not a payable.",
     ),
     "bank_notification": DocumentRoute(
@@ -164,7 +164,7 @@ DOCUMENT_ROUTES = {
         needs_approval=False,
         needs_erp_posting=False,
         auto_close=True,
-        gmail_label="Clearledgr/Processed",
+        gmail_label="Solden/Processed",
         workflow_guidance="Bank charge, direct debit, or FX notification. Record for reconciliation.",
     ),
 
@@ -178,7 +178,7 @@ DOCUMENT_ROUTES = {
         needs_approval=False,
         needs_erp_posting=False,
         auto_close=True,
-        gmail_label="Clearledgr/Processed",
+        gmail_label="Solden/Processed",
         workflow_guidance="Vendor confirmed your purchase order. Update PO status.",
     ),
 
@@ -192,7 +192,7 @@ DOCUMENT_ROUTES = {
         needs_approval=False,
         needs_erp_posting=False,
         auto_close=True,
-        gmail_label="Clearledgr/Processed",
+        gmail_label="Solden/Processed",
         workflow_guidance="VAT invoice, WHT certificate, or tax receipt. Flag for tax compliance reporting.",
     ),
 
@@ -206,7 +206,7 @@ DOCUMENT_ROUTES = {
         needs_approval=False,
         needs_erp_posting=False,
         auto_close=True,
-        gmail_label="Clearledgr/Processed",
+        gmail_label="Solden/Processed",
         workflow_guidance="Vendor contract or renewal notice. Review terms and link to vendor profile.",
     ),
     "dispute_response": DocumentRoute(
@@ -218,7 +218,7 @@ DOCUMENT_ROUTES = {
         needs_approval=False,
         needs_erp_posting=False,
         auto_close=True,
-        gmail_label="Clearledgr/Processed",
+        gmail_label="Solden/Processed",
         workflow_guidance="Vendor reply to a dispute. Link to existing dispute and notify operator.",
         match_to="dispute",
     ),

@@ -1,9 +1,9 @@
 /**
- * Clearledgr — User Event Script for Vendor Bill record.
+ * Solden — User Event Script for Vendor Bill record.
  *
  * Two responsibilities:
  *
- * 1. **Read direction (`beforeLoad`)** — renders a "Clearledgr" subtab
+ * 1. **Read direction (`beforeLoad`)** — renders a "Solden" subtab
  *    on the Vendor Bill page when the user is viewing or editing an
  *    existing bill. The subtab hosts an iframe that loads our Suitelet,
  *    which serves the panel HTML/JS/CSS and (Phase 3) mints a short-
@@ -14,7 +14,7 @@
  * 2. **Write direction (`afterSubmit`)** — fires an HMAC-signed webhook
  *    to api.clearledgr.com/erp/webhooks/netsuite/<orgId> on every
  *    vendor-bill insert/update/delete. This is what makes ERP-arrived
- *    bills (EDI, vendor portal, AP-clerk-typed) visible to Clearledgr
+ *    bills (EDI, vendor portal, AP-clerk-typed) visible to Solden
  *    without going through Gmail. The same `bundle_secret` provisioned
  *    in `customrecord_cl_settings` signs both the panel JWT and these
  *    outbound payloads.
@@ -47,7 +47,7 @@ define(['N/url', 'N/runtime', 'N/search', 'N/https', 'N/crypto', 'N/encode', 'N/
                 orgId: String(row.getValue({ name: 'custrecord_cl_org_id' }) || '').trim(),
             };
         } catch (err) {
-            log.error({ title: 'Clearledgr settings load failed', details: String(err) });
+            log.error({ title: 'Solden settings load failed', details: String(err) });
             return null;
         }
     }
@@ -64,7 +64,7 @@ define(['N/url', 'N/runtime', 'N/search', 'N/https', 'N/crypto', 'N/encode', 'N/
 
         const form = context.form;
         if (!form || typeof form.addTab !== 'function') return;
-        form.addTab({ id: 'custpage_clearledgr_tab', label: 'Clearledgr' });
+        form.addTab({ id: 'custpage_clearledgr_tab', label: 'Solden' });
 
         const suiteletUrl = urlMod.resolveScript({
             scriptId: SUITELET_SCRIPT_ID,
@@ -164,7 +164,7 @@ define(['N/url', 'N/runtime', 'N/search', 'N/https', 'N/crypto', 'N/encode', 'N/
         const settings = loadSettings();
         if (!settings || !settings.apiBase || !settings.bundleSecret || !settings.orgId) {
             log.audit({
-                title: 'Clearledgr webhook skipped',
+                title: 'Solden webhook skipped',
                 details: 'customrecord_cl_settings is missing api_base / bundle_secret / org_id; not firing webhook.',
             });
             return;
@@ -190,7 +190,7 @@ define(['N/url', 'N/runtime', 'N/search', 'N/https', 'N/crypto', 'N/encode', 'N/
         try {
             signature = fallbackHexHmacSha256(settings.bundleSecret, signed);
         } catch (err) {
-            log.error({ title: 'Clearledgr HMAC sign failed', details: String(err) });
+            log.error({ title: 'Solden HMAC sign failed', details: String(err) });
             return;
         }
 
@@ -203,18 +203,18 @@ define(['N/url', 'N/runtime', 'N/search', 'N/https', 'N/crypto', 'N/encode', 'N/
                     'Content-Type': 'application/json',
                     'X-NetSuite-Signature': 'v1=' + signature,
                     'X-NetSuite-Timestamp': ts,
-                    'X-Clearledgr-Event': eventType,
+                    'X-Solden-Event': eventType,
                 },
             });
             if (resp.code >= 400) {
                 log.audit({
-                    title: 'Clearledgr webhook non-2xx',
+                    title: 'Solden webhook non-2xx',
                     details: 'event=' + eventType + ' code=' + resp.code + ' body=' + String(resp.body || '').slice(0, 500),
                 });
             }
         } catch (err) {
             // Don't let webhook failures roll back the user's NetSuite save.
-            log.error({ title: 'Clearledgr webhook POST failed', details: String(err) });
+            log.error({ title: 'Solden webhook POST failed', details: String(err) });
         }
     }
 

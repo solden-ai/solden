@@ -40,7 +40,7 @@ Token semantics
   enforces this by revoking any prior token for the same session
   before issuing a new one.
 
-This mixin is composed into :class:`ClearledgrDB` alongside the other
+This mixin is composed into :class:`SoldenDB` alongside the other
 store mixins. Direct SQL access to the ``vendor_onboarding_tokens``
 table is forbidden — every read/write goes through this module so the
 hashing, expiry, and audit semantics stay in one place.

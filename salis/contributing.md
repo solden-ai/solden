@@ -138,7 +138,7 @@ Example: you want `expense_claim` alongside `ap_item` and `vendor_onboarding_ses
     ))
     ```
 
-4. Write a store mixin in `clearledgr/core/stores/expense_claim_store.py` — cover `create_<type>`, `get_<type>`, `update_<type>` with the same atomicity pattern `ap_store.py:update_ap_item` uses. Compose it into `ClearledgrDB` in `clearledgr/core/database.py`.
+4. Write a store mixin in `clearledgr/core/stores/expense_claim_store.py` — cover `create_<type>`, `get_<type>`, `update_<type>` with the same atomicity pattern `ap_store.py:update_ap_item` uses. Compose it into `SoldenDB` in `clearledgr/core/database.py`.
 
 5. The Box lifecycle machinery works for free: exceptions and outcomes are keyed on `(box_type, box_id)`, so `db.raise_box_exception(box_type="expense_claim", box_id=...)` just works. Same for outcomes and the `/api/ap_items/{id}/box` pattern — copy the read route for the new type.
 

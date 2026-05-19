@@ -1,4 +1,4 @@
-# Multi-Target Application descriptor for Clearledgr's SAP Fiori extension.
+# Multi-Target Application descriptor for Solden's SAP Fiori extension.
 #
 # Two CF apps (approuter + html5-deployer) and three BTP services
 # (xsuaa, destination, html5-apps-repo). Built with `mbt build` and
@@ -11,7 +11,7 @@
 ID: com.clearledgr.s4hana.boxpanel
 _schema-version: "3.3"
 version: 0.1.0
-description: Clearledgr Box panel — embedded inside SAP S/4HANA Manage Supplier Invoices
+description: Solden Box panel — embedded inside SAP S/4HANA Manage Supplier Invoices
 
 parameters:
   enable-parallel-deployments: true

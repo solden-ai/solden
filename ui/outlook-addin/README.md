@@ -1,4 +1,4 @@
-# Clearledgr Outlook Add-in
+# Solden Outlook Add-in
 
 Finance execution agents embedded in Outlook — AP workflows, vendor intelligence, and approvals right inside your inbox.
 

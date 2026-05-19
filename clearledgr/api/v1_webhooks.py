@@ -38,7 +38,7 @@ returns 404, not a leaked row. Same defence-in-depth contract as the
 rest of the /v1 surface.
 
 Signing contract: deliveries include both ``X-Solden-Signature``
-(canonical, brand-aligned) and ``X-Clearledgr-Signature`` (legacy
+(canonical, brand-aligned) and ``X-Solden-Signature`` (legacy
 header — kept during the deprecation window for any receiver wired
 under the old brand). Both carry the same ``sha256=<hex>`` value.
 """

@@ -1,4 +1,4 @@
-"""Clearledgr v1 core API routes — health, me, audit.
+"""Solden v1 core API routes — health, me, audit.
 
 The shared baseline for the public ``/v1`` surface (the per-feature
 routers ``v1_intents`` and ``v1_records`` register separately).

@@ -47,7 +47,7 @@ from clearledgr.services.invoice_workflow import InvoiceWorkflowService
 
 
 class _FakeDB:
-    """Hand-rolled stand-in for ``ClearledgrDB`` that captures every
+    """Hand-rolled stand-in for ``SoldenDB`` that captures every
     call. Each test seeds the relevant slice of state and asserts on
     the captured calls. Avoids a Postgres roundtrip — the lock
     helpers fall through to ``no_infra`` when there's no ``_pg_pool``,

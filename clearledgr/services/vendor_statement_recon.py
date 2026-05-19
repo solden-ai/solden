@@ -6,7 +6,7 @@ amount) and matches each against posted AP items for the same vendor.
 Produces a reconciliation report with:
 - Matched items (statement line ↔ AP item)
 - Unmatched on statement (vendor claims we owe, we have no record)
-- Unmatched in Clearledgr (we have an AP item, statement doesn't show it)
+- Unmatched in Solden (we have an AP item, statement doesn't show it)
 - Amount discrepancies (matched by reference but amounts differ)
 
 Never raises — returns empty report on error.
@@ -28,7 +28,7 @@ AMOUNT_TOLERANCE_PCT = 0.01  # 1%
 
 
 class VendorStatementRecon:
-    """Reconcile a vendor statement against Clearledgr AP items."""
+    """Reconcile a vendor statement against Solden AP items."""
 
     def __init__(self, organization_id: Optional[str] = None) -> None:
         from clearledgr.core.org_utils import assert_org_id

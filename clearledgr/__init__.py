@@ -1,1 +1,1 @@
-"""Clearledgr core package."""
+"""Solden core package."""

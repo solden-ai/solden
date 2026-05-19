@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from clearledgr.core.database import ClearledgrDB
+from clearledgr.core.database import SoldenDB
 from clearledgr.services.audit_trail import AuditEventType, AuditTrailService
 
 
 def test_audit_trail_service_persists_events_via_shared_audit_store(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
-    db = ClearledgrDB(str(tmp_path / "audit-trail.db"))
+    db = SoldenDB(str(tmp_path / "audit-trail.db"))
     db.initialize()
 
     monkeypatch.setattr("clearledgr.services.audit_trail.get_db", lambda: db)

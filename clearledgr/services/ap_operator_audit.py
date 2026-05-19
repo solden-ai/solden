@@ -46,23 +46,23 @@ _REASON_LABELS = {
     "rejection_reason_required": "A rejection reason is required before this invoice can be rejected.",
     "state_not_ready_to_post": "Invoice is not ready to post yet.",
     "policy_precheck_failed": "Policy and workflow checks blocked this action.",
-    "followup_attempt_limit_reached": "Clearledgr reached the vendor follow-up attempt limit.",
-    "waiting_for_sla_window": "Clearledgr is waiting for the next vendor follow-up window.",
-    "gmail_auth_unavailable": "Gmail authorization is required before Clearledgr can prepare the follow-up draft.",
-    "draft_not_created": "Clearledgr could not prepare the vendor follow-up draft.",
+    "followup_attempt_limit_reached": "Solden reached the vendor follow-up attempt limit.",
+    "waiting_for_sla_window": "Solden is waiting for the next vendor follow-up window.",
+    "gmail_auth_unavailable": "Gmail authorization is required before Solden can prepare the follow-up draft.",
+    "draft_not_created": "Solden could not prepare the vendor follow-up draft.",
     "retry_not_recoverable": "This posting failure is not safe to retry automatically.",
     "finance_summary_email_draft": "Prepared a finance summary email draft.",
     "fallback_preview_confirmed_and_dispatched": "ERP fallback session was confirmed and dispatched.",
-    "runtime_request_approval": "Clearledgr routed this invoice into the approval queue.",
+    "runtime_request_approval": "Solden routed this invoice into the approval queue.",
     "runtime_approve_invoice": "Approval was recorded and the workflow moved forward.",
-    "runtime_request_info": "Clearledgr moved this invoice back to needs info.",
-    "runtime_reject_invoice": "Clearledgr recorded the rejection decision.",
-    "runtime_post_to_erp": "Clearledgr completed the ERP posting action.",
-    "runtime_escalate_approval": "Clearledgr escalated this approval request for finance review.",
-    "runtime_reassign_approval": "Clearledgr reassigned this approval request to a new approver.",
-    "agent_runtime_route_low_risk_for_approval": "Clearledgr routed this low-risk invoice for approval.",
-    "batch_retry_recoverable_failures": "Clearledgr retried the posting step for this invoice.",
-    "runtime_escalate_invoice_review": "Clearledgr escalated this invoice for review.",
+    "runtime_request_info": "Solden moved this invoice back to needs info.",
+    "runtime_reject_invoice": "Solden recorded the rejection decision.",
+    "runtime_post_to_erp": "Solden completed the ERP posting action.",
+    "runtime_escalate_approval": "Solden escalated this approval request for finance review.",
+    "runtime_reassign_approval": "Solden reassigned this approval request to a new approver.",
+    "agent_runtime_route_low_risk_for_approval": "Solden routed this low-risk invoice for approval.",
+    "batch_retry_recoverable_failures": "Solden retried the posting step for this invoice.",
+    "runtime_escalate_invoice_review": "Solden escalated this invoice for review.",
     "runtime_record_field_correction": "Recorded an operator correction on this invoice.",
     "manual_entity_route_resolution": "The legal entity route was resolved for this invoice.",
 }
@@ -442,7 +442,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "approval_request_sent",
                 "title": "Approval requested",
-                "message": reason or "Clearledgr routed this invoice to the approver.",
+                "message": reason or "Solden routed this invoice to the approver.",
                 "severity": "info",
                 "next_action": "Wait for approval callback or send a reminder.",
             }
@@ -466,7 +466,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "approval_request_failed",
                 "title": "Approval request failed",
-                "message": reason or "Clearledgr could not send this invoice for approval.",
+                "message": reason or "Solden could not send this invoice for approval.",
                 "severity": "warning",
                 "next_action": "Retry approval routing or review the connected approval channel.",
             }
@@ -502,7 +502,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "invoice_approval_failed",
                 "title": "Approval could not complete",
-                "message": reason or "Approval was received, but Clearledgr could not finish the next step.",
+                "message": reason or "Approval was received, but Solden could not finish the next step.",
                 "severity": "warning",
                 "next_action": "Review the current invoice state and retry the allowed next step.",
             }
@@ -550,7 +550,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "info_request_failed",
                 "title": "Could not request more information",
-                "message": reason or "Clearledgr could not move this invoice back to needs info.",
+                "message": reason or "Solden could not move this invoice back to needs info.",
                 "severity": "warning",
                 "next_action": "Refresh the invoice and retry the allowed next step.",
             }
@@ -610,7 +610,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "approval_escalation_failed",
                 "title": "Escalation failed",
-                "message": reason or "Clearledgr could not escalate this approval request.",
+                "message": reason or "Solden could not escalate this approval request.",
                 "severity": "warning",
                 "next_action": "Retry the escalation or reassign the approver.",
             }
@@ -622,7 +622,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "approval_escalation_sent",
                 "title": "Approval escalated",
-                "message": reason or "Clearledgr escalated this approval request.",
+                "message": reason or "Solden escalated this approval request.",
                 "severity": "info",
                 "next_action": "Wait for the escalated review or reassign the approver.",
             }
@@ -634,7 +634,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "approval_escalation_deduped",
                 "title": "Escalation suppressed",
-                "message": reason or "Clearledgr skipped a duplicate escalation because the invoice was escalated recently.",
+                "message": reason or "Solden skipped a duplicate escalation because the invoice was escalated recently.",
                 "severity": "info",
                 "next_action": "Wait for the existing escalation thread or reassign the approver.",
             }
@@ -658,7 +658,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "approval_reassignment_failed",
                 "title": "Reassignment failed",
-                "message": reason or "Clearledgr could not reassign this approval request.",
+                "message": reason or "Solden could not reassign this approval request.",
                 "severity": "warning",
                 "next_action": "Retry with a valid approver or send an escalation.",
             }
@@ -706,7 +706,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "invoice_reject_failed",
                 "title": "Rejection failed",
-                "message": reason or "Clearledgr could not reject this invoice.",
+                "message": reason or "Solden could not reject this invoice.",
                 "severity": "warning",
                 "next_action": "Retry rejection or review the current invoice status.",
             }
@@ -816,7 +816,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
                 {
                     "code": "erp_post_failed",
                     "title": "Posting failed",
-                    "message": reason or "Clearledgr could not complete ERP posting.",
+                    "message": reason or "Solden could not complete ERP posting.",
                     "severity": "error",
                     "next_action": "Retry ERP posting or review the connector result.",
                 }
@@ -907,7 +907,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "approval_request_sent",
                 "title": "Approval requested",
-                "message": reason or "Clearledgr routed this low-risk invoice for approval.",
+                "message": reason or "Solden routed this low-risk invoice for approval.",
                 "severity": "info",
                 "next_action": "Wait for approval callback.",
             }
@@ -931,7 +931,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "approval_request_failed",
                 "title": "Approval request failed",
-                "message": reason or "Clearledgr could not route this invoice for approval.",
+                "message": reason or "Solden could not route this invoice for approval.",
                 "severity": "warning",
                 "next_action": "Retry approval routing or review the approval channel.",
             }
@@ -955,7 +955,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "retry_completed",
                 "title": "Retry completed",
-                "message": reason or "Clearledgr retried the ERP post successfully.",
+                "message": reason or "Solden retried the ERP post successfully.",
                 "severity": "success",
                 "next_action": "No action required.",
             }
@@ -967,7 +967,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "retry_failed",
                 "title": "Retry failed",
-                "message": reason or "Clearledgr could not recover this ERP posting failure.",
+                "message": reason or "Solden could not recover this ERP posting failure.",
                 "severity": "warning",
                 "next_action": "Review the connector result and retry manually if appropriate.",
             }
@@ -979,7 +979,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "invoice_escalated",
                 "title": "Escalated for review",
-                "message": reason or "Clearledgr escalated this invoice for finance review.",
+                "message": reason or "Solden escalated this invoice for finance review.",
                 "severity": "warning",
                 "next_action": "Review the exception details and decide the next step.",
             }
@@ -1043,7 +1043,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "finance_summary_share_failed",
                 "title": "Finance summary share failed",
-                "message": reason or "Clearledgr could not share the finance summary.",
+                "message": reason or "Solden could not share the finance summary.",
                 "severity": "warning",
                 "next_action": "Retry the share action or review the delivery surface.",
             }
@@ -1055,7 +1055,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "ap_item_resubmitted",
                 "title": "Invoice resubmitted",
-                "message": reason or "Clearledgr marked this invoice as superseded by a corrected resubmission.",
+                "message": reason or "Solden marked this invoice as superseded by a corrected resubmission.",
                 "severity": "info",
                 "next_action": "Open the new AP item to continue review.",
             }
@@ -1079,7 +1079,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "ap_item_merged",
                 "title": "Records merged",
-                "message": reason or "Clearledgr merged another invoice record into this AP item.",
+                "message": reason or "Solden merged another invoice record into this AP item.",
                 "severity": "info",
                 "next_action": "Review the merged sources if needed.",
             }
@@ -1103,7 +1103,7 @@ def _operator_view_for_event(event: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "code": "ap_item_split_created",
                 "title": "Split record created",
-                "message": reason or "Clearledgr created a new AP item from selected invoice sources.",
+                "message": reason or "Solden created a new AP item from selected invoice sources.",
                 "severity": "info",
                 "next_action": "Review the new split item if further action is needed.",
             }

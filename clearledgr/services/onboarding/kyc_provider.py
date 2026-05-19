@@ -1,6 +1,6 @@
 """Pluggable KYC provider — vendor-onboarding-spec §4.2.
 
-Clearledgr does not run its own KYB/KYC pipeline. It integrates with
+Solden does not run its own KYB/KYC pipeline. It integrates with
 one. The KYC provider answers four questions about a vendor: does
 this company exist in the local registry, is anyone on the beneficial
 ownership chain sanctioned, is anyone politically exposed, is there

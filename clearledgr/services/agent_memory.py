@@ -16,7 +16,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-from clearledgr.core.database import ClearledgrDB, get_db
+from clearledgr.core.database import SoldenDB, get_db
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class AgentMemoryService:
     """Canonical memory/persistence layer for the AP runtime."""
 
     _DEFAULT_PROFILE: Dict[str, Any] = {
-        "name": "Clearledgr AP Agent",
+        "name": "Solden AP Agent",
         "mission": "Own the AP lane from intake through approval routing and ERP completion.",
         "doctrine_version": "ap_v1",
         "risk_posture": "bounded_autonomy",
@@ -65,7 +65,7 @@ class AgentMemoryService:
         self,
         organization_id: Optional[str] = "default",  # noqa: org-default — platform-mode sentinel; see _init_ body for None handling
         *,
-        db: Optional[ClearledgrDB] = None,
+        db: Optional[SoldenDB] = None,
     ) -> None:
         # Treat None as the platform-mode sentinel ("default") so callers
         # that pass nothing or None still get the system service. An
@@ -538,7 +538,7 @@ class AgentMemoryService:
         if reason == "field_review_required" or response.get("requires_field_review") or metadata.get("requires_field_review"):
             return {
                 "type": "human_field_review",
-                "label": "Check the invoice details before Clearledgr continues",
+                "label": "Check the invoice details before Solden continues",
                 "owner": "operator",
             }
         if status in {"pending_approval", "awaiting_approval"}:
@@ -1590,7 +1590,7 @@ class AgentMemoryService:
 def get_agent_memory_service(
     organization_id: Optional[str] = "default",  # noqa: org-default — platform-mode sentinel; mirrors AgentMemoryService.__init__
     *,
-    db: Optional[ClearledgrDB] = None,
+    db: Optional[SoldenDB] = None,
 ) -> AgentMemoryService:
     if db is None:
         db = get_db()

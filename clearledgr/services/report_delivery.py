@@ -103,7 +103,7 @@ def deliver_subscription(db: Any, subscription: Dict[str, Any]) -> SubscriptionD
     csv_filename = workspace_reports.csv_filename(report_type, payload.get("params", {}))
     label = _REPORT_LABELS.get(report_type, report_type)
 
-    subject = f"[Clearledgr] {label} report — {payload.get('params', {}).get('period') or 'snapshot'}"
+    subject = f"[Solden] {label} report — {payload.get('params', {}).get('period') or 'snapshot'}"
     body_text = _build_email_body_text(label, payload, subscription)
     body_html = _build_email_body_html(label, payload, subscription)
 
@@ -177,7 +177,7 @@ def _build_email_body_text(
     cadence = subscription.get("cadence", "")
 
     lines: List[str] = [
-        f"Your {cadence} {label} report from Clearledgr.",
+        f"Your {cadence} {label} report from Solden.",
         "",
         f"Window: {params.get('from', '')[:10]} to {params.get('to', '')[:10]}",
     ]
@@ -222,7 +222,7 @@ def _build_email_body_html(
       {_h(label)} report
     </h1>
     <p style="margin:0 0 24px;color:#475569;font-size:13px">
-      Your {_h(cadence)} Clearledgr report. Window: {_h(params.get('from', '')[:10])} to {_h(params.get('to', '')[:10])}.
+      Your {_h(cadence)} Solden report. Window: {_h(params.get('from', '')[:10])} to {_h(params.get('to', '')[:10])}.
     </p>
     {f'<table style="border-collapse:collapse;margin:0 0 24px"><tbody>{summary_rows}</tbody></table>' if summary_rows else ''}
     <p style="margin:0 0 16px;color:#475569;font-size:13px">

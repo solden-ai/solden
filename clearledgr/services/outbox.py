@@ -153,7 +153,7 @@ class OutboxWriter:
 
         Caller is responsible for being inside a DB transaction —
         this method opens its own connection but the enclosing
-        ``ClearledgrDB`` connection-pool semantics ensure visibility
+        ``SoldenDB`` connection-pool semantics ensure visibility
         with the surrounding business write provided the caller is
         on the same connection.
         """

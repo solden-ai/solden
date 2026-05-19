@@ -1,4 +1,4 @@
-"""Tests for Module 4 Pass D — reverse vendor sync (Clearledgr → ERP).
+"""Tests for Module 4 Pass D — reverse vendor sync (Solden → ERP).
 
 Coverage:
   * push_vendor_to_erp returns ``failed:vendor_not_found`` when the

@@ -6,7 +6,7 @@ Author: Mo
 
 ## Context
 
-Clearledgr's commercial promise is a trustworthy audit trail. A finance team adopts us because when something goes wrong — a duplicate bill posts, a payment goes to the wrong vendor, an approval gets skipped — they can reconstruct *exactly* what happened from the Box timeline.
+Solden's commercial promise is a trustworthy audit trail. A finance team adopts us because when something goes wrong — a duplicate bill posts, a payment goes to the wrong vendor, an approval gets skipped — they can reconstruct *exactly* what happened from the Box timeline.
 
 That promise has one failure mode that kills it: **the side effect ran but we have no record of it running.** A bill posts to QuickBooks with no matching audit row. A vendor email goes out with no audit row. A Slack escalation happens with no audit row.
 

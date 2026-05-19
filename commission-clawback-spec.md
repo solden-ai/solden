@@ -8,17 +8,17 @@ How the commission clawback agent detects refunds, calculates clawback
 amounts, drafts reversal journal entries, and posts to ERP · Internal
 engineering reference
 
-> *Confidential --- Clearledgr Ltd · Engineering team only*
+> *Confidential --- Solden Technologies Ltd. · Engineering team only*
 
 **1. Overview**
 
-Commission Clawback is the second workflow class the Clearledgr coordination layer handles, extending the agent system beyond AP into a non-accounts-payable workflow. It is the first real test of the platform thesis: that the Box model, agent architecture, rules-decide-LLM-describes discipline, and ERP write layer all generalise to workflows the product wasn't originally designed for. It is relevant to any business that pays commissions to partners, agents, or intermediaries and needs to reclaim them when a transaction is cancelled or refunded. Travel, hospitality, marketplaces, insurance, SaaS with reseller channels, and financial services all face this problem. The current process is always manual --- finance teams detect the refund event, look up the original booking or transaction, calculate the clawback amount, and post a reversal journal entry to the ERP.
+Commission Clawback is the second workflow class the Solden coordination layer handles, extending the agent system beyond AP into a non-accounts-payable workflow. It is the first real test of the platform thesis: that the Box model, agent architecture, rules-decide-LLM-describes discipline, and ERP write layer all generalise to workflows the product wasn't originally designed for. It is relevant to any business that pays commissions to partners, agents, or intermediaries and needs to reclaim them when a transaction is cancelled or refunded. Travel, hospitality, marketplaces, insurance, SaaS with reseller channels, and financial services all face this problem. The current process is always manual --- finance teams detect the refund event, look up the original booking or transaction, calculate the clawback amount, and post a reversal journal entry to the ERP.
 
-Clawback is structurally the same problem AP solves, running in reverse: where AP drives the cash *out* against a matched obligation, clawback drives the cash *back in* against a matched reversal. The same Box model applies: an event (the refund) kicks off a workflow instance, the agent reconstructs the commercial relationship (the original commission payment), deterministic calculation produces the reversal, a human approves on exceptions, the agent posts to the ERP, and the Box carries the full attributable history. The fact that Clearledgr's architecture generalises from AP to clawback without modification is the direct validation of the coordination-layer thesis: each new workflow is a new Box type running on the same platform, not a separate product.
+Clawback is structurally the same problem AP solves, running in reverse: where AP drives the cash *out* against a matched obligation, clawback drives the cash *back in* against a matched reversal. The same Box model applies: an event (the refund) kicks off a workflow instance, the agent reconstructs the commercial relationship (the original commission payment), deterministic calculation produces the reversal, a human approves on exceptions, the agent posts to the ERP, and the Box carries the full attributable history. The fact that Solden's architecture generalises from AP to clawback without modification is the direct validation of the coordination-layer thesis: each new workflow is a new Box type running on the same platform, not a separate product.
 
 The agent automates this end-to-end. It sits inside Gmail and Slack, reads refund and cancellation events, looks up the original booking record and commission paid, calculates the clawback amount, drafts the reversal journal entry, routes for approval, and posts to the ERP. No new tool. No migration. The finance team stays in their inbox.
 
-This spec extends the core Clearledgr Agent Design Specification. All architectural components --- the event system, planning engine, coordination engine, state management, LLM/deterministic boundary, and error handling --- are inherited without modification. This document defines only what is new: the commission clawback event types, the extended action space, the new pipeline, the planning logic specific to clawback, and the complete lifecycle.
+This spec extends the core Solden Agent Design Specification. All architectural components --- the event system, planning engine, coordination engine, state management, LLM/deterministic boundary, and error handling --- are inherited without modification. This document defines only what is new: the commission clawback event types, the extended action space, the new pipeline, the planning logic specific to clawback, and the complete lifecycle.
 
 > *The fundamental design principle is unchanged: rules decide, Claude
 > describes. The clawback calculation is always deterministic. Claude is
@@ -303,7 +303,7 @@ requires modification for the new business logic.
 
   **check_clawback_duplicate(booking_reference,   **DET**     Check whether a reversal journal entry
   erp)**                                                      for this booking reference already
-                                                              exists in the ERP or in the Clearledgr
+                                                              exists in the ERP or in the Solden
                                                               Box state store (trailing 90 days).
                                                               Returns {duplicate_found,
                                                               existing_entry_id?}. A found duplicate
@@ -697,7 +697,7 @@ branches without modifying the existing handlers.
                                     assumption is that partner silence during
                                     the window constitutes consent. This
                                     assumption must be supported by the
-                                    customer\'s partner agreements; Clearledgr
+                                    customer\'s partner agreements; Solden
                                     does not assert the legal basis on behalf
                                     of the customer.
   --------------------------------------------------------------------------------
@@ -1057,9 +1057,9 @@ following additions.
                                         KONP/KONV tables. NetSuite: custom rate
                                         schedule records. Xero/QuickBooks: rate
                                         schedules are typically maintained in
-                                        Clearledgr configuration for these ERPs, with
+                                        Solden configuration for these ERPs, with
                                         ERP lookup as a fallback. The connector maps
-                                        the result to the Clearledgr rate_schedule
+                                        the result to the Solden rate_schedule
                                         object.
 
   **post_reversal_entry**               Posts the reversal journal entry to the ERP.
@@ -1166,9 +1166,9 @@ logging.
 Audit exports are scoped to a time range and an optional filter
 (partner, reversal_reason_code, amount band, disposition). The JSONL
 export is signed with a per-workspace signing key so auditors can
-verify it was generated by Clearledgr and not modified after export.
+verify it was generated by Solden and not modified after export.
 Audit exports are themselves logged to a workspace-level audit log
-(who ran the export, what filter, when) so Clearledgr\'s own export
+(who ran the export, what filter, when) so Solden\'s own export
 activity is traceable.
 
 **10. Performance Requirements**
@@ -1611,15 +1611,15 @@ The migration is three parts, one per ERP:
 
 -   **NetSuite**: reversal reason is a custom field on the journal
     entry --- the customer's NetSuite admin typically defines the
-    picklist. Map the Clearledgr enum to the customer's picklist at
+    picklist. Map the Solden enum to the customer's picklist at
     connector config time.
 
 -   **Xero** / **QuickBooks**: both store reversal reasons as
-    free-text narration. The Clearledgr enum value is written into the
+    free-text narration. The Solden enum value is written into the
     narration prefix (`"[force_majeure_dispute] Partner dispute
     accepted --- ..."`) so downstream reporting can grep.
 
-Store the Clearledgr enum value on the Box record regardless of ERP
+Store the Solden enum value on the Box record regardless of ERP
 (in the audit timeline and as a queryable field). That gives the
 "show me all force_majeure reversals YTD" report without free-text
 parsing, even on Xero / QuickBooks.
@@ -1652,5 +1652,5 @@ What we must add:
 Do not build a second reaper. The existing one is correct and was
 stress-tested during the AP override-window rollout.
 
-Commission Clawback Agent Design Specification · Clearledgr Ltd ·
+Commission Clawback Agent Design Specification · Solden Technologies Ltd. ·
 Engineering team only · Review with CTO before implementation

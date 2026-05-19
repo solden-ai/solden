@@ -1332,7 +1332,7 @@ async def reverse_bill(
 
     Per DESIGN_THESIS.md §8, the ability to reverse a post within the
     override window is the architectural precondition that lets
-    Clearledgr auto-post with confidence — the human escape hatch makes
+    Solden auto-post with confidence — the human escape hatch makes
     autonomous posting safe.
     """
     org_id = assert_org_id(organization_id, context="erp_router")

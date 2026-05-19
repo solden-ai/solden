@@ -221,7 +221,7 @@ GOOGLE_REDIRECT_URI=https://api.clearledgr.com/gmail/callback
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Set up Gmail Pub/Sub for Clearledgr"
+        description="Set up Gmail Pub/Sub for Solden"
     )
     parser.add_argument(
         "--project-id",
@@ -252,7 +252,7 @@ def main():
         sys.exit(1)
     
     print("=" * 60)
-    print("Clearledgr Gmail Pub/Sub Setup")
+    print("Solden Gmail Pub/Sub Setup")
     print("=" * 60)
     print(f"Project: {args.project_id}")
     print(f"Webhook: {args.webhook_url}")

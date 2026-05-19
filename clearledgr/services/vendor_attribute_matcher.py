@@ -2,7 +2,7 @@
 
 When a bill arrives claiming to be from "Acme Corp", confirming
 identity by name alone is a fraud surface — the #1 vector in
-pre-Clearledgr AP fraud is BEC vendors that spell the name right
+pre-Solden AP fraud is BEC vendors that spell the name right
 and slip in a different IBAN. This module scores the bill against
 the stored vendor profile across five attributes:
 

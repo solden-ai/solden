@@ -344,7 +344,7 @@ def _oauth_success_page(message: str) -> HTMLResponse:
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Clearledgr Gmail Connected</title>
+    <title>Solden Gmail Connected</title>
     <style>
       :root {{
         color-scheme: light;
@@ -550,7 +550,7 @@ def _oauth_success_page(message: str) -> HTMLResponse:
     <main class="shell">
       <section class="card">
         <div class="topline">
-          <div class="eyebrow">Clearledgr AP</div>
+          <div class="eyebrow">Solden AP</div>
           <div class="pill">Monitoring active</div>
         </div>
         <div class="hero">
@@ -569,7 +569,7 @@ def _oauth_success_page(message: str) -> HTMLResponse:
             <div class="note-bullet"></div>
             <div>
               <strong>Connection is durable now</strong>
-              <span>Clearledgr can keep monitoring Gmail in the background with the new refresh token.</span>
+              <span>Solden can keep monitoring Gmail in the background with the new refresh token.</span>
             </div>
           </div>
           <div class="note">
@@ -611,7 +611,7 @@ def _oauth_success_page(message: str) -> HTMLResponse:
 async def gmail_connected(success: Optional[str] = None):
     is_success = str(success or "").strip().lower() == "true"
     message = (
-        "Clearledgr can now continue Gmail monitoring. You can return to Gmail."
+        "Solden can now continue Gmail monitoring. You can return to Gmail."
         if is_success
         else "You can close this tab and return to Gmail."
     )
@@ -869,7 +869,7 @@ async def _process_label_changes(
     For every labelsAdded history record, resolve label IDs → display
     names and emit a ``LABEL_CHANGED`` agent event when:
 
-      1. At least one added label is in ``LABEL_TO_INTENT`` (a Clearledgr
+      1. At least one added label is in ``LABEL_TO_INTENT`` (a Solden
          action verb — we ignore status-only labels like "Matched" that
          we ourselves apply).
       2. The affected message's thread has an AP box in this org.
@@ -1132,7 +1132,7 @@ async def process_gmail_notification(email_address: str, history_id: str, push_r
         #
         # For every labelsAdded record, resolve the label IDs → display
         # names and enqueue a LABEL_CHANGED event if it matches a
-        # Clearledgr action label and the thread has an AP box.
+        # Solden action label and the thread has an AP box.
         if label_change_records:
             try:
                 await _process_label_changes(
@@ -1794,7 +1794,7 @@ async def _create_invoice_draft_summary(client: GmailAPIClient, message, invoice
     amount_str = f"${amount:,.2f}" if isinstance(amount, (int, float)) and amount else str(amount)
 
     body = (
-        f"Clearledgr detected an invoice in this thread.\n\n"
+        f"Solden detected an invoice in this thread.\n\n"
         f"  Vendor:     {vendor}\n"
         f"  Amount:     {amount_str} {currency}\n"
         f"  Invoice #:  {inv_num}\n"
@@ -1802,7 +1802,7 @@ async def _create_invoice_draft_summary(client: GmailAPIClient, message, invoice
         f"  Confidence: {invoice.confidence:.0%}\n\n"
         f"Status: Needs approval\n"
         f"---\n"
-        f"This draft was created by Clearledgr. "
+        f"This draft was created by Solden. "
         f"Delete it if not needed, or forward it to your approver."
     )
 
@@ -2031,14 +2031,14 @@ async def gmail_callback(code: str, state: Optional[str] = None):
         # Store token
         token_store.store(token)
 
-        # Pre-create Clearledgr labels so they appear in Gmail immediately
+        # Pre-create Solden labels so they appear in Gmail immediately
         try:
             from clearledgr.services.gmail_labels import CLEARLEDGR_LABELS, ensure_label
             label_client = GmailAPIClient(token.user_id)
             if await label_client.ensure_authenticated():
                 for key in CLEARLEDGR_LABELS:
                     await ensure_label(label_client, key, token.email or "")
-                logger.info("Pre-created Clearledgr labels for %s", token.email)
+                logger.info("Pre-created Solden labels for %s", token.email)
         except Exception as exc:
             logger.warning("Could not pre-create labels: %s", exc)
 
@@ -2081,13 +2081,13 @@ async def gmail_callback(code: str, state: Optional[str] = None):
             from fastapi.responses import RedirectResponse
             safe_redirect = _append_success_query(redirect_url, success=True)
             if str(redirect_url).startswith("/workspace"):
-                return _oauth_success_page("Clearledgr connected Gmail successfully. Return to Gmail to continue.")
+                return _oauth_success_page("Solden connected Gmail successfully. Return to Gmail to continue.")
             return RedirectResponse(url=safe_redirect)
         
         return {
             "status": "success",
             "email": token.email,
-            "message": "Gmail autopilot enabled. Clearledgr will now process your emails automatically.",
+            "message": "Gmail autopilot enabled. Solden will now process your emails automatically.",
             "watch_status": watch_status,
             "watch_error": watch_error,
             "watch_expiration": watch_result.get("expiration"),

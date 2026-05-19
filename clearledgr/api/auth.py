@@ -1,5 +1,5 @@
 """
-Clearledgr Auth API
+Solden Auth API
 
 Authentication endpoints for login, registration, and token management.
 """
@@ -51,7 +51,7 @@ def _session_cookie_domain() -> Optional[str]:
 def _set_workspace_session_cookies(response: Response, access_token: str) -> None:
     """Set the short-lived access cookie + CSRF cookie.
 
-    Streak-aligned model: there is no Clearledgr-issued refresh token.
+    Streak-aligned model: there is no Solden-issued refresh token.
     When the access JWT expires, the Gmail extension silently re-runs
     Google's token flow (chrome.identity.getAuthToken) and re-exchanges
     via /auth/google/exchange to get a new access JWT. Google's grant
@@ -225,12 +225,12 @@ def _consume_google_auth_code(code: str) -> Dict[str, Any]:
 #     password is set during invite-accept (/auth/invites/accept) and
 #     verified here against the bcrypt hash on the user row.
 #
-# There is no Clearledgr-issued refresh token. When the access JWT
+# There is no Solden-issued refresh token. When the access JWT
 # expires, the SPA falls through to /login and the user re-authenticates
 # (Google flow OR password form). See _set_workspace_session_cookies
 # for the cookie shape.
 #
-# /auth/register is intentionally absent: Clearledgr is sales-led
+# /auth/register is intentionally absent: Solden is sales-led
 # (admin-creates-org, then invites teammates). Self-serve org
 # creation would be added when GTM moves to PLG.
 
@@ -1110,7 +1110,7 @@ async def google_oauth_popup_complete():
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Clearledgr — signing you in</title>
+    <title>Solden — signing you in</title>
     <style>
       body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0A1628;color:#fff;
            display:flex;align-items:center;justify-content:center;height:100vh;margin:0}

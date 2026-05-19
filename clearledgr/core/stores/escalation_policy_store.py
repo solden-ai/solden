@@ -1,6 +1,6 @@
 """Escalation policy store — Module 11 (org-level stuck-exception escalation).
 
-Mixed into ``ClearledgrDB``. Owns three primitives:
+Mixed into ``SoldenDB``. Owns three primitives:
 
   - CRUD over ``escalation_policies`` rows.
   - The worker-pickup query

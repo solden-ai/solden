@@ -34,7 +34,7 @@ def test_get_pending_approver_ids_falls_back_to_pending_chain_steps(tmp_path, mo
         status="pending",
         current_step=0,
         requester_id="ap_agent",
-        requester_name="Clearledgr AP Agent",
+        requester_name="Solden AP Agent",
         created_at=datetime.now(timezone.utc),
         completed_at=None,
         steps=[

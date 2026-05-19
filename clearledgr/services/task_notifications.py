@@ -1,5 +1,5 @@
 """
-Clearledgr Task Notifications
+Solden Task Notifications
 
 Sends task notifications via Slack and Teams APPS (not webhooks).
 Uses the native app integrations for rich interactive messages.

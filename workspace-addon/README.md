@@ -1,11 +1,11 @@
-# Clearledgr AP — Google Workspace Add-on
+# Solden AP — Google Workspace Add-on
 
 DESIGN_THESIS.md §6.9: Mobile Approvals
 
 ## What it does
 
 Lightweight approval panel inside the native Gmail app (iOS/Android).
-When a CFO or Controller opens an email thread linked to a Clearledgr
+When a CFO or Controller opens an email thread linked to a Solden
 invoice Box, the Add-on shows:
 
 - Invoice amount (large)
@@ -17,7 +17,7 @@ One tap. No navigation. No separate app.
 
 ## What it is NOT
 
-- Not the full Clearledgr experience (that's the Chrome extension)
+- Not the full Solden experience (that's the Chrome extension)
 - Not a standalone mobile app
 - Not a replacement for the desktop pipeline view
 
@@ -33,9 +33,9 @@ One tap. No navigation. No separate app.
 ## Authentication
 
 Uses Google's built-in OAuth via `ScriptApp.getOAuthToken()`.
-The Clearledgr backend validates this token in `core/auth.py`
+The Solden backend validates this token in `core/auth.py`
 (same path as the Chrome extension's Google OAuth).
-No separate Clearledgr login required.
+No separate Solden login required.
 
 ## API Endpoints Used
 

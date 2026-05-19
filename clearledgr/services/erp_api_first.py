@@ -12,7 +12,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from clearledgr.core.database import ClearledgrDB, get_db
+from clearledgr.core.database import SoldenDB, get_db
 from clearledgr.core.launch_controls import (
     get_erp_posting_block_reason,
 )
@@ -45,7 +45,7 @@ def _stable_hash(parts: Dict[str, Any]) -> str:
 
 
 def _resolve_ap_item_id(
-    db: ClearledgrDB,
+    db: SoldenDB,
     *,
     organization_id: str,
     ap_item_id: Optional[str] = None,
@@ -75,7 +75,7 @@ def _resolve_ap_item_id(
 
 
 def _audit(
-    db: ClearledgrDB,
+    db: SoldenDB,
     *,
     ap_item_id: Optional[str],
     organization_id: str,
@@ -304,7 +304,7 @@ async def post_bill_api_first(
     erp_url: Optional[str] = None,
     idempotency_key: Optional[str] = None,
     correlation_id: Optional[str] = None,
-    db: Optional[ClearledgrDB] = None,
+    db: Optional[SoldenDB] = None,
 ) -> Dict[str, Any]:
     """Post a bill via the ERP API.
 
@@ -595,7 +595,7 @@ async def _erp_follow_on_api_first(
     note: Optional[str],
     email_id: Optional[str],
     correlation_id: Optional[str],
-    db: Optional[ClearledgrDB] = None,
+    db: Optional[SoldenDB] = None,
 ) -> Dict[str, Any]:
     resolved_db = db or get_db()
     strategy = get_erp_connector_strategy()
@@ -818,7 +818,7 @@ async def apply_credit_note_api_first(
     note: Optional[str] = None,
     email_id: Optional[str] = None,
     correlation_id: Optional[str] = None,
-    db: Optional[ClearledgrDB] = None,
+    db: Optional[SoldenDB] = None,
 ) -> Dict[str, Any]:
     return await _erp_follow_on_api_first(
         action_key="apply_credit_note",
@@ -854,7 +854,7 @@ async def apply_settlement_api_first(
     note: Optional[str] = None,
     email_id: Optional[str] = None,
     correlation_id: Optional[str] = None,
-    db: Optional[ClearledgrDB] = None,
+    db: Optional[SoldenDB] = None,
 ) -> Dict[str, Any]:
     return await _erp_follow_on_api_first(
         action_key="apply_settlement",

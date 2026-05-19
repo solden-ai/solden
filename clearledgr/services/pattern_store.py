@@ -10,7 +10,7 @@ from clearledgr.models.patterns import MatchPattern
 
 class PatternStore:
     # db_path arg kept for back-compat with callers that pass it; now
-    # ignored — the store uses the process-wide ClearledgrDB singleton.
+    # ignored — the store uses the process-wide SoldenDB singleton.
     def __init__(self, db_path: Optional[str] = None) -> None:
         self.db = get_db()
         self.db.initialize()

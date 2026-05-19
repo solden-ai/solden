@@ -2,13 +2,13 @@
 
 Writes ``custbody_clearledgr_state`` (configurable via target_config)
 on the Vendor Bill record so a NetSuite user looking at the bill
-sees the current Clearledgr state inline — no need to open the
-Clearledgr panel sub-tab.
+sees the current Solden state inline — no need to open the
+Solden panel sub-tab.
 
 Customer-side prerequisite: the SuiteApp's bundle must declare the
 custom field. The backend can write to it; the field has to exist.
 Default field id ``custbody_clearledgr_state`` is what the
-Clearledgr SuiteApp installer creates; customers who renamed it
+Solden SuiteApp installer creates; customers who renamed it
 override via ``target_config.field_id``.
 
 Skips for non-NetSuite bills + bills that don't have an

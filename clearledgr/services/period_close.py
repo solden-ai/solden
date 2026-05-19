@@ -153,7 +153,7 @@ class PeriodCloseService:
 
         An invoice is backdated if:
         - invoice_date falls within the period (YYYY-MM)
-        - created_at (when Clearledgr received it) is after the cutoff
+        - created_at (when Solden received it) is after the cutoff
         """
         config = self.get_config()
         close_day = config.get("close_day_offset", DEFAULT_CLOSE_DAY_OFFSET)

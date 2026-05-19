@@ -111,7 +111,7 @@ def build_firs_einvoice(
 
     Returns a dict ready to JSON-serialize and POST to the org's
     Access Service Provider. The provider returns a FIRS-issued
-    IRN (Invoice Reference Number) which Clearledgr stores back on
+    IRN (Invoice Reference Number) which Solden stores back on
     the AP item — that part lives in a future sibling integration
     module; this function is the payload generator only.
     """

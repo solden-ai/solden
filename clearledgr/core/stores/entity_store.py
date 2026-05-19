@@ -1,4 +1,4 @@
-"""Entity-domain data-access mixin for ClearledgrDB.
+"""Entity-domain data-access mixin for SoldenDB.
 
 ``EntityStore`` is a **mixin class** -- it has no ``__init__`` of its own
 and expects the concrete class that inherits it to provide:

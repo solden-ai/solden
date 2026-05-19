@@ -12,7 +12,7 @@ Supported policy kinds (each is a snapshot of one slice of
 * ``approval_thresholds`` — per-amount routing rules + approver
   targets. Drives Slack approval card destination + mentions.
 * ``gl_account_map`` — semantic GL category → ERP-side account code.
-  Drives where Clearledgr-posted bills land in the chart of accounts.
+  Drives where Solden-posted bills land in the chart of accounts.
 * ``confidence_gate`` — confidence-floor parameters
   (``critical_field_confidence_threshold``,
   ``confidence_gate_threshold``). Drives auto-approve eligibility.

@@ -1,10 +1,10 @@
-# Clearledgr Architecture
+# Solden Architecture
 
-This document describes the current architecture of Clearledgr as implemented in this repository. It is deliberately grounded in the codebase, not just the product narrative.
+This document describes the current architecture of Solden as implemented in this repository. It is deliberately grounded in the codebase, not just the product narrative.
 
-The shortest correct description of Clearledgr is:
+The shortest correct description of Solden is:
 
-- Clearledgr is the **execution layer for finance operations**
+- Solden is the **execution layer for finance operations**
 - more specifically, it is a **Finance AI Agent** embedded in the tools finance teams already use
 - it uses **one finance agent runtime**
 - AP is the first production workflow and skill domain on that runtime
@@ -24,7 +24,7 @@ This document covers:
 
 ## 1. Product Boundaries
 
-Clearledgr is not modeled here as:
+Solden is not modeled here as:
 
 - a generic AP dashboard
 - an ERP replacement
@@ -603,7 +603,7 @@ One of the hardest parts of a multi-surface AP workflow is stable record resolut
 
 ### 12.1 Shared record model
 
-Clearledgr uses a shared AP record model that can be resolved from:
+Solden uses a shared AP record model that can be resolved from:
 
 - Gmail thread/message context
 - Slack interaction context
@@ -909,7 +909,7 @@ These areas are real, but still evolving:
 
 ### 20.3 Not the same as “broad enterprise intake”
 
-The current architecture does not mean Clearledgr is already a broad enterprise AP intake platform for:
+The current architecture does not mean Solden is already a broad enterprise AP intake platform for:
 
 - EDI-first environments
 - heavily portal-driven procurement flows
@@ -967,7 +967,7 @@ For a new engineer trying to understand the system, the best reading order is:
 
 ## 23. Summary
 
-Clearledgr’s current architecture is a finance execution architecture built around one finance runtime, shared record identity, server-enforced workflow transitions, and increasingly mailbox-aware orchestration.
+Solden’s current architecture is a finance execution architecture built around one finance runtime, shared record identity, server-enforced workflow transitions, and increasingly mailbox-aware orchestration.
 
 Today, AP is the first and deepest production workflow on that architecture, with a Gmail-first execution model.
 

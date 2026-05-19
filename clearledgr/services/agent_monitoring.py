@@ -1,5 +1,5 @@
 """
-Agent Monitoring Service for Clearledgr Reconciliation v1
+Agent Monitoring Service for Solden Reconciliation v1
 
 Monitors data changes and triggers autonomous agent execution.
 """

@@ -1,15 +1,15 @@
-Clearledgr AP v1 — Embedded Execution for Accounts Payable
+Solden AP v1 — Embedded Execution for Accounts Payable
 
 1. Product Overview
 
-Product name: Clearledgr AP
+Product name: Solden AP
 Version: v1 (MVP)
 Category: Embedded finance workflow execution
 
-Clearledgr AP is an embedded execution layer for accounts payable.
+Solden AP is an embedded execution layer for accounts payable.
 It runs inside the tools finance teams already use, starting with email, and executes AP workflows end-to-end across email, spreadsheets, approvals, and ERP systems.
 
-Clearledgr does not introduce a new dashboard or destination.
+Solden does not introduce a new dashboard or destination.
 It performs the work where it starts.
 
 
@@ -32,9 +32,9 @@ It is the manual coordination and execution across systems.
 
 3. Product Principles (v1)
 	1.	Execution over visibility
-Clearledgr performs actions. It does not just surface data.
+Solden performs actions. It does not just surface data.
 	2.	Embedded, not destination
-Users do not log into Clearledgr. Clearledgr appears where work already happens.
+Users do not log into Solden. Solden appears where work already happens.
 	3.	Deterministic state, not brittle automation
 AP is modeled as a state machine, not a collection of scripts.
 	4.	Human-in-the-loop by design
@@ -112,7 +112,7 @@ State transitions are executed by agents, not users.
 7. Workflow Execution (v1)
 
 7.1 Intake
-	•	Clearledgr detects invoices and payment requests in email threads
+	•	Solden detects invoices and payment requests in email threads
 	•	Extracts structured data from attachments and email body
 	•	Creates or updates AP Items automatically
 
@@ -156,7 +156,7 @@ Where users interact
 	3.	ERP confirmation
 	•	Final system of record
 
-There is no separate Clearledgr application.
+There is no separate Solden application.
 
 
 9. Human-in-the-Loop Design
@@ -171,7 +171,7 @@ All other work is automated.
 
 10. Audit & Traceability
 
-For every AP Item, Clearledgr records:
+For every AP Item, Solden records:
 	•	Source inputs
 	•	State transitions
 	•	Agent actions
@@ -213,7 +213,7 @@ Agents are task-specific and tool-enabled.
 
 13. Positioning
 
-Clearledgr AP is not invoice automation.
+Solden AP is not invoice automation.
 It is not a dashboard.
 It is not an RPA script.
 

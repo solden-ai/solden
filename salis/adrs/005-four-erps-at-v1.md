@@ -22,7 +22,7 @@ The heuristic is wrong for ERP breadth in AP. Here's why.
 
 2. **Pipeline filter.** Cold outbound opens 10 conversations. 3 are on QuickBooks, 3 on Xero, 2 NetSuite, 2 SAP. With one ERP, 7 self-disqualify. With four, zero do. At pre-seed pipeline volumes, this matters more than feature breadth.
 
-3. **Product-promise anchor.** The pitch is "AP coordination for mid-market finance teams." Finance teams on mid-market-popular ERPs expect integration. One ERP is a different product positioning ("Clearledgr for QuickBooks users").
+3. **Product-promise anchor.** The pitch is "AP coordination for mid-market finance teams." Finance teams on mid-market-popular ERPs expect integration. One ERP is a different product positioning ("Solden for QuickBooks users").
 
 4. **Architectural forcing function.** Building four forced a real abstraction: `ERPConnection` dataclass (`erp_router.py:158`), uniform webhook contract (`erp_webhook_verify.py`), shared OAuth helpers (`integrations/oauth.py`). Building one would have let QBO-specific assumptions leak into core paths; the second-ERP refactor would have been painful.
 

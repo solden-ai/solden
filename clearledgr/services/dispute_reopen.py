@@ -108,7 +108,7 @@ def reopen_for_dispute(
     """Spawn a correction AP item for the disputed original.
 
     ``correction_amount`` is the GROSS amount of the correction. For
-    credit_note, this is what the vendor will refund (Clearledgr
+    credit_note, this is what the vendor will refund (Solden
     treats it as a negative-impact AP item via metadata, the JE
     posting layer translates to a Cr expense / Dr AP entry).
 

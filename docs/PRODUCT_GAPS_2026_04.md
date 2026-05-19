@@ -1,4 +1,4 @@
-# Product Gaps — Clearledgr v1
+# Product Gaps — Solden v1
 
 Date: 2026-04-03
 Source: Codebase audit + competitive analysis (Streak, BILL, Stampli)
@@ -204,7 +204,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Status:** Completed 2026-04-03
 **What was built:**
 - `clearledgr/services/vendor_erp_sync.py` — `sync_vendors_from_erp()` service
-- Pulls all vendors from ERP (via `list_all_vendors`), upserts to Clearledgr vendor profiles
+- Pulls all vendors from ERP (via `list_all_vendors`), upserts to Solden vendor profiles
 - Change detection: new vendors, deactivated vendors, reactivated vendors, payment terms changes
 - ERP-sourced fields stored in profile metadata (vendor_id, email, phone, address, tax_id, currency, balance)
 - Preserves existing custom metadata on update
@@ -245,7 +245,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 
 ### 20. [MISSING] Payment execution
 **Priority:** P3
-**What's missing:** No payment triggering after approval. Clearledgr posts the bill but finance still triggers payment in ERP.
+**What's missing:** No payment triggering after approval. Solden posts the bill but finance still triggers payment in ERP.
 **What's needed:**
 - Payment run integration (batch payments via ERP API)
 - Payment method selection (ACH, wire, check)
@@ -295,7 +295,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Status:** Completed 2026-04-03
 **What was built:**
 - `clearledgr/core/stores/webhook_store.py` — WebhookStore mixin with subscription CRUD, wildcard (`*`) event matching
-- `clearledgr/services/webhook_delivery.py` — async delivery with HMAC-SHA256 signing (`X-Clearledgr-Signature`), event emission, retry via existing notification queue
+- `clearledgr/services/webhook_delivery.py` — async delivery with HMAC-SHA256 signing (`X-Solden-Signature`), event emission, retry via existing notification queue
 - `webhook_subscriptions` table (id, org, url, event_types JSON, secret, is_active)
 - 11 event types: invoice.received, .validated, .needs_approval, .approved, .rejected, .ready_to_post, .posted_to_erp, .closed, .needs_info, .failed_post + payment events
 - Auto-emitted on every AP state transition (fire-and-forget post-commit hook in `update_ap_item`)
@@ -306,7 +306,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 
 ### 25. [N/A] Mobile app or mobile-optimized view
 **Priority:** N/A
-**Status:** Not applicable — by design, Clearledgr renders inside Gmail (extension sidebar) and Outlook (add-in taskpane), which are already responsive. Approvals route to Slack/Teams mobile. No standalone app surface exists for daily use. Workspace admin console is setup-only, not a daily workflow surface.
+**Status:** Not applicable — by design, Solden renders inside Gmail (extension sidebar) and Outlook (add-in taskpane), which are already responsive. Approvals route to Slack/Teams mobile. No standalone app surface exists for daily use. Workspace admin console is setup-only, not a daily workflow surface.
 
 ### 26. [DONE] Audit trail export
 **Priority:** P1
@@ -319,7 +319,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 
 ### 27. [N/A] SSO/SAML implementation
 **Priority:** N/A
-**Status:** Not applicable — Clearledgr authenticates through the email provider (Gmail Chrome identity, Outlook Office SSO) and messaging platform (Slack/Teams OAuth). There is no standalone login surface where SSO/SAML would apply. Enterprise identity is inherited from the host platform.
+**Status:** Not applicable — Solden authenticates through the email provider (Gmail Chrome identity, Outlook Office SSO) and messaging platform (Slack/Teams OAuth). There is no standalone login surface where SSO/SAML would apply. Enterprise identity is inherited from the host platform.
 
 ---
 
@@ -328,7 +328,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 ### 28. [DEFERRED] SOC 2 certification
 **Priority:** P2 (enterprise requirement)
 **Status:** Technical controls built, formal audit not started.
-**Why it matters:** Clearledgr reads invoices from customer inboxes, sends them to Claude for extraction, stores extracted financial data (amounts, vendors, line items), and holds OAuth tokens with inbox read access. Enterprise procurement requires SOC 2 for this data handling profile.
+**Why it matters:** Solden reads invoices from customer inboxes, sends them to Claude for extraction, stores extracted financial data (amounts, vendors, line items), and holds OAuth tokens with inbox read access. Enterprise procurement requires SOC 2 for this data handling profile.
 **What's already built (code-level controls):**
 - Fernet encryption at rest for all tokens/secrets
 - Append-only audit trail with DB triggers (no UPDATE/DELETE on audit_events)
@@ -392,7 +392,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 
 ### 33. [N/A] Historical data import
 **Priority:** N/A
-**Status:** Not needed — Clearledgr processes invoices as they arrive (Streak model). Historical AP data lives in the ERP (already readable via chart of accounts, vendor list, payment status APIs). The existing `/extension/repair-historical-invoices` handles the one valid case: backfilling Gmail emails that arrived before Clearledgr was connected.
+**Status:** Not needed — Solden processes invoices as they arrive (Streak model). Historical AP data lives in the ERP (already readable via chart of accounts, vendor list, payment status APIs). The existing `/extension/repair-historical-invoices` handles the one valid case: backfilling Gmail emails that arrived before Solden was connected.
 
 ---
 
@@ -453,7 +453,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **What was built:**
 - `clearledgr/services/vendor_statement_recon.py` — VendorStatementRecon with 4-tier matching strategy
 - Matching: exact reference → partial reference → amount+date proximity (5-day tolerance) → amount-only
-- Output: matched items, amount discrepancies, unmatched on statement, unmatched in Clearledgr
+- Output: matched items, amount discrepancies, unmatched on statement, unmatched in Solden
 - Summary: match rate %, totals, difference, counts per category
 - Reference normalization (strips punctuation for INV/003 = INV-003)
 - `POST /api/workspace/vendor-intelligence/reconcile-statement` endpoint

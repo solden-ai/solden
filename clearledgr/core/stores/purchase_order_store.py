@@ -57,7 +57,7 @@ def _encode_json(value: Any) -> str:
 
 
 class PurchaseOrderStore:
-    """Mixin providing PO / GR / 3-way match persistence for ClearledgrDB."""
+    """Mixin providing PO / GR / 3-way match persistence for SoldenDB."""
 
     # ------------------------------------------------------------------
     # Row shape helpers

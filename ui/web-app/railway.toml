@@ -1,6 +1,6 @@
 # Railway deployment configuration for the web-app service.
 #
-# This is the 5th Railway service in the Clearledgr project, alongside
+# This is the 5th Railway service in the Solden project, alongside
 # api / worker / beat / redis. Static SPA + reverse proxy to the api
 # service. Same-origin model: workspace.clearledgr.com serves both the SPA
 # and proxies /api, /auth, /v1, /extension, /erp, /portal, /slack,

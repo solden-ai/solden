@@ -1,6 +1,6 @@
 """ComplyAdvantage KYC provider adapter (Wave 3 / E1).
 
-Wraps the ComplyAdvantage REST API for the four KYC checks Clearledgr
+Wraps the ComplyAdvantage REST API for the four KYC checks Solden
 runs (company registry, sanctions, PEP, adverse media). The provider
 sells one search endpoint that returns matches across all four lists
 in a single call, with per-match list-membership flags; we split the
@@ -53,7 +53,7 @@ def _now_iso() -> str:
 def _classify_match(types: List[str]) -> Dict[str, bool]:
     """ComplyAdvantage returns a ``types`` array per match — values
     like ``sanction``, ``warning``, ``pep``, ``pep-class-1``,
-    ``adverse-media``. Roll up into the four categories Clearledgr
+    ``adverse-media``. Roll up into the four categories Solden
     cares about."""
     flat = " ".join(types).lower()
     return {
@@ -136,7 +136,7 @@ async def _post_search(
 class ComplyAdvantageProvider(KYCProvider):
     """ComplyAdvantage REST adapter.
 
-    Each Clearledgr-side method runs a single search and filters the
+    Each Solden-side method runs a single search and filters the
     response to the relevant match category. ``company_registry_lookup``
     + ``resolve_ubo`` aren't ComplyAdvantage products — they fall back
     to ``inconclusive`` so the planner routes those to a different

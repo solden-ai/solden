@@ -10,14 +10,14 @@ from fastapi.testclient import TestClient
 from clearledgr.api import ap_policies as ap_policies_module
 from clearledgr.api.ap_policies import router as ap_policies_router
 from clearledgr.core.auth import TokenData
-from clearledgr.core.database import ClearledgrDB
+from clearledgr.core.database import SoldenDB
 from clearledgr.services.invoice_workflow import InvoiceData, InvoiceWorkflowService
 from clearledgr.services import policy_compliance as policy_compliance_module
 from clearledgr.services import agent_background as agent_background_module
 
 
-def _make_db(tmp_path: Path) -> ClearledgrDB:
-    db = ClearledgrDB(str(tmp_path / "ap-policy-framework.db"))
+def _make_db(tmp_path: Path) -> SoldenDB:
+    db = SoldenDB(str(tmp_path / "ap-policy-framework.db"))
     db.initialize()
     return db
 

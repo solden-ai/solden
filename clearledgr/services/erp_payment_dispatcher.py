@@ -603,7 +603,7 @@ def _dispatch_one(
     if ap_item is None:
         # Orphan: the bill exists in the ERP but we don't have an AP
         # item for it. Could be a manual-in-ERP payment, or the bill
-        # was created outside Clearledgr. Emit an audit-only orphan
+        # was created outside Solden. Emit an audit-only orphan
         # record so the operator can investigate.
         try:
             db.append_audit_event({

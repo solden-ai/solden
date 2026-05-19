@@ -1,6 +1,6 @@
 """Reconciliation Store mixin — DB persistence for reconciliation items.
 
-Added to ClearledgrDB via mixin inheritance, following the same pattern
+Added to SoldenDB via mixin inheritance, following the same pattern
 as APStore, VendorStore, TaskStore, etc.
 """
 from __future__ import annotations

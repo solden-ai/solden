@@ -14,7 +14,7 @@ Top-level options:
                   even without the flag)
 
 See subcommand --help for the rest. v0.1 talks directly to the DB
-through ``ClearledgrDB``; remote/API mode is a later sprint.
+through ``SoldenDB``; remote/API mode is a later sprint.
 """
 from __future__ import annotations
 

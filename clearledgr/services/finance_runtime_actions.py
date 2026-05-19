@@ -280,17 +280,17 @@ async def share_finance_summary(
     operator_note = str(note or "").strip()
     vendor = str(ap_item.get("vendor_name") or ap_item.get("vendor") or "Unknown vendor").strip()
     invoice_number = str(ap_item.get("invoice_number") or "N/A").strip()
-    subject = f"[Clearledgr] Exception summary: {vendor} · Invoice {invoice_number}"
+    subject = f"[Solden] Exception summary: {vendor} · Invoice {invoice_number}"
     body_lines = [
         "Hi,",
         "",
-        "Clearledgr prepared the following AP exception summary for review:",
+        "Solden prepared the following AP exception summary for review:",
         "",
         *[f"- {line}" for line in (summary.get("lines") or [])],
     ]
     if operator_note:
         body_lines.extend(["", "Operator note:", operator_note])
-    body_lines.extend(["", "Sent from Clearledgr Gmail Agent Actions."])
+    body_lines.extend(["", "Sent from Solden Gmail Agent Actions."])
     draft = {
         "to": resolved_recipient,
         "subject": subject,

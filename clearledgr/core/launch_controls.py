@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from clearledgr.core.database import ClearledgrDB, get_db
+from clearledgr.core.database import SoldenDB, get_db
 
 
 def _now_iso() -> str:
@@ -37,13 +37,13 @@ def _parse_iso(raw: Any) -> Optional[datetime]:
         return None
 
 
-def _load_org_settings(db: ClearledgrDB, organization_id: str) -> Dict[str, Any]:
+def _load_org_settings(db: SoldenDB, organization_id: str) -> Dict[str, Any]:
     org = db.ensure_organization(organization_id, organization_name=organization_id)
     settings = org.get("settings_json") or org.get("settings") or {}
     return _parse_dict(settings)
 
 
-def _save_org_settings(db: ClearledgrDB, organization_id: str, settings: Dict[str, Any]) -> None:
+def _save_org_settings(db: SoldenDB, organization_id: str, settings: Dict[str, Any]) -> None:
     db.update_organization(organization_id, settings=settings)
 
 
@@ -89,7 +89,7 @@ def default_rollback_controls() -> Dict[str, Any]:
     }
 
 
-def get_rollback_controls(organization_id: str, db: Optional[ClearledgrDB] = None) -> Dict[str, Any]:
+def get_rollback_controls(organization_id: str, db: Optional[SoldenDB] = None) -> Dict[str, Any]:
     resolved_db = db or get_db()
     settings = _load_org_settings(resolved_db, organization_id)
     raw = _parse_dict(settings.get("rollback_controls"))
@@ -111,7 +111,7 @@ def set_rollback_controls(
     controls_patch: Dict[str, Any],
     *,
     updated_by: Optional[str] = None,
-    db: Optional[ClearledgrDB] = None,
+    db: Optional[SoldenDB] = None,
 ) -> Dict[str, Any]:
     resolved_db = db or get_db()
     settings = _load_org_settings(resolved_db, organization_id)
@@ -148,7 +148,7 @@ def get_channel_action_block_reason(
     organization_id: str,
     channel: str,
     *,
-    db: Optional[ClearledgrDB] = None,
+    db: Optional[SoldenDB] = None,
 ) -> Optional[str]:
     controls = get_rollback_controls(organization_id, db=db)
     if not controls.get("active", True):
@@ -166,7 +166,7 @@ def get_erp_posting_block_reason(
     organization_id: str,
     *,
     erp_type: Optional[str] = None,
-    db: Optional[ClearledgrDB] = None,
+    db: Optional[SoldenDB] = None,
 ) -> Optional[str]:
     controls = get_rollback_controls(organization_id, db=db)
     if not controls.get("active", True):
@@ -206,7 +206,7 @@ def _normalize_list_of_dicts(raw: Any) -> list[dict]:
     return result
 
 
-def get_ga_readiness(organization_id: str, db: Optional[ClearledgrDB] = None) -> Dict[str, Any]:
+def get_ga_readiness(organization_id: str, db: Optional[SoldenDB] = None) -> Dict[str, Any]:
     resolved_db = db or get_db()
     settings = _load_org_settings(resolved_db, organization_id)
     raw = _parse_dict(settings.get("ga_readiness"))
@@ -238,7 +238,7 @@ def set_ga_readiness(
     evidence_patch: Dict[str, Any],
     *,
     updated_by: Optional[str] = None,
-    db: Optional[ClearledgrDB] = None,
+    db: Optional[SoldenDB] = None,
 ) -> Dict[str, Any]:
     resolved_db = db or get_db()
     settings = _load_org_settings(resolved_db, organization_id)

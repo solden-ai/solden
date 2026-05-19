@@ -1,12 +1,12 @@
 """
-Clearledgr AP v1 Database
+Solden AP v1 Database
 
 Single source of truth for AP items, approvals, audit events, Gmail OAuth tokens,
 Gmail autopilot state, and ERP connections.
 
 Domain methods live in ``clearledgr.core.stores.*`` mixins.  This module
 provides the shared infrastructure (connection management, schema init,
-encryption helpers) and composes the final ``ClearledgrDB`` class via
+encryption helpers) and composes the final ``SoldenDB`` class via
 multiple inheritance.
 
 Threading model
@@ -84,8 +84,8 @@ logger = logging.getLogger(__name__)
 
 AP_RUNTIME_COMPAT_TABLES: tuple[str, ...] = ()
 _CLEARLEDGR_DB_IMPL = None
-# Process-global pool registry keyed by DSN. See ClearledgrDB.connect()
-# for rationale: multiple ClearledgrDB instances targeting the same
+# Process-global pool registry keyed by DSN. See SoldenDB.connect()
+# for rationale: multiple SoldenDB instances targeting the same
 # DSN share one pool, instead of each spawning min_size=2 fresh
 # connections on first .connect().
 _PG_POOLS_BY_DSN: dict = {}
@@ -243,13 +243,13 @@ def _load_store_symbols() -> None:
     BankMatchStore = _BankMatchStore
 
 
-class _ClearledgrDBBase:
+class _SoldenDBBase:
     def __init__(self, db_path: str = "clearledgr.db"):
         self.dsn = os.getenv("DATABASE_URL")
         self.db_path = db_path
         if not self.dsn:
             raise RuntimeError(
-                "DATABASE_URL is required. Clearledgr no longer supports SQLite."
+                "DATABASE_URL is required. Solden no longer supports SQLite."
             )
         dsn_lower = self.dsn.strip().lower()
         if not (dsn_lower.startswith("postgres://") or dsn_lower.startswith("postgresql://")):
@@ -274,9 +274,9 @@ class _ClearledgrDBBase:
     def connect(self):
         connect_timeout = self._postgres_connect_timeout_seconds()
         if self._pg_pool is None:
-            # Share a single pool per DSN across all ClearledgrDB
+            # Share a single pool per DSN across all SoldenDB
             # instances in the process. Without this, every test
-            # fixture that constructs ClearledgrDB directly would
+            # fixture that constructs SoldenDB directly would
             # spawn its own pool (min_size=2 connections each); a full
             # 2400-test suite then racks up dozens of pools against a
             # PG with max_connections=100 default.
@@ -1670,15 +1670,15 @@ class _ClearledgrDBBase:
             logger.error("Database migrations failed: %s", exc)
 
 
-# ARCHITECTURE NOTE: ClearledgrDB uses mixin inheritance for store methods.
+# ARCHITECTURE NOTE: SoldenDB uses mixin inheritance for store methods.
 # Each mixin (APStore, AuthStore, IntegrationStore, PolicyStore, etc.) adds
 # query methods to the DB class.  The final class is assembled dynamically in
 # _get_db_impl_class() below via multiple inheritance.
 # Future migration: replace mixins with composition (db.ap.list_items()).
 # See docs/TIER4_AUDIT_2026_04.md section I5/I6 for details.
-class ClearledgrDB:
+class SoldenDB:
     def __new__(cls, *args, **kwargs):
-        if cls is ClearledgrDB:
+        if cls is SoldenDB:
             impl_cls = _get_db_impl_class()
             instance = object.__new__(impl_cls)
             impl_cls.__init__(instance, *args, **kwargs)
@@ -1691,8 +1691,8 @@ def _get_db_impl_class():
     if _CLEARLEDGR_DB_IMPL is None:
         _load_store_symbols()
 
-        class _ClearledgrDBImpl(
-            ClearledgrDB,
+        class _SoldenDBImpl(
+            SoldenDB,
             APStore,
             APRuntimeStore,
             ApprovalChainStore,
@@ -1722,21 +1722,21 @@ def _get_db_impl_class():
             RulesStore,
             FxRateStore,
             BankMatchStore,
-            _ClearledgrDBBase,
+            _SoldenDBBase,
         ):
             pass
 
-        _CLEARLEDGR_DB_IMPL = _ClearledgrDBImpl
+        _CLEARLEDGR_DB_IMPL = _SoldenDBImpl
     return _CLEARLEDGR_DB_IMPL
 
 
-_DB_INSTANCE: Optional[ClearledgrDB] = None
+_DB_INSTANCE: Optional[SoldenDB] = None
 
 
-def get_db() -> ClearledgrDB:
+def get_db() -> SoldenDB:
     global _DB_INSTANCE
     if _DB_INSTANCE is None:
-        _DB_INSTANCE = ClearledgrDB(db_path=os.getenv("CLEARLEDGR_DB_PATH", "clearledgr.db"))
+        _DB_INSTANCE = SoldenDB(db_path=os.getenv("CLEARLEDGR_DB_PATH", "clearledgr.db"))
         # E10: Verify database connectivity on first creation.
         # In prod-like envs we fail loud: raise so the worker crashes
         # and the container restarts, rather than silently returning

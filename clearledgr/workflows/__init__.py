@@ -1,4 +1,4 @@
-"""Workflow definitions for Clearledgr.
+"""Workflow definitions for Solden.
 
 The primary workflow is the AP (Accounts Payable) invoice pipeline defined
 in ``ap_workflow.py``.  See ``AP_WORKFLOW_STEPS`` for the declarative step

@@ -131,8 +131,8 @@ class TestReplayHarness:
     """Verify the replay harness works structurally."""
 
     def test_replay_with_no_corrections_returns_clean(self, tmp_path):
-        from clearledgr.core.database import ClearledgrDB
-        db = ClearledgrDB(str(tmp_path / "replay.db"))
+        from clearledgr.core.database import SoldenDB
+        db = SoldenDB(str(tmp_path / "replay.db"))
         db.initialize()
 
         result = run_replay(db, organization_id="test_replay")

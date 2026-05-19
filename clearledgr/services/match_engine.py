@@ -10,7 +10,7 @@ Matching is a fundamental operation that recurs across finance:
 
 Every match has the same shape: candidates + tolerances + a decision
 + audit. Today only AP's version exists, hardcoded in
-:class:`PurchaseOrderService.match_invoice_to_po`. As Clearledgr
+:class:`PurchaseOrderService.match_invoice_to_po`. As Solden
 expands across the deck's roadmap (Q4 2026 AR, H1 2027 Recon, H2
 2027 Close), each new workflow needs its own matcher — but they all
 need the same plumbing for tolerance config, audit, replay, and

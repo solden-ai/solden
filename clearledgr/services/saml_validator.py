@@ -1,6 +1,6 @@
 """SAML 2.0 response validator (Module 6 Pass C).
 
-Clearledgr's SAML SSO accepts SP-initiated and IdP-initiated flows
+Solden's SAML SSO accepts SP-initiated and IdP-initiated flows
 from any SAML 2.0 IdP (Azure AD, Okta, Google Workspace, OneLogin,
 generic). Per scope §Module 6 §220 the design point is *bounded* and
 *safe by default* — every assertion runs through this validator
@@ -46,7 +46,7 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-# Tolerated clock skew between Clearledgr and the IdP. 60s is what
+# Tolerated clock skew between Solden and the IdP. 60s is what
 # the major IdPs (Azure AD, Okta) recommend.
 _CLOCK_SKEW_SECONDS = 60
 
@@ -123,7 +123,7 @@ def parse_and_validate_saml_response(
             admin action via the workspace UI.
         idp_entity_id: The customer's configured IdP entity id.
             Issuer on the assertion must match this exactly.
-        sp_entity_id: Clearledgr's SP entity id for this tenant.
+        sp_entity_id: Solden's SP entity id for this tenant.
             Audience on the assertion must include this.
         sp_acs_url: The Assertion Consumer Service URL. The Response's
             Destination must equal this if the IdP set it (it always

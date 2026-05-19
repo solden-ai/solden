@@ -1,6 +1,6 @@
 """Vendor onboarding portal router — Phase 3.1.b.
 
-The only Clearledgr endpoint surface that accepts unauthenticated
+The only Solden endpoint surface that accepts unauthenticated
 traffic. Vendors land here via a one-time magic-link emailed to them by
 their customer's AP team. The router serves a single multi-section HTML
 form (server-rendered Jinja2, zero JS framework) and two POST handlers
@@ -139,7 +139,7 @@ def _build_form_context(
     # Resolve the customer (buyer) name so the portal can tell the vendor
     # who they're onboarding with. Vendors often onboard with multiple
     # customers in parallel — "Onboarding with Acme" beats generic
-    # Clearledgr branding.
+    # Solden branding.
     customer_name = ""
     try:
         org = db.get_organization(portal.organization_id) or {}

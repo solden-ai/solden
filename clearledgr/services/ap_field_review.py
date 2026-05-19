@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
 
-from clearledgr.core.database import ClearledgrDB
+from clearledgr.core.database import SoldenDB
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +163,7 @@ def _field_resolution_column_updates(field: str, value: Any) -> Dict[str, Any]:
     return {}
 
 
-def _filter_allowed_ap_item_updates(db: ClearledgrDB, updates: Dict[str, Any]) -> Dict[str, Any]:
+def _filter_allowed_ap_item_updates(db: SoldenDB, updates: Dict[str, Any]) -> Dict[str, Any]:
     allowed = getattr(db, "_AP_ITEM_ALLOWED_COLUMNS", None)
     filtered = dict(updates)
     if isinstance(allowed, (set, frozenset)):
@@ -182,7 +182,7 @@ def _filter_allowed_ap_item_updates(db: ClearledgrDB, updates: Dict[str, Any]) -
 
 
 def _build_operator_truth_context(
-    db: ClearledgrDB,
+    db: SoldenDB,
     *,
     item: Dict[str, Any],
     metadata: Dict[str, Any],
@@ -383,10 +383,10 @@ def _build_field_review_surface(payload: Dict[str, Any]) -> Dict[str, Any]:
         winner_label = _field_review_source_label(winning_source)
         attachment_name = str(evidence_entry.get("attachment_name") or "").strip() or None
         reason = str(conflict.get("reason") or "").strip().lower() or "source_value_mismatch"
-        winner_reason = f"{winner_label} currently wins because Clearledgr selected that value as canonical."
+        winner_reason = f"{winner_label} currently wins because Solden selected that value as canonical."
         if winning_source == "attachment" and attachment_name:
             winner_reason = (
-                f"{winner_label} currently wins because Clearledgr selected the value from {attachment_name} as canonical."
+                f"{winner_label} currently wins because Solden selected the value from {attachment_name} as canonical."
             )
 
         blockers.append(
@@ -470,7 +470,7 @@ def _build_field_review_surface(payload: Dict[str, Any]) -> Dict[str, Any]:
                 f"Review {field_label.lower()} before this invoice moves forward."
             )
             winner_reason = (
-                f"Clearledgr read {current_value_display}"
+                f"Solden read {current_value_display}"
                 f"{f' from the {current_source_label.lower()}' if current_source_label else ''}. "
                 f"Because {field_label.lower()} is a critical field, a person needs to confirm it before approval continues."
             )
@@ -481,7 +481,7 @@ def _build_field_review_surface(payload: Dict[str, Any]) -> Dict[str, Any]:
         else:
             paused_reason = f"Review {field_label.lower()} before this invoice moves forward."
             winner_reason = (
-                f"Clearledgr needs the {field_label.lower()} confirmed before this invoice can continue."
+                f"Solden needs the {field_label.lower()} confirmed before this invoice can continue."
             )
             auto_check_note = None
         blockers.append(

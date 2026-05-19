@@ -8,10 +8,10 @@ Glues together:
   * IdP-initiated and SP-completed login — ``handle_assertion``
     validates the SAMLResponse, JIT-provisions the user, applies
     the attribute mapping (role, default entity), records the
-    AssertionID for replay protection, and returns the Clearledgr
+    AssertionID for replay protection, and returns the Solden
     user row + a session token.
   * SP metadata XML — ``render_sp_metadata`` produces the XML the
-    customer's IdP needs to register Clearledgr as a SAML SP.
+    customer's IdP needs to register Solden as a SAML SP.
 
 Replay protection: we use the existing ``audit_events`` idempotency
 key constraint. Inserting an audit row keyed on
@@ -469,9 +469,9 @@ def _certificate_parses(pem: str) -> bool:
 
 
 def _normalize_role(token: str) -> Optional[str]:
-    """Map a free-form attribute value to a canonical Clearledgr role.
+    """Map a free-form attribute value to a canonical Solden role.
 
-    Handles common IdP conventions: 'ClearledgrAPManager', 'AP-Manager',
+    Handles common IdP conventions: 'SoldenAPManager', 'AP-Manager',
     'ap_manager' all map to ``ap_manager``. Unknown tokens return
     ``None`` so callers fall back to the default_role.
     """

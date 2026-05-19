@@ -1,4 +1,4 @@
-/** Shared Preact hooks for Clearledgr UI */
+/** Shared Preact hooks for Solden UI */
 import { h, Component } from 'preact';
 import { useState, useCallback, useRef, useEffect } from 'preact/hooks';
 
@@ -17,7 +17,7 @@ export class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    console.error('[Clearledgr ErrorBoundary]', error, info?.componentStack || '');
+    console.error('[Solden ErrorBoundary]', error, info?.componentStack || '');
   }
 
   render() {

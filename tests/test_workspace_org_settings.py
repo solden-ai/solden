@@ -91,7 +91,7 @@ def test_patch_org_settings_requires_admin(client_factory):
     client = client_factory(_operator_user)
     resp = client.patch(
         "/api/workspace/org/settings",
-        json={"organization_id": "org-test", "patch": {"organization_name": "Clearledgr"}},
+        json={"organization_id": "org-test", "patch": {"organization_name": "Solden"}},
     )
     assert resp.status_code == 403
     # workspace_shell._require_admin uses has_admin_access (Financial
@@ -167,16 +167,16 @@ def test_patch_org_settings_renames_and_audits(db, client_factory):
     client = client_factory(_admin_user)
     resp = client.patch(
         "/api/workspace/org/settings",
-        json={"organization_id": "org-test", "patch": {"organization_name": "Clearledgr"}},
+        json={"organization_id": "org-test", "patch": {"organization_name": "Solden"}},
     )
     assert resp.status_code == 200
     body = resp.json()
     assert body["success"] is True
-    assert body["organization"]["name"] == "Clearledgr"
+    assert body["organization"]["name"] == "Solden"
 
     # DB carried the rename.
     org = db.get_organization("org-test") or {}
-    assert org.get("name") == "Clearledgr"
+    assert org.get("name") == "Solden"
 
     # Exactly one audit event was emitted, of type organization_renamed,
     # with the old + new names captured for post-mortem grep.
@@ -187,7 +187,7 @@ def test_patch_org_settings_renames_and_audits(db, client_factory):
     assert event["actor_type"] == "user"
     # prev_state / new_state columns carry the rename pair.
     assert event.get("prev_state") == "org-test"
-    assert event.get("new_state") == "Clearledgr"
+    assert event.get("new_state") == "Solden"
 
 
 def test_patch_org_settings_noop_does_not_audit(db, client_factory):
@@ -195,11 +195,11 @@ def test_patch_org_settings_noop_does_not_audit(db, client_factory):
     or churn the DB. Defensive against a UI that re-saves on blur."""
     client = client_factory(_admin_user)
     # Seed prior name.
-    db.update_organization("org-test", name="Clearledgr")
+    db.update_organization("org-test", name="Solden")
 
     resp = client.patch(
         "/api/workspace/org/settings",
-        json={"organization_id": "org-test", "patch": {"organization_name": "Clearledgr"}},
+        json={"organization_id": "org-test", "patch": {"organization_name": "Solden"}},
     )
     assert resp.status_code == 200
 

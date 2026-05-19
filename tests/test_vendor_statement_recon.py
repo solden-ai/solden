@@ -167,7 +167,7 @@ class TestReconSummary:
         result = svc.reconcile("Zeta", [
             {"reference": "Z-001", "amount": 1000.0, "date": "2026-03-01"},
             {"reference": "Z-002", "amount": 2000.0, "date": "2026-03-15"},
-            {"reference": "Z-003", "amount": 500.0, "date": "2026-03-20"},  # not in Clearledgr
+            {"reference": "Z-003", "amount": 500.0, "date": "2026-03-20"},  # not in Solden
         ])
 
         s = result["summary"]

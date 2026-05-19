@@ -1,6 +1,6 @@
-# Salis — Clearledgr engineering docs
+# Salis — Solden engineering docs
 
-This directory is the engineering handoff for Clearledgr.v1. If you're joining the team, start here.
+This directory is the engineering handoff for Solden.v1. If you're joining the team, start here.
 
 Named "Salis" so we can talk about "the docs" as a thing with an identity, not a folder.
 

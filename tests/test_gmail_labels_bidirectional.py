@@ -1,6 +1,6 @@
 """Integration test for Phase 2 Gmail labels bidirectional sync.
 
-Trace: vendor/AP-clerk applies a Clearledgr action label in Gmail →
+Trace: vendor/AP-clerk applies a Solden action label in Gmail →
 Gmail Pub/Sub delivers a ``labelsAdded`` history record → our
 ``_process_label_changes`` resolves the label ID to a display name,
 looks up the AP box by thread, and enqueues an ``AgentEvent`` with
@@ -100,8 +100,8 @@ class TestLabelsBidirectionalSync:
         item = _seed_ap_item(db, ap_item_id="AP-BIDI-1", thread_id="thread-1")
 
         client = _MockGmailClient({
-            "LABEL_APPROVED": "Clearledgr/Invoice/Approved",
-            "LABEL_STATUS":   "Clearledgr/Matched",  # status-only; ignored
+            "LABEL_APPROVED": "Solden/Invoice/Approved",
+            "LABEL_STATUS":   "Solden/Matched",  # status-only; ignored
         })
         queue = _MockQueue()
         token = SimpleNamespace(email="ap-clerk@default.com")
@@ -126,11 +126,11 @@ class TestLabelsBidirectionalSync:
         assert ev.type == AgentEventType.LABEL_CHANGED
         assert ev.organization_id == "org-test"
         assert ev.source == "gmail_label_sync"
-        assert ev.idempotency_key == "label:Clearledgr/Invoice/Approved:msg-gmail-42"
+        assert ev.idempotency_key == "label:Solden/Invoice/Approved:msg-gmail-42"
         assert ev.payload["box_id"] == item["id"]
         assert ev.payload["thread_id"] == "thread-1"
         assert ev.payload["message_id"] == "msg-gmail-42"
-        assert ev.payload["label_name"] == "Clearledgr/Invoice/Approved"
+        assert ev.payload["label_name"] == "Solden/Invoice/Approved"
         assert ev.payload["intent"] == "approve_invoice"
         assert ev.payload["actor_email"] == "ap-clerk@default.com"
 
@@ -138,7 +138,7 @@ class TestLabelsBidirectionalSync:
     async def test_exception_label_enqueues_needs_info_intent(self, db):
         _seed_ap_item(db, ap_item_id="AP-BIDI-2", thread_id="thread-2")
         client = _MockGmailClient({
-            "LABEL_EXC": "Clearledgr/Invoice/Exception",
+            "LABEL_EXC": "Solden/Invoice/Exception",
         })
         queue = _MockQueue()
 
@@ -157,7 +157,7 @@ class TestLabelsBidirectionalSync:
     async def test_not_finance_label_enqueues_reject_invoice_intent(self, db):
         _seed_ap_item(db, ap_item_id="AP-BIDI-3", thread_id="thread-3")
         client = _MockGmailClient({
-            "LABEL_NF": "Clearledgr/Not Finance",
+            "LABEL_NF": "Solden/Not Finance",
         })
         queue = _MockQueue()
 
@@ -176,9 +176,9 @@ class TestLabelsBidirectionalSync:
     async def test_status_only_labels_are_ignored(self, db):
         _seed_ap_item(db, ap_item_id="AP-BIDI-4", thread_id="thread-4")
         client = _MockGmailClient({
-            "LABEL_MATCHED": "Clearledgr/Matched",
-            "LABEL_PAID":    "Clearledgr/Paid",
-            "LABEL_RCVD":    "Clearledgr/Invoice/Received",
+            "LABEL_MATCHED": "Solden/Matched",
+            "LABEL_PAID":    "Solden/Paid",
+            "LABEL_RCVD":    "Solden/Invoice/Received",
         })
         queue = _MockQueue()
 
@@ -200,7 +200,7 @@ class TestLabelsBidirectionalSync:
         # No seeded AP item for thread-ghost — labels on threads we
         # don't track should no-op, not crash.
         client = _MockGmailClient({
-            "LABEL_APPROVED": "Clearledgr/Invoice/Approved",
+            "LABEL_APPROVED": "Solden/Invoice/Approved",
         })
         queue = _MockQueue()
 
@@ -218,7 +218,7 @@ class TestLabelsBidirectionalSync:
     async def test_replayed_record_is_deduped_via_idempotency_key(self, db):
         _seed_ap_item(db, ap_item_id="AP-BIDI-6", thread_id="thread-6")
         client = _MockGmailClient({
-            "LABEL_APPROVED": "Clearledgr/Invoice/Approved",
+            "LABEL_APPROVED": "Solden/Invoice/Approved",
         })
         queue = _MockQueue()
 
@@ -251,7 +251,7 @@ class TestLabelsBidirectionalSync:
         _seed_ap_item(db, ap_item_id="AP-BIDI-7a", thread_id="thread-7a")
         _seed_ap_item(db, ap_item_id="AP-BIDI-7b", thread_id="thread-7b")
         client = _MockGmailClient({
-            "LABEL_APPROVED": "Clearledgr/Invoice/Approved",
+            "LABEL_APPROVED": "Solden/Invoice/Approved",
         })
         queue = _MockQueue()
 

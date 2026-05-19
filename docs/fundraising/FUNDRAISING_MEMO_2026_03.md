@@ -1,4 +1,4 @@
-# Clearledgr Fundraising Memo
+# Solden Fundraising Memo
 
 Date: 2026-03-25
 
@@ -13,9 +13,9 @@ Date: 2026-03-25
 
 ## One-Line Pitch
 
-Clearledgr is the AI execution layer for finance teams. Its first production skill runs AP from Gmail: triage invoices, route approvals, validate against ERP, and write approved invoices back without manual approval chasing or duplicate data entry.
+Solden is the AI execution layer for finance teams. Its first production skill runs AP from Gmail: triage invoices, route approvals, validate against ERP, and write approved invoices back without manual approval chasing or duplicate data entry.
 
-Longer term, Clearledgr will expand into adjacent finance workflows with the same manual coordination problem.
+Longer term, Solden will expand into adjacent finance workflows with the same manual coordination problem.
 
 ## The Problem
 
@@ -31,7 +31,7 @@ This is why finance teams do not need another dashboard. They need a system that
 
 ## The Product Thesis
 
-Clearledgr is not an AP suite. It is the execution layer for finance work.
+Solden is not an AP suite. It is the execution layer for finance work.
 
 The right hierarchy is:
 
@@ -72,20 +72,20 @@ The more important point is that the market already admits this workflow exists.
 - Tipalti supports approval by email, but email is still a side channel to the main product
 - Stampli explicitly frames fragmented email-thread coordination as the broken old way and centralizes it inside Stampli
 
-So the wedge is not based on an invented workflow. AP already runs through email in practice. The difference is that incumbents treat email as intake, notification, or something to escape from. Clearledgr treats Gmail as the operating surface.
+So the wedge is not based on an invented workflow. AP already runs through email in practice. The difference is that incumbents treat email as intake, notification, or something to escape from. Solden treats Gmail as the operating surface.
 
-Clearledgr is not forcing finance into a new place. It is putting the workflow into the place they already work from and making that workflow actually run end to end.
+Solden is not forcing finance into a new place. It is putting the workflow into the place they already work from and making that workflow actually run end to end.
 
-## What Clearledgr Is Not
+## What Solden Is Not
 
-Clearledgr is not:
+Solden is not:
 
 - a generic OCR tool
 - another AP dashboard
 - a replacement for ERP
 - an "AI accounting" product
 
-The product wins if finance can stay in email while Clearledgr handles triage, approval routing, ERP checks, and writeback.
+The product wins if finance can stay in email while Solden handles triage, approval routing, ERP checks, and writeback.
 
 ## Product Today
 
@@ -206,7 +206,7 @@ Near-term GTM objective:
 
 ## Why Us
 
-Clearledgr is not being built by someone who discovered finance ops from the outside, and it is not being sold by a team that does not know how to win enterprise workflows.
+Solden is not being built by someone who discovered finance ops from the outside, and it is not being sold by a team that does not know how to win enterprise workflows.
 
 The founding-team advantage is unusually direct:
 
@@ -236,13 +236,13 @@ Working pricing thesis:
 - production rollout: $10K-$15K per month for the first AP workflow
 - expansion through workflow depth, entity coverage, and adjacent finance workflows
 
-The core economic idea is that Clearledgr is bought to remove labor and coordination cost, not to add another layer of reporting.
+The core economic idea is that Solden is bought to remove labor and coordination cost, not to add another layer of reporting.
 
 ## What This Round Must Buy
 
 This round should buy proof.
 
-By the end of this round, Clearledgr should have:
+By the end of this round, Solden should have:
 
 1. 2-3 paid pilots or paid conversions on the AP wedge
 2. repeat weekly operator usage
@@ -277,7 +277,7 @@ The real risks are not conceptual. They are execution risks:
 
 ## Why $2M-$2.5M
 
-$2M-$2.5M is the right amount because it gives Clearledgr enough runway to:
+$2M-$2.5M is the right amount because it gives Solden enough runway to:
 
 - finish polishing the Gmail-native AP wedge
 - convert design-partner signal into paid pilot proof
@@ -288,7 +288,7 @@ It is large enough to matter and small enough to preserve discipline.
 
 ## Closing
 
-Clearledgr should be pitched now as:
+Solden should be pitched now as:
 
 - the company: the AI execution layer for finance teams
 - today: the first production skill is Gmail-native AP

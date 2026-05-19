@@ -1,4 +1,4 @@
-"""Durable task run persistence mixin for ClearledgrDB.
+"""Durable task run persistence mixin for SoldenDB.
 
 Follows the exact ApprovalChainStore mixin pattern:
 - No __init__ of its own

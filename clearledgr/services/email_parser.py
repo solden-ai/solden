@@ -1,5 +1,5 @@
 """
-Clearledgr Email Parser Service
+Solden Email Parser Service
 
 Parses finance-related emails and attachments:
 - Invoice extraction from PDFs (with table support via pdfplumber)

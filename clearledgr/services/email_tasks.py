@@ -1,5 +1,5 @@
 """
-Clearledgr Email Tasks Service
+Solden Email Tasks Service
 
 Turns email threads into actionable tasks:
 - Creates close tasks from emails

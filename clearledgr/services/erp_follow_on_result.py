@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, List, Optional
 from fastapi import HTTPException
 
 from clearledgr.core.ap_states import APState
-from clearledgr.core.database import ClearledgrDB
+from clearledgr.core.database import SoldenDB
 from clearledgr.core.utils import safe_float
 
 
@@ -54,7 +54,7 @@ def _normalize_document_type_token(raw: Any) -> str:
     return get_route(token).type
 
 
-def _filter_allowed_ap_item_updates(db: ClearledgrDB, updates: Dict[str, Any]) -> Dict[str, Any]:
+def _filter_allowed_ap_item_updates(db: SoldenDB, updates: Dict[str, Any]) -> Dict[str, Any]:
     allowed = getattr(db, "_AP_ITEM_ALLOWED_COLUMNS", None)
     filtered = dict(updates)
     if isinstance(allowed, (set, frozenset)):
@@ -72,7 +72,7 @@ def _filter_allowed_ap_item_updates(db: ClearledgrDB, updates: Dict[str, Any]) -
     return serialized
 
 
-def _require_item(db: ClearledgrDB, ap_item_id: str) -> Dict[str, Any]:
+def _require_item(db: SoldenDB, ap_item_id: str) -> Dict[str, Any]:
     item = db.get_ap_item(ap_item_id)
     if not item:
         raise HTTPException(status_code=404, detail="ap_item_not_found")
@@ -428,7 +428,7 @@ def _normalize_erp_follow_on_status(result: Dict[str, Any]) -> str:
 
 
 def _apply_erp_follow_on_result(
-    db: ClearledgrDB,
+    db: SoldenDB,
     *,
     source_ap_item_id: str,
     related_ap_item_id: str,
@@ -436,7 +436,7 @@ def _apply_erp_follow_on_result(
     result: Dict[str, Any],
     actor_id: str,
     organization_id: str,
-    item_serializer: Optional[Callable[[ClearledgrDB, Dict[str, Any]], Dict[str, Any]]] = None,
+    item_serializer: Optional[Callable[[SoldenDB, Dict[str, Any]], Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     source_item = _require_item(db, source_ap_item_id)
     related_item = _require_item(db, related_ap_item_id)

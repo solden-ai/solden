@@ -421,7 +421,7 @@ def _explain_with_claude(
     amount_str = f"${amount:.2f}" if amount else "unknown"
     conf_str = f"{float(confidence):.0%}" if confidence else "unknown"
 
-    prompt = f"""You are Clearledgr, an AP agent embedded in Gmail.
+    prompt = f"""You are Solden, an AP agent embedded in Gmail.
 
 An operator is asking: "Why is this invoice in its current state?"
 

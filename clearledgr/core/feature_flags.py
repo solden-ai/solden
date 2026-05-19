@@ -2,7 +2,7 @@
 
 The thesis draws two hard boundaries for V1:
 
-  §12 #6 Outlook — "The answer in V1 is no. Clearledgr does Gmail
+  §12 #6 Outlook — "The answer in V1 is no. Solden does Gmail
     exceptionally. It does not do Outlook at all in V1. This boundary
     must be stated explicitly in every sales conversation."
 

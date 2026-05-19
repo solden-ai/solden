@@ -29,10 +29,10 @@ def _run(coro):
 
 
 def _make_db(tmp_path: str):
-    """Create a fresh ClearledgrDB instance at a temp path."""
+    """Create a fresh SoldenDB instance at a temp path."""
     os.environ["CLEARLEDGR_DB_PATH"] = tmp_path
-    from clearledgr.core.database import ClearledgrDB
-    db = ClearledgrDB(tmp_path)
+    from clearledgr.core.database import SoldenDB
+    db = SoldenDB(tmp_path)
     db.initialize()
     return db
 

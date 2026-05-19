@@ -1,6 +1,6 @@
 """Report subscription store — persistence for Module 8 scheduled email.
 
-Mixed into ``ClearledgrDB`` so callers use ``db.create_report_subscription``,
+Mixed into ``SoldenDB`` so callers use ``db.create_report_subscription``,
 ``db.list_report_subscriptions``, ``db.due_report_subscriptions``, etc.
 
 Why a dedicated mixin:
@@ -90,7 +90,7 @@ def compute_next_due(cadence: str, anchor: Optional[datetime] = None) -> datetim
 
 
 class ReportSubscriptionStoreMixin:
-    """Mix into ``ClearledgrDB`` for report-subscription persistence."""
+    """Mix into ``SoldenDB`` for report-subscription persistence."""
 
     def create_report_subscription(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         sub_id = payload.get("id") or f"sub-{uuid.uuid4().hex[:16]}"

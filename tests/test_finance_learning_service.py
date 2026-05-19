@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from clearledgr.core.database import ClearledgrDB
+from clearledgr.core.database import SoldenDB
 from clearledgr.services.finance_learning import FinanceLearningService
 
 
 def test_finance_learning_records_outcome_calibration_from_runtime_outcome(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
-    db = ClearledgrDB(str(tmp_path / "finance-learning.db"))
+    db = SoldenDB(str(tmp_path / "finance-learning.db"))
     db.initialize()
 
     service = FinanceLearningService("test-org", db=db)

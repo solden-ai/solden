@@ -1,19 +1,19 @@
-# Clearledgr Embedded Ecosystem (AP-First)
+# Solden Embedded Ecosystem (AP-First)
 
 ## Status
 
 - **Role:** Product-surface and ecosystem reference
-- **Canonical doctrine:** `/Users/mombalam/Desktop/Clearledgr.v1/PLAN.md`
+- **Canonical doctrine:** `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
 - **Scope here:** AP v1 embedded ecosystem and runtime expansion model
 
 ## Ecosystem Summary
 
-Clearledgr is an embedded finance execution agent:
+Solden is an embedded finance execution agent:
 
 1. Gmail is the primary AP operator surface.
 2. Slack/Teams are approval decision surfaces.
 3. ERP is the system of record.
-4. Clearledgr runtime executes policy-governed AP actions with auditability.
+4. Solden runtime executes policy-governed AP actions with auditability.
 
 The product is designed to execute work in-place, not move operators into a new daily dashboard.
 
@@ -102,9 +102,9 @@ All new skills must inherit:
 
 ## Related Docs
 
-1. `/Users/mombalam/Desktop/Clearledgr.v1/PLAN.md`
-2. `/Users/mombalam/Desktop/Clearledgr.v1/docs/HOW_IT_WORKS.md`
-3. `/Users/mombalam/Desktop/Clearledgr.v1/docs/V1_EMBEDDED_WORKER_EXPERIENCE.md`
-4. `/Users/mombalam/Desktop/Clearledgr.v1/docs/V1_BACKEND_CONTRACTS.md`
-5. `/Users/mombalam/Desktop/Clearledgr.v1/docs/API_REFERENCE.md`
-6. `/Users/mombalam/Desktop/Clearledgr.v1/docs/AGENT_ARCHITECTURE.md`
+1. `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
+2. `/Users/mombalam/Desktop/Solden.v1/docs/HOW_IT_WORKS.md`
+3. `/Users/mombalam/Desktop/Solden.v1/docs/V1_EMBEDDED_WORKER_EXPERIENCE.md`
+4. `/Users/mombalam/Desktop/Solden.v1/docs/V1_BACKEND_CONTRACTS.md`
+5. `/Users/mombalam/Desktop/Solden.v1/docs/API_REFERENCE.md`
+6. `/Users/mombalam/Desktop/Solden.v1/docs/AGENT_ARCHITECTURE.md`

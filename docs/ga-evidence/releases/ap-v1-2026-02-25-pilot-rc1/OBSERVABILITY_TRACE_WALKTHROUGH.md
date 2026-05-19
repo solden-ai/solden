@@ -30,10 +30,10 @@ Result:
 
 | Lifecycle stage | Verification | Evidence |
 |---|---|---|
-| Intake -> validation -> approval state chain | Correlation ID remains stable across state-transition audit events | `/Users/mombalam/Desktop/Clearledgr.v1/tests/test_invoice_workflow_runtime_state_transitions.py::test_workflow_state_transition_audits_share_single_correlation_id_across_intake_and_approval` |
-| Callback duplicate handling | Duplicate callback requests remain idempotent with same correlation lineage | `/Users/mombalam/Desktop/Clearledgr.v1/tests/test_channel_approval_contract.py::test_slack_interactive_duplicate_storm_is_idempotent` |
-| Posting API failure path | API-first failure path emits fallback request with correlated context | `/Users/mombalam/Desktop/Clearledgr.v1/tests/test_erp_api_first.py::test_post_bill_api_first_requests_browser_fallback_on_api_failure` |
-| Audit endpoint queryability | Browser evidence + correlation linkage retrievable via audit endpoint | `/Users/mombalam/Desktop/Clearledgr.v1/tests/test_browser_agent_layer.py::test_browser_evidence_is_queryable_via_audit_endpoint` |
+| Intake -> validation -> approval state chain | Correlation ID remains stable across state-transition audit events | `/Users/mombalam/Desktop/Solden.v1/tests/test_invoice_workflow_runtime_state_transitions.py::test_workflow_state_transition_audits_share_single_correlation_id_across_intake_and_approval` |
+| Callback duplicate handling | Duplicate callback requests remain idempotent with same correlation lineage | `/Users/mombalam/Desktop/Solden.v1/tests/test_channel_approval_contract.py::test_slack_interactive_duplicate_storm_is_idempotent` |
+| Posting API failure path | API-first failure path emits fallback request with correlated context | `/Users/mombalam/Desktop/Solden.v1/tests/test_erp_api_first.py::test_post_bill_api_first_requests_browser_fallback_on_api_failure` |
+| Audit endpoint queryability | Browser evidence + correlation linkage retrievable via audit endpoint | `/Users/mombalam/Desktop/Solden.v1/tests/test_browser_agent_layer.py::test_browser_evidence_is_queryable_via_audit_endpoint` |
 
 ## Remaining Work For DONE
 

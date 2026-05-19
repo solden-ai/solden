@@ -22,7 +22,7 @@ import pytest
 
 @pytest.fixture()
 def fresh_db(monkeypatch):
-    """Point ClearledgrDB at a throwaway SQLite file so the test is
+    """Point SoldenDB at a throwaway SQLite file so the test is
     isolated from whatever the other tests or the dev DB are doing."""
     tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
     tmp.close()

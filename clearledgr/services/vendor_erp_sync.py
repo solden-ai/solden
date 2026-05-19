@@ -1,4 +1,4 @@
-"""Vendor master data sync — pulls vendor records from ERP into Clearledgr profiles.
+"""Vendor master data sync — pulls vendor records from ERP into Solden profiles.
 
 Compares ERP vendor directory against existing vendor profiles, upserts
 changes, and detects important mutations (new vendors, deactivated vendors,
@@ -20,11 +20,11 @@ async def sync_vendors_from_erp(
     organization_id: str,
     force_refresh: bool = True,
 ) -> Dict[str, Any]:
-    """Sync vendor master data from ERP to Clearledgr vendor profiles.
+    """Sync vendor master data from ERP to Solden vendor profiles.
 
     Steps:
     1. Fetch all vendors from ERP (via list_all_vendors with force_refresh)
-    2. Bulk query existing Clearledgr vendor profiles
+    2. Bulk query existing Solden vendor profiles
     3. For each ERP vendor, upsert profile with ERP-sourced fields
     4. Detect changes: new vendors, deactivated, bank/terms changes
     5. Return sync summary

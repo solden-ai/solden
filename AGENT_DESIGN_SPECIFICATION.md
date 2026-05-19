@@ -1,20 +1,20 @@
-# Clearledgr Agent Design Specification
+# Solden Agent Design Specification
 
-**How the Clearledgr agent thinks, acts, and recovers** · Internal engineering reference
+**How the Solden agent thinks, acts, and recovers** · Internal engineering reference
 
 ---
 
-This document defines the Clearledgr agent from the inside: its architecture, event system, formal action space, planning and coordination layers, state management, LLM/deterministic boundary, invoice and vendor onboarding lifecycles, waiting and resumption model, error handling, and context window management. The Product Design Thesis describes what the agent does from the outside. This document is how it actually works.
+This document defines the Solden agent from the inside: its architecture, event system, formal action space, planning and coordination layers, state management, LLM/deterministic boundary, invoice and vendor onboarding lifecycles, waiting and resumption model, error handling, and context window management. The Product Design Thesis describes what the agent does from the outside. This document is how it actually works.
 
-Clearledgr is the stateful coordination layer for finance operations. The agent specified in this document is the runtime that makes that layer real. Every workflow instance — an AP invoice, a vendor onboarding, a commission clawback — is a Box. The agent advances each Box where it can and escalates to a human on the exception. The Box holds state, timeline, exceptions, and outcome across days and email threads. The agent advances it. Gmail, Slack, and the customer's ERP are how Box state is rendered to the human operators. The agent has no customer-facing web surface of its own — following the Streak architectural precedent, all customer interaction happens inside the tools the finance team already uses.
+Solden is the stateful coordination layer for finance operations. The agent specified in this document is the runtime that makes that layer real. Every workflow instance — an AP invoice, a vendor onboarding, a commission clawback — is a Box. The agent advances each Box where it can and escalates to a human on the exception. The Box holds state, timeline, exceptions, and outcome across days and email threads. The agent advances it. Gmail, Slack, and the customer's ERP are how Box state is rendered to the human operators. The agent has no customer-facing web surface of its own — following the Streak architectural precedent, all customer interaction happens inside the tools the finance team already uses.
 
-> Confidential — Clearledgr Ltd · Engineering team only
+> Confidential — Solden Technologies Ltd. · Engineering team only
 
 ---
 
 ## 1. Architecture Overview
 
-The Clearledgr agent is an event-driven, stateful coordination system with two primary layers: a planning engine that decides what needs to happen given an event and current Box state, and a coordination engine that carries out the plan one action at a time, recording each action to the Box timeline before executing it.
+The Solden agent is an event-driven, stateful coordination system with two primary layers: a planning engine that decides what needs to happen given an event and current Box state, and a coordination engine that carries out the plan one action at a time, recording each action to the Box timeline before executing it.
 
 The agent is not a single LLM call. It is an orchestration system that calls Claude for specific, bounded tasks — classification, extraction, natural language generation — and delegates everything else to deterministic rules. The intelligence is in knowing exactly where the boundary is. The audit trail is in recording every step before it happens.
 
@@ -47,7 +47,7 @@ The agent is not a single LLM call. It is an orchestration system that calls Cla
 
 ### 2.1 Gmail Pub/Sub Watch
 
-The customer's Gmail inbox (the shared ap@ address and any individual addresses configured during onboarding) is watched via the Gmail API `watch()` method. Gmail pushes notifications to Clearledgr's registered Pub/Sub topic when new messages arrive. The notification contains the history ID and the email address — it does not contain the message content. The listener fetches the message content separately using the history ID to list changes since the last known history ID.
+The customer's Gmail inbox (the shared ap@ address and any individual addresses configured during onboarding) is watched via the Gmail API `watch()` method. Gmail pushes notifications to Solden's registered Pub/Sub topic when new messages arrive. The notification contains the history ID and the email address — it does not contain the message content. The listener fetches the message content separately using the history ID to list changes since the last known history ID.
 
 | Watch lifecycle step | Implementation detail |
 |----------------------|----------------------|
@@ -71,7 +71,7 @@ Every event that enters the system has a type, a source, and a payload. The plan
 | `kyc_document_received` | A vendor submits a KYC document via the onboarding portal. Payload: `{vendor_id, document_type, document_url}` |
 | `payment_confirmed` | ERP or payment rail confirms that a scheduled payment has settled. Payload: `{box_id, payment_reference, settled_at, amount}` |
 | `timer_fired` | A scheduled job's time condition has been met. Payload: `{box_id, timer_type, original_scheduled_at}`. Used for: GRN polling, vendor chase escalation, approval timeout. |
-| `manual_classification` | AP Manager manually classifies a Clearledgr/Review Required email. Payload: `{message_id, classification, classified_by}` |
+| `manual_classification` | AP Manager manually classifies a Solden/Review Required email. Payload: `{message_id, classification, classified_by}` |
 | `iban_change_submitted` | A vendor submits a new IBAN via the onboarding portal. Payload: `{vendor_id, new_iban_token, submitted_at}`. Always triggers the three-factor verification flow regardless of source. |
 | `override_window_expired` | A timer confirming the override window for an autonomous action has closed. Payload: `{box_id, action_type, action_timestamp}`. The action is now irreversible. |
 
@@ -89,7 +89,7 @@ The action space is closed. If a new capability is needed that is not expressibl
 |--------|-------|-------------|
 | `read_email(message_id)` | DET | Fetch full email content from Gmail API: headers, plain text body, HTML body, attachment metadata. Returns a structured `EmailContent` object. |
 | `fetch_attachment(message_id, attachment_id)` | DET | Download a specific attachment from Gmail. Returns raw bytes. Called only for attachments identified as likely invoices by the classification step. |
-| `apply_label(thread_id, label)` | DET | Apply a Clearledgr Gmail label to the thread via Gmail API. Idempotent — applying a label that is already present is a no-op. Removes conflicting stage labels before applying the new one. |
+| `apply_label(thread_id, label)` | DET | Apply a Solden Gmail label to the thread via Gmail API. Idempotent — applying a label that is already present is a no-op. Removes conflicting stage labels before applying the new one. |
 | `remove_label(thread_id, label)` | DET | Remove a specific label from a thread. Used when an invoice moves stages. |
 | `split_thread(thread_id, message_id)` | DET | Split a Gmail thread at a specific message, creating a new thread from that message forward. Used when a vendor sends a new invoice as a reply to an existing thread. |
 | `send_email(to, subject, body, thread_id?)` | DET | Send an email from the AP inbox via Gmail API. Optional `thread_id` to reply within an existing thread. All outbound emails are logged to the Box timeline. |
@@ -148,10 +148,10 @@ The action space is closed. If a new capability is needed that is not expressibl
 
 | Action | Layer | Description |
 |--------|-------|-------------|
-| `create_vendor_record(vendor_data)` | DET | Create a new Vendor record in the Clearledgr vendor master with status: `pending_onboarding`. Does not activate the vendor in the ERP. |
+| `create_vendor_record(vendor_data)` | DET | Create a new Vendor record in the Solden vendor master with status: `pending_onboarding`. Does not activate the vendor in the ERP. |
 | `enrich_vendor(vendor_id)` | DET | Call external enrichment APIs (Companies House, HMRC VAT register, open corporate registries) to pre-populate the Vendor record with public registration data. Stores source and timestamp per enriched field. |
 | `run_adverse_media_check(vendor_id)` | DET | Run an adverse media check against the vendor's registered directors and company name. Returns `{clear: bool, flags: []}`. A flagged check requires AP Manager review before the vendor can be activated. |
-| `initiate_micro_deposit(vendor_id, iban)` | DET | Send a micro-deposit to the vendor's provided IBAN to verify bank account ownership. Stores the deposit amount (known only to Clearledgr) for verification. Does not reveal the amount to the vendor. |
+| `initiate_micro_deposit(vendor_id, iban)` | DET | Send a micro-deposit to the vendor's provided IBAN to verify bank account ownership. Stores the deposit amount (known only to Solden) for verification. Does not reveal the amount to the vendor. |
 | `verify_micro_deposit(vendor_id, amount_claimed)` | DET | Compare the amount claimed by the vendor against the stored deposit amount. Returns `{verified: bool}`. Three failed attempts locks the IBAN and requires AP Manager intervention. |
 | `activate_vendor_in_erp(vendor_id, erp)` | DET | Create or activate the vendor in the ERP vendor master with the verified bank details. Requires both KYC complete and IBAN verified flags on the Vendor record. Returns `{activated: bool, erp_vendor_id?}`. |
 | `freeze_vendor_payments(vendor_id, reason)` | DET | Apply a payment hold on all invoices from a vendor. New invoices from the vendor are processed but not scheduled for payment until the hold is lifted. Triggered automatically on IBAN change detection. |
@@ -360,7 +360,7 @@ This section traces a single invoice from email arrival to payment confirmation,
 3. Planning engine receives event. Thread is not watched — this is a new thread.
 4. **Plan step 1:** `read_email(message_id)`. Execution engine writes pre-execution timeline entry. Fetches full email content and attachment.
 5. **Plan step 2:** `classify_email(email_content)`. Claude returns `{type: 'invoice', confidence: 0.94}`. Confidence passes.
-6. **Plan step 3:** `apply_label(thread_id, 'Clearledgr/Invoice/Received')`.
+6. **Plan step 3:** `apply_label(thread_id, 'Solden/Invoice/Received')`.
 7. **Plan step 4:** `create_box('ap_invoices', {thread_id, mailbox, received_at})`. Box ID assigned.
 8. **Plan step 5:** `check_domain_match(sender_email, vendor_id)`. Vendor looked up by domain. Domain matches — vendor is known and Active.
 9. **Plan step 6:** `check_duplicate(vendor_id, null, null, 90)`. No reference extracted yet — duplicate check is partial at this stage. Full check runs after extraction.
@@ -373,7 +373,7 @@ This section traces a single invoice from email arrival to payment confirmation,
 16. **Plan step 13:** `lookup_po(po_reference, erp)`. PO found. Status: open.
 17. **Plan step 14:** `lookup_grn(po_reference, erp)`. GRN found and confirmed. Total received amount matches invoice within tolerance.
 18. **Plan step 15:** `run_three_way_match(invoice, po, grn)`. Result: passed. Match score: 0.997.
-19. **Plan step 16:** `apply_label(thread_id, 'Clearledgr/Invoice/Matched')`.
+19. **Plan step 16:** `apply_label(thread_id, 'Solden/Invoice/Matched')`.
 20. **Plan step 17:** `move_box_stage(box_id, 'awaiting_approval')`.
 21. **Plan step 18:** `send_slack_approval(box_id, ap_manager, invoice_summary)`. Structured message with match result and Approve/Reject buttons sent to AP Manager DM.
 22. **Plan step 19:** `set_waiting_condition(box_id, {type: 'approval_response', timeout: 4h})`. Approval timeout timer scheduled.
@@ -386,7 +386,7 @@ This section traces a single invoice from email arrival to payment confirmation,
 3. **Plan step 1:** `clear_waiting_condition(box_id)`.
 4. **Plan step 2:** `pre_post_validate(box_id, erp)`. PO still open. GRN still unmatched. No duplicate bill. Vendor active. All clear.
 5. **Plan step 3:** `post_bill(invoice_data, erp)`. ERP returns confirmation with bill ID.
-6. **Plan step 4:** `move_box_stage(box_id, 'approved')`. `apply_label(thread_id, 'Clearledgr/Invoice/Approved')`.
+6. **Plan step 4:** `move_box_stage(box_id, 'approved')`. `apply_label(thread_id, 'Solden/Invoice/Approved')`.
 7. **Plan step 5:** `schedule_payment(vendor, amount, due_date, currency, erp)`. Payment scheduled in ERP.
 8. **Plan step 6:** `post_timeline_entry` — DID: "Posted INV-2841 to NetSuite and scheduled SEPA payment of £12,400 due 14 April." WHY: "Three-way match passed within 0.3% tolerance. AP Manager approved 09:41." NEXT: "Payment executes on 14 April. Override window open until 09:56."
 9. **Plan step 7:** `send_slack_override_window(box_id, 'payment_scheduled', close_time)`. AP Manager sees confirmation with live Undo button.
@@ -396,7 +396,7 @@ This section traces a single invoice from email arrival to payment confirmation,
 **Payment confirmation:**
 
 1. ERP payment run executes. Payment confirmation arrives as `payment_confirmed` event.
-2. Plan: `move_box_stage(box_id, 'paid')`. `apply_label(thread_id, 'Clearledgr/Invoice/Paid')`. `post_timeline_entry('Payment of £12,400 settled 14 April. Reference PAY-8821.')`. Thread archived per configured period.
+2. Plan: `move_box_stage(box_id, 'paid')`. `apply_label(thread_id, 'Solden/Invoice/Paid')`. `post_timeline_entry('Payment of £12,400 settled 14 April. Reference PAY-8821.')`. Thread archived per configured period.
 
 ### 9.2 Invoice with GRN Wait
 
@@ -413,7 +413,7 @@ Same as the happy path through step 13. At step 14: `lookup_grn` returns no conf
 Same as happy path through step 15. At step 15: `run_three_way_match` returns failed.
 
 - Planning engine: `generate_exception_reason(match_result, invoice, po, grn)`. Claude returns plain-language explanation.
-- `apply_label(thread_id, 'Clearledgr/Invoice/Exception')`.
+- `apply_label(thread_id, 'Solden/Invoice/Exception')`.
 - `move_box_stage(box_id, 'exception')`.
 - `send_slack_exception(box_id, ap_channel, {exception_summary, resolution_buttons})`.
 - AP Manager selects resolution in Slack: [Override and approve] / [Request credit note] / [Reject invoice].
@@ -476,7 +476,7 @@ The gap this section closes: a finance team receiving 50 invoices on the first o
 
 #### 11.2.1 Worker Pool Architecture
 
-Clearledgr runs a fleet of Celery workers, each capable of handling any event for any workspace. Workers are identical and interchangeable. The number of workers is the primary scaling lever — doubling workers doubles throughput. Workers are deployed as a Kubernetes Deployment with horizontal pod autoscaling based on Redis Stream queue depth.
+Solden runs a fleet of Celery workers, each capable of handling any event for any workspace. Workers are identical and interchangeable. The number of workers is the primary scaling lever — doubling workers doubles throughput. Workers are deployed as a Kubernetes Deployment with horizontal pod autoscaling based on Redis Stream queue depth.
 
 | Component | Role and configuration |
 |-----------|----------------------|
@@ -593,11 +593,11 @@ The surfaces described in the Product Design Thesis are the agent's communicatio
 
 | Surface | How it reads agent state — and what the agent writes to make it work |
 |---------|----------------------------------------------------------------------|
-| **Gmail inbox stage labels (InboxSDK Lists)** | The extension reads the Clearledgr Gmail labels applied by `apply_label`. The label presence is the data. InboxSDK renders the visual stage badge from the label. The agent does not know InboxSDK exists. |
-| **Thread sidebar (InboxSDK Conversations)** | The sidebar reads the Box record and Box timeline for the current thread from the Clearledgr backend API. The agent writes to the Box record and timeline. The sidebar presents whatever it finds there. |
+| **Gmail inbox stage labels (InboxSDK Lists)** | The extension reads the Solden Gmail labels applied by `apply_label`. The label presence is the data. InboxSDK renders the visual stage badge from the label. The agent does not know InboxSDK exists. |
+| **Thread sidebar (InboxSDK Conversations)** | The sidebar reads the Box record and Box timeline for the current thread from the Solden backend API. The agent writes to the Box record and timeline. The sidebar presents whatever it finds there. |
 | **Thread toolbar buttons (InboxSDK Toolbars)** | The toolbar reads the Box stage and match result from the backend API to decide which buttons to show. The agent writes the stage and match result. The toolbar is driven by that data. |
 | **Pipeline Kanban (InboxSDK Router)** | The Kanban reads all Boxes in the pipeline with their current stage from the backend API. The agent writes Box stages. The Kanban reflects whatever stages exist. |
-| **Clearledgr Home (InboxSDK Router)** | Home reads: exception count, awaiting approval count, due this week count, last 10 agent actions, vendor onboarding blockers — all from structured queries on the Box state store. The agent writes to the state store. Home reads from it. |
+| **Solden Home (InboxSDK Router)** | Home reads: exception count, awaiting approval count, due this week count, last 10 agent actions, vendor onboarding blockers — all from structured queries on the Box state store. The agent writes to the state store. Home reads from it. |
 | **Slack / Teams messages** | The agent writes to Slack and Teams directly via the communication actions. These are outbound writes, not reads. Slack button callbacks arrive as events and re-enter the event queue. |
 | **Google Workspace Add-on** | The Add-on reads Box stage and match result from the backend API — same API as the sidebar. Approve/Reject button taps create `approval_received` events via the backend webhook. |
 
@@ -605,4 +605,4 @@ The agent is backend infrastructure. The surfaces are frontend presentations of 
 
 ---
 
-> This document is the engineering reference for the Clearledgr agent. Section owners: §1-§5 CTO, §6 Backend Lead, §7 ML Lead, §8 Backend Lead, §9-§10 Product Engineering Lead, §11-§12 Infrastructure Lead, §13 Full-Stack Lead. Review quarterly or on any significant architectural change. Changes to the LLM boundary (§7) require CTO sign-off. Changes to the action space (§3) require both CTO and product sign-off.
+> This document is the engineering reference for the Solden agent. Section owners: §1-§5 CTO, §6 Backend Lead, §7 ML Lead, §8 Backend Lead, §9-§10 Product Engineering Lead, §11-§12 Infrastructure Lead, §13 Full-Stack Lead. Review quarterly or on any significant architectural change. Changes to the LLM boundary (§7) require CTO sign-off. Changes to the action space (§3) require both CTO and product sign-off.

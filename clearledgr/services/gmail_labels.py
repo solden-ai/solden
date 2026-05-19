@@ -1,8 +1,8 @@
-"""Gmail label management for Clearledgr finance workflow.
+"""Gmail label management for Solden finance workflow.
 
 DESIGN_THESIS.md §6.4 defines a three-level nested label hierarchy:
 
-  Clearledgr/
+  Solden/
     Invoice/
       Received        — Email classified, Box created, extraction in progress
       Matched         — 3-way match passed, awaiting approval
@@ -21,7 +21,7 @@ DESIGN_THESIS.md §6.4 defines a three-level nested label hierarchy:
 
 This module owns the canonical label taxonomy, the mapping from AP
 state machine states to labels, and backward-compatible migration of
-labels from the old flat structure (``Clearledgr/Invoices``, etc.) to
+labels from the old flat structure (``Solden/Invoices``, etc.) to
 the thesis hierarchy.
 """
 from __future__ import annotations
@@ -46,21 +46,21 @@ logger = logging.getLogger(__name__)
 # LEGACY_LABEL_ALIASES dict maps old names so migration is seamless.
 CLEARLEDGR_LABELS = {
     # ── Invoice pipeline stages ──
-    "invoice_received":     "Clearledgr/Invoice/Received",
-    "invoice_matched":      "Clearledgr/Invoice/Matched",
-    "invoice_exception":    "Clearledgr/Invoice/Exception",
-    "invoice_approved":     "Clearledgr/Invoice/Approved",
-    "invoice_paid":         "Clearledgr/Invoice/Paid",
+    "invoice_received":     "Solden/Invoice/Received",
+    "invoice_matched":      "Solden/Invoice/Matched",
+    "invoice_exception":    "Solden/Invoice/Exception",
+    "invoice_approved":     "Solden/Invoice/Approved",
+    "invoice_paid":         "Solden/Invoice/Paid",
     # ── Vendor pipeline ──
-    "vendor_onboarding":    "Clearledgr/Vendor/Onboarding",
+    "vendor_onboarding":    "Solden/Vendor/Onboarding",
     # ── Finance document types ──
-    "finance_credit_note":  "Clearledgr/Finance/Credit Note",
-    "finance_statement":    "Clearledgr/Finance/Statement",
-    "finance_query":        "Clearledgr/Finance/Query",
-    "finance_renewal":      "Clearledgr/Finance/Renewal",
+    "finance_credit_note":  "Solden/Finance/Credit Note",
+    "finance_statement":    "Solden/Finance/Statement",
+    "finance_query":        "Solden/Finance/Query",
+    "finance_renewal":      "Solden/Finance/Renewal",
     # ── Classification states ──
-    "review_required":      "Clearledgr/Review Required",
-    "not_finance":          "Clearledgr/Not Finance",
+    "review_required":      "Solden/Review Required",
+    "not_finance":          "Solden/Not Finance",
     # ── Backward-compat aliases: old keys still work via _LABEL_KEY_ALIASES ──
     # These are NOT labels — they map old internal keys to new ones so
     # callers that pass e.g. "invoices" still resolve correctly.
@@ -96,69 +96,69 @@ def _resolve_label_key(key: str) -> str:
 
 LEGACY_LABEL_ALIASES = {
     "invoice_received": (
-        "Clearledgr/Processed",
-        "Clearledgr/Invoices",
-        "Clearledgr/Invoice",
-        "Clearledgr/Invoices/Matched",
-        "Clearledgr/Invoices/Unmatched",
-        "Clearledgr/Payment Requests",
-        "Clearledgr/Receipts",
+        "Solden/Processed",
+        "Solden/Invoices",
+        "Solden/Invoice",
+        "Solden/Invoices/Matched",
+        "Solden/Invoices/Unmatched",
+        "Solden/Payment Requests",
+        "Solden/Receipts",
     ),
     "invoice_matched": (
-        "Clearledgr/Needs Approval",
+        "Solden/Needs Approval",
     ),
     "invoice_exception": (
-        "Clearledgr/Exceptions",
-        "Clearledgr/Rejected",
+        "Solden/Exceptions",
+        "Solden/Rejected",
     ),
     "invoice_approved": (
-        "Clearledgr/Approved",
+        "Solden/Approved",
     ),
     "invoice_paid": (
-        "Clearledgr/Posted",
-        "Clearledgr/Payments",
-        "Clearledgr/Invoices/Posted",
+        "Solden/Posted",
+        "Solden/Payments",
+        "Solden/Invoices/Posted",
     ),
     "review_required": (
-        "Clearledgr/Needs Review",
-        "Clearledgr/Pending",
+        "Solden/Needs Review",
+        "Solden/Pending",
     ),
     "finance_credit_note": (
-        "Clearledgr/Credit Notes",
-        "Clearledgr/Refunds",
+        "Solden/Credit Notes",
+        "Solden/Refunds",
     ),
     "finance_statement": (
-        "Clearledgr/Bank Statements",
+        "Solden/Bank Statements",
     ),
 }
 
 STALE_LABEL_NAMES = frozenset({
-    "Clearledgr/Skipped",
+    "Solden/Skipped",
 })
 
 LEGACY_LABEL_MIGRATIONS = {
     # Old flat labels → new thesis hierarchy keys
-    "Clearledgr/Invoices":            {"invoice_received"},
-    "Clearledgr/Invoice":             {"invoice_received"},
-    "Clearledgr/Invoices/Matched":    {"invoice_matched"},
-    "Clearledgr/Invoices/Unmatched":  {"invoice_received", "review_required"},
-    "Clearledgr/Invoices/Posted":     {"invoice_paid"},
-    "Clearledgr/Processed":           {"invoice_received"},
-    "Clearledgr/Payment Requests":    {"invoice_received"},
-    "Clearledgr/Payment Request":     {"invoice_received"},
-    "Clearledgr/Payments":            {"invoice_paid"},
-    "Clearledgr/Receipts":            {"invoice_received"},
-    "Clearledgr/Refunds":             {"finance_credit_note"},
-    "Clearledgr/Credit Notes":        {"finance_credit_note"},
-    "Clearledgr/Bank Statements":     {"finance_statement"},
-    "Clearledgr/Needs Review":        {"review_required"},
-    "Clearledgr/Pending":             {"review_required"},
-    "Clearledgr/Exceptions":          {"invoice_exception"},
-    "Clearledgr/Needs Approval":      {"invoice_matched"},
-    "Clearledgr/Approved":            {"invoice_approved"},
-    "Clearledgr/Posted":              {"invoice_paid"},
-    "Clearledgr/Rejected":            {"invoice_exception"},
-    "Clearledgr/Skipped":             set(),
+    "Solden/Invoices":            {"invoice_received"},
+    "Solden/Invoice":             {"invoice_received"},
+    "Solden/Invoices/Matched":    {"invoice_matched"},
+    "Solden/Invoices/Unmatched":  {"invoice_received", "review_required"},
+    "Solden/Invoices/Posted":     {"invoice_paid"},
+    "Solden/Processed":           {"invoice_received"},
+    "Solden/Payment Requests":    {"invoice_received"},
+    "Solden/Payment Request":     {"invoice_received"},
+    "Solden/Payments":            {"invoice_paid"},
+    "Solden/Receipts":            {"invoice_received"},
+    "Solden/Refunds":             {"finance_credit_note"},
+    "Solden/Credit Notes":        {"finance_credit_note"},
+    "Solden/Bank Statements":     {"finance_statement"},
+    "Solden/Needs Review":        {"review_required"},
+    "Solden/Pending":             {"review_required"},
+    "Solden/Exceptions":          {"invoice_exception"},
+    "Solden/Needs Approval":      {"invoice_matched"},
+    "Solden/Approved":            {"invoice_approved"},
+    "Solden/Posted":              {"invoice_paid"},
+    "Solden/Rejected":            {"invoice_exception"},
+    "Solden/Skipped":             set(),
 }
 
 # AP state machine → label key mapping (DESIGN_THESIS.md §6.4).
@@ -190,10 +190,10 @@ AP_STATE_TO_LABEL = {
 # reasonably want to express by dragging a thread into a Gmail label.
 # New entries require product sign-off.
 LABEL_TO_INTENT = {
-    "Clearledgr/Invoice/Approved":    "approve_invoice",
-    "Clearledgr/Invoice/Exception":   "needs_info",
-    "Clearledgr/Review Required":     "needs_info",
-    "Clearledgr/Not Finance":         "reject_invoice",
+    "Solden/Invoice/Approved":    "approve_invoice",
+    "Solden/Invoice/Exception":   "needs_info",
+    "Solden/Review Required":     "needs_info",
+    "Solden/Not Finance":         "reject_invoice",
 }
 
 # Reverse lookup: intent → label-text-for-audit. Used when we want to
@@ -202,7 +202,7 @@ INTENT_FOR_AUDIT = {v: k for k, v in LABEL_TO_INTENT.items()}
 
 
 def intent_for_label(label_name: str) -> Optional[str]:
-    """Return the intent string for a Clearledgr label, or None.
+    """Return the intent string for a Solden label, or None.
 
     Case-sensitive against the canonical label display name. Handles
     the case where the caller passes a label_key (``invoice_approved``)
@@ -424,7 +424,7 @@ def _label_names_for_key(label_key: str) -> Set[str]:
 
 
 async def ensure_label(client, label_key: str, user_email: str = "") -> Optional[str]:
-    """Get or create a canonical Clearledgr label and return its Gmail label ID.
+    """Get or create a canonical Solden label and return its Gmail label ID.
 
     Serialised per mailbox so two concurrent events can't both miss the
     cache and both try to create the same label (which fails on the
@@ -474,7 +474,7 @@ async def ensure_label(client, label_key: str, user_email: str = "") -> Optional
 
 
 async def apply_label(client, message_id: str, label_key: str, user_email: str = ""):
-    """Apply a canonical Clearledgr label to a Gmail message."""
+    """Apply a canonical Solden label to a Gmail message."""
     label_id = await ensure_label(client, label_key, user_email)
     if label_id:
         try:
@@ -484,7 +484,7 @@ async def apply_label(client, message_id: str, label_key: str, user_email: str =
 
 
 async def remove_label(client, message_id: str, label_key: str, user_email: str = ""):
-    """Remove a Clearledgr label and any legacy aliases from a Gmail message.
+    """Remove a Solden label and any legacy aliases from a Gmail message.
 
     Gmail's modify API silently succeeds when the target label isn't
     applied to the message, so we don't have to swallow a 404 for that
@@ -540,7 +540,7 @@ def finance_label_keys(
     finance_email: Optional[Any] = None,
     document_type: Optional[str] = None,
 ) -> Set[str]:
-    """Return the canonical Clearledgr label keys for a finance record."""
+    """Return the canonical Solden label keys for a finance record."""
     keys: Set[str] = {"invoice_received"}
 
     ap_row = dict(ap_item or {})
@@ -620,7 +620,7 @@ async def sync_labels(
     desired_keys: Iterable[str],
     user_email: str = "",
 ) -> Set[str]:
-    """Synchronize all managed Clearledgr labels on a Gmail message."""
+    """Synchronize all managed Solden labels on a Gmail message."""
     normalized_keys = {
         _resolve_label_key(str(label_key).strip())
         for label_key in (desired_keys or [])
@@ -650,7 +650,7 @@ async def sync_labels(
         if stale_ids:
             await client.remove_label(message_id, [label_id for label_id in stale_ids if label_id])
     except Exception as exc:
-        logger.warning("Could not sync Clearledgr labels for %s: %s", message_id, exc)
+        logger.warning("Could not sync Solden labels for %s: %s", message_id, exc)
 
     return normalized_keys
 

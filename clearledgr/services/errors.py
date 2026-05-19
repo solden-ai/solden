@@ -1,5 +1,5 @@
 """
-Clearledgr Error Handling
+Solden Error Handling
 
 Specific error types with user-friendly messages and debugging context.
 """
@@ -35,7 +35,7 @@ class ErrorCode(str, Enum):
     TEAMS_ERROR = "TEAMS_ERROR"
 
 
-class ClearledgrError(Exception):
+class SoldenError(Exception):
     """Base exception with structured error info."""
     
     def __init__(
@@ -64,7 +64,7 @@ class ClearledgrError(Exception):
         return result
 
 
-class CSVParseError(ClearledgrError):
+class CSVParseError(SoldenError):
     """Error parsing CSV file."""
     
     def __init__(self, source: str, detail: str):
@@ -76,7 +76,7 @@ class CSVParseError(ClearledgrError):
         )
 
 
-class ConfigError(ClearledgrError):
+class ConfigError(SoldenError):
     """Error in configuration."""
     
     def __init__(self, field: str, detail: str):
@@ -88,7 +88,7 @@ class ConfigError(ClearledgrError):
         )
 
 
-class DateFormatError(ClearledgrError):
+class DateFormatError(SoldenError):
     """Error in date format."""
     
     def __init__(self, value: str, expected: str = "YYYY-MM-DD"):
@@ -100,7 +100,7 @@ class DateFormatError(ClearledgrError):
         )
 
 
-class EmptyDataError(ClearledgrError):
+class EmptyDataError(SoldenError):
     """No data to process."""
     
     def __init__(self, source: str):
@@ -112,7 +112,7 @@ class EmptyDataError(ClearledgrError):
         )
 
 
-class ReconciliationError(ClearledgrError):
+class ReconciliationError(SoldenError):
     """Error during reconciliation."""
     
     def __init__(self, stage: str, detail: str):
@@ -124,7 +124,7 @@ class ReconciliationError(ClearledgrError):
         )
 
 
-class CategorizationError(ClearledgrError):
+class CategorizationError(SoldenError):
     """Error during categorization."""
     
     def __init__(self, detail: str):
@@ -135,7 +135,7 @@ class CategorizationError(ClearledgrError):
         )
 
 
-class LLMError(ClearledgrError):
+class LLMError(SoldenError):
     """Error calling LLM service."""
     
     def __init__(self, detail: str):
@@ -146,7 +146,7 @@ class LLMError(ClearledgrError):
         )
 
 
-class ExternalServiceError(ClearledgrError):
+class ExternalServiceError(SoldenError):
     """Error with external service (Sheets, Slack, etc)."""
     
     def __init__(self, service: str, detail: str):
@@ -164,8 +164,8 @@ class ExternalServiceError(ClearledgrError):
         )
 
 
-def to_http_exception(error: ClearledgrError) -> HTTPException:
-    """Convert ClearledgrError to HTTPException."""
+def to_http_exception(error: SoldenError) -> HTTPException:
+    """Convert SoldenError to HTTPException."""
     # Map error codes to HTTP status codes
     status_map = {
         ErrorCode.INVALID_CSV: 400,

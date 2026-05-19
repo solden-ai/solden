@@ -8,21 +8,21 @@ How the vendor onboarding agent invites vendors, runs KYC, verifies
 bank details via open banking, and writes to the ERP vendor master ·
 Internal engineering reference
 
-> *Confidential --- Clearledgr Ltd · Engineering team only*
+> *Confidential --- Solden Technologies Ltd. · Engineering team only*
 
 **1. Overview**
 
-Vendor Onboarding is a foundational sub-workflow of the Accounts Payable pipeline --- it runs alongside AP Invoices and ensures that every vendor who sends an invoice is a trusted, verified, ERP-registered party before an AP Invoice Box is ever opened. It is the first workflow customers see when they begin using Clearledgr for AP, because every new invoice from an unknown sender triggers an onboarding Box that must complete before AP processing can continue. The two workflows are structurally entwined.
+Vendor Onboarding is a foundational sub-workflow of the Accounts Payable pipeline --- it runs alongside AP Invoices and ensures that every vendor who sends an invoice is a trusted, verified, ERP-registered party before an AP Invoice Box is ever opened. It is the first workflow customers see when they begin using Solden for AP, because every new invoice from an unknown sender triggers an onboarding Box that must complete before AP processing can continue. The two workflows are structurally entwined.
 
 Vendor onboarding automates the journey from first contact with a new vendor to that vendor being written to the ERP vendor master with AP-enabled status --- a journey that today takes most finance teams two to six weeks, multiple email threads, a shared spreadsheet, and manual ERP data entry.
 
 The problem is not that vendor onboarding is complicated. It is that it is fragmented. A finance team invites a vendor by email, the vendor replies with documents attached, someone downloads them, someone else emails back asking for the missing certificate, the vendor eventually sends it, someone initiates micro-deposits or requests a bank letter, someone validates the response, someone types the record into the ERP, someone tells the AP team the vendor is live. Each step is cheap. The coordination is expensive. Most teams track this in a spreadsheet because no tool owns the whole journey.
 
-The Clearledgr thesis is that vendor onboarding and AP invoicing are not two separate products --- they are two Box types in the same coordination layer. The data compounds: the KYC record, bank verification state, and vendor classification built during onboarding become inputs the AP pipeline consumes the first time an invoice arrives from that vendor. The coordination compounds: the Box from onboarding carries forward as an attributable source of truth for every subsequent AP decision involving that vendor. A finance team that trusts Clearledgr to onboard a vendor also trusts Clearledgr to process invoices from that vendor, because the same Box-level attributable history is visible across both.
+The Solden thesis is that vendor onboarding and AP invoicing are not two separate products --- they are two Box types in the same coordination layer. The data compounds: the KYC record, bank verification state, and vendor classification built during onboarding become inputs the AP pipeline consumes the first time an invoice arrives from that vendor. The coordination compounds: the Box from onboarding carries forward as an attributable source of truth for every subsequent AP decision involving that vendor. A finance team that trusts Solden to onboard a vendor also trusts Solden to process invoices from that vendor, because the same Box-level attributable history is visible across both.
 
 The agent automates the whole journey end-to-end. It sits inside Gmail and Slack, dispatches the onboarding invitation, runs a hosted vendor-facing portal for document submission and bank verification, performs KYC checks at the depth the workspace has configured, verifies bank details via open banking, drafts the vendor master record, routes for approval where required, and writes to the ERP. No spreadsheet. No side channel. The finance team stays in their inbox.
 
-This spec extends the core Clearledgr Agent Design Specification. All architectural components --- the event system, planning engine, coordination engine, state management, LLM/deterministic boundary, and error handling --- are inherited without modification. This document defines only what is new: the vendor onboarding event types, the extended action space, the four-stage pipeline, the planning logic, the vendor-facing portal surface, the open banking integration, and the complete lifecycle across the range of KYC configurations.
+This spec extends the core Solden Agent Design Specification. All architectural components --- the event system, planning engine, coordination engine, state management, LLM/deterministic boundary, and error handling --- are inherited without modification. This document defines only what is new: the vendor onboarding event types, the extended action space, the four-stage pipeline, the planning logic, the vendor-facing portal surface, the open banking integration, and the complete lifecycle across the range of KYC configurations.
 
 > *The fundamental design principle is unchanged: rules decide,
 > Claude describes. KYC disposition, bank verification disposition,
@@ -54,7 +54,7 @@ the AP Manager for manual handling:
     but does not cover every country a Booking.com or enterprise
     customer will have vendors in. Vendors in unsupported countries
     are flagged at the bank verification stage for manual bank
-    letter verification by the AP team. Clearledgr does not attempt
+    letter verification by the AP team. Solden does not attempt
     a fallback verification method in v1.
 
 -   **Beneficial ownership resolution beyond a configurable depth.**
@@ -1019,8 +1019,8 @@ onboarding pipeline.
 **8. The Vendor Portal**
 
 The vendor portal is the surface the vendor interacts with. It is
-the only non-Gmail, non-Slack surface in the Clearledgr ecosystem.
-It exists because the vendor is not a Clearledgr customer, does not
+the only non-Gmail, non-Slack surface in the Solden ecosystem.
+It exists because the vendor is not a Solden customer, does not
 have the Gmail extension installed, and will not tolerate account
 creation to complete an onboarding. The portal must be frictionless,
 familiar, and minimal.
@@ -1380,7 +1380,7 @@ KYC records are typically subject to statutory retention periods
 Audit exports are scoped to a time range and an optional filter
 (vendor, disposition, close reason, KYC tier). The JSONL export is
 signed with a per-workspace signing key so auditors can verify it
-was generated by Clearledgr and not modified after export. Audit
+was generated by Solden and not modified after export. Audit
 exports are themselves logged to a workspace-level audit log.
 
 **15. Build Plan**
@@ -1399,7 +1399,7 @@ open banking providers.
                                      progressive disclosure, document
                                      uploads to encrypted storage, embedded
                                      open banking flow, mobile-first. Built
-                                     on existing Clearledgr web stack.
+                                     on existing Solden web stack.
                                      Design alignment with Gmail extension
                                      required. Highest design surface in
                                      the product.
@@ -1496,5 +1496,5 @@ available.
 > Likewise the open banking provider: selection by week 1,
 > integration from week 2.*
 
-Vendor Onboarding Agent Design Specification · Clearledgr Ltd ·
+Vendor Onboarding Agent Design Specification · Solden Technologies Ltd. ·
 Engineering team only · Review with CTO before implementation

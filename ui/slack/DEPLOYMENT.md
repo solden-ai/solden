@@ -1,10 +1,10 @@
-# Clearledgr Slack App Deployment
+# Solden Slack App Deployment
 
 ## What Users Experience
 
 After deployment, users will:
 1. Go to Slack App Directory
-2. Search "Clearledgr"
+2. Search "Solden"
 3. Click "Add to Slack"
 4. Done - no configuration needed
 

@@ -1136,7 +1136,7 @@ class SlackChannelRequest(BaseModel):
 class SlackTestRequest(BaseModel):
     organization_id: Optional[str] = None
     channel_id: Optional[str] = None
-    message: str = "Clearledgr admin test: Slack approval channel is connected."
+    message: str = "Solden admin test: Slack approval channel is connected."
 
 
 class TeamsWebhookRequest(BaseModel):
@@ -1146,7 +1146,7 @@ class TeamsWebhookRequest(BaseModel):
 
 class TeamsTestRequest(BaseModel):
     organization_id: Optional[str] = None
-    message: str = "Clearledgr admin test: Teams approval channel is connected."
+    message: str = "Solden admin test: Teams approval channel is connected."
 
 
 class OnboardingStepRequest(BaseModel):
@@ -2000,7 +2000,7 @@ def test_teams_webhook(
                     "type": "AdaptiveCard",
                     "version": "1.4",
                     "body": [
-                        {"type": "TextBlock", "weight": "Bolder", "text": "Clearledgr Teams connectivity test"},
+                        {"type": "TextBlock", "weight": "Bolder", "text": "Solden Teams connectivity test"},
                         {"type": "TextBlock", "wrap": True, "text": request.message},
                     ],
                 },
@@ -2026,8 +2026,8 @@ def slack_manifest_template(
     return {
         "organization_id": org_id,
         "manifest": {
-            "display_information": {"name": "Clearledgr AP"},
-            "features": {"bot_user": {"display_name": "Clearledgr AP"}},
+            "display_information": {"name": "Solden AP"},
+            "features": {"bot_user": {"display_name": "Solden AP"}},
             "oauth_config": {
                 "redirect_urls": [redirect_uri],
                 "scopes": {
@@ -2039,7 +2039,7 @@ def slack_manifest_template(
                 "event_subscriptions": {"request_url": f"{app_base}/slack/events"},
                 "interactivity": {"is_enabled": True, "request_url": f"{app_base}/slack/invoices/interactive"},
                 "slash_commands": [
-                    {"command": "/clearledgr", "url": f"{app_base}/slack/commands", "description": "Clearledgr AP"}
+                    {"command": "/clearledgr", "url": f"{app_base}/slack/commands", "description": "Solden AP"}
                 ],
             },
         },
@@ -3490,7 +3490,7 @@ async def test_webhook(
     ok = await deliver_webhook(
         url=sub["url"],
         event_type="test.ping",
-        payload={"message": "Clearledgr webhook test", "webhook_id": webhook_id},
+        payload={"message": "Solden webhook test", "webhook_id": webhook_id},
         secret=sub.get("secret", ""),
     )
     return {"delivered": ok, "url": sub["url"], "event": "test.ping"}
@@ -4021,7 +4021,7 @@ def reconcile_vendor_statement(
     user: TokenData = Depends(get_current_user),
     body: dict = {},
 ):
-    """Reconcile a vendor statement against Clearledgr AP items.
+    """Reconcile a vendor statement against Solden AP items.
 
     Body:
         vendor_name: str (required)
@@ -4854,7 +4854,7 @@ def get_admin_health(
 #
 # The leader maps non-default ERP field IDs (NetSuite custom-bodies, SAP
 # Z-fields, QB classes, Xero tracking categories) to the bounded set of
-# Clearledgr fields the agent runtime understands. Backed by:
+# Solden fields the agent runtime understands. Backed by:
 #   * clearledgr/integrations/field_mapping_catalog.py — the catalog
 #     defines what's mappable and the per-ERP regex each value must match
 #   * settings_json["erp_field_mappings"][erp_type] — persistence

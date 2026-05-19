@@ -14,7 +14,7 @@ The derivation classifies each integration as ``healthy`` / ``degraded`` /
 ``down`` / ``not_configured`` using a deliberately small heuristic (see
 ``_classify_status``). A more elaborate per-integration scoring system
 is post-GA scope; the dashboard goal is "leader sees the breakage
-within 10 minutes" (per ``Clearledgr_Workspace_Scope_GA.md`` §Module 5
+within 10 minutes" (per ``Solden_Workspace_Scope_GA.md`` §Module 5
 acceptance criteria), which a simple chip + last-error snippet
 already satisfies.
 

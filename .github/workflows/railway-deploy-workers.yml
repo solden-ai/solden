@@ -15,7 +15,7 @@ name: Deploy worker + beat
 # sync.
 #
 # Requires repo secret RAILWAY_TOKEN (generate from Railway dashboard
-# → Project Settings → Tokens, scoped to the Clearledgr project).
+# → Project Settings → Tokens, scoped to the Solden project).
 
 on:
   push:

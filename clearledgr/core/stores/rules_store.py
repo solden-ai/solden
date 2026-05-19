@@ -1,6 +1,6 @@
 """Rules store — Module 3 (workspace approval rule engine).
 
-Mixed into ``ClearledgrDB``. Owns:
+Mixed into ``SoldenDB``. Owns:
 
   - CRUD over ``rules`` rows.
   - Version snapshots on every change (``rule_versions`` ledger),

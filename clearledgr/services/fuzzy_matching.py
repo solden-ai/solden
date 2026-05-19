@@ -1,5 +1,5 @@
 """
-Fuzzy Matching Service for Clearledgr v1
+Fuzzy Matching Service for Solden v1
 
 Provides intelligent matching beyond exact/tolerance comparisons:
 - Vendor name fuzzy matching (handles variations)

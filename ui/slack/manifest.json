@@ -1,9 +1,9 @@
 {
   "display_information": {
-    "name": "Clearledgr",
+    "name": "Solden",
     "description": "Finance execution agents — approvals, exceptions, and workflow actions",
     "background_color": "#0a1628",
-    "long_description": "Clearledgr is an embedded finance execution agent. In Slack, teams review AP exceptions, approve/reject invoices, and track AP execution outcomes without leaving chat."
+    "long_description": "Solden is an embedded finance execution agent. In Slack, teams review AP exceptions, approve/reject invoices, and track AP execution outcomes without leaving chat."
   },
   "features": {
     "app_home": {
@@ -12,14 +12,14 @@
       "messages_tab_read_only_enabled": false
     },
     "bot_user": {
-      "display_name": "Clearledgr",
+      "display_name": "Solden",
       "always_online": true
     },
     "slash_commands": [
       {
         "command": "/clearledgr",
         "url": "https://YOUR_DOMAIN/slack/commands",
-        "description": "Run Clearledgr commands",
+        "description": "Run Solden commands",
         "usage_hint": "[status | run | exceptions | tasks | help]",
         "should_escape": false
       },
@@ -43,7 +43,7 @@
         "name": "Create Finance Task",
         "type": "message",
         "callback_id": "create_task_from_message",
-        "description": "Turn this message into a Clearledgr task"
+        "description": "Turn this message into a Solden task"
       },
       {
         "name": "Run AP Health Check",

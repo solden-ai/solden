@@ -1,5 +1,5 @@
 """
-Concurrent multi-tenant isolation tests for Clearledgr AP v1.
+Concurrent multi-tenant isolation tests for Solden AP v1.
 
 Tests:
 1. test_org_data_isolation_reads         — org-A data invisible to org-B query

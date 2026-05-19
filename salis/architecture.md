@@ -38,7 +38,7 @@ Every file in the repo belongs to one of these three layers. If you're not sure 
   ┌─────────────────────────────────────────────────────────────────┐
   │                  PERSISTENCE (state)                            │
   │                                                                 │
-  │   ClearledgrDB (store mixins)  ──►  Postgres (prod)/SQLite      │
+  │   SoldenDB (store mixins)  ──►  Postgres (prod)/SQLite      │
   │   Event queue                   ──►  Redis Streams/in-memory    │
   │   LLM Gateway                   ──►  Anthropic API + call log   │
   │   ERP router                    ──►  QBO / Xero / NS / SAP      │
@@ -81,13 +81,13 @@ Every file in the repo belongs to one of these three layers. If you're not sure 
 - `erp_webhook_verify.py` — HMAC verification for all four ERPs.
 - `portal_auth.py`, `portal_input.py` — magic-link auth + vendor-portal input validation.
 - `migrations.py` — schema migrations (currently v43).
-- `database.py` — `ClearledgrDB` — the database singleton (composes store mixins).
+- `database.py` — `SoldenDB` — the database singleton (composes store mixins).
 - `errors.py` — `safe_error()` — the exception-sanitizer for API responses.
 - `stores/` — 21 store mixins (including `box_lifecycle_store.py` for first-class exceptions + outcomes). See below.
 
 ### `clearledgr/core/stores/` — database mixins
 
-Each mixin handles one domain's SQL. `ClearledgrDB` inherits all of them; read/write methods get grouped by domain naturally.
+Each mixin handles one domain's SQL. `SoldenDB` inherits all of them; read/write methods get grouped by domain naturally.
 
 - `ap_store.py` — AP items, audit_events, channel_threads. The big one. `update_ap_item` is the state-change funnel — atomic state UPDATE + audit INSERT in a single `conn.commit()`, and post-commit mirrors exception_code / terminal-state transitions into `box_exceptions` / `box_outcomes`.
 - `box_lifecycle_store.py` — `box_exceptions` (multiple per Box, severity + raised_by + resolved_by) and `box_outcomes` (UNIQUE per Box, terminal record). Every mutation narrates to `audit_events` AND emits a `box.exception_raised` / `box.exception_resolved` / `box.outcome_recorded` webhook to subscribed customers.

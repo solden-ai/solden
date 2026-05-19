@@ -33,7 +33,7 @@ def verify_signature(
     ``body`` computed with ``secret``.
 
     ``header_value`` should be the literal value of the
-    ``X-Solden-Signature`` (or legacy ``X-Clearledgr-Signature``)
+    ``X-Solden-Signature`` (or legacy ``X-Solden-Signature``)
     header — formatted as ``sha256=<hex>``. Any other shape returns
     False.
 

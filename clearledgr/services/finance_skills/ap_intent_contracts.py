@@ -226,7 +226,7 @@ _AUDIT_CONTRACTS: Dict[str, Dict[str, Any]] = {
 _OPERATOR_COPY: Dict[str, Dict[str, str]] = {
     "request_approval": {
         "what_happened": "Validated this invoice for approval routing from Gmail.",
-        "why_now": "Clearledgr checks the current invoice state before sending an approval request.",
+        "why_now": "Solden checks the current invoice state before sending an approval request.",
         "recommended_allowed": "Request approval now.",
         "recommended_blocked": "Resolve the blocking state before requesting approval.",
     },
@@ -238,7 +238,7 @@ _OPERATOR_COPY: Dict[str, Dict[str, str]] = {
     },
     "request_info": {
         "what_happened": "Validated that this invoice can be sent back for more information.",
-        "why_now": "Clearledgr only records info requests while the invoice is still in a reviewable state.",
+        "why_now": "Solden only records info requests while the invoice is still in a reviewable state.",
         "recommended_allowed": "Send this invoice back for more information.",
         "recommended_blocked": "Refresh the invoice and use the allowed next step.",
     },
@@ -262,7 +262,7 @@ _OPERATOR_COPY: Dict[str, Dict[str, str]] = {
     },
     "reject_invoice": {
         "what_happened": "Validated that this invoice can still be rejected.",
-        "why_now": "Clearledgr requires a rejection reason and a rejectable state before recording the decision.",
+        "why_now": "Solden requires a rejection reason and a rejectable state before recording the decision.",
         "recommended_allowed": "Reject this invoice with a reason.",
         "recommended_blocked": "Provide a reason or return the invoice to a rejectable state.",
     },

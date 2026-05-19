@@ -2085,7 +2085,7 @@ def test_finance_lead_summary_prefers_agent_memory_next_action_label():
             assert ap_item_id == "ap-route-1"
             assert skill_id == "ap_v1"
             return {
-                "profile": {"name": "Clearledgr AP Agent"},
+                "profile": {"name": "Solden AP Agent"},
                 "belief": {"reason": "Approval is pending with the assigned approver."},
                 "current_state": "validated",
                 "status": "pending_approval",

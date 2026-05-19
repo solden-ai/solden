@@ -1,6 +1,6 @@
 # Post-GA Monitoring Plan
 
-Clearledgr v1 — Live operations monitoring. Covers thresholds, cadence, ownership, and escalation paths.
+Solden v1 — Live operations monitoring. Covers thresholds, cadence, ownership, and escalation paths.
 
 ---
 

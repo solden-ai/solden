@@ -11,7 +11,7 @@ Implementation:
 2. When a finance email arrives in an INDIVIDUAL team member's inbox
    (not the shared ap@ address), the agent:
    a) Creates the AP item as usual (org-scoped, visible to all)
-   b) Applies Clearledgr labels to the email (visible in Gmail)
+   b) Applies Solden labels to the email (visible in Gmail)
    c) Posts a timeline entry: "Invoice from [vendor] received in
       [person]'s inbox — added to AP Invoices pipeline."
    d) Sends a brief Slack notification to the AP channel so the team

@@ -6,7 +6,7 @@ Two routers:
   * ``saml_public_router`` — under /saml/, no auth required (these
     are the IdP-facing flows): SP metadata, login redirect, ACS
     POST. The ACS endpoint validates + JIT-provisions then sets a
-    Clearledgr session cookie and redirects to the workspace.
+    Solden session cookie and redirects to the workspace.
 
 Audit: every login attempt — whether it succeeds, fails validation,
 or trips replay protection — emits an ``saml_login_*`` event so a
@@ -219,7 +219,7 @@ saml_public_router = APIRouter(prefix="/saml", tags=["saml-public"])
 def sp_metadata(organization_id: str):
     """Return the SP metadata XML for one tenant.
 
-    Public endpoint — IdPs need to fetch this to register Clearledgr
+    Public endpoint — IdPs need to fetch this to register Solden
     as a SAML SP. The metadata is derived from the persisted SAML
     config; if the tenant has no config we 404 rather than emit a
     half-formed metadata blob.
@@ -275,7 +275,7 @@ async def saml_acs(
 
     Validates the SAMLResponse (signature, audience, expiry, replay)
     via ``saml_sso.handle_assertion``, JIT-provisions the user if
-    enabled, then issues a Clearledgr session JWT and redirects to
+    enabled, then issues a Solden session JWT and redirects to
     the workspace shell.
 
     Every outcome — success or failure — emits an audit event.
@@ -317,7 +317,7 @@ async def saml_acs(
         },
     )
 
-    # Issue a Clearledgr session JWT and redirect to the workspace
+    # Issue a Solden session JWT and redirect to the workspace
     # shell. The relay_state, if provided and looks like a workspace
     # path, becomes the redirect target — capped to in-app paths to
     # block open-redirect abuse.
@@ -356,7 +356,7 @@ def saml_logout_initiate(
 ):
     """SP-initiated Single Logout.
 
-    Clears the local Clearledgr session cookie and (if the IdP
+    Clears the local Solden session cookie and (if the IdP
     published an SLO endpoint in the SAML config) redirects to the
     IdP's SLO URL so the IdP also closes its session. This is the
     'sign out' button's target.

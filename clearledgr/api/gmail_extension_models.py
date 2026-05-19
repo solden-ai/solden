@@ -55,7 +55,7 @@ class HistoricalInvoiceRepairRequest(BaseModel):
 
 
 class GmailLabelCleanupRequest(BaseModel):
-    """Migrate and delete obsolete Gmail labels from a Clearledgr mailbox."""
+    """Migrate and delete obsolete Gmail labels from a Solden mailbox."""
     organization_id: Optional[str] = None
     user_email: Optional[str] = None
     dry_run: bool = False

@@ -18,7 +18,7 @@ from typing_extensions import TypedDict
 
 
 class APItemDict(TypedDict, total=False):
-    """Shape of the dict returned by ``ClearledgrDB.get_ap_item()``
+    """Shape of the dict returned by ``SoldenDB.get_ap_item()``
     and consumed throughout the AP pipeline.
 
     ``total=False`` because many columns are nullable / only populated

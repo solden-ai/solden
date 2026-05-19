@@ -8,7 +8,7 @@ Author: Mo
 
 The vendor portal (`clearledgr/api/vendor_portal.py`) is the **only unauthenticated surface in the product that accepts user input.** Every other input-accepting surface is gated by an authenticated JWT; the portal is gated only by a magic-link token that carries its own per-vendor scope.
 
-That means a vendor (who is not a Clearledgr customer — they're the customer's vendor) submits:
+That means a vendor (who is not a Solden customer — they're the customer's vendor) submits:
 
 - `registration_number` — business registration ID
 - `vat_number` — VAT ID (optional)

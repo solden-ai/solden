@@ -9,7 +9,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-from clearledgr.core.database import ClearledgrDB, get_db
+from clearledgr.core.database import SoldenDB, get_db
 from clearledgr.core.utils import safe_float
 from clearledgr.services.correction_learning import CorrectionLearningService
 
@@ -30,7 +30,7 @@ def _now_iso() -> str:
 class LearningCalibrationService:
     """Compute and persist calibration snapshots from real operator outcomes."""
 
-    def __init__(self, organization_id: Optional[str] = None, *, db: Optional[ClearledgrDB] = None) -> None:
+    def __init__(self, organization_id: Optional[str] = None, *, db: Optional[SoldenDB] = None) -> None:
         from clearledgr.core.org_utils import assert_org_id
 
         self.organization_id = assert_org_id(
@@ -403,7 +403,7 @@ class LearningCalibrationService:
 def get_learning_calibration_service(
     organization_id: Optional[str] = None,
     *,
-    db: Optional[ClearledgrDB] = None,
+    db: Optional[SoldenDB] = None,
 ) -> LearningCalibrationService:
     return LearningCalibrationService(organization_id=organization_id, db=db)
 

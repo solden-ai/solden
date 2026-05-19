@@ -30,11 +30,11 @@ def _build_source_link(invoice: Any) -> str:
     * SAP S/4HANA (ERP-native) → Fiori Launchpad cross-nav intent
       ``#SupplierInvoice-display?CompanyCode=...&SupplierInvoice=...&FiscalYear=...``
       against the customer's Fiori host (read from ``erp_metadata``;
-      falls back to a Clearledgr deeplink if the Fiori host isn't
+      falls back to a Solden deeplink if the Fiori host isn't
       known)
-    * Anything else → Clearledgr web app deeplink
+    * Anything else → Solden web app deeplink
 
-    Each ERP-native branch falls through to the Clearledgr deeplink
+    Each ERP-native branch falls through to the Solden deeplink
     when the metadata it needs is missing — so a Slack card never has
     a dead "Open" button.
     """
@@ -87,7 +87,7 @@ def _build_source_link(invoice: Any) -> str:
 def _source_link_label(invoice: Any) -> str:
     """The button text for the deeplink built by ``_build_source_link``.
     Matches the destination so operators see "Open in NetSuite" /
-    "Open in SAP" / "Open in Gmail" / "Open in Clearledgr"."""
+    "Open in SAP" / "Open in Gmail" / "Open in Solden"."""
     source_type = str(getattr(invoice, "source_type", "gmail") or "gmail").lower()
     erp_metadata = getattr(invoice, "erp_metadata", None) or {}
     if source_type == "gmail" and getattr(invoice, "gmail_id", ""):
@@ -96,7 +96,7 @@ def _source_link_label(invoice: Any) -> str:
         return "Open in NetSuite"
     if source_type == "sap_s4hana" and erp_metadata.get("sap_fiori_host") and erp_metadata.get("supplier_invoice"):
         return "Open in SAP"
-    return "Open in Clearledgr"
+    return "Open in Solden"
 
 
 # ---------------------------------------------------------------------------
@@ -282,7 +282,7 @@ def build_approval_surface_copy(
         )
 
     if not why_scored:
-        why_scored.append((50, "This invoice needs approval before Clearledgr can post it."))
+        why_scored.append((50, "This invoice needs approval before Solden can post it."))
 
     why_candidates = [line for _score, line in sorted(why_scored, key=lambda entry: entry[0], reverse=True)]
     why_summary = " ".join(dedupe_reason_lines(why_candidates, limit=2)).strip()
@@ -301,41 +301,41 @@ def build_approval_surface_copy(
         if has_validation_blockers or confidence_requires_review
         else "Only reject if the duplicate risk is confirmed; otherwise ask for clarification."
         if has_duplicate_risk
-        else "Approve and let Clearledgr post it if the details look correct."
+        else "Approve and let Solden post it if the details look correct."
     )
 
     if requires_budget_decision:
         approve_line = (
-            "Approve override: Clearledgr records the justification and then posts this invoice to ERP."
+            "Approve override: Solden records the justification and then posts this invoice to ERP."
             if hard_budget_block
-            else "Approve override: Clearledgr records the justification and then posts this invoice to ERP."
+            else "Approve override: Solden records the justification and then posts this invoice to ERP."
         )
         request_info_line = (
-            "Request info: Clearledgr sends this back for budget or policy clarification."
+            "Request info: Solden sends this back for budget or policy clarification."
             if has_validation_blockers
-            else "Request info: Clearledgr sends this back for clarification."
+            else "Request info: Solden sends this back for clarification."
         )
-        reject_line = "Reject: Clearledgr records the rejection and stops any further posting."
+        reject_line = "Reject: Solden records the rejection and stops any further posting."
         if has_duplicate_risk:
             reject_line = (
-                "Reject: use this if the duplicate risk is confirmed. Clearledgr records the rejection and stops posting."
+                "Reject: use this if the duplicate risk is confirmed. Solden records the rejection and stops posting."
             )
         next_lines = [approve_line, request_info_line, reject_line]
     else:
         approve_line = (
-            "Approve / Post to ERP: Clearledgr records the approval and posts this invoice automatically."
+            "Approve / Post to ERP: Solden records the approval and posts this invoice automatically."
             if confidence_requires_review
-            else "Approve / Post to ERP: Clearledgr records the approval and posts this invoice automatically."
+            else "Approve / Post to ERP: Solden records the approval and posts this invoice automatically."
         )
         request_info_line = (
-            "Request info: Clearledgr sends this back for the missing policy or evidence details."
+            "Request info: Solden sends this back for the missing policy or evidence details."
             if has_validation_blockers
-            else "Request info: Clearledgr sends this back for the missing details."
+            else "Request info: Solden sends this back for the missing details."
         )
-        reject_line = "Reject: Clearledgr records the rejection and stops any further posting."
+        reject_line = "Reject: Solden records the rejection and stops any further posting."
         if has_duplicate_risk:
             reject_line = (
-                "Reject: use this if the duplicate risk is confirmed. Clearledgr records the rejection and stops posting."
+                "Reject: use this if the duplicate risk is confirmed. Solden records the rejection and stops posting."
             )
         next_lines = [approve_line, request_info_line, reject_line]
 

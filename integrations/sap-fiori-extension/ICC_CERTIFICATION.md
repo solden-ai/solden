@@ -33,7 +33,7 @@ patterns:
       (XSUAA issuer, JWKS URL, audience, webhook secret) lives in
       Solden's backend, looked up per-org from
       ``erp_connections.credentials``. The Fiori app receives only a
-      short-lived Clearledgr JWT (5-min TTL) minted server-side after
+      short-lived Solden JWT (5-min TTL) minted server-side after
       XSUAA verification.
 - [x] **XSUAA-signed JWT validation** uses asymmetric (RS256) keys
       fetched from BTP's JWKS endpoint and cached for 1h with stale-
@@ -185,7 +185,7 @@ access to. Each scenario should pass without manual intervention.
 | B5 | Click **Reject**. Confirm in the warning dialog. | State badge → `rejected`. Audit row records the reason + `ui_surface=erp_native_sap`. Invoice cancelled via `SupplierInvoiceCancellation` action; falls back to PATCH `ReverseDocument=True` on accounts that don't expose the action. | ☐ |
 | B6 | Toggle to **dark mode** in BTP Work Zone. | Panel respects SAP Horizon dark theme tokens. State badge contrast meets WCAG AA. | ☐ |
 | B7 | Toggle to **English (en-US)**, then **Deutsch (de-DE)**, then **Português (pt-BR)** — all locales in `i18n.properties`. | All translatable strings render in the selected language. Currency formatting uses the locale's conventions (e.g., `€ 12.500,00` in pt-BR vs `EUR 12,500.00` in en-US). | ☐ |
-| B8 | Wait for the Clearledgr JWT to expire (5-minute TTL). Click Approve. | Panel surfaces the auth error gracefully. Refreshing the iframe re-runs `_bootstrapSession` and mints a new JWT. | ☐ |
+| B8 | Wait for the Solden JWT to expire (5-minute TTL). Click Approve. | Panel surfaces the auth error gracefully. Refreshing the iframe re-runs `_bootstrapSession` and mints a new JWT. | ☐ |
 | B9 | Open the panel directly via the Approuter URL with composite key in the query string (deep-link entry). | Same render as via cross-nav. The Launchpad-tile UX (Phase 4) follows this same direct-load path. | ☐ |
 
 ### B.2 Write direction (webhook)
@@ -203,7 +203,7 @@ access to. Each scenario should pass without manual intervention.
 | # | Scenario | Expected | Pass |
 |---|---|---|---|
 | C1 | Deploy the MTA to a **fresh BTP trial subaccount**. Open the Approuter URL. | BTP login → BoxPanel renders in <5s after auth. Phase 1-3 deploy works without any backend config beyond the Destination. | ☐ |
-| C2 | Deploy to **a customer subaccount with their corporate IDP federated** via SAP IAS (Identity Authentication Service). | Login goes through customer's IDP. JWT carries customer's user identity (email + groups). Solden resolves the Clearledgr user via email match. | ☐ |
+| C2 | Deploy to **a customer subaccount with their corporate IDP federated** via SAP IAS (Identity Authentication Service). | Login goes through customer's IDP. JWT carries customer's user identity (email + groups). Solden resolves the Solden user via email match. | ☐ |
 | C3 | Rotate the per-tenant `webhook_secret` in `erp_connections.credentials` AND on the BTP Event Mesh subscription side simultaneously. | Subsequent events still validate. Previous-secret-signed events are rejected with a clear error. | ☐ |
 | C4 | Assign a user to **only the "Reader" role collection** (not "Approver"). | Panel loads. Approve / Reject buttons are hidden or disabled. (Phase 4 — role-based UX gate; Phase 1-3 may show buttons that 403 server-side.) | ☐ |
 
@@ -220,8 +220,8 @@ team on operational security. Pre-fill the answers below.
 | Question | Solden's answer |
 |---|---|
 | How is the BTP user authenticated to the Fiori app? | Via SAP Approuter using XSUAA's standard OAuth 2.0 / OIDC flow against the BTP subaccount's configured IDP (BTP IAS by default; customer's corporate IDP via IAS federation). The Fiori app sees the user's identity via `/user-api/attributes` provided by Approuter; the raw XSUAA JWT is forwarded to the backend `Authorization` header. |
-| How is the user authenticated to Solden's API? | The Fiori app POSTs the XSUAA JWT to `/extension/sap/exchange`. Solden verifies the JWT against the per-tenant XSUAA JWKS (asymmetric RS256), validates the `iss`/`aud`/`exp` claims, looks up the matching Clearledgr user via the `email` claim, and mints a 5-minute Clearledgr JWT. The Fiori app caches that token in memory + uses it as Bearer for action endpoints. |
-| What's the per-tenant cross-tenant guard? | The exchange endpoint resolves the `iss` claim → matching org via `erp_connections.credentials.s4hana_xsuaa_issuer`. Once resolved, the org_id is pinned for the duration of the request — the caller cannot override. A leaked Clearledgr token is bound to the org it was minted for; cross-org access via JWT is impossible. |
+| How is the user authenticated to Solden's API? | The Fiori app POSTs the XSUAA JWT to `/extension/sap/exchange`. Solden verifies the JWT against the per-tenant XSUAA JWKS (asymmetric RS256), validates the `iss`/`aud`/`exp` claims, looks up the matching Solden user via the `email` claim, and mints a 5-minute Solden JWT. The Fiori app caches that token in memory + uses it as Bearer for action endpoints. |
+| What's the per-tenant cross-tenant guard? | The exchange endpoint resolves the `iss` claim → matching org via `erp_connections.credentials.s4hana_xsuaa_issuer`. Once resolved, the org_id is pinned for the duration of the request — the caller cannot override. A leaked Solden token is bound to the org it was minted for; cross-org access via JWT is impossible. |
 | What happens if the XSUAA secret/JWKS rotates? | Solden's JWKS cache (1h + stale-fallback) auto-refreshes on a kid miss. The exchange endpoint verifies against the freshly-fetched keys. Customers don't notify Solden on key rotation; the system handles it. |
 
 ### C.2 Data handling
@@ -241,7 +241,7 @@ team on operational security. Pre-fill the answers below.
 |---|---|
 | What's the failure mode if Solden's API is down? | The BoxPanel renders the error state ("Could not load Solden Box"). The Vendor Invoice is fully usable in S/4HANA — Solden's read panel is purely additive. Webhook delivery is queued by BTP Event Mesh's standard retry policy on the customer side. |
 | Audit chain shape? | Every state transition produces an immutable `audit_events` row capturing: actor (user / agent), source channel (slack / teams / gmail / **erp_native_sap** for Fiori panel decisions), decision context (validation gate verdict, agent recommendation, vendor profile snapshot), timestamp, correlation id. Append-only enforced by DB trigger. |
-| Rate limits / throttling? | Solden's API enforces per-org rate limits (1000 req/min default, configurable). Bursts above that return 429 with `Retry-After`. The Fiori panel's caching (5-min Clearledgr JWT TTL + 30s Box-data refresh) keeps it well under the limit in normal use. |
+| Rate limits / throttling? | Solden's API enforces per-org rate limits (1000 req/min default, configurable). Bursts above that return 429 with `Retry-After`. The Fiori panel's caching (5-min Solden JWT TTL + 30s Box-data refresh) keeps it well under the limit in normal use. |
 
 ### C.4 Incident response + SLA
 

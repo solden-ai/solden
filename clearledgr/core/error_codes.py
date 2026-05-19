@@ -1,4 +1,4 @@
-"""Structured error codes for Clearledgr AP.
+"""Structured error codes for Solden AP.
 
 Provides a canonical enum of error codes so that API consumers and
 front-end clients can programmatically handle known failure modes

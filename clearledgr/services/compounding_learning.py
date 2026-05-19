@@ -7,7 +7,7 @@ Every user action improves the system. This service:
 3. Updates confidence models
 4. Tracks improvement over time
 
-The goal: Clearledgr gets smarter with every interaction.
+The goal: Solden gets smarter with every interaction.
 """
 from __future__ import annotations
 

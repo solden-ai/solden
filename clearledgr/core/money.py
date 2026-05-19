@@ -1,7 +1,7 @@
 """Money helpers — penny-exact Decimal arithmetic everywhere.
 
 Project rule: every time a monetary value is summed, compared, or
-arithmetic'd internally in Clearledgr, it travels as `decimal.Decimal`
+arithmetic'd internally in Solden, it travels as `decimal.Decimal`
 quantized to 2 decimal places. Float never touches internal math.
 
 Why this module exists:

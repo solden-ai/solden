@@ -108,7 +108,7 @@ def _classify_erp_connect_error(erp_type: str, exc: Exception) -> Dict[str, Any]
             "remediation_link": remediation_link,
             "message": (
                 f"The {erp_type} OAuth consent did not grant all the "
-                "scopes Clearledgr needs (read POs + GRNs + vendor "
+                "scopes Solden needs (read POs + GRNs + vendor "
                 "master, write bills). Retry the connect flow and "
                 "accept all requested scopes."
             ),
@@ -292,7 +292,7 @@ def _popup_close_response(
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Clearledgr — {erp.title()}</title>
+    <title>Solden — {erp.title()}</title>
     <style>
       body{{font-family:-apple-system,'Segoe UI',sans-serif;background:#0A1628;color:#fff;
            display:flex;align-items:center;justify-content:center;height:100vh;margin:0}}

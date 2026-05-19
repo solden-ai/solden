@@ -101,7 +101,7 @@ def main() -> int:
     parser.add_argument(
         "--extension-id",
         default="ioccdcmiojkcpjcmikikdimnjcpihegd",
-        help="Chrome extension ID (default: Clearledgr's)",
+        help="Chrome extension ID (default: Solden's)",
     )
     args = parser.parse_args()
 

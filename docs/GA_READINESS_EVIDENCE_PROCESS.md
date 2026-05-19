@@ -1,11 +1,11 @@
 # GA Readiness Evidence Process (AP v1)
 
-Source doctrine: `/Users/mombalam/Desktop/Clearledgr.v1/PLAN.md`
+Source doctrine: `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
 
 Purpose:
 - Define how GA-readiness evidence is produced, stored, referenced, and approved.
 - Prevent GA claims from relying only on mutable in-app metadata.
-- Keep Clearledgr AP v1 evidence aligned with the embedded/agentic product doctrine.
+- Keep Solden AP v1 evidence aligned with the embedded/agentic product doctrine.
 
 ## Scope
 
@@ -126,13 +126,13 @@ Each signoff record must include:
 Required for pilot/GA claims involving Gmail as the primary operator surface:
 - authenticated Gmail runtime execution proof (not browserless harness only)
 - extension runtime loaded in Chrome profile
-- Clearledgr sidebar selectors mounted in live Gmail page
+- Solden sidebar selectors mounted in live Gmail page
 - evidence JSON and screenshot artifact, plus summarized report
 
 Reference execution command:
 
 ```bash
-cd /Users/mombalam/Desktop/Clearledgr.v1/ui/gmail-extension
+cd /Users/mombalam/Desktop/Solden.v1/ui/gmail-extension
 npm run test:e2e-auth:evidence -- --release-id <release_id>
 ```
 

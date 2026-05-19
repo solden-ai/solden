@@ -10,7 +10,7 @@ Four time-gated milestones:
   **Week 1 — Show Everything**
     Maximum transparency mode. Every agent action generates a visible
     timeline entry with full reasoning. Override window extended to 30
-    minutes. Clearledgr Home shows a persistent banner.
+    minutes. Solden Home shows a persistent banner.
 
   **Day 14 — Establish the Baseline**
     Slack message with concrete performance data: invoices processed,

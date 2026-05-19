@@ -1,4 +1,4 @@
-"""AP-domain data-access mixin for ClearledgrDB.
+"""AP-domain data-access mixin for SoldenDB.
 
 ``APStore`` is a **mixin class** -- it has no ``__init__`` of its own and
 expects the concrete class that inherits it to provide:
@@ -10,7 +10,7 @@ expects the concrete class that inherits it to provide:
 * ``self._exception_severity_rank()`` -- maps severity label to int rank
 
 All methods are copied verbatim from ``clearledgr/core/database.py`` so that
-``ClearledgrDB(APStore, ...)`` inherits them without any behavioural change.
+``SoldenDB(APStore, ...)`` inherits them without any behavioural change.
 
 Gmail ID mapping
 ~~~~~~~~~~~~~~~~

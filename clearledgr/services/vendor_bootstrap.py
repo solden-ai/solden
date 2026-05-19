@@ -42,7 +42,7 @@ def bootstrap_vendor_intelligence(
     """Populate vendor intelligence from all existing ap_items for an org.
 
     Args:
-        db:              ClearledgrDB instance (must have VendorStore mixed in)
+        db:              SoldenDB instance (must have VendorStore mixed in)
         organization_id: Org to process
         limit:           Max ap_items to scan (default 5000)
         dry_run:         If True, compute stats but don't write to DB

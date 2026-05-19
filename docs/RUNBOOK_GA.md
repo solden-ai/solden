@@ -16,7 +16,7 @@ account.
 1. Open https://portal.azure.com → Azure Active Directory → App
    registrations → **New registration**.
 2. Fill in:
-   - **Name:** Clearledgr workspace
+   - **Name:** Solden workspace
    - **Supported account types:** "Accounts in any organizational
      directory (Any Azure AD directory — Multitenant)"
    - **Redirect URI (Web):** `https://api.clearledgr.com/auth/microsoft/callback`

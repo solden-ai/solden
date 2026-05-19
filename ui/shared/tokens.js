@@ -1,4 +1,4 @@
-/** Clearledgr design tokens — JS export for Preact components */
+/** Solden design tokens — JS export for Preact components */
 
 export const STATE_LABELS = {
   received: 'Received',

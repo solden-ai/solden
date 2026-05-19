@@ -1,15 +1,15 @@
-# Clearledgr Agentic UX v1.5 Implementation Plan
+# Solden Agentic UX v1.5 Implementation Plan
 
 ## Purpose
 
 This plan closes the gap between:
 
-- the **agentic execution infrastructure** already present in Clearledgr AP v1, and
+- the **agentic execution infrastructure** already present in Solden AP v1, and
 - the **user-facing perception** (currently still too workflow/status-heavy vs visibly agentic).
 
 This is a **product-expression plan**, not a rewrite of the AP engine.
 
-It preserves the AP v1 doctrine in `/Users/mombalam/Desktop/Clearledgr.v1/PLAN.md`:
+It preserves the AP v1 doctrine in `/Users/mombalam/Desktop/Solden.v1/PLAN.md`:
 
 1. Gmail remains the primary operator surface
 2. Slack/Teams remain approval/decision surfaces
@@ -19,28 +19,28 @@ It preserves the AP v1 doctrine in `/Users/mombalam/Desktop/Clearledgr.v1/PLAN.m
 
 ## Codebase Reality Check (Verified)
 
-Clearledgr already has real agentic infrastructure. The issue is mostly **how little of it is surfaced to operators by default**.
+Solden already has real agentic infrastructure. The issue is mostly **how little of it is surfaced to operators by default**.
 
 ### What is already real in the codebase
 
 1. **Agent runtime/orchestration**
-   - `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/agent_orchestrator.py`
+   - `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/agent_orchestrator.py`
    - Includes reflection/correction, workflow execution, and durable retry queue processing
 
 2. **Browser-agent tool layer (policy/preview/confirmation/result)**
-   - `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/browser_agent.py`
+   - `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/browser_agent.py`
    - `preview_command`, `dispatch_macro`, `enqueue_command`, `submit_result`
 
 3. **Agent session APIs**
-   - `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/agent_sessions.py`
+   - `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/agent_sessions.py`
    - Session create/get, command preview/dispatch, result submission, fallback completion, policy APIs
 
 4. **Gmail sidebar already has an agent execution section**
-   - `/Users/mombalam/Desktop/Clearledgr.v1/ui/gmail-extension/src/inboxsdk-layer.js`
+   - `/Users/mombalam/Desktop/Solden.v1/ui/gmail-extension/src/inboxsdk-layer.js`
    - `renderAgentActions()` renders session state, next action, preflight preview, history, and approval buttons
 
 5. **ERP fallback reconciliation**
-   - `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/erp_api_first.py`
+   - `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/erp_api_first.py`
    - Browser fallback preview/confirmation and AP-state reconciliation paths are implemented
 
 ### Why it still does not feel agentic
@@ -53,7 +53,7 @@ Clearledgr already has real agentic infrastructure. The issue is mostly **how li
 
 ## Product Goal (v1.5)
 
-Make Clearledgr feel like an **embedded AP agent** that executes work in Gmail, while preserving:
+Make Solden feel like an **embedded AP agent** that executes work in Gmail, while preserving:
 
 - deterministic AP state machine controls
 - human approval gates
@@ -355,7 +355,7 @@ AX7 copy coverage is now complete for planned v1.5 semantics (including richer �
 1. Upgraded the manual-gated E2E harness with authenticated runtime assertions (`GMAIL_E2E_ASSERT_AUTH=1`):
    - fails fast on Gmail sign-in pages when authenticated mode is requested
    - verifies extension service worker presence
-   - verifies Clearledgr sidebar selectors mount in real Gmail runtime
+   - verifies Solden sidebar selectors mount in real Gmail runtime
 2. Added optional screenshot capture output for pilot evidence collection.
 3. Added explicit npm entrypoint:
    - `test:e2e-auth`
@@ -429,10 +429,10 @@ Make the agent’s work legible in the Gmail thread panel.
 
 ### Current reusable base
 
-- `renderAgentActions()` in `/Users/mombalam/Desktop/Clearledgr.v1/ui/gmail-extension/src/inboxsdk-layer.js`
-- `GET /api/agent/sessions/{session_id}` in `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/agent_sessions.py`
-- `BrowserAgentService.get_session()` in `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/browser_agent.py`
-- AP audit/context APIs in `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/ap_items.py`
+- `renderAgentActions()` in `/Users/mombalam/Desktop/Solden.v1/ui/gmail-extension/src/inboxsdk-layer.js`
+- `GET /api/agent/sessions/{session_id}` in `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/agent_sessions.py`
+- `BrowserAgentService.get_session()` in `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/browser_agent.py`
+- AP audit/context APIs in `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/ap_items.py`
 
 ### Changes
 
@@ -453,10 +453,10 @@ Make the agent’s work legible in the Gmail thread panel.
 
 ### Code touchpoints
 
-- `/Users/mombalam/Desktop/Clearledgr.v1/ui/gmail-extension/src/inboxsdk-layer.js`
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/agent_sessions.py`
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/ap_items.py`
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/browser_agent.py`
+- `/Users/mombalam/Desktop/Solden.v1/ui/gmail-extension/src/inboxsdk-layer.js`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/agent_sessions.py`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/ap_items.py`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/browser_agent.py`
 
 ### Acceptance criteria
 
@@ -478,9 +478,9 @@ Let operators delegate AP tasks in plain product language without turning the pr
 
 ### Current reusable base
 
-- `dispatch_agent_macro`, `preview_agent_command`, `enqueue_agent_command` in `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/agent_sessions.py`
-- Browser macros in `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/browser_agent.py`
-- Gmail agent UI action buttons in `/Users/mombalam/Desktop/Clearledgr.v1/ui/gmail-extension/src/inboxsdk-layer.js`
+- `dispatch_agent_macro`, `preview_agent_command`, `enqueue_agent_command` in `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/agent_sessions.py`
+- Browser macros in `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/browser_agent.py`
+- Gmail agent UI action buttons in `/Users/mombalam/Desktop/Solden.v1/ui/gmail-extension/src/inboxsdk-layer.js`
 
 ### Changes
 
@@ -500,11 +500,11 @@ This is **intent routing to existing tools/macros**, not unrestricted natural-la
 
 ### Code touchpoints
 
-- `/Users/mombalam/Desktop/Clearledgr.v1/ui/gmail-extension/src/inboxsdk-layer.js`
-- `/Users/mombalam/Desktop/Clearledgr.v1/ui/gmail-extension/queue-manager.js`
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/agent_sessions.py`
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/browser_agent.py`
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/invoice_workflow.py`
+- `/Users/mombalam/Desktop/Solden.v1/ui/gmail-extension/src/inboxsdk-layer.js`
+- `/Users/mombalam/Desktop/Solden.v1/ui/gmail-extension/queue-manager.js`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/agent_sessions.py`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/browser_agent.py`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/invoice_workflow.py`
 
 ### Acceptance criteria
 
@@ -521,13 +521,13 @@ Make the agent feel proactive, not just reactive.
 ### Current reusable base
 
 - Gmail draft endpoint and compose prefill flow (already used for needs-info drafts)
-  - `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/gmail_extension.py`
-  - `/Users/mombalam/Desktop/Clearledgr.v1/ui/gmail-extension/src/inboxsdk-layer.js`
+  - `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/gmail_extension.py`
+  - `/Users/mombalam/Desktop/Solden.v1/ui/gmail-extension/src/inboxsdk-layer.js`
 - Slack/Teams approval and notification services
-  - `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/slack_api.py`
-  - `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/teams_api.py`
-  - `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/slack_notifications.py`
-  - `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/teams_notifications.py`
+  - `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/slack_api.py`
+  - `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/teams_api.py`
+  - `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/slack_notifications.py`
+  - `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/teams_notifications.py`
 
 ### Changes
 
@@ -540,10 +540,10 @@ Make the agent feel proactive, not just reactive.
 
 ### Code touchpoints
 
-- `/Users/mombalam/Desktop/Clearledgr.v1/ui/gmail-extension/src/inboxsdk-layer.js`
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/gmail_extension.py`
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/invoice_workflow.py`
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/ap_items.py`
+- `/Users/mombalam/Desktop/Solden.v1/ui/gmail-extension/src/inboxsdk-layer.js`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/gmail_extension.py`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/invoice_workflow.py`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/ap_items.py`
 - notification services above
 
 ### Acceptance criteria
@@ -560,9 +560,9 @@ Support “delegate a batch” behavior without introducing a separate AP dashbo
 
 ### Current reusable base
 
-- Gmail worklist and pipeline APIs in `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/gmail_extension.py`
-- Canonical `next_action`, `requires_field_review`, `confidence_blockers` in `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/ap_items.py`
-- Workflow service and agent orchestrator in `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/invoice_workflow.py` and `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/agent_orchestrator.py`
+- Gmail worklist and pipeline APIs in `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/gmail_extension.py`
+- Canonical `next_action`, `requires_field_review`, `confidence_blockers` in `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/ap_items.py`
+- Workflow service and agent orchestrator in `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/invoice_workflow.py` and `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/agent_orchestrator.py`
 
 ### Changes
 
@@ -590,9 +590,9 @@ Turn browser fallback from “backend fallback mechanism” into a visible, trus
 
 ### Current reusable base
 
-- Preview/confirmation/dispatch/finalization in `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/erp_api_first.py`
-- Browser command preview/queue/result in `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/browser_agent.py`
-- Browser fallback completion endpoint in `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/agent_sessions.py`
+- Preview/confirmation/dispatch/finalization in `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/erp_api_first.py`
+- Browser command preview/queue/result in `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/browser_agent.py`
+- Browser fallback completion endpoint in `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/agent_sessions.py`
 
 ### Changes
 
@@ -632,10 +632,10 @@ Measure agent usefulness, not just workflow completion.
 
 ### Code touchpoints
 
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/api/ops.py`
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/core/stores/metrics_store.py`
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/agent_orchestrator.py`
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/invoice_workflow.py`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/ops.py`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/core/stores/metrics_store.py`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/agent_orchestrator.py`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/invoice_workflow.py`
 
 ### Acceptance criteria
 
@@ -657,9 +657,9 @@ Keep Slack/Teams as decision surfaces, but make them feel like interacting with 
 
 ### Code touchpoints
 
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/slack_api.py`
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/teams_api.py`
-- `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/invoice_workflow.py`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/slack_api.py`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/teams_api.py`
+- `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/invoice_workflow.py`
 
 ## Delivery Plan (Suggested)
 
@@ -670,7 +670,7 @@ Keep Slack/Teams as decision surfaces, but make them feel like interacting with 
 3. AX5 Browser fallback visibility states
 
 Success criterion:
-- Clearledgr visibly looks agentic in Gmail demos without weakening controls.
+- Solden visibly looks agentic in Gmail demos without weakening controls.
 
 ## Phase 2 (1 week): Proactive Behavior
 
@@ -712,18 +712,18 @@ Success criterion:
 
 For each AX workstream landed, update these docs:
 
-1. `/Users/mombalam/Desktop/Clearledgr.v1/docs/V1_EMBEDDED_WORKER_EXPERIENCE.md`
+1. `/Users/mombalam/Desktop/Solden.v1/docs/V1_EMBEDDED_WORKER_EXPERIENCE.md`
    - operator-visible behavior and UX doctrine updates
-2. `/Users/mombalam/Desktop/Clearledgr.v1/docs/API_REFERENCE.md`
+2. `/Users/mombalam/Desktop/Solden.v1/docs/API_REFERENCE.md`
    - any new Gmail/agent session API contracts
-3. `/Users/mombalam/Desktop/Clearledgr.v1/docs/HOW_IT_WORKS.md`
+3. `/Users/mombalam/Desktop/Solden.v1/docs/HOW_IT_WORKS.md`
    - demo/user-flow narrative changes
-4. `/Users/mombalam/Desktop/Clearledgr.v1/docs/GA_LAUNCH_READINESS_TRACKER.md` (if in launch scope)
+4. `/Users/mombalam/Desktop/Solden.v1/docs/GA_LAUNCH_READINESS_TRACKER.md` (if in launch scope)
    - new evidence items for agentic UX behavior and fallback visibility
 
-## What “Agentic” Means for Clearledgr (Positioning)
+## What “Agentic” Means for Solden (Positioning)
 
-Clearledgr should feel like:
+Solden should feel like:
 
 - an **AP agent embedded in Gmail** that can execute work safely,
 - not a generic “automation builder,”

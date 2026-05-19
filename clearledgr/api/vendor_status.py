@@ -206,7 +206,7 @@ def patch_vendor_status(
     return response_body
 
 
-# ─── Module 4 Pass D — Reverse vendor sync (Clearledgr → ERP) ────────
+# ─── Module 4 Pass D — Reverse vendor sync (Solden → ERP) ────────
 
 
 @router.post("/{vendor_name}/sync-erp")
@@ -215,7 +215,7 @@ async def sync_vendor_to_erp(
     organization_id: Optional[str] = Query(default=None),
     user: TokenData = Depends(get_current_user),
 ):
-    """Push the in-Clearledgr vendor profile to the connected ERP.
+    """Push the in-Solden vendor profile to the connected ERP.
 
     Admin-gated. Returns a structured result the SPA can render:
     ok / no_change / not_supported / no_erp_id / failed. Audit

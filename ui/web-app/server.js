@@ -3,7 +3,7 @@
  *
  * Two responsibilities:
  *   1. Serve the static SPA build from `dist/`.
- *   2. Reverse-proxy API paths to the Clearledgr api service running
+ *   2. Reverse-proxy API paths to the Solden api service running
  *      on the same Railway project, so the browser sees a single
  *      origin (no CORS, no cookie-domain headaches — the workspace
  *      session cookie is scoped to workspace.clearledgr.com which is also

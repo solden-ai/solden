@@ -1,6 +1,6 @@
-/* Clearledgr panel — boots inside the Suitelet-served iframe.
+/* Solden panel — boots inside the Suitelet-served iframe.
    Reads bill id + account id + API base + auth token from <meta> tags
-   in <head>, calls Clearledgr's by-netsuite-bill endpoint, and renders
+   in <head>, calls Solden's by-netsuite-bill endpoint, and renders
    the Box (state, timeline, exceptions) + action buttons.
 
    Vanilla JS, no build step. Phase 3 will add JWT-bearer auth; Phase 1-2
@@ -166,7 +166,7 @@
         const badge = $('cl-state-badge');
         if (badge) {
             badge.className = 'cl-badge cl-badge-loading';
-            badge.textContent = 'Not in Clearledgr';
+            badge.textContent = 'Not in Solden';
         }
     }
 
@@ -220,7 +220,7 @@
             }
             // eslint-disable-next-line no-console
             console.error('[clearledgr] load failed', err);
-            renderError('Could not reach Clearledgr (' + (err.status || err.code || 'error') + ').');
+            renderError('Could not reach Solden (' + (err.status || err.code || 'error') + ').');
         }
     }
 

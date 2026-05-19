@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import json
 
-from clearledgr.core.database import ClearledgrDB
+from clearledgr.core.database import SoldenDB
 from clearledgr.services.agent_memory import AgentMemoryService
 
 
 def test_agent_memory_service_persists_profile_events_and_belief(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
-    db = ClearledgrDB(str(tmp_path / "agent-memory.db"))
+    db = SoldenDB(str(tmp_path / "agent-memory.db"))
     db.initialize()
 
     service = AgentMemoryService("test-org", db=db)
@@ -58,14 +58,14 @@ def test_agent_memory_service_persists_profile_events_and_belief(tmp_path, monke
     assert events[0]["event_type"] == "ap_invoice_processing_completed"
     assert belief["belief"]["vendor_name"] == "Acme Co"
     assert belief["next_action"]["type"] == "await_approval"
-    assert belief["summary"]["profile"]["name"] == "Clearledgr AP Agent"
+    assert belief["summary"]["profile"]["name"] == "Solden AP Agent"
     assert episode["status"] == "pending_approval"
     assert episode["outcome"]["next_action"]["type"] == "await_approval"
 
 
 def test_agent_memory_service_recall_patterns_and_record_outcome(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
-    db = ClearledgrDB(str(tmp_path / "agent-memory-recall.db"))
+    db = SoldenDB(str(tmp_path / "agent-memory-recall.db"))
     db.initialize()
 
     db.create_ap_item(
@@ -143,7 +143,7 @@ def test_agent_memory_service_recall_patterns_and_record_outcome(tmp_path, monke
 
 def test_agent_memory_surface_aggregates_semantic_and_episodic_context(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
-    db = ClearledgrDB(str(tmp_path / "agent-memory-surface.db"))
+    db = SoldenDB(str(tmp_path / "agent-memory-surface.db"))
     db.initialize()
 
     db.create_ap_item(
@@ -202,7 +202,7 @@ def test_agent_memory_surface_aggregates_semantic_and_episodic_context(tmp_path,
 
     surface = service.build_surface(ap_item_id="ap-3", skill_id="ap_v1")
 
-    assert surface["identity_memory"]["name"] == "Clearledgr AP Agent"
+    assert surface["identity_memory"]["name"] == "Solden AP Agent"
     assert surface["semantic_memory"]["vendor_profile"]["payment_terms"] == "Net 15"
     assert surface["semantic_memory"]["vendor_feedback_summary"]["total_feedback"] == 1
     assert "workflow_runs" not in surface["episodic_memory"]
@@ -212,7 +212,7 @@ def test_agent_memory_surface_aggregates_semantic_and_episodic_context(tmp_path,
 
 def test_agent_memory_compacts_old_events_and_persists_eval_snapshot(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
-    db = ClearledgrDB(str(tmp_path / "agent-memory-compact.db"))
+    db = SoldenDB(str(tmp_path / "agent-memory-compact.db"))
     db.initialize()
 
     service = AgentMemoryService("test-org", db=db)
@@ -260,7 +260,7 @@ def test_agent_memory_compacts_old_events_and_persists_eval_snapshot(tmp_path, m
 
 def test_agent_memory_ensure_profile_preserves_existing_overrides(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
-    db = ClearledgrDB(str(tmp_path / "agent-memory-profile.db"))
+    db = SoldenDB(str(tmp_path / "agent-memory-profile.db"))
     db.initialize()
 
     service = AgentMemoryService("test-org", db=db)

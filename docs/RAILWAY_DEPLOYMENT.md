@@ -1,6 +1,6 @@
 # Railway Deployment
 
-Clearledgr is ready to run on Railway as two services plus managed data:
+Solden is ready to run on Railway as two services plus managed data:
 
 1. `api`
    - public HTTPS service
@@ -136,8 +136,8 @@ Then load the unpacked build from `ui/gmail-extension/build`.
 3. Deploy the `worker` service with `CLEARLEDGR_PROCESS_ROLE=worker`.
 4. Set Slack callback URLs to the Railway public domain.
 5. Set Gmail OAuth redirect URIs to the Railway public domain.
-6. Reconnect Slack from inside Clearledgr.
-7. Reconnect Gmail from inside Clearledgr.
+6. Reconnect Slack from inside Solden.
+7. Reconnect Gmail from inside Solden.
 8. Build the Gmail extension against the Railway backend URL.
 
 ## Sanity checks

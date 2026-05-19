@@ -1,4 +1,4 @@
-# Clearledgr — Deferred Work
+# Solden — Deferred Work
 
 This file tracks deferred or follow-on work only.
 It does not describe overall AP v1 implementation completeness or current launch posture.
@@ -6,9 +6,9 @@ It does not describe overall AP v1 implementation completeness or current launch
 The codebase already includes the core AP v1 product loop: Gmail-first intake/autopilot, Gmail-native work surfaces, Slack/Teams approvals, ERP posting and standard follow-on operations, audit trails, and ops/readiness APIs.
 
 Use these documents for current status instead:
-- `/Users/mombalam/Desktop/Clearledgr.v1/README.md`
-- `/Users/mombalam/Desktop/Clearledgr.v1/docs/GA_LAUNCH_READINESS_TRACKER.md`
-- `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/MANIFEST.md`
+- `/Users/mombalam/Desktop/Solden.v1/README.md`
+- `/Users/mombalam/Desktop/Solden.v1/docs/GA_LAUNCH_READINESS_TRACKER.md`
+- `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/MANIFEST.md`
 
 ## P1 — Security & Reliability
 

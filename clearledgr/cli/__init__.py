@@ -5,7 +5,7 @@ Entry: ``python -m clearledgr.cli`` or the ``solden`` script in
 
 V0.1 scope (Sprint 1, 2026-05-10):
 operator-local tool, talks directly to the database via the existing
-``ClearledgrDB`` facade. No remote/API mode yet — that's a later
+``SoldenDB`` facade. No remote/API mode yet — that's a later
 sprint when we want SaaS customers to manage their own tenants.
 
 Subcommand groups:

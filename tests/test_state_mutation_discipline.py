@@ -1,7 +1,7 @@
 """Phase 1, Gap 3 — guard against raw state mutations on ``ap_items``.
 
 Every state transition on an AP item MUST go through
-``ClearledgrDB.update_ap_item``. That single chokepoint is what
+``SoldenDB.update_ap_item``. That single chokepoint is what
 enforces:
 
 * state-machine validation (``ap_states.transition_or_raise``)
@@ -98,7 +98,7 @@ def test_no_raw_state_mutation_outside_update_ap_item():
                 )
 
     assert not failures, (
-        "Raw state mutation found outside ClearledgrDB.update_ap_item.\n"
+        "Raw state mutation found outside SoldenDB.update_ap_item.\n"
         "Route the change through ``db.update_ap_item(ap_item_id, state=...,"
         " _actor_type=..., _actor_id=..., _decision_reason=...)`` so the "
         "state-machine, audit_events row, and decision_context snapshot "

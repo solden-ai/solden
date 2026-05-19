@@ -1,4 +1,4 @@
-"""Integration-domain data-access mixin for ClearledgrDB.
+"""Integration-domain data-access mixin for SoldenDB.
 
 ``IntegrationStore`` is a **mixin class** -- it has no ``__init__`` of its own
 and expects the concrete class that inherits it to provide:
@@ -10,7 +10,7 @@ and expects the concrete class that inherits it to provide:
 * ``self._decrypt_secret()``       -- Fernet-decrypts an encrypted secret
 
 All methods are copied verbatim from ``clearledgr/core/database.py`` so that
-``ClearledgrDB(IntegrationStore, ...)`` inherits them without any behavioural change.
+``SoldenDB(IntegrationStore, ...)`` inherits them without any behavioural change.
 """
 from __future__ import annotations
 

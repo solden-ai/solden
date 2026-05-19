@@ -1,6 +1,6 @@
 """Bidirectional Gmail label sync — Phase 2.
 
-User applies a Clearledgr/* label in Gmail → agent reacts.
+User applies a Solden/* label in Gmail → agent reacts.
 
 These tests lock in the contract:
   - Only labels in LABEL_TO_INTENT drive workflow; status-only labels
@@ -35,15 +35,15 @@ from clearledgr.services.gmail_labels import (
 
 def test_intent_for_label_maps_only_action_verbs():
     # Action verbs
-    assert intent_for_label("Clearledgr/Invoice/Approved") == "approve_invoice"
-    assert intent_for_label("Clearledgr/Invoice/Exception") == "needs_info"
-    assert intent_for_label("Clearledgr/Review Required") == "needs_info"
-    assert intent_for_label("Clearledgr/Not Finance") == "reject_invoice"
+    assert intent_for_label("Solden/Invoice/Approved") == "approve_invoice"
+    assert intent_for_label("Solden/Invoice/Exception") == "needs_info"
+    assert intent_for_label("Solden/Review Required") == "needs_info"
+    assert intent_for_label("Solden/Not Finance") == "reject_invoice"
 
     # Status-only labels the agent applies itself → MUST NOT trigger action
-    assert intent_for_label("Clearledgr/Invoice/Received") is None
-    assert intent_for_label("Clearledgr/Invoice/Matched") is None
-    assert intent_for_label("Clearledgr/Invoice/Paid") is None
+    assert intent_for_label("Solden/Invoice/Received") is None
+    assert intent_for_label("Solden/Invoice/Matched") is None
+    assert intent_for_label("Solden/Invoice/Paid") is None
 
     # Off-brand labels
     assert intent_for_label("Work/Important") is None
@@ -60,10 +60,10 @@ def test_label_to_intent_set_is_narrow():
     # Guard against future expansion without product sign-off. If the
     # set grows, update this test deliberately.
     assert set(LABEL_TO_INTENT.keys()) == {
-        "Clearledgr/Invoice/Approved",
-        "Clearledgr/Invoice/Exception",
-        "Clearledgr/Review Required",
-        "Clearledgr/Not Finance",
+        "Solden/Invoice/Approved",
+        "Solden/Invoice/Exception",
+        "Solden/Review Required",
+        "Solden/Not Finance",
     }
 
 
@@ -73,7 +73,7 @@ def test_label_to_intent_set_is_narrow():
 
 
 def _make_label_event(intent: str, *, box_id: str = "AP-1",
-                      label_name: str = "Clearledgr/Invoice/Approved"):
+                      label_name: str = "Solden/Invoice/Approved"):
     return AgentEvent(
         type=AgentEventType.LABEL_CHANGED,
         source="gmail_label_sync",
@@ -116,7 +116,7 @@ def test_label_changed_reject_plan_is_exception_only():
     engine = DeterministicPlanningEngine()
     plan = engine.plan(
         _make_label_event("reject_invoice",
-                          label_name="Clearledgr/Not Finance"),
+                          label_name="Solden/Not Finance"),
         {},
     )
     names = [a.name for a in plan.actions]
@@ -126,7 +126,7 @@ def test_label_changed_reject_plan_is_exception_only():
     assert "move_box_stage" in names
     # The Exception label gets applied
     assert any(a.name == "apply_label"
-               and a.params.get("label") == "Clearledgr/Invoice/Exception"
+               and a.params.get("label") == "Solden/Invoice/Exception"
                for a in plan.actions)
 
 
@@ -134,7 +134,7 @@ def test_label_changed_needs_info_plan_moves_to_review():
     engine = DeterministicPlanningEngine()
     plan = engine.plan(
         _make_label_event("needs_info",
-                          label_name="Clearledgr/Review Required"),
+                          label_name="Solden/Review Required"),
         {},
     )
     names = [a.name for a in plan.actions]
@@ -156,7 +156,7 @@ def test_label_changed_missing_box_id_returns_empty_plan():
         source="gmail_label_sync",
         organization_id="org-test",
         payload={
-            "label_name": "Clearledgr/Invoice/Approved",
+            "label_name": "Solden/Invoice/Approved",
             "intent": "approve_invoice",
         },
     )
@@ -173,7 +173,7 @@ def test_label_changed_missing_box_id_returns_empty_plan():
 async def test_process_label_changes_enqueues_for_action_label_on_known_thread():
     mock_client = MagicMock()
     mock_client.list_labels = AsyncMock(return_value=[
-        {"id": "Label_APPROVED", "name": "Clearledgr/Invoice/Approved"},
+        {"id": "Label_APPROVED", "name": "Solden/Invoice/Approved"},
         {"id": "Label_OTHER", "name": "Some Other Label"},
     ])
 
@@ -202,15 +202,15 @@ async def test_process_label_changes_enqueues_for_action_label_on_known_thread()
     assert ev.type == AgentEventType.LABEL_CHANGED
     assert ev.payload["intent"] == "approve_invoice"
     assert ev.payload["box_id"] == "AP-42"
-    assert ev.payload["label_name"] == "Clearledgr/Invoice/Approved"
-    assert ev.idempotency_key == "label:Clearledgr/Invoice/Approved:m1"
+    assert ev.payload["label_name"] == "Solden/Invoice/Approved"
+    assert ev.idempotency_key == "label:Solden/Invoice/Approved:m1"
 
 
 @pytest.mark.asyncio
 async def test_process_label_changes_ignores_status_only_labels():
     mock_client = MagicMock()
     mock_client.list_labels = AsyncMock(return_value=[
-        {"id": "Label_MATCHED", "name": "Clearledgr/Invoice/Matched"},
+        {"id": "Label_MATCHED", "name": "Solden/Invoice/Matched"},
     ])
     mock_db = MagicMock()
     mock_db.get_ap_item_by_thread.return_value = {"id": "AP-42"}
@@ -233,7 +233,7 @@ async def test_process_label_changes_ignores_status_only_labels():
 async def test_process_label_changes_ignores_threads_without_ap_box():
     mock_client = MagicMock()
     mock_client.list_labels = AsyncMock(return_value=[
-        {"id": "Label_APPROVED", "name": "Clearledgr/Invoice/Approved"},
+        {"id": "Label_APPROVED", "name": "Solden/Invoice/Approved"},
     ])
     mock_db = MagicMock()
     mock_db.get_ap_item_by_thread.return_value = None  # no box
@@ -258,7 +258,7 @@ async def test_process_label_changes_dedupes_via_idempotency_key():
     the same idempotency key so the queue can drop duplicates."""
     mock_client = MagicMock()
     mock_client.list_labels = AsyncMock(return_value=[
-        {"id": "Label_APPROVED", "name": "Clearledgr/Invoice/Approved"},
+        {"id": "Label_APPROVED", "name": "Solden/Invoice/Approved"},
     ])
     mock_db = MagicMock()
     mock_db.get_ap_item_by_thread.return_value = {"id": "AP-42"}
@@ -285,17 +285,17 @@ async def test_process_label_changes_dedupes_via_idempotency_key():
     # Both records produce the same key so the queue's dedup handles it.
     assert len(enqueued_keys) == 2
     assert enqueued_keys[0] == enqueued_keys[1]
-    assert enqueued_keys[0] == "label:Clearledgr/Invoice/Approved:m1"
+    assert enqueued_keys[0] == "label:Solden/Invoice/Approved:m1"
 
 
 @pytest.mark.asyncio
 async def test_process_label_changes_picks_first_action_label_when_multiple():
-    """If a record contains several Clearledgr labels + noise labels, we
+    """If a record contains several Solden labels + noise labels, we
     should fire on the first action label and ignore the rest."""
     mock_client = MagicMock()
     mock_client.list_labels = AsyncMock(return_value=[
-        {"id": "Label_APPROVED", "name": "Clearledgr/Invoice/Approved"},
-        {"id": "Label_MATCHED", "name": "Clearledgr/Invoice/Matched"},
+        {"id": "Label_APPROVED", "name": "Solden/Invoice/Approved"},
+        {"id": "Label_MATCHED", "name": "Solden/Invoice/Matched"},
         {"id": "Label_USER", "name": "User/Important"},
     ])
     mock_db = MagicMock()
@@ -318,7 +318,7 @@ async def test_process_label_changes_picks_first_action_label_when_multiple():
     )
     # Should fire exactly once on the first action label found
     assert len(captured) == 1
-    assert captured[0].payload["label_name"] == "Clearledgr/Invoice/Approved"
+    assert captured[0].payload["label_name"] == "Solden/Invoice/Approved"
 
 
 @pytest.mark.asyncio

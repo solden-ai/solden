@@ -1,5 +1,5 @@
 """
-Clearledgr Task Scheduler
+Solden Task Scheduler
 
 Autonomous task follow-ups and reminders:
 - Daily overdue check

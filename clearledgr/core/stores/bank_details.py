@@ -9,7 +9,7 @@ Architectural rules:
   - Bank details are NEVER stored in raw JSON columns (e.g., the
     ``ap_items.metadata`` blob). They live in dedicated
     ``bank_details_encrypted`` columns containing Fernet ciphertext.
-  - The encryption key is the same one ``_ClearledgrDBBase._get_fernet``
+  - The encryption key is the same one ``_SoldenDBBase._get_fernet``
     derives from ``CLEARLEDGR_SECRET_KEY`` — already in production use
     for ERP OAuth tokens.
   - API responses ALWAYS return masked shapes via ``mask_bank_details``.
@@ -24,7 +24,7 @@ Architectural rules:
 This module is pure Python — no DB access. The encryption helpers take
 a callable (``encrypt_fn``, ``decrypt_fn``) so callers can pass in the
 DB instance's ``_encrypt_secret`` / ``_decrypt_secret`` bound methods
-without coupling this module to ``ClearledgrDB``.
+without coupling this module to ``SoldenDB``.
 """
 from __future__ import annotations
 

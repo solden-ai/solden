@@ -1,6 +1,6 @@
-"""Domain-specific store mixins for ClearledgrDB.
+"""Domain-specific store mixins for SoldenDB.
 
-Each store groups related database methods by domain. ClearledgrDB inherits
+Each store groups related database methods by domain. SoldenDB inherits
 from all of them, so callers continue to use ``get_db()`` unchanged.
 """
 

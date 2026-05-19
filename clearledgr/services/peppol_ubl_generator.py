@@ -1,15 +1,15 @@
 """PEPPOL UBL 2.1 outbound generator (Wave 4 / F2).
 
-Produces UBL 2.1 XML for two outbound document types Clearledgr
+Produces UBL 2.1 XML for two outbound document types Solden
 emits to vendors:
 
   * **CreditNote** (UBL CreditNote-2 schema, type code 381) — when
     the operator issues a vendor credit (e.g. partial dispute
-    resolution, returned goods). Generated from a Clearledgr
+    resolution, returned goods). Generated from a Solden
     ``ap_items`` row plus a credit amount + reason.
 
   * **Invoice** — for organizations that receive the AP bill via
-    Clearledgr but need to round-trip the PEPPOL UBL representation
+    Solden but need to round-trip the PEPPOL UBL representation
     back to a vendor / portal that demands it (re-issue with
     corrected fields).
 

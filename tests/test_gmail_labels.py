@@ -29,30 +29,30 @@ from clearledgr.services.gmail_labels import (
 class TestLabelHierarchy:
 
     def test_thesis_invoice_labels_present(self):
-        assert CLEARLEDGR_LABELS["invoice_received"] == "Clearledgr/Invoice/Received"
-        assert CLEARLEDGR_LABELS["invoice_matched"] == "Clearledgr/Invoice/Matched"
-        assert CLEARLEDGR_LABELS["invoice_exception"] == "Clearledgr/Invoice/Exception"
-        assert CLEARLEDGR_LABELS["invoice_approved"] == "Clearledgr/Invoice/Approved"
-        assert CLEARLEDGR_LABELS["invoice_paid"] == "Clearledgr/Invoice/Paid"
+        assert CLEARLEDGR_LABELS["invoice_received"] == "Solden/Invoice/Received"
+        assert CLEARLEDGR_LABELS["invoice_matched"] == "Solden/Invoice/Matched"
+        assert CLEARLEDGR_LABELS["invoice_exception"] == "Solden/Invoice/Exception"
+        assert CLEARLEDGR_LABELS["invoice_approved"] == "Solden/Invoice/Approved"
+        assert CLEARLEDGR_LABELS["invoice_paid"] == "Solden/Invoice/Paid"
 
     def test_thesis_vendor_label_present(self):
-        assert CLEARLEDGR_LABELS["vendor_onboarding"] == "Clearledgr/Vendor/Onboarding"
+        assert CLEARLEDGR_LABELS["vendor_onboarding"] == "Solden/Vendor/Onboarding"
 
     def test_thesis_finance_labels_present(self):
-        assert CLEARLEDGR_LABELS["finance_credit_note"] == "Clearledgr/Finance/Credit Note"
-        assert CLEARLEDGR_LABELS["finance_statement"] == "Clearledgr/Finance/Statement"
-        assert CLEARLEDGR_LABELS["finance_query"] == "Clearledgr/Finance/Query"
-        assert CLEARLEDGR_LABELS["finance_renewal"] == "Clearledgr/Finance/Renewal"
+        assert CLEARLEDGR_LABELS["finance_credit_note"] == "Solden/Finance/Credit Note"
+        assert CLEARLEDGR_LABELS["finance_statement"] == "Solden/Finance/Statement"
+        assert CLEARLEDGR_LABELS["finance_query"] == "Solden/Finance/Query"
+        assert CLEARLEDGR_LABELS["finance_renewal"] == "Solden/Finance/Renewal"
 
     def test_thesis_classification_labels_present(self):
-        assert CLEARLEDGR_LABELS["review_required"] == "Clearledgr/Review Required"
-        assert CLEARLEDGR_LABELS["not_finance"] == "Clearledgr/Not Finance"
+        assert CLEARLEDGR_LABELS["review_required"] == "Solden/Review Required"
+        assert CLEARLEDGR_LABELS["not_finance"] == "Solden/Not Finance"
 
     def test_all_labels_are_three_level_or_two_level(self):
         for key, name in CLEARLEDGR_LABELS.items():
             parts = name.split("/")
-            assert parts[0] == "Clearledgr", f"{key}: {name} doesn't start with Clearledgr/"
-            assert len(parts) >= 2, f"{key}: {name} is not nested under Clearledgr/"
+            assert parts[0] == "Solden", f"{key}: {name} doesn't start with Solden/"
+            assert len(parts) >= 2, f"{key}: {name} is not nested under Solden/"
 
 
 # ===========================================================================
@@ -226,8 +226,8 @@ class TestCleanupLegacyLabels:
 
             async def list_labels(self):
                 return [
-                    {"id": "old-invoices", "name": "Clearledgr/Invoices", "messagesTotal": 2},
-                    {"id": "new-received", "name": "Clearledgr/Invoice/Received", "messagesTotal": 0},
+                    {"id": "old-invoices", "name": "Solden/Invoices", "messagesTotal": 2},
+                    {"id": "new-received", "name": "Solden/Invoice/Received", "messagesTotal": 0},
                 ]
 
             async def create_label(self, _name):
@@ -255,7 +255,7 @@ class TestCleanupLegacyLabels:
 
             async def list_labels(self):
                 return [
-                    {"id": "legacy-skipped", "name": "Clearledgr/Skipped", "messagesTotal": 1},
+                    {"id": "legacy-skipped", "name": "Solden/Skipped", "messagesTotal": 1},
                 ]
 
             async def create_label(self, _name):

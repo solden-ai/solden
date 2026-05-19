@@ -1,7 +1,7 @@
 """
 Agent Background Intelligence Loop
 
-Runs periodic tasks that make Clearledgr proactive:
+Runs periodic tasks that make Solden proactive:
 - Overdue/stale AP item nudges (every 15 min) → Slack alert
 - Volume/pattern anomaly detection (every hour) → Slack alert
 - Period-end alerts (daily) → Slack alert
@@ -1816,7 +1816,7 @@ async def _sync_purchase_orders(org_id: str):
 
 
 async def _sync_vendor_master_data(org_id: str):
-    """Sync vendor master data from ERP to Clearledgr vendor profiles (daily)."""
+    """Sync vendor master data from ERP to Solden vendor profiles (daily)."""
     try:
         from clearledgr.services.vendor_erp_sync import sync_vendors_from_erp
 

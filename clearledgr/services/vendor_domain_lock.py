@@ -16,7 +16,7 @@ Matching semantics:
   - Payment-processor domains (Stripe, PayPal, Paddle, Bill.com, etc.)
     bypass the lock because the "sender" for processor-routed invoices
     is the processor, not the underlying merchant. Processors are a
-    separate trust mechanism Clearledgr already recognizes; Phase 2.2
+    separate trust mechanism Solden already recognizes; Phase 2.2
     does not redefine that boundary.
 
 Bootstrap semantics:

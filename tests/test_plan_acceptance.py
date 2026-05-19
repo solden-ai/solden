@@ -1,7 +1,7 @@
 """PLAN.md Section 7.1 — Acceptance tests for storage/contract guardrails.
 
 These tests intentionally exercise DB/state-machine primitives directly
-(`ClearledgrDB.update_ap_item`, audit writes, transition validation) so plan
+(`SoldenDB.update_ap_item`, audit writes, transition validation) so plan
 requirements can be validated without external services.
 
 They are *not* the proof of runtime orchestration alignment. Runtime-path
@@ -37,9 +37,9 @@ ROOT = Path(__file__).resolve().parent.parent
 # ---------------------------------------------------------------------------
 
 def _get_db():
-    """Return a fresh, isolated ClearledgrDB for testing.
+    """Return a fresh, isolated SoldenDB for testing.
 
-    Uses a temp file instead of :memory: because ClearledgrDB opens a new
+    Uses a temp file instead of :memory: because SoldenDB opens a new
     connection per ``connect()`` call, and :memory: databases are not shared
     across connections.
     """

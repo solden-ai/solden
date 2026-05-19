@@ -37,7 +37,7 @@ After ``max_retries`` consecutive conflicts, raises ``BoxConflict``
 with both the observed-vs-expected timestamps so the caller can
 log the contention.
 
-This module is small, pure, and DB-aware via a ``ClearledgrDB``
+This module is small, pure, and DB-aware via a ``SoldenDB``
 handle. Tests use a fake handle. The actual DB-backed integration
 test path is in ``test_box_cas.py``.
 """
@@ -78,7 +78,7 @@ class BoxConflict(RuntimeError):
 
 # Columns the CAS helper is permitted to update via mutator return
 # values. Mirrors the production ``_AP_ITEM_ALLOWED_COLUMNS``
-# whitelist on ``ClearledgrDB`` — copied here as a service-layer
+# whitelist on ``SoldenDB`` — copied here as a service-layer
 # defense. A mutator returning a key not in this set raises
 # ``ValueError`` so a buggy specialist can't sneak through arbitrary
 # column writes.

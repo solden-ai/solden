@@ -83,7 +83,7 @@ This part is external-facing. Every claim on the Problem + Solution slides is ma
 - **Seven InboxSDK injection points** — all present in [inboxsdk-layer.js](../ui/gmail-extension/src/inboxsdk-layer.js):
   1. **Home route** — `'clearledgr/home'` registered at [inboxsdk-layer.js:1723](../ui/gmail-extension/src/inboxsdk-layer.js#L1723), [HomePage.js](../ui/gmail-extension/src/routes/pages/HomePage.js)
   2. **NavMenu** — [inboxsdk-layer.js:2409-2445](../ui/gmail-extension/src/inboxsdk-layer.js#L2409)
-  3. **Lists (inbox stage)** — driven by Clearledgr Gmail labels via [services/gmail_labels.py](../clearledgr/services/gmail_labels.py)
+  3. **Lists (inbox stage)** — driven by Solden Gmail labels via [services/gmail_labels.py](../clearledgr/services/gmail_labels.py)
   4. **Gmail label architecture** — canonical taxonomy in `gmail_labels.py`; Phase 2 bidirectional sync (label → `LABEL_CHANGED` event → planner)
   5. **Toolbars** — [inboxsdk-layer.js:1049](../ui/gmail-extension/src/inboxsdk-layer.js#L1049), [1091](../ui/gmail-extension/src/inboxsdk-layer.js#L1091)
   6. **Conversations (thread sidebar)** — [inboxsdk-layer.js:752](../ui/gmail-extension/src/inboxsdk-layer.js#L752), [ThreadSidebar.js](../ui/gmail-extension/src/components/ThreadSidebar.js)
@@ -130,7 +130,7 @@ This part is external-facing. Every claim on the Problem + Solution slides is ma
 
 **Claim:** "Backoffice. Your own admin system. Where internal ops tools and dashboards already live."
 
-**This means:** Clearledgr connects to the customer's existing backoffice (Retool, Superset, internal admin, etc.) — outbound. Not Clearledgr giving them an admin console.
+**This means:** Solden connects to the customer's existing backoffice (Retool, Superset, internal admin, etc.) — outbound. Not Solden giving them an admin console.
 
 **Evidence (match):**
 

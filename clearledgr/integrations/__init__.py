@@ -1,5 +1,5 @@
 """
-Clearledgr Integrations
+Solden Integrations
 
 Real integrations with:
 - Payment gateways (Stripe, Paystack, Flutterwave)

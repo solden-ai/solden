@@ -11,7 +11,7 @@
     "https://www.googleapis.com/auth/userinfo.email"
   ],
   "gmail": {
-    "name": "Clearledgr AP",
+    "name": "Solden AP",
     "logoUrl": "https://api.clearledgr.com/static/icons/icon128.png",
     "primaryColor": "#0A1628",
     "secondaryColor": "#00D67E",
@@ -23,7 +23,7 @@
     ],
     "universalActions": [
       {
-        "text": "Open Clearledgr",
+        "text": "Open Solden",
         "openLink": {
           "url": "https://mail.google.com/mail/u/0/#clearledgr/home"
         }

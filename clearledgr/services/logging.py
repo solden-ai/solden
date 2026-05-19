@@ -1,5 +1,5 @@
 """
-Structured logging for Clearledgr Reconciliation API.
+Structured logging for Solden Reconciliation API.
 """
 import logging
 import sys

@@ -1,6 +1,6 @@
 # Handoff Tour
 
-This is the doc I wish someone had written for me before I started building Clearledgr. It's not the spec. It's the walkthrough.
+This is the doc I wish someone had written for me before I started building Solden. It's not the spec. It's the walkthrough.
 
 If you're Suleiman or Little reading this for the first time, this is the one document you should read before you touch any code. Everything else in `salis/` is reference. This is orientation.
 
@@ -55,18 +55,18 @@ Not code, but context. The "Working Rules" section at the bottom is how I think 
 
 ## The mental model
 
-Here's the sentence I use when I have to explain Clearledgr in 15 seconds:
+Here's the sentence I use when I have to explain Solden in 15 seconds:
 
-> Clearledgr is an AP coordination agent that lives in your Gmail, routes approvals through Slack, and posts bills into your ERP.
+> Solden is an AP coordination agent that lives in your Gmail, routes approvals through Slack, and posts bills into your ERP.
 
 Unpack that:
 
-- **Coordination agent, not automation.** Automation tools run scripts. Clearledgr advances Boxes through state machines while preserving an auditable trail. The agent plans; deterministic code executes.
+- **Coordination agent, not automation.** Automation tools run scripts. Solden advances Boxes through state machines while preserving an auditable trail. The agent plans; deterministic code executes.
 - **Lives in your Gmail.** Email is the intake surface and the contextual work surface. Via InboxSDK (MV3). The sidebar shows Box state, not inbox metadata.
 - **Routes approvals through Slack.** Slack cards carry the approve/reject/needs-info buttons. Teams is V1.1 (feature-flagged off).
 - **Posts bills into your ERP.** We write, we don't own. ERP remains the ledger of record. Four ERPs supported: QuickBooks, Xero, NetSuite, SAP.
 
-The product thesis is: finance work today is scattered across tools that don't talk. ERP holds results. Email holds fragments. Slack holds conversation. State lives in human memory. Clearledgr gives every workflow instance a persistent home — a **Box** — that renders into every surface without losing the thread.
+The product thesis is: finance work today is scattered across tools that don't talk. ERP holds results. Email holds fragments. Slack holds conversation. State lives in human memory. Solden gives every workflow instance a persistent home — a **Box** — that renders into every surface without losing the thread.
 
 ---
 
@@ -102,7 +102,7 @@ Read `coordination_engine.py:375` — `_pre_write`.
 
 The rule is: **every agent action writes its timeline entry BEFORE it executes.** If the pre-write can't land (DB blip, network fail, whatever), the action is aborted and `_Rule1PreWriteFailed` is raised. No ERP post happens without an audit row. No vendor email goes out without an audit row. No Slack card is sent without an audit row.
 
-Why: if Clearledgr's value proposition is "trustworthy audit trail," then the audit trail has to be stronger than the side effects. If a bill posts to QuickBooks with no audit row, the customer's compliance story just broke. The thesis (DESIGN_THESIS.md §7.6) rests on this being airtight.
+Why: if Solden's value proposition is "trustworthy audit trail," then the audit trail has to be stronger than the side effects. If a bill posts to QuickBooks with no audit row, the customer's compliance story just broke. The thesis (DESIGN_THESIS.md §7.6) rests on this being airtight.
 
 I spent real time getting this right. The engine retries the pre-write 3 times with backoff. Only after 3 failures does it give up. Even then, it parks the Box in an exception state with a clear error, so an operator can see the Rule 1 failure in the audit chain.
 

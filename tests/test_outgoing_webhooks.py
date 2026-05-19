@@ -172,8 +172,8 @@ class TestWebhookDelivery:
         assert ok is True
         call_kwargs = mock_client.post.call_args
         headers = call_kwargs.kwargs.get("headers") or call_kwargs[1].get("headers", {})
-        assert "X-Clearledgr-Signature" in headers
-        assert headers["X-Clearledgr-Event"] == "invoice.approved"
+        assert "X-Solden-Signature" in headers
+        assert headers["X-Solden-Event"] == "invoice.approved"
 
     def test_failed_delivery(self):
         mock_resp = MagicMock()

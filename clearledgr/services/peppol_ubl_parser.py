@@ -1,6 +1,6 @@
 """PEPPOL UBL 2.1 invoice parser (Wave 4 / F1).
 
-Parses PEPPOL BIS Billing 3.0 invoices (UBL 2.1 XML) into Clearledgr's
+Parses PEPPOL BIS Billing 3.0 invoices (UBL 2.1 XML) into Solden's
 canonical :class:`InvoiceData` shape so the rest of the pipeline
 (validation gate, VAT calculator, JE preview, ERP post) treats a
 PEPPOL-delivered bill identically to a Gmail-attached PDF or a
@@ -17,7 +17,7 @@ Root: ``<Invoice>`` in namespace
 ``urn:oasis:names:specification:ubl:schema:xsd:Invoice-2`` with
 child elements in cbc + cac namespaces.
 
-Tax category codes mapped to Clearledgr treatments:
+Tax category codes mapped to Solden treatments:
 
   ``S``  (Standard rate)        → domestic
   ``Z``  (Zero rated)            → zero_rated

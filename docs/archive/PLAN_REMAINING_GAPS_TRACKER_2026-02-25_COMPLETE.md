@@ -1,7 +1,7 @@
 # Plan Remaining Gaps Tracker (Open Items Only)
 
 Date created: 2026-02-25
-Source of truth: `/Users/mombalam/Desktop/Clearledgr.v1/PLAN.md`
+Source of truth: `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
 Assessment baseline: latest read-only verification (post-tracker implementation review)
 
 ## Scope and Doctrine Guardrails
@@ -10,7 +10,7 @@ This tracker covers only the currently open, verified gaps/risks against `PLAN.m
 It does not reopen the archived completed tracker.
 
 Non-negotiable product/doctrine guardrails:
-- Preserve Clearledgr AP v1 as an embedded, agentic finance execution layer.
+- Preserve Solden AP v1 as an embedded, agentic finance execution layer.
 - Gmail remains the primary operator surface.
 - Slack and Teams remain approval/decision surfaces.
 - ERP remains system of record.

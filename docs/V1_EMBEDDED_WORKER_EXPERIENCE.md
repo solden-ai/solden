@@ -1,14 +1,14 @@
-# Clearledgr AP v1 Embedded Operator Experience
+# Solden AP v1 Embedded Operator Experience
 
 This document describes the **embedded AP v1 operator experience** across Gmail, Slack, and Teams.
 
 It aligns to the canonical doctrine in:
 
-- `/Users/mombalam/Desktop/Clearledgr.v1/PLAN.md`
+- `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
 
 Related implementation roadmap (post-hardening product-expression work):
 
-- `/Users/mombalam/Desktop/Clearledgr.v1/docs/AGENTIC_UX_V1_5_IMPLEMENTATION_PLAN.md`
+- `/Users/mombalam/Desktop/Solden.v1/docs/AGENTIC_UX_V1_5_IMPLEMENTATION_PLAN.md`
 
 ## Purpose
 
@@ -52,7 +52,7 @@ Note: The current codebase already contains agent runtime, browser-agent tooling
 
 ### AP Workspace (Thread-Level)
 
-When Clearledgr identifies an AP item in a thread, Gmail should show a focused workspace for the active record with:
+When Solden identifies an AP item in a thread, Gmail should show a focused workspace for the active record with:
 
 1. **Status**
    - Current AP state (for example `validating`, `needs_info`, `needs_approval`, `ready_to_post`, `posted`)

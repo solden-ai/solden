@@ -292,7 +292,7 @@ def test_postgres_append_only_guard_ddl_is_installed_without_live_db(db):
     pattern. The latter took ``AccessExclusiveLock`` on the table and
     deadlocked when two gunicorn workers booted in parallel — the
     rewrite is documented in
-    ``ClearledgrDB._install_audit_append_only_guards``. This test
+    ``SoldenDB._install_audit_append_only_guards``. This test
     verifies the new shape so a future refactor can't silently
     regress to the deadlock-prone DROP+CREATE.
     """

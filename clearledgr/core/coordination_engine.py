@@ -1010,7 +1010,7 @@ class CoordinationEngine:
 
         Steps per spec:
         1. generate_exception_reason(match_result, invoice, po, grn)
-        2. apply_label('Clearledgr/Invoice/Exception')
+        2. apply_label('Solden/Invoice/Exception')
         3. move_box_stage('exception')
         4. send_slack_exception(box_id, ap_channel, {exception_summary})
 
@@ -1025,7 +1025,7 @@ class CoordinationEngine:
             Action("generate_exception_reason", "LLM", {},
                    "Generate plain-language match exception reason"),
             Action("apply_label", "DET",
-                   {"label": "Clearledgr/Invoice/Exception"},
+                   {"label": "Solden/Invoice/Exception"},
                    "Apply Exception stage label"),
             Action("move_box_stage", "DET",
                    {"target": "needs_info"},
@@ -1240,7 +1240,7 @@ class CoordinationEngine:
             return {"ok": True}
 
     async def _handle_apply_label(self, action: Action, plan: Plan) -> dict:
-        """§3: Apply a Clearledgr Gmail label to the thread."""
+        """§3: Apply a Solden Gmail label to the thread."""
         label = action.params.get("label", "")
         if not label:
             return {"ok": True}
@@ -1905,7 +1905,7 @@ class CoordinationEngine:
     async def _handle_schedule_payment(self, action: Action, plan: Plan) -> dict:
         """Mark the AP item as ready for payment (V1: ERP-intermediated).
 
-        V1 scope per the thesis: Clearledgr posts the bill to the ERP
+        V1 scope per the thesis: Solden posts the bill to the ERP
         and the customer runs the payment from their ERP / treasury
         tool. Direct payment execution is Q4 roadmap and not wired
         here. This handler therefore does NOT create an actual
@@ -2227,7 +2227,7 @@ class CoordinationEngine:
             pass
 
         system_prompt = (
-            "You are Clearledgr's AP agent classifying a vendor's email reply "
+            "You are Solden's AP agent classifying a vendor's email reply "
             "to an onboarding or chase message. You will be given the reply "
             "body and what the session is currently waiting on, and must "
             "return a strict JSON classification.\n\n"
@@ -2773,7 +2773,7 @@ class CoordinationEngine:
     async def _handle_split_thread(self, action: Action, plan: Plan) -> dict:
         """§3: Split a Gmail thread at a specific message."""
         # Gmail API doesn't support native thread splitting.
-        # Clearledgr simulates this by creating a new AP item for the message.
+        # Solden simulates this by creating a new AP item for the message.
         logger.info("[CoordinationEngine] split_thread requested — creating new Box for split message")
         return {"ok": True}
 

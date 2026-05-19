@@ -9,7 +9,7 @@ const html = htm.bind(h);
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(error) { return { error }; }
-  componentDidCatch(e, info) { console.error('[Clearledgr]', e, info?.componentStack || ''); }
+  componentDidCatch(e, info) { console.error('[Solden]', e, info?.componentStack || ''); }
   render() {
     if (this.state.error) {
       return html`<div class="panel"><p class="muted">${this.props.fallback || 'Something went wrong.'}</p>
@@ -26,7 +26,7 @@ const PAGES = [
   { id: 'activity', title: 'Activity', subtitle: 'Your invoice processing at a glance.' },
   { id: 'integrations', title: 'Connections', subtitle: 'Gmail, Slack, Teams, and your accounting software.' },
   { id: 'policies', title: 'Approval Rules', subtitle: 'Control how invoices are reviewed and approved.' },
-  { id: 'team', title: 'Team', subtitle: 'Invite your colleagues to Clearledgr.' },
+  { id: 'team', title: 'Team', subtitle: 'Invite your colleagues to Solden.' },
   { id: 'organization', title: 'Company', subtitle: 'Your organization profile and preferences.' },
   { id: 'plan', title: 'Plan', subtitle: 'Your subscription and usage.' },
   { id: 'reconciliation', title: 'Reconciliation', subtitle: 'Match bank transactions to invoices.' },
@@ -232,7 +232,7 @@ function AuthShell({ onLogin, inviteToken }) {
 
   return html`<div class="auth-shell">
     <div class="auth-card">
-      <h1>Clearledgr Workspace Shell</h1>
+      <h1>Solden Workspace Shell</h1>
       <p>Sign in to manage setup, integrations, policies, and plan controls.</p>
       ${msg && html`<div class="muted">${msg}</div>`}
       <form onSubmit=${loginAction}>
@@ -261,7 +261,7 @@ function AuthShell({ onLogin, inviteToken }) {
 function SideNav({ pages, active, onNav, orgLabel, onLogout, userEmail }) {
   const initials = String(userEmail || '?').charAt(0).toUpperCase();
   return html`<aside class="side-nav">
-    <div class="brand">Clearledgr</div>
+    <div class="brand">Solden</div>
     <div class="org-chip">${orgLabel}</div>
     <nav>
       ${pages.map(p => html`<button key=${p.id} class="nav-btn ${active === p.id ? 'active' : ''}" onClick=${() => onNav(p.id)}>${p.title}</button>`)}
@@ -328,7 +328,7 @@ function SetupPage({ bootstrap, orgId, onNav, onRefresh }) {
   });
   const [launch, launchPending] = useAction(async () => {
     await api('/api/workspace/onboarding/step', { method: 'POST', body: JSON.stringify({ organization_id: orgId, step: 5 }) });
-    toast('Clearledgr is live! Your finance agents are now running.', 'success'); onRefresh();
+    toast('Solden is live! Your finance agents are now running.', 'success'); onRefresh();
   });
 
   const ws = gmail.watch_status || 'unknown';
@@ -338,7 +338,7 @@ function SetupPage({ bootstrap, orgId, onNav, onRefresh }) {
   const doneCount = [gmailOk && slackOk && teamsOk && erpOk, channelOk, policyOk, allReady].filter(Boolean).length;
 
   return html`
-    <div class="panel"><h3>Finish setting up Clearledgr</h3>
+    <div class="panel"><h3>Finish setting up Solden</h3>
       <p class="muted">${doneCount} of 4 complete</p>
       <div style="height:4px;background:#E2E8F0;border-radius:2px;margin:12px 0 16px;overflow:hidden">
         <div style="height:100%;width:${doneCount * 25}%;background:var(--accent);border-radius:2px;transition:width 0.3s"></div>
@@ -352,7 +352,7 @@ function SetupPage({ bootstrap, orgId, onNav, onRefresh }) {
     </div>
 
     <div class="panel"><h3>Connect your tools</h3>
-      <p class="muted">Clearledgr works with the tools your team already uses.</p>
+      <p class="muted">Solden works with the tools your team already uses.</p>
       <div class="connector-grid">
         <div class="connector-card ${gmailOk ? 'done' : ''}">
           <div class="connector-header"><strong>Gmail</strong>${statusBadge(gmailOk)}</div>
@@ -373,7 +373,7 @@ function SetupPage({ bootstrap, orgId, onNav, onRefresh }) {
     </div>
 
     <div class="panel"><h3>Connect your accounting software</h3>
-      <p class="muted">Where should Clearledgr post approved invoices?</p>
+      <p class="muted">Where should Solden post approved invoices?</p>
       <div class="connector-grid connector-grid-3">
         ${['quickbooks', 'xero'].map(t => html`
           <div class="connector-card ${erpOk && erpType === t ? 'done' : ''}">
@@ -444,7 +444,7 @@ function SetupPage({ bootstrap, orgId, onNav, onRefresh }) {
     </div>`}
 
     <div class="panel"><h3>Ready to go live?</h3>
-      <p class="muted">Once everything is connected, Clearledgr's agents will start executing your finance workflows.</p>
+      <p class="muted">Once everything is connected, Solden's agents will start executing your finance workflows.</p>
       <div class="readiness-list">
         <div class="readiness-item">${checkMark(gmailOk)} Gmail connected</div>
         <div class="readiness-item">${checkMark(slackOk)} Slack connected</div>
@@ -905,7 +905,7 @@ function ReconciliationPage({ bootstrap, orgId, onRefresh }) {
   return html`
     <div class="panel">
       <h3>Start reconciliation</h3>
-      <p class="muted">Paste a Google Sheets URL containing bank or card transactions. Clearledgr's agent will match them against posted AP items.</p>
+      <p class="muted">Paste a Google Sheets URL containing bank or card transactions. Solden's agent will match them against posted AP items.</p>
       <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
         <label>Google Sheet URL</label>
         <input placeholder="https://docs.google.com/spreadsheets/d/..." value=${sheetUrl} onInput=${e => setSheetUrl(e.target.value)} />
@@ -1097,7 +1097,7 @@ function AdminApp() {
 
 function App() {
   return html`
-    <${ErrorBoundary} fallback="Clearledgr Admin failed to load.">
+    <${ErrorBoundary} fallback="Solden Admin failed to load.">
       <${AdminApp} />
     <//>
     <${Toast} />

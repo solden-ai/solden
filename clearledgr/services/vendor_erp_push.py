@@ -1,15 +1,15 @@
-"""Reverse vendor sync — Clearledgr → ERP (Module 4 Pass D).
+"""Reverse vendor sync — Solden → ERP (Module 4 Pass D).
 
 Counterpart to ``vendor_erp_sync.py`` (which pulls ERP master data
-into Clearledgr). This module pushes vendor profile changes the
-*other* direction so a customer who edits a vendor in Clearledgr
+into Solden). This module pushes vendor profile changes the
+*other* direction so a customer who edits a vendor in Solden
 (IBAN verified, payment terms updated, vendor blocked) sees the
 change land in their ERP within seconds rather than waiting for the
 next daily sync to silently overwrite it.
 
 Scope (Pass D):
   * UPDATE only — existing vendors that have a known ERP id.
-    Creating a new vendor in Clearledgr → ERP is a Module 9 flow
+    Creating a new vendor in Solden → ERP is a Module 9 flow
     (multi-entity vendor seeding) and intentionally not in scope here.
   * Safe field set: name, email, phone, address, payment_terms,
     tax_id, active flag. We deliberately do NOT push bank details
@@ -23,7 +23,7 @@ Scope (Pass D):
 Conflict resolution (last-write-wins with attribution):
   * The push payload carries a ``Sparse: true`` modifier on QB +
     sets only the changed fields on Xero so we never blindly clobber
-    fields the operator didn't touch in Clearledgr.
+    fields the operator didn't touch in Solden.
   * Every push records an audit event (``vendor_erp_pushed``) with
     the field-level diff and the ERP's pre-push snapshot, so a
     reconciliation pass can detect drift if both surfaces edited the
@@ -64,7 +64,7 @@ class PushResult:
       * ``ok``         — ERP accepted the update.
       * ``no_change``  — no fields differed; nothing posted.
       * ``not_supported`` — ERP type doesn't have a push adapter yet.
-      * ``no_erp_id``  — Clearledgr profile has no erp_vendor_id; the
+      * ``no_erp_id``  — Solden profile has no erp_vendor_id; the
         operator needs to run a forward sync first to bind ids.
       * ``failed``     — ERP returned an error.
     """
@@ -86,7 +86,7 @@ async def push_vendor_to_erp(
     organization_id: str,
     vendor_name: str,
 ) -> PushResult:
-    """Push the in-Clearledgr vendor profile to the connected ERP.
+    """Push the in-Solden vendor profile to the connected ERP.
 
     Loads the profile + ERP connection, computes the safe-fields
     payload, dispatches to the per-ERP adapter, audit-emits the
@@ -129,8 +129,8 @@ async def push_vendor_to_erp(
             erp_vendor_id=None,
             status="no_erp_id",
             error=(
-                "Clearledgr profile has no recorded ERP vendor id. Run a "
-                "forward vendor sync first to bind Clearledgr ↔ ERP ids."
+                "Solden profile has no recorded ERP vendor id. Run a "
+                "forward vendor sync first to bind Solden ↔ ERP ids."
             ),
         )
 
@@ -226,7 +226,7 @@ def _resolve_erp_vendor_id(profile: Dict[str, Any], erp_type: str) -> Optional[s
 def _build_safe_payload(profile: Dict[str, Any]) -> Dict[str, Any]:
     """Project the profile into the safe-to-push field set.
 
-    Empty / None values are dropped — they signal "Clearledgr has
+    Empty / None values are dropped — they signal "Solden has
     no value", not "set the ERP value to empty". An operator who
     wants to clear an ERP field should do that in the ERP directly
     until we have a typed null-clearing API.

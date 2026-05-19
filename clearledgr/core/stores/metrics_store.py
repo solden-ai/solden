@@ -1,4 +1,4 @@
-"""Metrics and KPI data-access mixin for ClearledgrDB.
+"""Metrics and KPI data-access mixin for SoldenDB.
 
 ``MetricsStore`` is a **mixin class** -- it has no ``__init__`` of its own and
 expects the concrete class that inherits it to provide:
@@ -13,7 +13,7 @@ expects the concrete class that inherits it to provide:
 * ``self.list_audit_events()``             -- lists audit events for an organization
 
 All methods are copied verbatim from ``clearledgr/core/database.py`` so that
-``ClearledgrDB(MetricsStore, ...)`` inherits them without any behavioural change.
+``SoldenDB(MetricsStore, ...)`` inherits them without any behavioural change.
 """
 from __future__ import annotations
 

@@ -9,11 +9,11 @@ It is useful as a design reference for:
 2. context-in-thread UI decisions
 3. reducing context switching
 
-It is **not** the canonical Clearledgr product spec and it is **not** external positioning.
+It is **not** the canonical Solden product spec and it is **not** external positioning.
 
-Canonical doctrine for Clearledgr AP v1 lives in:
+Canonical doctrine for Solden AP v1 lives in:
 
-- `/Users/mombalam/Desktop/Clearledgr.v1/PLAN.md`
+- `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
 
 ## Why This Document Exists
 
@@ -21,7 +21,7 @@ Streak is a strong reference for one key reason:
 
 > It proves users will adopt serious workflow software inside Gmail when the product respects Gmail’s native interaction model.
 
-That is relevant to Clearledgr because AP work begins in email.
+That is relevant to Solden because AP work begins in email.
 
 ## What We Borrow from Streak (AP v1-Relevant)
 
@@ -29,7 +29,7 @@ That is relevant to Clearledgr because AP work begins in email.
 
 Streak’s strongest pattern is contextualizing the current email/thread, rather than forcing users into a separate workflow app for routine decisions.
 
-For Clearledgr AP v1, that translates to:
+For Solden AP v1, that translates to:
 1. Gmail thread as AP control surface
 2. Invoice status visible in context
 3. Exceptions and next action visible without leaving Gmail
@@ -42,7 +42,7 @@ Streak shows that workflow adoption improves when:
 2. the product augments the inbox rather than replacing it
 3. context is preserved
 
-For Clearledgr AP v1, this supports the doctrine:
+For Solden AP v1, this supports the doctrine:
 - Gmail = intake/triage and operational context
 - Slack/Teams = decisions
 - ERP = record system
@@ -51,7 +51,7 @@ For Clearledgr AP v1, this supports the doctrine:
 
 Streak’s labels/tags/stages are useful patterns.
 
-For Clearledgr AP v1, the analogous pattern is:
+For Solden AP v1, the analogous pattern is:
 1. AP state/status badges
 2. exception indicators
 3. next-action hints
@@ -66,7 +66,7 @@ Earlier versions of this analysis proposed Streak-style full-page routes (Home, 
 That is **not** the AP v1 doctrine.
 
 Why:
-1. It risks turning Clearledgr into another platform/dashboard.
+1. It risks turning Solden into another platform/dashboard.
 2. AP v1 should be inbox-native and decision-first.
 3. Admin/setup views belong in the Admin Console, not the daily AP operator workflow.
 
@@ -74,7 +74,7 @@ Why:
 
 Streak’s patterns can tempt teams to build navigation-heavy embedded chrome.
 
-For Clearledgr AP v1:
+For Solden AP v1:
 1. Gmail sidebar/panel should be **contextual AP workspace**, not global navigation.
 2. Global admin/config navigation belongs in `/console`.
 
@@ -88,9 +88,9 @@ A queue/worklist exists, but the operator experience is:
 3. clear exception
 4. clear next action
 
-## Current Clearledgr Interpretation of "Streak-like" (Internal Doctrine)
+## Current Solden Interpretation of "Streak-like" (Internal Doctrine)
 
-When Clearledgr uses "Streak-like" internally, it means:
+When Solden uses "Streak-like" internally, it means:
 1. workflow in context
 2. no daily context switching to another app
 3. light UI, heavy backend reliability
@@ -142,7 +142,7 @@ Earlier versions of this document included architecture recommendations such as:
 
 These recommendations are now superseded by the AP v1 doctrine in:
 
-- `/Users/mombalam/Desktop/Clearledgr.v1/PLAN.md`
+- `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
 
 They remain useful only as historical exploration of design options.
 
@@ -150,8 +150,8 @@ They remain useful only as historical exploration of design options.
 
 Streak is a valuable **UX pattern reference** for inbox-native software.
 
-For Clearledgr AP v1, the key lesson is:
+For Solden AP v1, the key lesson is:
 
 > Embed the workflow where finance work begins, but differentiate on execution reliability, policy enforcement, ERP write-back, and auditability.
 
-That is the part Streak-like UX alone cannot provide, and it is where Clearledgr wins.
+That is the part Streak-like UX alone cannot provide, and it is where Solden wins.

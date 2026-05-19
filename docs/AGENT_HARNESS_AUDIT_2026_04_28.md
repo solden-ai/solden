@@ -1,6 +1,6 @@
 # Agent Harness Audit — 2026-04-28
 
-**Scope.** Verify whether Clearledgr's agent harness (the runtime + planning + coordination + governance + state-machine + lifecycle + audit + durability stack) is actually live across the entire product, or whether parts of it are shelfware and parts of the product bypass it.
+**Scope.** Verify whether Solden's agent harness (the runtime + planning + coordination + governance + state-machine + lifecycle + audit + durability stack) is actually live across the entire product, or whether parts of it are shelfware and parts of the product bypass it.
 
 **Method.** Three parallel read-only audits: (A) every inbound event surface mapped to whether it routes through `FinanceAgentRuntime`, (B) internal harness wiring verified at the call-site level, (C) persistence + observability verified against the data model. File:line evidence below; no live-DB or live-traffic validation — that is called out explicitly where it would change a verdict.
 
@@ -229,7 +229,7 @@ Initially I claimed `BoxLifecycleStore` was shelfware for transitions. That was 
 
 ## What this means for the moat claim
 
-**Honest version:** Clearledgr has the components of an agent harness, and on the async event path (Gmail webhooks → Slack action → ERP write) all of them fire correctly. That path is genuinely defensible and harder to replicate than "an LLM with a prompt."
+**Honest version:** Solden has the components of an agent harness, and on the async event path (Gmail webhooks → Slack action → ERP write) all of them fire correctly. That path is genuinely defensible and harder to replicate than "an LLM with a prompt."
 
 **What we cannot truthfully claim today:**
 - "Every agent action goes through deterministic planning + coordination + governance." → only on Path 1.

@@ -8,7 +8,7 @@ This module answers a single question: is the given approver out of
 office right now (or inside the next approval-response window)? It
 uses the Google Calendar freeBusy API with the user's own OAuth
 token — not a service account — so the check only works for
-approvers who are Clearledgr users with a Gmail token already on
+approvers who are Solden users with a Gmail token already on
 file. External approvers (e.g. a fractional CFO who never installs
 the extension) fall through to the delegation-rules path in
 :func:`slack_notifications._check_ooo_and_get_backup`; the upstream

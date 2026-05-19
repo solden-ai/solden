@@ -1,7 +1,7 @@
 """
 Tests for API Endpoints
 
-Tests the FastAPI endpoints for the Clearledgr API.
+Tests the FastAPI endpoints for the Solden API.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -143,7 +143,7 @@ class TestAuthEndpoints:
         assert response.status_code == 401
 
     def test_refresh_endpoint_removed(self):
-        """Clearledgr no longer mints its own refresh token; the Gmail
+        """Solden no longer mints its own refresh token; the Gmail
         extension silently re-runs Google's token flow when the access
         JWT expires and re-exchanges via /auth/google/exchange."""
         response = client.post("/auth/refresh", json={"refresh_token": "x"})
@@ -546,10 +546,10 @@ class TestGmailWebhooks:
                 )
 
             async def list_labels(self):
-                return [{"id": "label-1", "name": "Clearledgr/Processed"}]
+                return [{"id": "label-1", "name": "Solden/Processed"}]
 
             async def create_label(self, _name):
-                return {"id": "label-1", "name": "Clearledgr/Processed"}
+                return {"id": "label-1", "name": "Solden/Processed"}
 
             async def add_label(self, _message_id, _label_ids):
                 return None
@@ -612,10 +612,10 @@ class TestGmailWebhooks:
                 )
 
             async def list_labels(self):
-                return [{"id": "label-1", "name": "Clearledgr/Processed"}]
+                return [{"id": "label-1", "name": "Solden/Processed"}]
 
             async def create_label(self, _name):
-                return {"id": "label-1", "name": "Clearledgr/Processed"}
+                return {"id": "label-1", "name": "Solden/Processed"}
 
             async def add_label(self, _message_id, _label_ids):
                 return None
@@ -1809,7 +1809,7 @@ class TestAdminConsoleIntegrations:
                 self.sent = False
 
             async def auth_test(self):
-                return {"team": "Clearledgr", "user_id": "B123"}
+                return {"team": "Solden", "user_id": "B123"}
 
             async def resolve_channel(self, channel):
                 return {"id": "C123", "name": "cl-finance-ap"} if channel == "cl-finance-ap" else None
@@ -1889,7 +1889,7 @@ class TestAdminConsoleIntegrations:
         }
         fake_db.get_slack_installation.return_value = {
             "team_id": "T123",
-            "team_name": "Clearledgr",
+            "team_name": "Solden",
             "scope_csv": "chat:write,commands,channels:read,groups:read,users:read",
         }
 
@@ -2761,14 +2761,14 @@ class TestExtensionEndpoints:
                 "messages_relabelled": 7,
                 "results": [
                     {
-                        "label_name": "Clearledgr/Invoice",
-                        "target_labels": ["Clearledgr/Invoices"],
+                        "label_name": "Solden/Invoice",
+                        "target_labels": ["Solden/Invoices"],
                         "messages_relabelled": 5,
                         "deleted": True,
                     },
                     {
-                        "label_name": "Clearledgr/Payment Request",
-                        "target_labels": ["Clearledgr/Payment Requests"],
+                        "label_name": "Solden/Payment Request",
+                        "target_labels": ["Solden/Payment Requests"],
                         "messages_relabelled": 2,
                         "deleted": True,
                     },

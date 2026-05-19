@@ -1,5 +1,5 @@
 """
-Clearledgr Authentication
+Solden Authentication
 
 JWT-based authentication backed by persistent database records.
 
@@ -379,13 +379,13 @@ def get_current_user(
     Get current authenticated user.
 
     Supports (in order):
-    1. Bearer token: Clearledgr JWT OR Google OAuth access token (Streak-style)
+    1. Bearer token: Solden JWT OR Google OAuth access token (Streak-style)
     2. API key: X-API-Key header
     3. Session cookie
     """
     if credentials and credentials.credentials:
         token = credentials.credentials
-        # Try Clearledgr JWT first
+        # Try Solden JWT first
         try:
             payload = decode_token(token)
             if payload.get("type") == "access":
@@ -393,7 +393,7 @@ def get_current_user(
                     _reconcile_token_data(_token_data_from_payload(payload))
                 )
         except HTTPException:
-            pass  # Not a Clearledgr JWT — try Google OAuth below
+            pass  # Not a Solden JWT — try Google OAuth below
 
         # Try Google OAuth token (Streak pattern: extension passes Google token directly)
         google_user = _validate_google_token(token)
@@ -466,7 +466,7 @@ def _looks_like_google_access_token(token: str) -> bool:
 
 
 def _validate_google_token(token: str) -> Optional[TokenData]:
-    """Validate a Google OAuth access token and resolve to a Clearledgr user.
+    """Validate a Google OAuth access token and resolve to a Solden user.
 
     Calls Google's tokeninfo endpoint to verify the token and get the email.
     Then looks up the user in the database by email.

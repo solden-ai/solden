@@ -1,9 +1,9 @@
-"""Auth-domain database mixin for ClearledgrDB.
+"""Auth-domain database mixin for SoldenDB.
 
 This module provides ``AuthStore``, a mixin class that holds every
 database method related to authentication, users, organizations,
 API keys, OAuth tokens, and team invites.  It is designed to be used
-via multiple-inheritance so that ``ClearledgrDB`` can compose its
+via multiple-inheritance so that ``SoldenDB`` can compose its
 surface area from several focused store modules.
 
 The mixin assumes the consuming class exposes:

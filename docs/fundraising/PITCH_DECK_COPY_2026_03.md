@@ -1,4 +1,4 @@
-# Clearledgr Pitch Deck Copy
+# Solden Pitch Deck Copy
 
 Date: 2026-03-25
 
@@ -9,11 +9,11 @@ Target raise:
 - $15M cap target
 
 Use this as the actual slide copy draft, not just a structural outline.
-For the slide-ready version, use [`PITCH_DECK_PRESENTATION_DRAFT_2026_03.md`](/Users/mombalam/Desktop/Clearledgr.v1/docs/fundraising/PITCH_DECK_PRESENTATION_DRAFT_2026_03.md).
+For the slide-ready version, use [`PITCH_DECK_PRESENTATION_DRAFT_2026_03.md`](/Users/mombalam/Desktop/Solden.v1/docs/fundraising/PITCH_DECK_PRESENTATION_DRAFT_2026_03.md).
 
 ## Slide 1 - Title
 
-Clearledgr
+Solden
 
 AI execution layer for finance teams
 
@@ -115,19 +115,19 @@ Use one Gmail thread-panel screenshot and one pipeline or review screenshot.
 
 Title:
 
-How one invoice moves through Clearledgr
+How one invoice moves through Solden
 
 Body:
 
 1. AP email arrives in Gmail
-2. Clearledgr classifies and routes it
+2. Solden classifies and routes it
 3. approver acts in Slack or Teams
 4. exceptions move into review or follow-up
 5. approved invoice writes back to ERP
 
 Close:
 
-Finance stays in Gmail while Clearledgr runs the workflow.
+Finance stays in Gmail while Solden runs the workflow.
 
 ## Slide 8 - Customer
 
@@ -145,7 +145,7 @@ Body:
 
 Close:
 
-This is where Clearledgr becomes urgent, not optional.
+This is where Solden becomes urgent, not optional.
 
 ## Slide 9 - Early Proof
 
@@ -190,7 +190,7 @@ Inbox-native finance workflow software is now viable.
 
 Title:
 
-Clearledgr is the execution layer. AP is the first skill.
+Solden is the execution layer. AP is the first skill.
 
 Body:
 
@@ -257,11 +257,11 @@ Terms:
 - YC post-money SAFE
 - $15M cap target
 
-## Appendix A - What Clearledgr Is Not
+## Appendix A - What Solden Is Not
 
 Title:
 
-What Clearledgr is not
+What Solden is not
 
 Body:
 
@@ -273,13 +273,13 @@ Body:
 
 Close:
 
-The product wins if finance can stay in Gmail while Clearledgr handles the workflow.
+The product wins if finance can stay in Gmail while Solden handles the workflow.
 
 ## Slide Design Notes
 
 - Keep each slide to one message.
 - Use product screenshots over abstract diagrams wherever possible.
-- Do not pitch Clearledgr as "AI accounting."
+- Do not pitch Solden as "AI accounting."
 - Do not over-claim full autonomy.
 - Keep AP as the buying wedge and finance execution as the broader category.
 - Do not make the deck feel like it is about one customer logo; use Cowrywise as the strongest proof anchor, not the whole story.

@@ -1,8 +1,8 @@
-"""Bounded catalog of mappable Clearledgr → ERP fields (Module 5).
+"""Bounded catalog of mappable Solden → ERP fields (Module 5).
 
-The Clearledgr workspace exposes a "Custom field mapping" UI for ERP
+The Solden workspace exposes a "Custom field mapping" UI for ERP
 admins whose chart-of-accounts or document layouts deviate from the
-defaults. The scope spec (``Clearledgr_Workspace_Scope_GA.md`` §Module 5)
+defaults. The scope spec (``Solden_Workspace_Scope_GA.md`` §Module 5)
 explicitly calls for a *bounded* surface — not a free-form
 {any-clearledgr-field → any-erp-field} matrix — to avoid customer
 configurations that the agent runtime cannot reason about.
@@ -14,7 +14,7 @@ posters (``erp_router.py``) read the persisted mapping at post time
 to resolve any non-default field IDs they need.
 
 Adding a new mappable field is intentionally a code change: the
-catalog is the contract between Clearledgr and the ERP, and a new
+catalog is the contract between Solden and the ERP, and a new
 entry usually requires the corresponding poster to know how to use it.
 """
 from __future__ import annotations
@@ -38,10 +38,10 @@ _GENERIC_FIELD_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_\.\-]{1,79}$")
 
 @dataclass(frozen=True)
 class FieldMapping:
-    """One mappable Clearledgr → ERP field.
+    """One mappable Solden → ERP field.
 
     Attributes:
-        key: Clearledgr-side identifier (stable; UI + persistence key).
+        key: Solden-side identifier (stable; UI + persistence key).
         label: Human-readable label shown in the dashboard.
         description: One-line "what does this control" explanation.
         default: Suggested ERP field id (informational; not auto-applied
@@ -65,7 +65,7 @@ CATALOG: Dict[str, Tuple[FieldMapping, ...]] = {
             key="state_field",
             label="State mirror field",
             description=(
-                "NetSuite custom body field that mirrors the Clearledgr "
+                "NetSuite custom body field that mirrors the Solden "
                 "AP state (received → posted). Lets NetSuite reports "
                 "filter on agent-managed work."
             ),
@@ -77,7 +77,7 @@ CATALOG: Dict[str, Tuple[FieldMapping, ...]] = {
             key="box_id_field",
             label="Box ID field",
             description=(
-                "Custom body field for the Clearledgr Box id. Use this "
+                "Custom body field for the Solden Box id. Use this "
                 "to deep-link from a NetSuite vendor bill back to the "
                 "agent timeline."
             ),
@@ -90,7 +90,7 @@ CATALOG: Dict[str, Tuple[FieldMapping, ...]] = {
             label="Final approver field",
             description=(
                 "Custom body field for the email of the human who "
-                "approved the bill in Clearledgr's policy gate."
+                "approved the bill in Solden's policy gate."
             ),
             default="custbody_clearledgr_approver",
             pattern=_NETSUITE_FIELD_RE,
@@ -102,7 +102,7 @@ CATALOG: Dict[str, Tuple[FieldMapping, ...]] = {
             description=(
                 "Custom body field for the agent run correlation id. "
                 "Required when reconciling NetSuite postings against "
-                "the Clearledgr audit log during incident response."
+                "the Solden audit log during incident response."
             ),
             default="custbody_clearledgr_correlation",
             pattern=_NETSUITE_FIELD_RE,
@@ -141,7 +141,7 @@ CATALOG: Dict[str, Tuple[FieldMapping, ...]] = {
             key="state_field",
             label="State mirror field",
             description=(
-                "S/4HANA Z-field that mirrors the Clearledgr AP state. "
+                "S/4HANA Z-field that mirrors the Solden AP state. "
                 "Lets SAP cockpit views filter on agent-managed work."
             ),
             default="ZZ_CLEARLEDGR_STATE",
@@ -151,7 +151,7 @@ CATALOG: Dict[str, Tuple[FieldMapping, ...]] = {
         FieldMapping(
             key="box_id_field",
             label="Box ID field",
-            description="Z-field for the Clearledgr Box id.",
+            description="Z-field for the Solden Box id.",
             default="ZZ_CLEARLEDGR_BOX_ID",
             pattern=_SAP_FIELD_RE,
             category="identity",

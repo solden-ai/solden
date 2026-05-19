@@ -16,7 +16,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from clearledgr.core.database import ClearledgrDB, get_db
+from clearledgr.core.database import SoldenDB, get_db
 from clearledgr.core.org_utils import assert_org_id
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ def _parse_meta(raw: Any) -> dict:
 
 
 def reconcile_erp_follow_on_state(
-    db: Optional[ClearledgrDB] = None,
+    db: Optional[SoldenDB] = None,
     *,
     organization_id: str,
     limit: int = 500,

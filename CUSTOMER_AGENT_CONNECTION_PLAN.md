@@ -394,7 +394,7 @@ tables).
 - `GET /v1/webhooks/{id}/deliveries` — recent attempt log from
   `webhook_deliveries` (status, response code, latency).
 - Outbound delivery sends both `X-Solden-Signature` (canonical) and
-  `X-Clearledgr-Signature` (legacy — for the deprecation window) on
+  `X-Solden-Signature` (legacy — for the deprecation window) on
   every webhook. Both carry the same `sha256=<hex>` value computed
   over the JSON body. Retries are inherited from the existing
   `webhook_delivery` pipeline.

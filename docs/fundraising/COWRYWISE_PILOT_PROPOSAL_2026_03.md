@@ -8,13 +8,13 @@ Status: Draft for next commercial conversation
 
 This pilot is designed to prove one thing:
 
-Clearledgr can run AP from Gmail for Cowrywise without manual approval chasing and without duplicate ERP entry.
+Solden can run AP from Gmail for Cowrywise without manual approval chasing and without duplicate ERP entry.
 
-The pilot is not meant to prove the entire Clearledgr vision. It is meant to prove one narrow, painful workflow with a clear operator, a clear success definition, and a clear path to paid rollout.
+The pilot is not meant to prove the entire Solden vision. It is meant to prove one narrow, painful workflow with a clear operator, a clear success definition, and a clear path to paid rollout.
 
 ## Pilot Goal
 
-For Cowrywise's finance team, Clearledgr will:
+For Cowrywise's finance team, Solden will:
 
 - triage AP emails from Gmail
 - route approvals automatically
@@ -74,9 +74,9 @@ Out of scope for the first pilot:
 - non-AP finance operations
 - custom long-tail exception handling outside the agreed pilot cases
 
-## What Clearledgr Will Handle
+## What Solden Will Handle
 
-During the pilot, Clearledgr will:
+During the pilot, Solden will:
 
 - process invoice emails from Gmail
 - extract invoice data
@@ -85,7 +85,7 @@ During the pilot, Clearledgr will:
 - track approval state
 - validate invoice data against NetSuite rules or records
 - write approved invoices back into NetSuite
-- maintain the workflow and audit trail inside Clearledgr
+- maintain the workflow and audit trail inside Solden
 
 ## What Cowrywise Will Provide
 
@@ -144,8 +144,8 @@ Recommended pilot metrics:
 
 Recommended target framing:
 
-- Clearledgr should materially reduce manual approval chasing
-- Clearledgr should materially reduce duplicate ERP entry
+- Solden should materially reduce manual approval chasing
+- Solden should materially reduce duplicate ERP entry
 - Cowrywise should be able to identify clear weekly time savings for the finance team
 
 ## Proposed Commercial Structure
@@ -193,8 +193,8 @@ The point of the pilot is not just product validation. It is to establish that C
 
 At the end of the pilot, Cowrywise should answer three questions:
 
-1. Did Clearledgr reduce approval chasing?
-2. Did Clearledgr remove duplicate ERP entry for approved invoices?
+1. Did Solden reduce approval chasing?
+2. Did Solden remove duplicate ERP entry for approved invoices?
 3. Is the value strong enough that this should replace the current Gmail-plus-Slack-plus-Excel workflow for AP?
 
 If the answer is yes to those three questions, the next step is production rollout, not another design-partner cycle.

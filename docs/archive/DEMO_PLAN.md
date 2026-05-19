@@ -1,7 +1,7 @@
-# Clearledgr Demo Plan - Multi-Surface Demo
+# Solden Demo Plan - Multi-Surface Demo
 
 ## Overview
-A comprehensive 3-minute demo showing Clearledgr's AI agents working across Gmail, Slack, and Google Sheets.
+A comprehensive 3-minute demo showing Solden's AI agents working across Gmail, Slack, and Google Sheets.
 
 ---
 
@@ -31,7 +31,7 @@ A comprehensive 3-minute demo showing Clearledgr's AI agents working across Gmai
 
 ### 1. Backend Server
 ```bash
-cd /Users/mombalam/Desktop/Clearledgr.v1
+cd /Users/mombalam/Desktop/Solden.v1
 python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
@@ -42,12 +42,12 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 ### 3. Slack Workspace
 - Create demo Slack workspace or use existing
-- Install Clearledgr app
+- Install Solden app
 - Pre-configure #finance channel
 
 ### 4. Google Sheets
 - Create demo spreadsheet with test data
-- Install Clearledgr add-on
+- Install Solden add-on
 - Pre-populate Gateway and Bank transaction sheets
 
 ---
@@ -112,15 +112,15 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 ### Scene 2: Gmail - Invoice Detection (0:15 - 0:50)
 
-**Screen:** Gmail inbox with Clearledgr sidebar
+**Screen:** Gmail inbox with Solden sidebar
 
 **Action:** 
 1. Show inbox with finance emails detected (badges visible)
-2. Click Clearledgr toggle to open sidebar
+2. Click Solden toggle to open sidebar
 3. Show "4 finance emails detected" with stats
 
 **Voiceover:**
-> "Clearledgr embeds AI agents directly in Gmail. When an invoice arrives, our agent automatically detects and extracts the data."
+> "Solden embeds AI agents directly in Gmail. When an invoice arrives, our agent automatically detects and extracts the data."
 
 **Action:**
 4. Click on AWS invoice email
@@ -161,9 +161,9 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 **Screen:** Switch to Slack #finance channel
 
 **Action:**
-1. Show notification from Clearledgr:
+1. Show notification from Solden:
    ```
-   [Clearledgr] Reconciliation Complete
+   [Solden] Reconciliation Complete
    Matches: 44
    Exceptions: 3
    Match Rate: 93.6%
@@ -194,7 +194,7 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 **Screen:** Switch to Google Sheets
 
 **Action:**
-1. Show Clearledgr menu in Sheets
+1. Show Solden menu in Sheets
 2. Open sidebar showing:
    - Activity feed with agent reasoning
    - Match progress
@@ -223,9 +223,9 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 **Screen:** Split view showing all three surfaces
 
 **Voiceover:**
-> "Clearledgr. AI agents that work where your finance team works. Gmail, Slack, Sheets. No new platform to learn. No context switching. Just faster, more accurate financial operations."
+> "Solden. AI agents that work where your finance team works. Gmail, Slack, Sheets. No new platform to learn. No context switching. Just faster, more accurate financial operations."
 
-**Screen:** Clearledgr logo + "clearledgr.com"
+**Screen:** Solden logo + "clearledgr.com"
 
 ---
 

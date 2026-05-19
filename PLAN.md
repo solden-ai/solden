@@ -1,29 +1,29 @@
-# Clearledgr Finance Agent — AP v1 GA Doctrine and Launch Spec (Canonical)
+# Solden Finance Agent — AP v1 GA Doctrine and Launch Spec (Canonical)
 
 ## Document Metadata
-- **Status:** Canonical doctrine + contracts + launch-gates spec for Clearledgr AP v1
+- **Status:** Canonical doctrine + contracts + launch-gates spec for Solden AP v1
 - **Last updated:** 2026-03-19
 - **Owner:** Product + Engineering
 - **Scope:** Accounts Payable (AP) v1 only
 - **Supersedes:** prior AP-first execution-layer plan variants that used ambiguous "launch" terminology
 
 ## Summary
-This document is the single source of truth for Clearledgr AP v1 doctrine, product positioning, engineering contracts, and GA launch gates.
+This document is the single source of truth for Solden AP v1 doctrine, product positioning, engineering contracts, and GA launch gates.
 
-Clearledgr is the **execution layer for finance operations**, embedding AI agents into the tools finance teams already use to execute finance workflows end-to-end. AP is its first production workflow. The agents are embedded in email, spreadsheets, ERPs, and communication tools — they don't just surface information, they perform the work. It is not a generic automation builder and not a standalone platform dashboard. AP v1 starts inside Gmail, routes approvals through Slack and Teams (or directly in email), posts to ERP systems as the system of record, and provides policy-governed orchestration plus an auditable execution trail.
+Solden is the **execution layer for finance operations**, embedding AI agents into the tools finance teams already use to execute finance workflows end-to-end. AP is its first production workflow. The agents are embedded in email, spreadsheets, ERPs, and communication tools — they don't just surface information, they perform the work. It is not a generic automation builder and not a standalone platform dashboard. AP v1 starts inside Gmail, routes approvals through Slack and Teams (or directly in email), posts to ERP systems as the system of record, and provides policy-governed orchestration plus an auditable execution trail.
 
 ### Locked product decisions
-1. **Clearledgr is the execution layer for finance operations** (external positioning). AP is the first production workflow; new finance workflows are added over time.
+1. **Solden is the execution layer for finance operations** (external positioning). AP is the first production workflow; new finance workflows are added over time.
 2. **AP v1 starts in Gmail** (inbox-native intake and triage).
 3. **Approvals happen in Slack and Teams at v1 GA** (co-equal channel parity requirement at GA).
-4. **ERP remains the system of record**; Clearledgr orchestrates and executes.
-5. **Clearledgr provides policy + orchestration + execution + audit**.
+4. **ERP remains the system of record**; Solden orchestrates and executes.
+5. **Solden provides policy + orchestration + execution + audit**.
 6. **"Streak-like" is internal UX doctrine only**, not external positioning.
 7. **WhatsApp and Telegram are not product surfaces** and are out of product scope by default.
 8. **"v1 launch" means GA launch**, not pilot launch.
 9. **ERP commitment at v1 GA is phased with a defined connector set**: **NetSuite, QuickBooks, Xero, and SAP** are in the GA connector scope, but each connector is independently enabled only after passing the same adapter readiness gates.
 10. **Execution is automated and audit-safe**; mutating/high‑risk actions are human‑confirmed by default unless policy explicitly allows autopilot.
-11. **Clearledgr runs one finance agent runtime with AP as the first production skill**; future workflows expand as skills on the same runtime rather than separate product runtimes.
+11. **Solden runs one finance agent runtime with AP as the first production skill**; future workflows expand as skills on the same runtime rather than separate product runtimes.
 12. **Durability claims are truth-in-runtime claims**: AP v1 default durable orchestration backend is `local_db`; Temporal is optional and must only be claimed when actually enabled.
 13. **Initial rollout geography is Europe and Africa first**; wider regional expansion comes after EMEA launch stability targets are met.
 14. **Operator-facing time standard is Europe/London** for shared team coordination; persisted system timestamps remain UTC.
@@ -32,18 +32,18 @@ Clearledgr is the **execution layer for finance operations**, embedding AI agent
 
 ## 1. Product Doctrine
 
-### 1.1 What Clearledgr is
-Clearledgr is a **Finance AI Agent** embedded in the tools finance teams already use. It executes finance workflows end‑to‑end with policy controls and auditability.
+### 1.1 What Solden is
+Solden is a **Finance AI Agent** embedded in the tools finance teams already use. It executes finance workflows end‑to‑end with policy controls and auditability.
 
-For AP v1, Clearledgr:
+For AP v1, Solden:
 1. Detects invoice and AP requests from email (Gmail primary).
 2. Extracts and validates fields against internal and connected systems.
 3. Routes approvals to finance decision-makers in Slack and Teams.
 4. Posts approved invoices to ERP systems.
 5. Records immutable, queryable execution and approval breadcrumbs.
 
-### 1.2 What Clearledgr is not
-Clearledgr is not:
+### 1.2 What Solden is not
+Solden is not:
 1. A generic automation builder or no‑code workflow tool.
 2. A consumer/personal AI assistant.
 3. A "Streak for finance" product category.
@@ -68,7 +68,7 @@ AP v1 is intentionally split across the surfaces finance teams already use:
 1. **Gmail** = operational context, thread-level status, exceptions, and next action.
 2. **Slack / Teams** = approval and escalation decision surfaces.
 3. **ERP** = system of record for posted AP transactions.
-4. **Clearledgr backend** = policy checks, workflow orchestration, execution engine, audit.
+4. **Solden backend** = policy checks, workflow orchestration, execution engine, audit.
 
 ### 1.5 Internal UX doctrine ("Streak-like", internal only)
 The phrase "Streak-like" is internal shorthand for UX principles, not external product positioning.
@@ -119,7 +119,7 @@ AP v1 does not include:
 6. Outlook inbox intake in GA scope (explicitly de-scoped; Gmail is the only inbox surface for AP v1 GA).
 
 ### 2.5 Gmail-native operations shell (release taxonomy context)
-Clearledgr uses Gmail as the primary product shell for AP v1. Inside that shell, the thread panel remains the high-context current-record UI, while `Pipeline` is the queue/control plane and Gmail-native routed pages handle setup and operational administration.
+Solden uses Gmail as the primary product shell for AP v1. Inside that shell, the thread panel remains the high-context current-record UI, while `Pipeline` is the queue/control plane and Gmail-native routed pages handle setup and operational administration.
 
 Gmail-native admin/operator responsibilities:
 1. Integration setup and diagnostics.
@@ -201,7 +201,7 @@ Operational shell rules:
 ### 3.6 Gmail thread work doctrine
 AP v1 Gmail UX is a single operator workspace and must not regress to mixed diagnostic surfaces:
 
-1. **Work panel (`Clearledgr AP`)** is action-first and decision-focused.
+1. **Work panel (`Solden AP`)** is action-first and decision-focused.
 2. Gmail must not render KPI telemetry, batch controls, raw agent events, or debug panels.
 3. Work panel must keep operator-critical context above fold:
    - invoice identity strip
@@ -635,9 +635,9 @@ This matrix prevents contradictions across strategy, backlog, and assessment doc
 4. `docs/GA_LAUNCH_READINESS_TRACKER.md` must be treated as a dated report and cite the `PLAN.md` version/assumptions it assessed.
 
 ### 10.3 Current cross-doc notes (as of 2026-02-25)
-1. `/Users/mombalam/Desktop/Clearledgr.v1/docs/GA_LAUNCH_READINESS_TRACKER.md` is a point-in-time readiness assessment and must be interpreted against this `PLAN.md` revision.
+1. `/Users/mombalam/Desktop/Solden.v1/docs/GA_LAUNCH_READINESS_TRACKER.md` is a point-in-time readiness assessment and must be interpreted against this `PLAN.md` revision.
 2. Findings in dated readiness docs are valuable as engineering risk inputs, but those documents are **not** the canonical source for AP v1 doctrine or launch definitions.
-3. `/Users/mombalam/Desktop/Clearledgr.v1/TODO_BACKLOG.md` and `/Users/mombalam/Desktop/Clearledgr.v1/VISION.md` should be interpreted as execution and strategy inputs aligned to this `PLAN.md`.
+3. `/Users/mombalam/Desktop/Solden.v1/TODO_BACKLOG.md` and `/Users/mombalam/Desktop/Solden.v1/VISION.md` should be interpreted as execution and strategy inputs aligned to this `PLAN.md`.
 
 ### 10.4 Terminology normalization (mandatory)
 To avoid scope drift and false completion claims, all future docs and tickets must distinguish:

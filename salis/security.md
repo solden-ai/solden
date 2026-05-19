@@ -39,7 +39,7 @@ Five things we care about:
 
 - Any new API route that doesn't take `organization_id` or use the guard. Review for `Depends(get_current_user)` + some form of `verify_org_access`.
 - Any new store method that accepts an ID without the org scope. Review for `WHERE id = ? AND organization_id = ?` pattern.
-- Direct SQL from outside the store mixins. This is why we funnel everything through `ClearledgrDB` — the guard lives there.
+- Direct SQL from outside the store mixins. This is why we funnel everything through `SoldenDB` — the guard lives there.
 
 ---
 

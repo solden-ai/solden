@@ -10,7 +10,7 @@ Phase 1's ``decision_context`` auto-build records ``ui_surface =
 "erp_native_sap"`` on the resulting state_transition audit row.
 
 These tests prove that compose end-to-end through the FastAPI layer:
-Clearledgr JWT auth (the panel obtains this via the XSUAA exchange
+Solden JWT auth (the panel obtains this via the XSUAA exchange
 endpoint after BTP login) → AP item lookup by composite key
 ``CompanyCode/SupplierInvoice/FiscalYear`` → runtime dispatch →
 workflow state transition → audit row with the expected
@@ -57,7 +57,7 @@ def db():
 @pytest.fixture()
 def panel_client():
     """FastAPI TestClient with the SAP extension router mounted. The
-    Fiori panel authenticates with a Clearledgr JWT minted by the
+    Fiori panel authenticates with a Solden JWT minted by the
     XSUAA-exchange endpoint; tests bypass that exchange and mint the
     JWT directly via ``create_access_token``, which is exactly the
     function the exchange endpoint uses internally.

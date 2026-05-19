@@ -232,7 +232,7 @@ def test_approval_link_sap_full_metadata():
 
 def test_approval_link_falls_back_to_clearledgr_when_metadata_missing(monkeypatch):
     """A NetSuite bill missing its ns_account_id should not produce a
-    dead link — fall back to the Clearledgr workspace SPA.
+    dead link — fall back to the Solden workspace SPA.
 
     Pin APP_BASE_URL to the canonical workspace host so the test is
     self-contained and doesn't depend on whatever the local ``.env`` /
@@ -253,7 +253,7 @@ def test_approval_link_falls_back_to_clearledgr_when_metadata_missing(monkeypatc
     # so a future re-route (e.g. /ap/items/<id>) still trips the test.
     assert "workspace.clearledgr.com" in link
     assert "/items/5135" in link
-    assert _source_link_label(inv) == "Open in Clearledgr"
+    assert _source_link_label(inv) == "Open in Solden"
 
 
 # ─── SAP IntakeAdapter event normalization + state derivation ──────

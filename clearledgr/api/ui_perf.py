@@ -1,6 +1,6 @@
 """Frontend performance telemetry — DESIGN_THESIS.md §4.07.
 
-The thesis defines four pass/fail performance budgets for Clearledgr's
+The thesis defines four pass/fail performance budgets for Solden's
 Gmail surfaces (sidebar, Kanban, Home, inbox labels). Before this
 endpoint existed, the budgets were words in the spec — nothing
 measured them once code reached the bundle. This endpoint accepts the

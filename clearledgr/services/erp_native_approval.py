@@ -17,7 +17,7 @@ approval card, posts it to the org's approval channel, and on approve:
 
 On reject: transition to ``rejected`` → ``closed``. Phase 3 (deferred)
 will optionally void the NetSuite bill on reject; for now reject just
-records the Clearledgr-side decision and leaves the bill in NetSuite
+records the Solden-side decision and leaves the bill in NetSuite
 for the AP team to handle manually.
 
 The Slack callback comes back through the existing
@@ -354,7 +354,7 @@ async def _handle_reject(
 
     actor_id = str(actor.get("actor_id") or actor.get("user_id") or "slack_user").strip()
     actor_email = str(actor.get("actor_email") or actor.get("email") or "").strip() or None
-    void_memo = f"Voided via Clearledgr — rejected by {actor_email or actor_id}"
+    void_memo = f"Voided via Solden — rejected by {actor_email or actor_id}"
 
     # 1. Void/cancel in the ERP. Dispatch by source — same pattern as
     # _handle_approve.
@@ -428,7 +428,7 @@ async def _handle_reject(
         except Exception as exc:  # noqa: BLE001
             # State transition failed AFTER NetSuite was already voided.
             # Surface this clearly — the AP team needs to know the bill
-            # is voided in NetSuite even though Clearledgr's Box may be
+            # is voided in NetSuite even though Solden's Box may be
             # stuck. Manual reconciliation step.
             _record_audit(
                 organization_id=organization_id,
@@ -520,7 +520,7 @@ async def void_netsuite_bill(
     expose it via REST), we fall back to PATCH with ``{voided: true}``.
     Either way: best-effort. If both fail we surface the error so the
     Slack handler can tell the operator the void didn't apply, and the
-    Box still moves to ``rejected → closed`` on the Clearledgr side.
+    Box still moves to ``rejected → closed`` on the Solden side.
     """
     primary = await _netsuite_bill_request(
         organization_id=organization_id,

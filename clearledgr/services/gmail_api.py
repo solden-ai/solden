@@ -1,5 +1,5 @@
 """
-Gmail API Client for Clearledgr
+Gmail API Client for Solden
 
 Provides server-side access to Gmail for autonomous email processing.
 Uses OAuth 2.0 for authorization and supports:
@@ -511,7 +511,7 @@ class GmailAPIClient:
 
         We subscribe to both ``messageAdded`` (new mail → agent intake)
         and ``labelAdded`` (bidirectional label sync: user drags a
-        thread into Clearledgr/Invoice/Approved → the agent approves).
+        thread into Solden/Invoice/Approved → the agent approves).
 
         Args:
             start_history_id: The history ID to start from

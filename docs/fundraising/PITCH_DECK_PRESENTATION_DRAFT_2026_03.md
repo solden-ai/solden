@@ -1,4 +1,4 @@
-# Clearledgr Presentation Draft
+# Solden Presentation Draft
 
 Date: 2026-03-25
 
@@ -22,7 +22,7 @@ This file is the slide-ready presentation draft. It is tighter than the copy doc
 
 ### On-slide
 
-Clearledgr
+Solden
 
 AI execution layer for finance teams
 
@@ -37,7 +37,7 @@ No approval chasing. No duplicate ERP entry.
 
 ### Speaker note
 
-Clearledgr is the execution layer for finance teams. The first production skill is AP from Gmail. If we win that workflow, we can expand into adjacent finance workflows later.
+Solden is the execution layer for finance teams. The first production skill is AP from Gmail. If we win that workflow, we can expand into adjacent finance workflows later.
 
 ## Slide 2
 
@@ -149,10 +149,10 @@ This is not a concept deck. The product exists, and the remaining work is pilot 
 
 ### On-slide
 
-How one invoice moves through Clearledgr
+How one invoice moves through Solden
 
 1. AP email arrives in Gmail
-2. Clearledgr classifies and routes it
+2. Solden classifies and routes it
 3. approver acts in Slack or Teams
 4. exceptions move into review or follow-up
 5. approved invoice writes back to ERP
@@ -163,7 +163,7 @@ How one invoice moves through Clearledgr
 
 ### Speaker note
 
-Finance stays in Gmail while Clearledgr handles the coordination work across the system.
+Finance stays in Gmail while Solden handles the coordination work across the system.
 
 ## Slide 8
 
@@ -183,7 +183,7 @@ The first buyer is a stretched finance team, not a giant enterprise committee
 
 ### Speaker note
 
-This is where Clearledgr becomes urgent. The first user is the finance manager or AP owner. The buyer is the VP Finance or CFO.
+This is where Solden becomes urgent. The first user is the finance manager or AP owner. The buyer is the VP Finance or CFO.
 
 ## Slide 9
 
@@ -232,7 +232,7 @@ The workflow has existed for years. The enabling technology and buyer urgency ar
 
 ### On-slide
 
-Clearledgr is the execution layer. AP is the first skill.
+Solden is the execution layer. AP is the first skill.
 
 - AP is frequent, painful, inbox-native, and tied directly to ERP outcomes
 - the same coordination pattern exists in vendor issues, finance exceptions, reconciliation, and close
@@ -313,7 +313,7 @@ The ask is not to fund exploration. It is to turn early pull into repeatable cus
 
 ### On-slide
 
-What Clearledgr is not
+What Solden is not
 
 - not a generic OCR tool
 - not just another AP suite

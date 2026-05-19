@@ -29,7 +29,7 @@ from clearledgr.core.database import get_db
 
 @pytest.fixture()
 def db():
-    """Fresh isolated ClearledgrDB with a test organization."""
+    """Fresh isolated SoldenDB with a test organization."""
     tmp = tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False)
     tmp.close()
     _db = get_db()

@@ -52,8 +52,8 @@ Total issues: 35 (0 critical, 8 high, 18 medium, 9 low)
 
 ### J2. [HIGH] Mixin-based DB pattern prevents isolated testing
 **File:** `clearledgr/core/database.py`
-**What:** ClearledgrDB inherits from 10+ mixins (APStore, AuthStore, VendorStore, etc.). Each mixin assumes `self.connect()` and `self._prepare_sql()` exist. Can't instantiate or test any store in isolation.
-**Impact:** Testing requires the full ClearledgrDB. Mocking is painful. Adding new queries requires knowing which mixin "owns" them.
+**What:** SoldenDB inherits from 10+ mixins (APStore, AuthStore, VendorStore, etc.). Each mixin assumes `self.connect()` and `self._prepare_sql()` exist. Can't instantiate or test any store in isolation.
+**Impact:** Testing requires the full SoldenDB. Mocking is painful. Adding new queries requires knowing which mixin "owns" them.
 **Fix:** Migrate to composition pattern over time.
 
 ### J3. [LOW] Logging inconsistency across 93 files
@@ -63,7 +63,7 @@ Total issues: 35 (0 critical, 8 high, 18 medium, 9 low)
 ### J4. [MEDIUM] Three different error return styles
 **What:** API routes raise HTTPException. Services return None. Some services return empty dict. 471 raise statements vs 558 `return None/{}` for "failure."
 **Impact:** Callers must handle both exceptions and null checks. No unified error contract.
-**Fix:** Create error hierarchy (`ClearledgrError`, `NotFoundError`, `ValidationError`). Transform at API boundary.
+**Fix:** Create error hierarchy (`SoldenError`, `NotFoundError`, `ValidationError`). Transform at API boundary.
 
 ### J5. [LOW] No structured error codes
 **What:** Error messages are free-form strings. No standardized error code enum. Different services use different formats for the same failure.

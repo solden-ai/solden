@@ -1,12 +1,12 @@
 # GA Launch Readiness Tracker (Execution Phase)
 
 Date created: 2026-02-25
-Source doctrine: `/Users/mombalam/Desktop/Clearledgr.v1/PLAN.md`
-Evidence process: `/Users/mombalam/Desktop/Clearledgr.v1/docs/GA_READINESS_EVIDENCE_PROCESS.md`
+Source doctrine: `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
+Evidence process: `/Users/mombalam/Desktop/Solden.v1/docs/GA_READINESS_EVIDENCE_PROCESS.md`
 
 Implementation baseline (completed and archived):
-- `/Users/mombalam/Desktop/Clearledgr.v1/docs/archive/PLAN_IMPLEMENTATION_GAP_TRACKER_2026-02-25_COMPLETE.md`
-- `/Users/mombalam/Desktop/Clearledgr.v1/docs/archive/PLAN_REMAINING_GAPS_TRACKER_2026-02-25_COMPLETE.md`
+- `/Users/mombalam/Desktop/Solden.v1/docs/archive/PLAN_IMPLEMENTATION_GAP_TRACKER_2026-02-25_COMPLETE.md`
+- `/Users/mombalam/Desktop/Solden.v1/docs/archive/PLAN_REMAINING_GAPS_TRACKER_2026-02-25_COMPLETE.md`
 
 Latest validation baseline:
 - AP v1 regression slice + durable retry tests: `114 passed` (recorded in remaining-gaps tracker archive)
@@ -17,7 +17,7 @@ This tracker is for launch execution and evidence collection after implementatio
 It does not replace the archived implementation trackers.
 
 Non-negotiable product/doctrine guardrails:
-- Preserve Clearledgr AP v1 as an embedded, agentic finance execution layer.
+- Preserve Solden AP v1 as an embedded, agentic finance execution layer.
 - Gmail remains the primary operator surface.
 - Slack and Teams remain approval/decision surfaces.
 - ERP remains the system of record.
@@ -41,7 +41,7 @@ Statuses:
 
 Validation command (pilot gate):
 ```bash
-python3 /Users/mombalam/Desktop/Clearledgr.v1/scripts/validate_launch_evidence.py --mode pilot --json
+python3 /Users/mombalam/Desktop/Solden.v1/scripts/validate_launch_evidence.py --mode pilot --json
 ```
 
 ## Status Summary Table
@@ -116,11 +116,11 @@ Schema per item:
   - ERP result visible to operator and persisted
   - audit chain is queryable by AP item
 - Artifact links:
-  - runtime evidence report: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/<release_id>/GMAIL_RUNTIME_E2E.md`
-  - evidence json: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/<release_id>/artifacts/gmail-e2e-evidence.json`
-  - automated pilot e2e baseline: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/<release_id>/PILOT_E2E_EVIDENCE.md`
+  - runtime evidence report: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/<release_id>/GMAIL_RUNTIME_E2E.md`
+  - evidence json: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/<release_id>/artifacts/gmail-e2e-evidence.json`
+  - automated pilot e2e baseline: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/<release_id>/PILOT_E2E_EVIDENCE.md`
 - Notes / blockers:
-  - use `npm run test:e2e-auth:evidence -- --release-id <release_id>` from `/Users/mombalam/Desktop/Clearledgr.v1/ui/gmail-extension`
+  - use `npm run test:e2e-auth:evidence -- --release-id <release_id>` from `/Users/mombalam/Desktop/Solden.v1/ui/gmail-extension`
   - prioritize one tenant and one ERP first, then expand
   - Latest authenticated runtime run (`2026-02-28T16:16Z`) passed and produced artifacts (`gmail-e2e-evidence.json`, `gmail-e2e-screenshot.png`, `GMAIL_RUNTIME_E2E.md`).
   - automated backend AP end-to-end flow suite passes (`PYTHONPATH=. pytest -q tests/test_e2e_ap_flow.py` -> `6 passed`).
@@ -143,7 +143,7 @@ Schema per item:
   - blocked actions are audited
   - rollback activation and recovery runbook steps succeed
 - Artifact links:
-  - rollback verification: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/ROLLBACK_CONTROLS_VERIFICATION.md`
+  - rollback verification: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/ROLLBACK_CONTROLS_VERIFICATION.md`
 - Notes / blockers:
   - use same tenant as L01 to reduce setup overhead
   - rollback/control verification artifacts and automated baseline are complete for this release package.
@@ -166,7 +166,7 @@ Schema per item:
   - posting failure lands in `failed_post` and recovery path is clear
   - fallback failure remains auditable and operator-visible
 - Artifact links:
-  - matrix: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md`
+  - matrix: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md`
 - Notes / blockers:
   - start with the 3 highest-value scenarios and expand in L09
   - pilot failure-mode subset coverage is complete with recorded evidence artifacts.
@@ -189,7 +189,7 @@ Schema per item:
   - retry processing resumes without manual DB edits
   - AP state/audit trail remains consistent
 - Artifact links:
-  - scenario evidence: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md`
+  - scenario evidence: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md`
 - Notes / blockers:
   - align with L03 posting-failure scenario for reuse
   - durable retry restart evidence is captured in the linked failure-mode artifacts.
@@ -208,7 +208,7 @@ Schema per item:
 - Validation / success criteria:
   - all required pilot approvers recorded with release id and scope
 - Artifact links:
-  - signoff doc: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/SIGNOFFS.md`
+  - signoff doc: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/SIGNOFFS.md`
 - Notes / blockers:
   - signoff package is recorded in linked artifact for this release.
 
@@ -228,7 +228,7 @@ Schema per item:
   - each enabled ERP has pass/fail status with evidence links
   - connector-specific behavior does not leak into operator-facing contracts
 - Artifact links:
-  - parity matrix: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/ERP_PARITY_MATRIX.md`
+  - parity matrix: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/ERP_PARITY_MATRIX.md`
 - Notes / blockers:
   - can scope to enabled connectors for pilot, full enabled set for GA
 
@@ -247,7 +247,7 @@ Schema per item:
   - required runbooks validated within target window
   - operators can execute trace lookup using correlation ID
 - Artifact links:
-  - runbook validation index: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/RUNBOOK_VALIDATIONS.md`
+  - runbook validation index: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/RUNBOOK_VALIDATIONS.md`
 - Notes / blockers:
   - coordinate with Ops/Support schedule
 
@@ -265,7 +265,7 @@ Schema per item:
 - Validation / success criteria:
   - manifest contains release scope, enabled surfaces/connectors, signoff table, rollback summary, accepted risks (pilot only)
 - Artifact links:
-  - manifest path: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/MANIFEST.md`
+  - manifest path: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/MANIFEST.md`
 - Notes / blockers:
   - Manifest finalized and linked to all in-repo evidence artifacts for this release id.
 
@@ -282,7 +282,7 @@ Schema per item:
 - Validation / success criteria:
   - all plan-listed scenarios covered or explicitly waived with approval
 - Artifact links:
-  - matrix: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md`
+  - matrix: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md`
 - Notes / blockers:
   - GA matrix expansion artifacts recorded for this release package.
 
@@ -303,7 +303,7 @@ Schema per item:
   - rollback path tested or confirmed available
   - go/no-go decision documented
 - Artifact links:
-  - canary report: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/CANARY_ROLLOUT_REPORT.md`
+  - canary report: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/CANARY_ROLLOUT_REPORT.md`
 - Notes / blockers:
   - canary observations and decision record captured in linked artifact.
 
@@ -324,7 +324,7 @@ Schema per item:
   - invalid signatures/tokens are rejected and audited
   - protected app surfaces reject unauthenticated requests
 - Artifact links:
-  - security validation record: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/SECURITY_VALIDATION.md`
+  - security validation record: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/SECURITY_VALIDATION.md`
 - Notes / blockers:
   - callback verification and auth-boundary validation evidence recorded in linked artifact.
   - auth-boundary test coverage currently includes `/api/agent/*`, `/api/ops/*`, `/api/ap/items/*`, and sensitive `/extension/*` endpoints
@@ -344,7 +344,7 @@ Schema per item:
   - operator can reconstruct lifecycle with one correlation ID
   - callback/fallback degradation signals are visible
 - Artifact links:
-  - trace walkthrough: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/OBSERVABILITY_TRACE_WALKTHROUGH.md`
+  - trace walkthrough: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/OBSERVABILITY_TRACE_WALKTHROUGH.md`
 - Notes / blockers:
   - correlation trace walkthrough and evidence references are recorded in the linked artifact.
 
@@ -381,8 +381,8 @@ Schema per item:
 - Validation / success criteria:
   - repo manifest exists and links to external artifacts
 - Artifact links:
-  - release folder: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/`
-  - templates: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/templates/`
+  - release folder: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/`
+  - templates: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/templates/`
 - Notes / blockers:
   - Completed `2026-02-25`: release scaffold + templates + manifest placeholders created.
 
@@ -426,14 +426,14 @@ Schema per item:
 
 Fill these as artifacts are created for the selected release id.
 
-- Release manifest: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/MANIFEST.md`
-- ERP parity matrix: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/ERP_PARITY_MATRIX.md`
-- Failure-mode matrix: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md`
-- Runbook validation index: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/RUNBOOK_VALIDATIONS.md`
-- Signoff record: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/SIGNOFFS.md`
-- Canary report: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/CANARY_ROLLOUT_REPORT.md`
-- Observability trace walkthrough: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/OBSERVABILITY_TRACE_WALKTHROUGH.md`
-- Rollback controls verification record: `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/ROLLBACK_CONTROLS_VERIFICATION.md`
+- Release manifest: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/MANIFEST.md`
+- ERP parity matrix: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/ERP_PARITY_MATRIX.md`
+- Failure-mode matrix: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md`
+- Runbook validation index: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/RUNBOOK_VALIDATIONS.md`
+- Signoff record: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/SIGNOFFS.md`
+- Canary report: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/CANARY_ROLLOUT_REPORT.md`
+- Observability trace walkthrough: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/OBSERVABILITY_TRACE_WALKTHROUGH.md`
+- Rollback controls verification record: `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/ROLLBACK_CONTROLS_VERIFICATION.md`
 
 ## Immediate Next Actions (recommended)
 
@@ -448,18 +448,18 @@ Fill these as artifacts are created for the selected release id.
 
 - `2026-02-25`: Created launch execution tracker seeded from `GA_READINESS_EVIDENCE_PROCESS.md` after archiving completed implementation/remediation trackers.
 - `2026-02-25`: Created `docs/ga-evidence/` templates and seeded pilot release scaffold + manifest for `ap-v1-2026-02-25-pilot-rc1`; updated `L08` to `IN_PROGRESS` and `L14` to `DONE`.
-- `2026-02-27`: Added a deterministic real-browser Gmail sidebar harness at `/Users/mombalam/Desktop/Clearledgr.v1/ui/gmail-extension/tests/inboxsdk-layer.browser-harness.test.cjs` with script `npm run test:browser-harness`; this strengthens browser-runtime UI wiring confidence while live authenticated Gmail E2E remains tracked under `L01`.
-- `2026-02-27`: Extended `/Users/mombalam/Desktop/Clearledgr.v1/ui/gmail-extension/tests/inboxsdk-layer.e2e-smoke.test.cjs` with optional evidence JSON output (`GMAIL_E2E_EVIDENCE_JSON`) so manual Gmail smoke/auth runs produce auditable artifacts for pilot/GA evidence collection.
-- `2026-02-27`: Removed non-durable AP post-processing fallback in `/Users/mombalam/Desktop/Clearledgr.v1/clearledgr/services/agent_orchestrator.py` so post-processing is durable-queue-only (or explicitly gated/audited) and updated regression coverage in `/Users/mombalam/Desktop/Clearledgr.v1/tests/test_agent_orchestrator_durable_retry.py`.
-- `2026-02-27`: Enforced strict AP-v1 runtime surface pruning in `/Users/mombalam/Desktop/Clearledgr.v1/main.py` (legacy route families are no longer mounted when strict profile is active), with verification in `/Users/mombalam/Desktop/Clearledgr.v1/tests/test_runtime_surface_scope.py`.
-- `2026-02-28`: Added authenticated Gmail runtime evidence wrapper + validation pipeline (`npm run test:e2e-auth:evidence`) with normalized report output at `/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/<release_id>/GMAIL_RUNTIME_E2E.md`; moved `L01` to `IN_PROGRESS` pending live staging run artifact capture.
-- `2026-02-28`: Added launch-evidence gate validator script `/Users/mombalam/Desktop/Clearledgr.v1/scripts/validate_launch_evidence.py` and documented the pilot validation command in tracker usage rules.
+- `2026-02-27`: Added a deterministic real-browser Gmail sidebar harness at `/Users/mombalam/Desktop/Solden.v1/ui/gmail-extension/tests/inboxsdk-layer.browser-harness.test.cjs` with script `npm run test:browser-harness`; this strengthens browser-runtime UI wiring confidence while live authenticated Gmail E2E remains tracked under `L01`.
+- `2026-02-27`: Extended `/Users/mombalam/Desktop/Solden.v1/ui/gmail-extension/tests/inboxsdk-layer.e2e-smoke.test.cjs` with optional evidence JSON output (`GMAIL_E2E_EVIDENCE_JSON`) so manual Gmail smoke/auth runs produce auditable artifacts for pilot/GA evidence collection.
+- `2026-02-27`: Removed non-durable AP post-processing fallback in `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/agent_orchestrator.py` so post-processing is durable-queue-only (or explicitly gated/audited) and updated regression coverage in `/Users/mombalam/Desktop/Solden.v1/tests/test_agent_orchestrator_durable_retry.py`.
+- `2026-02-27`: Enforced strict AP-v1 runtime surface pruning in `/Users/mombalam/Desktop/Solden.v1/main.py` (legacy route families are no longer mounted when strict profile is active), with verification in `/Users/mombalam/Desktop/Solden.v1/tests/test_runtime_surface_scope.py`.
+- `2026-02-28`: Added authenticated Gmail runtime evidence wrapper + validation pipeline (`npm run test:e2e-auth:evidence`) with normalized report output at `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/<release_id>/GMAIL_RUNTIME_E2E.md`; moved `L01` to `IN_PROGRESS` pending live staging run artifact capture.
+- `2026-02-28`: Added launch-evidence gate validator script `/Users/mombalam/Desktop/Solden.v1/scripts/validate_launch_evidence.py` and documented the pilot validation command in tracker usage rules.
 - `2026-02-28`: Assigned execution owners for pilot-critical evidence items (`L01`, `L02`, `L03`, `L04`, `L11`) to remove `TBD` ownership gaps.
 - `2026-02-28`: Populated pilot release evidence working docs (`MANIFEST`, parity/failure/runbook/rollback/signoff files) with automated baseline evidence and moved `L02`, `L03`, `L04`, `L06`, `L07`, `L11` to `IN_PROGRESS`.
 - `2026-02-28`: Executed authenticated Gmail runtime evidence command for `L01`; artifacts were produced but run failed due unauthenticated Gmail profile. `L01` moved to `BLOCKED`. Launch evidence validator now reports only `status_not_done` errors for `L01`, `L02`, `L03`, `L04`, `L11` (no missing artifact/link warnings).
 - `2026-02-28`: Re-ran `L01` authenticated Gmail runtime evidence with unlocked profile; run passed (`2/2 tests`) and artifacts updated. `L01` returned to `IN_PROGRESS` pending non-Gmail pilot drill evidence (Slack/Teams + ERP + audit chain).
 - `2026-02-28`: Ran focused automated evidence bundles for `L02`, `L03`, `L04`, and `L11` (rollback/admin controls `7 passed`, durability restart/dead-letter `4 passed`, failure-mode subset `3 passed`, auth-boundary + Teams verifier subset `12 passed`) and refreshed release evidence files.
-- `2026-02-28`: Added `L01` automated AP end-to-end baseline artifact (`/Users/mombalam/Desktop/Clearledgr.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/PILOT_E2E_EVIDENCE.md`) with `tests/test_e2e_ap_flow.py` result (`6 passed`).
+- `2026-02-28`: Added `L01` automated AP end-to-end baseline artifact (`/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/PILOT_E2E_EVIDENCE.md`) with `tests/test_e2e_ap_flow.py` result (`6 passed`).
 - `2026-03-02`: Removed `TBD` metadata debt on required GA items (`L05`, `L09`, `L10`, `L12`) by assigning owners and real artifact paths; added canary and observability working docs to keep validator output focused on true status blockers.
 
 ## Archive Protocol

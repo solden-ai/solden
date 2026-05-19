@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
 
-from clearledgr.core.database import ClearledgrDB
+from clearledgr.core.database import SoldenDB
 from clearledgr.core.org_utils import assert_org_id
 from clearledgr.services.ap_projection import build_worklist_items
 from clearledgr.services.policy_compliance import get_approval_automation_policy
@@ -216,7 +216,7 @@ def _sort_vendor_issue_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]
 # Org settings loader (duplicated to avoid circular import)
 # ---------------------------------------------------------------------------
 
-def _load_org_settings_for_item(db: ClearledgrDB, organization_id: Any) -> Dict[str, Any]:
+def _load_org_settings_for_item(db: SoldenDB, organization_id: Any) -> Dict[str, Any]:
     org_id = str(organization_id or "").strip()
     if not org_id or not hasattr(db, "get_organization"):
         return {}
@@ -245,7 +245,7 @@ def _approval_followup_policy(organization_id: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def _build_vendor_summary_rows(
-    db: ClearledgrDB,
+    db: SoldenDB,
     organization_id: str,
     *,
     search: str = "",
@@ -428,7 +428,7 @@ def _build_vendor_summary_rows(
 
 
 def _build_vendor_detail_payload(
-    db: ClearledgrDB,
+    db: SoldenDB,
     organization_id: str,
     vendor_name: str,
     *,

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Optional
 
-from clearledgr.core.database import ClearledgrDB
+from clearledgr.core.database import SoldenDB
 from clearledgr.services.agent_memory import get_agent_memory_service
 from clearledgr.services.finance_learning import get_finance_learning_service
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def build_agent_memory_projection(
     *,
-    db: Optional[ClearledgrDB],
+    db: Optional[SoldenDB],
     organization_id: str,
     ap_item_id: Optional[str],
     skill_id: str = "ap_v1",
@@ -34,7 +34,7 @@ def build_agent_memory_projection(
 
 def sync_ap_execution_event(
     *,
-    db: Optional[ClearledgrDB],
+    db: Optional[SoldenDB],
     organization_id: str,
     ap_item_id: Optional[str],
     event_type: str,

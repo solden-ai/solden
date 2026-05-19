@@ -1,6 +1,6 @@
 """Shared helpers for the Solden CLI.
 
-* ``get_db()`` returns the singleton ``ClearledgrDB`` instance after
+* ``get_db()`` returns the singleton ``SoldenDB`` instance after
   honoring an optional ``--db-url`` override (set via the top-level
   parser before any subcommand runs).
 * ``print_table()`` renders a list of dicts as a fixed-width table.
@@ -24,7 +24,7 @@ from typing import Any, Iterable, List, Mapping, Optional, Sequence
 def apply_db_url_override(db_url: Optional[str]) -> None:
     """Apply ``--db-url`` before the DB singleton is constructed.
 
-    ``ClearledgrDB.__init__`` reads ``DATABASE_URL`` from the env at
+    ``SoldenDB.__init__`` reads ``DATABASE_URL`` from the env at
     construction time, so we set it here before the first call to
     ``get_db()``. Idempotent — calling with ``None`` leaves the env
     alone.
@@ -34,7 +34,7 @@ def apply_db_url_override(db_url: Optional[str]) -> None:
 
 
 def get_db():
-    """Return the canonical ``ClearledgrDB`` singleton.
+    """Return the canonical ``SoldenDB`` singleton.
 
     Lazy import keeps ``--help`` fast: the DB layer pulls in
     ``psycopg`` + connection-pool init, which is ~150ms of startup

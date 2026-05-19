@@ -29,7 +29,7 @@ import pytest
 
 @pytest.fixture
 def tmp_db(tmp_path, monkeypatch):
-    """Fresh temp-file ClearledgrDB wired as the singleton."""
+    """Fresh temp-file SoldenDB wired as the singleton."""
     from clearledgr.core.database import get_db
     from clearledgr.core import database as db_module
 

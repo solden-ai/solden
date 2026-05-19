@@ -60,7 +60,7 @@ _VALID_ACTOR_TYPES = frozenset({"agent", "user", "system"})
 class BoxLifecycleStore:
     """Mixin providing Box-exception + Box-outcome CRUD.
 
-    Composed into :class:`ClearledgrDB`. Every mutating method emits an
+    Composed into :class:`SoldenDB`. Every mutating method emits an
     audit row through ``append_audit_event`` (which this mixin assumes
     is available on ``self`` — it is, via :class:`APStore`).
     """

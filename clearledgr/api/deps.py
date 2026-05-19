@@ -1,4 +1,4 @@
-"""FastAPI dependencies for Clearledgr core services."""
+"""FastAPI dependencies for Solden core services."""
 import logging
 from typing import Optional
 

@@ -1,10 +1,10 @@
-"""Payment tracking data-access mixin for ClearledgrDB.
+"""Payment tracking data-access mixin for SoldenDB.
 
 ``PaymentStore`` is a **mixin class** — it has no ``__init__`` of its own and
 expects the concrete class that inherits it to provide the standard DB
 infrastructure (``connect()``, ``initialize()``).
 
-The ``payments`` table is purely informational.  Clearledgr NEVER executes
+The ``payments`` table is purely informational.  Solden NEVER executes
 payments — it tracks readiness and status.  Humans trigger payments in the ERP.
 """
 

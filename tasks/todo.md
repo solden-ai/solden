@@ -1,6 +1,6 @@
 # Task Log
 
-Ongoing work log for Clearledgr v1. Each session appends completed + open items.
+Ongoing work log for Solden v1. Each session appends completed + open items.
 
 ---
 

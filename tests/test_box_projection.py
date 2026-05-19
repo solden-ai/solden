@@ -51,7 +51,7 @@ class _FakeProjectionDB:
         self.outcomes_by_box: Dict[str, Dict[str, Any]] = {}
         self.list_ap_items_calls: List[tuple] = []
 
-    # ── ClearledgrDB-compatible helpers used by box_summary.py ──
+    # ── SoldenDB-compatible helpers used by box_summary.py ──
     def initialize(self):
         pass
 
