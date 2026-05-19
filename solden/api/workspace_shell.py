@@ -1788,13 +1788,38 @@ async def slack_install_callback(
         },
     )
     db.update_organization(org_id, integration_mode=mode)
-    from fastapi.responses import HTMLResponse
-    return HTMLResponse("""<!DOCTYPE html><html><head><title>Connected</title>
-<style>body{font-family:system-ui;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f8f9fa}
-.card{text-align:center;padding:2rem;border-radius:8px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1)}
-h1{color:#22c55e;margin:0 0 .5rem}</style></head>
-<body><div class="card"><h1>Slack Connected</h1>
-<p>You can close this tab. Use <code>/clearledgr setup</code> in Slack to continue.</p></div></body></html>""")
+    # Bounce the browser back to the workspace SPA. Slack's OAuth
+    # redirect_uri MUST be on api.{host} (Slack rejects redirect URIs
+    # that don't exactly match the registered one), but the user
+    # started the install from workspace.{host} and should land back
+    # there, not stranded on the api host. ``redirect_path`` was
+    # signed into the state at install/start so the user returns to
+    # whichever page they kicked off from. Falls back to ``/connections``
+    # when the state didn't include one (older signed states or
+    # malformed payloads).
+    from fastapi.responses import RedirectResponse
+
+    raw_redirect_path = str(state_payload.get("redirect_path") or "/connections").strip()
+    # Defensive: only allow same-origin SPA paths so the state payload
+    # can't be replayed as an open redirect. Reject anything that
+    # doesn't start with '/' or that looks like a scheme.
+    if not raw_redirect_path.startswith("/") or "://" in raw_redirect_path:
+        raw_redirect_path = "/connections"
+    workspace_base = os.getenv("APP_BASE_URL", "").strip().rstrip("/")
+    if not workspace_base:
+        # No env override: derive from the incoming request host by
+        # swapping the api.* subdomain for workspace.*.
+        request_origin = _request_origin_base_url(http_request) or ""
+        if request_origin.startswith("https://api."):
+            workspace_base = "https://workspace." + request_origin[len("https://api."):]
+        elif request_origin.startswith("http://api."):
+            workspace_base = "http://workspace." + request_origin[len("http://api."):]
+        else:
+            workspace_base = request_origin or "https://workspace.soldenai.com"
+    return RedirectResponse(
+        url=f"{workspace_base}{raw_redirect_path}?slack_install=ok",
+        status_code=302,
+    )
 
 
 @router.post("/integrations/slack/channel")
