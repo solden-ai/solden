@@ -2,6 +2,7 @@ import { h } from 'preact';
 import { useRef, useState, useEffect, useCallback, useMemo } from 'preact/hooks';
 import htm from 'htm';
 import { hasCapability, useAction } from '../route-helpers.js';
+import { displayOrgName } from '../../utils/formatters.js';
 
 const html = htm.bind(h);
 
@@ -296,7 +297,22 @@ function InviteRow({ invite, onRevoke, canManage, toast }) {
     ${isPending && inviteLink
       ? html`
         <div style="display:flex;gap:8px;align-items:center;background:rgba(0,0,0,0.04);border-radius:6px;padding:8px 10px">
-          <code style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title=${inviteLink}>${inviteLink}</code>
+          <span class="muted" style="flex:1;font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">
+            Invite link — ends in ${'…'}${(() => {
+              // Show only the last 4 characters of the token. The
+              // token IS the capability — anyone who reads the full
+              // URL off a screen can accept the invite as the
+              // invitee. Mask by default; copy-button gives the
+              // admin the full link when they actually want to share.
+              try {
+                const url = new URL(inviteLink);
+                const tok = url.searchParams.get('token') || url.searchParams.get('invite_token') || '';
+                return tok ? tok.slice(-4) : '••••';
+              } catch {
+                return '••••';
+              }
+            })()}
+          </span>
           <button class="btn-sm" onClick=${copyLink}>
             ${copied ? 'Copied!' : 'Copy link'}
           </button>
@@ -749,9 +765,15 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
     </div>
 
     <div class="settings-summary-grid" style="margin-bottom:20px">
+      <!-- All four cards share the same shape: small uppercase label,
+           a single prominent metric/value, a small subtext line. The
+           previous cards were inconsistent (sentence vs metadata stack
+           vs three-line prose), which read as four different widgets
+           rather than a single status row. -->
       <div class="settings-summary-card">
         <strong>Pending invites</strong>
-        <span>${Number(invites.filter((invite) => invite.status === 'pending').length).toLocaleString()} waiting for a response.</span>
+        <span class="settings-summary-metric">${Number(invites.filter((inv) => inv.status === 'pending').length).toLocaleString()}</span>
+        <span class="muted small">waiting for a response</span>
       </div>
       <div class="settings-summary-card">
         <strong>Workspace</strong>
@@ -787,7 +809,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
             </div>`
           : html`
             <span class="cl-inline-edit-display">
-              <span class="cl-inline-edit-value">${org.name || 'Untitled'}</span>
+              <span class="settings-summary-metric cl-inline-edit-value">${displayOrgName(org.name) || 'Untitled'}</span>
               ${canManageCompany
                 ? html`<button
                     class="cl-inline-edit-trigger"
@@ -798,15 +820,17 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
                   </button>`
                 : null}
             </span>
-            <span class="muted small">${org.domain || 'Domain not set'} · ${org.integration_mode === 'per_org' ? 'Per organization' : 'Shared workspace'}</span>`}
+            <span class="muted small">${org.domain || 'Domain not set'}</span>`}
       </div>
       <div class="settings-summary-card">
         <strong>Plan</strong>
-        <span>${planName} · ${sub.status || 'Active'}</span>
+        <span class="settings-summary-metric">${planName}</span>
+        <span class="muted small">${sub.status || 'Active'}</span>
       </div>
       <div class="settings-summary-card">
-        <strong>Access model</strong>
-        <span>Admins manage setup. Operators work the queue. Read-only teammates can follow records without making changes.</span>
+        <strong>Team</strong>
+        <span class="settings-summary-metric">${Number(usage.users_count || 0).toLocaleString()}</span>
+        <span class="muted small">members</span>
       </div>
     </div>
 
@@ -853,7 +877,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
                 </div>`
               : html`
                 <div style="display:flex;align-items:center;gap:12px">
-                  <span style="font-size:16px;font-weight:600">${org.name || 'Untitled'}</span>
+                  <span style="font-size:16px;font-weight:600">${displayOrgName(org.name) || 'Untitled'}</span>
                   ${canManageCompany
                     ? html`<button class="btn btn-sm btn-tertiary" onClick=${beginEditOrgName} aria-label="Rename workspace">Rename</button>`
                     : null}

@@ -137,6 +137,19 @@
   line-height: 1.4;
 }
 
+/* Prominent metric line — used as the focal value of each summary
+   card (count, plan name, workspace name). Pairs with the small
+   uppercase label above and an optional muted subtext below to give
+   all four cards the same hierarchy. */
+.settings-summary-card .settings-summary-metric {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+  line-height: 1.2;
+  margin-top: 2px;
+  letter-spacing: -0.01em;
+}
+
 .settings-summary-card .muted.small {
   font-size: 12px;
   color: var(--cl-ink-muted);

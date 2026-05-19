@@ -119,6 +119,20 @@ export function trimText(value, maxLength = 96) {
   return `${text.slice(0, Math.max(1, maxLength - 1)).trim()}…`;
 }
 
+/**
+ * Capitalise just the first letter of an organisation name for
+ * sentence-context display ("Sign in to Solden" instead of
+ * "Sign in to solden"). The brand wordmark stays lowercase on its
+ * own; in prose it should read with an initial capital. Multi-word
+ * or camelCased names ("Acme Corp", "iRobot") preserve their
+ * intended casing — we only touch character 0.
+ */
+export function displayOrgName(name) {
+  const raw = String(name || '').trim();
+  if (!raw) return '';
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
 export function prettifyEventType(value) {
   if (!value) return 'Event';
   return String(value).replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());

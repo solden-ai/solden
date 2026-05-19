@@ -3,7 +3,7 @@ import { useLocation } from 'wouter-preact';
 import { html } from '../../utils/htm.js';
 import { api } from '../../api/client.js';
 import { useBootstrap, useOrgId } from '../../shell/BootstrapContext.js';
-import { formatAmount, formatRelative } from '../../utils/formatters.js';
+import { formatAmount, formatRelative, displayOrgName } from '../../utils/formatters.js';
 import { AgentActivityRibbon } from '../../components/AgentActivityRibbon.js';
 
 /**
@@ -99,7 +99,7 @@ export function HomePage() {
   }, [orgId]);
 
   const userName = bootstrap?.current_user?.name || bootstrap?.current_user?.email?.split('@')[0] || 'there';
-  const orgName = bootstrap?.organization?.name || 'your workspace';
+  const orgName = displayOrgName(bootstrap?.organization?.name) || 'your workspace';
   const onboardingPending = bootstrap?.onboarding && bootstrap.onboarding.completed === false;
 
   const m = metrics.data?.metrics || metrics.data || {};

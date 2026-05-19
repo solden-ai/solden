@@ -5,6 +5,7 @@ import { useSession, logout } from '../auth/useSession.js';
 import { useBootstrap } from './BootstrapContext.js';
 import { EntitySwitcher } from './EntitySwitcher.js';
 import { useMobileShell } from './MobileShellContext.js';
+import { displayOrgName } from '../utils/formatters.js';
 
 /**
  * Topbar — org context (left) + user menu (right).
@@ -42,11 +43,12 @@ export function Topbar() {
 
   const email = bootstrap?.current_user?.email || session?.email || '';
   const name = bootstrap?.current_user?.name || session?.name || email;
-  const orgName =
-    bootstrap?.organization?.name ||
-    bootstrap?.organization?.id ||
-    session?.organization_id ||
-    'default';
+  const orgName = displayOrgName(
+    bootstrap?.organization?.name
+      || bootstrap?.organization?.id
+      || session?.organization_id
+      || ''
+  ) || 'Workspace';
   const rawRole = String(
     bootstrap?.current_user?.role || session?.role || ''
   ).trim().toLowerCase();

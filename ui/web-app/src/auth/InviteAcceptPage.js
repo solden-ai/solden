@@ -4,6 +4,7 @@ import { html } from '../utils/htm.js';
 import { api, ApiError } from '../api/client.js';
 import { logout, refreshSession, useSession } from './useSession.js';
 import { GoogleMark, MicrosoftMark } from './OAuthIcons.js';
+import { displayOrgName } from '../utils/formatters.js';
 
 /**
  * /signup/accept?token=<invite-token>
@@ -129,13 +130,9 @@ export function InviteAcceptPage() {
   const sameUser = isAuthenticated && sessionEmail && sessionEmail === inviteEmail;
   const wrongUser = isAuthenticated && sessionEmail && sessionEmail !== inviteEmail;
   // Display the org name with a leading capital so "Join solden" reads
-  // as "Join Solden" in sentence context. We only touch the first
-  // letter — names like "iRobot" or "Acme Corp" preserve their
-  // intended casing.
-  const _rawOrg = (preview.organization_name || '').trim();
-  const orgLabel = _rawOrg
-    ? _rawOrg.charAt(0).toUpperCase() + _rawOrg.slice(1)
-    : 'your team';
+  // as "Join Solden" in sentence context. The helper handles
+  // empty/short cases uniformly with the rest of the SPA.
+  const orgLabel = displayOrgName(preview.organization_name) || 'your team';
 
   // ── Signed in as the invited email. Accept + continue. ─────────
   const acceptAsCurrentUser = async () => {
