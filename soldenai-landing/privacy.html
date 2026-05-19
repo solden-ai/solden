@@ -6,7 +6,7 @@
     <meta name="referrer" content="strict-origin-when-cross-origin" />
 
     <title>Privacy posture · Solden</title>
-    <meta name="description" content="What we do with personal data you give us through soldenai.com. Short, direct, no surprises." />
+    <meta name="description" content="What Solden does with your data. Marketing site, product, every surface. Short, direct, no surprises." />
     <meta name="theme-color" content="#F9F5EC" />
 
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png?v=6" />
@@ -34,74 +34,103 @@
       </div>
     </header>
 
-    <!-- Cover ───────────────────────────────────────────────── -->
     <section class="page-cover">
       <div class="page-cover__glow" aria-hidden="true"></div>
       <div class="shell shell--narrow page-cover__inner">
-        <p class="page-cover__eyebrow">Privacy posture · v1.0 · May 2026</p>
+        <p class="page-cover__eyebrow">Privacy posture · v1.1 · May 2026</p>
         <h1 class="page-cover__title">
           What we do with <span class="page-cover__title-accent">your data</span>.
         </h1>
-        <p class="page-cover__hint">What we collect. What we do with it. How long we keep it.</p>
+        <p class="page-cover__hint">Marketing site. Workspace. Browser extensions. Approval surfaces. What we collect. What we do with it. How long we keep it.</p>
       </div>
     </section>
 
-    <!-- Body ────────────────────────────────────────────────── -->
     <section class="page-section">
       <div class="shell">
         <article class="privacy">
 
           <section class="privacy__section">
             <h2 class="privacy__h">Who we are</h2>
-            <p>Solden Technologies Ltd., a UK company building the workflow runtime for the back office. This page covers what we do with personal data you give us through soldenai.com.</p>
-            <p>Data the Solden product touches once a customer installs it — the workspace, the Gmail extension, the Outlook add-in, the Slack and Teams surfaces — is covered separately on <a href="/product-privacy.html">soldenai.com/product-privacy</a>. Customer-tenant data is governed by the data processing agreement we sign before any production data flows.</p>
+            <p>Solden Technologies Ltd., a UK company building the workflow runtime for the back office. This page covers everything we do with your data — the marketing site you're reading now, the workspace you sign into, the browser extensions you install, and the approval surfaces we deliver into your chat tools. The specifics of how we process customer-tenant data under contract are spelled out in our DPA, which we sign before any production data flows.</p>
           </section>
 
           <section class="privacy__section">
-            <h2 class="privacy__h">What we collect</h2>
+            <h2 class="privacy__h">What the marketing site collects</h2>
             <p>From the contact form: your name, work email, company, role, primary ERP, topic, and a short message about your back office. That is it.</p>
-            <p>From your visit: standard server logs (IP address, user agent, page, timestamp). We do not run third-party analytics that follow you across sites. No tracking pixels. No advertising cookies.</p>
+            <p>From your visit: standard server logs (IP address, user agent, page, timestamp) and one first-party preference cookie. No third-party analytics. No tracking pixels. No advertising cookies.</p>
           </section>
 
           <section class="privacy__section">
-            <h2 class="privacy__h">Why we collect it</h2>
-            <p>To reply to your inquiry. To route the conversation to the right person. To read your situation before the first call so we are not wasting your time.</p>
-            <p>Server logs exist to keep the site up and to protect it from abuse.</p>
+            <h2 class="privacy__h">What the workspace collects</h2>
+            <p>Workspace identity for everyone the customer adds: email address, name, organization, role. Authentication metadata: last sign-in, OAuth tokens (encrypted at rest), session timestamps. Workflow data: AP records, vendor master records, approval decisions, ERP posting state, the agent's reasoning + governance verdict on every routing decision, and the append-only audit trail.</p>
+            <p>The workspace at workspace.clearledgr.com is the coordination-layer control center. It does not read inboxes directly — that work happens in the browser extensions described below.</p>
+          </section>
+
+          <section class="privacy__section">
+            <h2 class="privacy__h">What the browser extensions do</h2>
+            <p>Solden ships a Gmail extension and an Outlook add-in that surface a contextual sidebar on invoice threads. When you open an invoice email with one installed, Solden reads the email's content and metadata so the agent can extract bill details, run validation, and route the record for approval through the chat tool the approver lives in.</p>
+            <p>The Gmail extension uses Google's <code>gmail.modify</code> scope to:</p>
+            <ul>
+              <li>Read the subject, sender, headers, body, and attachments on the active invoice thread.</li>
+              <li>Read invoice attachments (PDF, image) and pass them to the extraction pipeline.</li>
+              <li>Apply a Solden label to threads we've processed.</li>
+              <li>Archive threads after the agent posts the bill to your ERP (configurable per workspace).</li>
+            </ul>
+            <p>The Outlook add-in uses Microsoft Graph's <code>Mail.Read</code> and <code>Mail.ReadWrite</code> scopes for the same purpose on Microsoft 365 inboxes.</p>
+            <p>Neither extension reads inbox contents beyond the threads you open with the sidebar, sends email on your behalf, or accesses your contacts. Neither extension approves or rejects invoices — those decisions are routed to the chat-tool approval cards described below.</p>
+          </section>
+
+          <section class="privacy__section">
+            <h2 class="privacy__h">What the approval surfaces do</h2>
+            <p>Solden delivers approval cards into the channel the workspace admin configures on Slack or Microsoft Teams. We read the approval click + any note the approver adds. We do not read channel history, direct messages, or membership beyond verifying the responding user is on the workspace's approver list.</p>
           </section>
 
           <section class="privacy__section">
             <h2 class="privacy__h">Where it lives</h2>
-            <p>Form submissions land in our internal CRM and the founder inbox. Server logs live with our hosting provider for a short window. We do not sell, enrich, or syndicate any of it.</p>
+            <p>Solden runs on managed hosting in US and EU regions. Each customer organization has its own logical tenant; rows are scoped by organization id and writes are gated by per-table constraints. Customer data is encrypted in transit (TLS 1.3) and at rest (AES-256). Database backups are retained for 30 days with the same encryption. OAuth tokens are encrypted at rest with per-deployment keys held in the runtime environment, not in the database.</p>
           </section>
 
           <section class="privacy__section">
-            <h2 class="privacy__h">Who else sees it</h2>
-            <p>The Solden team. Plus the small set of sub-processors we need to run the site and our email: hosting, email delivery, form intake. We will share the current list of sub-processors on request to <a href="mailto:privacy@soldenai.com">privacy@soldenai.com</a>.</p>
+            <h2 class="privacy__h">Sub-processors</h2>
+            <p>Solden uses a small set of sub-processors to operate the product: a managed-hosting provider, a transactional-email service for system notices, an error-monitoring service (PII scrubbed at the application boundary), and a language-model API for narrative summaries that surface in operator views. Deterministic AP routing — matching, validation, approval gating, ERP posting — does not call any language model.</p>
+            <p>The current named list, with sub-processor locations and data categories, is shared on request to <a href="mailto:privacy@soldenai.com">privacy@soldenai.com</a> and is governed by the customer's DPA. We notify workspace owners of material changes before they take effect.</p>
+          </section>
+
+          <section class="privacy__section">
+            <h2 class="privacy__h">Third-party services you connect</h2>
+            <p>Separate from our sub-processors, your workspace can connect to systems your organization already runs. These remain your systems; we read or write to them under the scopes you authorize. The connections are:</p>
+            <ul>
+              <li><strong>Google Workspace or Microsoft 365</strong> — for the Gmail or Outlook intake described above.</li>
+              <li><strong>Slack or Microsoft Teams</strong> — for the approval surfaces described above.</li>
+              <li><strong>Your ERP</strong> (QuickBooks Online, Xero, NetSuite, SAP, or other supported back-office systems) — Solden writes bills, payments, and journal entries you configure; reads master data you authorize.</li>
+            </ul>
+            <p>Disconnect any of them at any time from Settings → Connections. Disconnecting revokes the stored credential immediately and Solden stops accessing the system within the next agent cycle.</p>
           </section>
 
           <section class="privacy__section">
             <h2 class="privacy__h">How long we keep it</h2>
-            <p>Conversation records: while a relationship is active, plus 24 months after the last exchange in case you come back. Server logs: 90 days.</p>
+            <p>Marketing-site conversation records: while the relationship is active, plus 24 months after the last exchange. Server logs: 90 days.</p>
+            <p>Tenant data: the lifetime of the customer relationship. The audit chain is retained per the customer's chosen policy (default 7 years, configurable in workspace settings to meet sector requirements). On contract termination we delete tenant data within 30 days unless the customer requests an export window first; legal-hold data is retained per the DPA.</p>
           </section>
 
           <section class="privacy__section">
             <h2 class="privacy__h">Your rights</h2>
-            <p>You can ask us to show you what we hold on you, correct anything wrong, export it, or delete it. Email <a href="mailto:privacy@soldenai.com">privacy@soldenai.com</a> and we will respond within 30 days. If you are in the EU or UK, you also have the right to complain to your local data protection authority.</p>
+            <p>You can ask us to show you what we hold on you, correct anything wrong, export it, or delete it. Workspace owners can request export or deletion of the tenant's data. Email <a href="mailto:privacy@soldenai.com">privacy@soldenai.com</a> and we will respond within 30 days. If you are in the EU or UK, you also have the right to complain to your local data protection authority.</p>
           </section>
 
           <section class="privacy__section">
-            <h2 class="privacy__h">Cookies</h2>
-            <p>The site uses one first-party preference cookie to remember small UI choices. No third-party tracking. No advertising network.</p>
+            <h2 class="privacy__h">Data sharing</h2>
+            <p>We do not sell, syndicate, or share customer or end-user data outside the sub-processor set described above. Aggregated, de-identified usage statistics may inform product improvements; no row of personal or tenant data leaves Solden's control for any other purpose.</p>
           </section>
 
           <section class="privacy__section">
             <h2 class="privacy__h">Changes</h2>
-            <p>If anything material shifts, we will update this page and bump the version stamp at the top. Last reviewed: 18 May 2026.</p>
+            <p>If anything material shifts, we update this page and bump the version stamp at the top. Material product changes are notified to workspace owners by email. Last reviewed: 19 May 2026.</p>
           </section>
 
           <section class="privacy__section">
             <h2 class="privacy__h">Contact</h2>
-            <p>Privacy questions: <a href="mailto:privacy@soldenai.com">privacy@soldenai.com</a>. Security concerns: <a href="mailto:security@soldenai.com">security@soldenai.com</a>.</p>
+            <p>Privacy questions: <a href="mailto:privacy@soldenai.com">privacy@soldenai.com</a>. Security: <a href="mailto:security@soldenai.com">security@soldenai.com</a>.</p>
           </section>
 
         </article>
@@ -141,7 +170,7 @@
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644z"/></svg>
             </a>
           </div>
-          <span class="footer__copyright"><a href="/privacy.html">Privacy</a> · <a href="/product-privacy.html">Product privacy</a> · © <span data-year>2026</span> Solden. All rights reserved.</span>
+          <span class="footer__copyright"><a href="/privacy.html">Privacy</a> · © <span data-year>2026</span> Solden. All rights reserved.</span>
         </div>
       </div>
     </footer>
