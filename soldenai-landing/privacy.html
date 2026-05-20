@@ -51,7 +51,7 @@
 
           <section class="privacy__section">
             <h2 class="privacy__h">Who we are</h2>
-            <p>Solden Technologies Ltd., a UK company building the workflow runtime for the back office. This page covers everything we do with your data — the marketing site you're reading now, the workspace you sign into, the browser extensions you install, and the approval surfaces we deliver into your chat tools. The specifics of how we process customer-tenant data under contract are spelled out in our DPA, which we sign before any production data flows.</p>
+            <p>Solden Technologies Ltd., a UK company building the workflow runtime for the back office. This page covers everything we do with your data: the marketing site you're reading now, the workspace you sign into, the browser extensions you install, and the approval surfaces we deliver into your chat tools. The specifics of how we process customer-tenant data under contract are spelled out in our DPA, which we sign before any production data flows.</p>
           </section>
 
           <section class="privacy__section">
@@ -63,7 +63,7 @@
           <section class="privacy__section">
             <h2 class="privacy__h">What the workspace collects</h2>
             <p>Workspace identity for everyone the customer adds: email address, name, organization, role. Authentication metadata: last sign-in, OAuth tokens (encrypted at rest), session timestamps. Workflow data: AP records, vendor master records, approval decisions, ERP posting state, the agent's reasoning + governance verdict on every routing decision, and the append-only audit trail.</p>
-            <p>The workspace at workspace.soldenai.com is the coordination-layer control center. It does not read inboxes directly — that work happens in the browser extensions described below.</p>
+            <p>The workspace at workspace.soldenai.com is the coordination-layer control center. It does not read inboxes directly. That work happens in the browser extensions described below.</p>
           </section>
 
           <section class="privacy__section">
@@ -77,7 +77,7 @@
               <li>Archive threads after the agent posts the bill to your ERP (configurable per workspace).</li>
             </ul>
             <p>The Outlook add-in uses Microsoft Graph's <code>Mail.Read</code> and <code>Mail.ReadWrite</code> scopes for the same purpose on Microsoft 365 inboxes.</p>
-            <p>Neither extension reads inbox contents beyond the threads you open with the sidebar, sends email on your behalf, or accesses your contacts. Neither extension approves or rejects invoices — those decisions are routed to the chat-tool approval cards described below.</p>
+            <p>Neither extension reads inbox contents beyond the threads you open with the sidebar, sends email on your behalf, or accesses your contacts. Neither extension approves or rejects invoices. Those decisions are routed to the chat-tool approval cards described below.</p>
           </section>
 
           <section class="privacy__section">
@@ -92,7 +92,7 @@
 
           <section class="privacy__section">
             <h2 class="privacy__h">Sub-processors</h2>
-            <p>Solden uses a small set of sub-processors to operate the product: a managed-hosting provider, a transactional-email service for system notices, an error-monitoring service (PII scrubbed at the application boundary), and a language-model API for narrative summaries that surface in operator views. Deterministic AP routing — matching, validation, approval gating, ERP posting — does not call any language model.</p>
+            <p>Solden uses a small set of sub-processors to operate the product: a managed-hosting provider, a transactional-email service for system notices, an error-monitoring service (PII scrubbed at the application boundary), and a language-model API for narrative summaries that surface in operator views. Deterministic AP routing (matching, validation, approval gating, ERP posting) does not call any language model.</p>
             <p>The current named list, with sub-processor locations and data categories, is shared on request to <a href="mailto:privacy@soldenai.com">privacy@soldenai.com</a> and is governed by the customer's DPA. We notify workspace owners of material changes before they take effect.</p>
           </section>
 
@@ -100,9 +100,9 @@
             <h2 class="privacy__h">Third-party services you connect</h2>
             <p>Separate from our sub-processors, your workspace can connect to systems your organization already runs. These remain your systems; we read or write to them under the scopes you authorize. The connections are:</p>
             <ul>
-              <li><strong>Google Workspace or Microsoft 365</strong> — for the Gmail or Outlook intake described above.</li>
-              <li><strong>Slack or Microsoft Teams</strong> — for the approval surfaces described above.</li>
-              <li><strong>Your ERP</strong> (QuickBooks Online, Xero, NetSuite, SAP, or other supported back-office systems) — Solden writes bills, payments, and journal entries you configure; reads master data you authorize.</li>
+              <li><strong>Google Workspace or Microsoft 365</strong>, for the Gmail or Outlook intake described above.</li>
+              <li><strong>Slack or Microsoft Teams</strong>, for the approval surfaces described above.</li>
+              <li><strong>Your ERP</strong> (QuickBooks Online, Xero, NetSuite, SAP, or other supported back-office systems), Solden writes bills, payments, and journal entries you configure; reads master data you authorize.</li>
             </ul>
             <p>Disconnect any of them at any time from Settings → Connections. Disconnecting revokes the stored credential immediately and Solden stops accessing the system within the next agent cycle.</p>
           </section>
