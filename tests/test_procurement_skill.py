@@ -1,0 +1,118 @@
+"""ProcurementFinanceSkill + tiered thresholds + seed strategy.
+
+Covers the agent's action interface for the purchase_order BoxType:
+create/submit/approve through the skill, the tiered approval autonomy
+gate, illegal-transition blocking, and the seed-strategy creation path.
+"""
+from __future__ import annotations
+
+import asyncio
+import sys
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
+
+from solden.core import database as db_module  # noqa: E402
+from solden.core.procurement_thresholds import (  # noqa: E402
+    ProcurementThresholds,
+    evaluate_po_approval,
+)
+from solden.services.finance_agent_runtime import FinanceAgentRuntime  # noqa: E402
+from solden.services.finance_skills.procurement_skill import (  # noqa: E402
+    ProcurementFinanceSkill,
+)
+
+ORG = "orgProcSkill"
+
+
+@pytest.fixture()
+def runtime():
+    db = db_module.get_db()
+    db.initialize()
+    db.ensure_organization(ORG, organization_name=ORG)
+    return FinanceAgentRuntime(
+        organization_id=ORG, actor_id="agent@test", actor_email="agent@test", db=db,
+    )
+
+
+def test_threshold_tiers():
+    cfg = ProcurementThresholds(auto_approve_ceiling=1000, dual_approval_above=25000)
+    assert evaluate_po_approval(500, cfg).tier == "auto"
+    assert evaluate_po_approval(500, cfg).auto_approvable is True
+    assert evaluate_po_approval(5000, cfg).tier == "single"
+    assert evaluate_po_approval(50000, cfg).tier == "dual"
+    assert evaluate_po_approval(50000, cfg).requires_dual_approval is True
+
+
+def test_skill_create_submit_approve(runtime):
+    skill = ProcurementFinanceSkill()
+    res = asyncio.run(skill.execute(
+        runtime, "create_purchase_order",
+        {"vendor_name": "Acme", "total_amount": 500.0},
+    ))
+    assert res["status"] == "created"
+    po_id = res["po_id"]
+    assert res["state"] == "draft"
+
+    res2 = asyncio.run(skill.execute(runtime, "submit_purchase_order", {"po_id": po_id}))
+    assert res2["status"] == "ok" and res2["state"] == "pending_approval"
+
+    res3 = asyncio.run(skill.execute(runtime, "approve_purchase_order", {"po_id": po_id}))
+    assert res3["status"] == "ok" and res3["state"] == "approved"
+
+
+def test_skill_autonomy_gate_blocks_large_po(runtime):
+    skill = ProcurementFinanceSkill()
+    created = asyncio.run(skill.execute(
+        runtime, "create_purchase_order",
+        {"vendor_name": "Acme", "total_amount": 50000.0},  # above dual_approval_above default
+    ))
+    po_id = created["po_id"]
+    asyncio.run(skill.execute(runtime, "submit_purchase_order", {"po_id": po_id}))
+    out = asyncio.run(skill.execute(
+        runtime, "approve_purchase_order", {"po_id": po_id, "autonomous": True},
+    ))
+    assert out["status"] == "blocked"
+    assert "autonomy_gate_blocked" in out["policy_precheck"]["reason_codes"]
+
+
+def test_skill_small_po_auto_approvable(runtime):
+    skill = ProcurementFinanceSkill()
+    created = asyncio.run(skill.execute(
+        runtime, "create_purchase_order",
+        {"vendor_name": "Acme", "total_amount": 200.0},  # below auto_approve_ceiling
+    ))
+    po_id = created["po_id"]
+    asyncio.run(skill.execute(runtime, "submit_purchase_order", {"po_id": po_id}))
+    out = asyncio.run(skill.execute(
+        runtime, "approve_purchase_order", {"po_id": po_id, "autonomous": True},
+    ))
+    assert out["status"] == "ok" and out["state"] == "approved"
+
+
+def test_skill_illegal_transition_blocked(runtime):
+    skill = ProcurementFinanceSkill()
+    created = asyncio.run(skill.execute(
+        runtime, "create_purchase_order",
+        {"vendor_name": "Acme", "total_amount": 500.0},
+    ))
+    po_id = created["po_id"]
+    # approve a draft (must pass through pending_approval first) -> illegal
+    out = asyncio.run(skill.execute(runtime, "approve_purchase_order", {"po_id": po_id}))
+    assert out["status"] == "blocked"
+    assert "illegal_transition" in out["policy_precheck"]["reason_codes"]
+
+
+def test_skill_registered_on_runtime(runtime):
+    assert "approve_purchase_order" in runtime.supported_intents
+    assert "create_purchase_order" in runtime.supported_intents
+
+
+def test_seed_strategy_creates_po(runtime):
+    box = runtime.seed_box("purchase_order", {"vendor_name": "Acme", "total_amount": 750.0})
+    assert box["state"] == "draft"
+    assert box["id"].startswith("PO-")

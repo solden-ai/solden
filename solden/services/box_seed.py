@@ -63,4 +63,32 @@ class APSeedStrategy:
         )
 
 
+class PurchaseOrderSeedStrategy:
+    """Seeds a ``purchase_order`` Box from a procurement-request payload.
+
+    Unlike AP (which extracts from an email), a PO request is already
+    structured, so this just normalises org/requester defaults and
+    persists through the box-aware creator.
+    """
+
+    box_type = "purchase_order"
+
+    def seed(
+        self,
+        runtime: Any,
+        payload: Dict[str, Any],
+        *,
+        correlation_id: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        import uuid
+
+        data = dict(payload or {})
+        data.setdefault("po_id", f"PO-{uuid.uuid4().hex[:16]}")
+        data.setdefault("organization_id", getattr(runtime, "organization_id", ""))
+        data.setdefault("requested_by", getattr(runtime, "actor_id", "") or "procurement")
+        data.setdefault("status", "draft")
+        return runtime.db.create_purchase_order_box(data)
+
+
 register_seed_strategy(APSeedStrategy())
+register_seed_strategy(PurchaseOrderSeedStrategy())
