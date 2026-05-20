@@ -647,11 +647,19 @@ body:not(.theme-dark) .footer-cta {
   padding: 64px 0 24px;
   border-top: 1px solid rgba(31, 27, 22, 0.1);
   overflow: hidden;
+  position: relative;
+  /* room for the monument wordmark to rise from the bottom edge */
+  min-height: 440px;
 }
 .footer__inner {
   display: flex;
   flex-direction: column;
   gap: 56px;
+  position: relative;
+  z-index: 1;
+  /* push the legal strip to the bottom so the monument fills the
+     space between the top strip and the legal row */
+  min-height: inherit;
 }
 
 /* Top strip: tagline on the left, nav columns on the right */
@@ -720,27 +728,38 @@ body:not(.theme-dark) .footer-cta {
    bleeding off the bottom of the page. */
 .footer__wordmark {
   font-family: "Iowan Old Style", "Georgia", serif;
-  font-size: clamp(180px, 35vw, 580px);
-  line-height: 0.82;
-  letter-spacing: -0.04em;
+  font-size: clamp(240px, 46vw, 720px);
+  line-height: 0.9;
+  letter-spacing: -0.05em;
   font-weight: 500;
   color: rgba(31, 27, 22, 0.1);
-  /* Break out of the .shell max-width so the wordmark spans the full
-     viewport and centres on it — inside the shell it overflowed right
-     once it grew wider than the 1200px content box. Negative bottom
-     margin keeps the legal strip pulled up over the clipped glyphs. */
-  width: 100vw;
-  margin: 0 calc(50% - 50vw) -0.2em;
+  /* Monument: anchored to the footer's bottom edge and pushed down so
+     the lower ~38% of the glyphs bleeds past the edge and is clipped
+     by the footer's overflow:hidden — only the top of the letters
+     shows. left:50% + translateX(-50%) centres it on the viewport
+     regardless of width; nowrap keeps "solden" on one line. Sits
+     behind the footer content (z-index 0). */
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  /* scaleX compresses the word so it stays whole + within the width
+     while the font-size keeps the letters tall (monumental). Without
+     it, a font big enough to feel huge makes "solden" wider than the
+     viewport and the s/n bleed off unreadably. */
+  transform: translate(-50%, 35%) scaleX(0.85);
+  white-space: nowrap;
+  margin: 0;
   user-select: none;
   pointer-events: none;
   text-align: center;
-  position: relative;
   z-index: 0;
 }
 
 /* Legal strip: socials on the left, copyright on the right.
-   Sits above the wordmark (z-index) so the copy stays crisp over
-   the faint monument the negative margin pulls up behind it. */
+   Pinned to the bottom of the footer (margin-top:auto) so the top
+   strip stays up top and the monument wordmark fills the space
+   between. Sits above the wordmark (z-index) so the copy stays
+   crisp over the faint monument behind it. */
 .footer__legal {
   display: flex;
   justify-content: space-between;
@@ -753,6 +772,7 @@ body:not(.theme-dark) .footer-cta {
   color: rgba(31, 27, 22, 0.55);
   position: relative;
   z-index: 1;
+  margin-top: auto;
 }
 .footer__copyright a {
   color: rgba(31, 27, 22, 0.55);
