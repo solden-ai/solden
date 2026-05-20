@@ -69,6 +69,14 @@ class BoxType:
         Optional per-state minute thresholds beyond which a Box in that
         state is considered stuck. Falls back to a caller-provided
         default when absent.
+    initial_state
+        The state a freshly-created Box of this type enters. Lets the
+        planner/coordination engine open a Box without hardcoding a
+        per-type literal (e.g. AP's ``"received"``).
+    exception_state
+        The state a Box moves to when work stalls and a human is needed.
+        ``None`` means this type has no stuck state (e.g. bank_match): the
+        engine then raises a box_exception without moving state.
     """
 
     name: str
@@ -78,6 +86,8 @@ class BoxType:
     terminal_states: FrozenSet[str]
     exception_states: FrozenSet[str]
     stuck_thresholds: Dict[str, int] = field(default_factory=dict)
+    initial_state: str = ""
+    exception_state: Optional[str] = None
 
 
 BOX_TYPES: Dict[str, BoxType] = {}
@@ -101,13 +111,13 @@ def get(name: str) -> BoxType:
     return BOX_TYPES[name]
 
 
-def load_box(box_type: str, box_id: str, db: Any) -> Optional[Dict[str, Any]]:
+def get_box(box_type: str, box_id: str, db: Any) -> Optional[Dict[str, Any]]:
     """Load one Box row by (type, id). Returns the underlying store row.
 
     Dispatches to the appropriate store method based on ``box_type``.
     This is the generic read primitive other Box-level code (audit
-    joins, health drill-down) can use without knowing which table a
-    Box lives in.
+    joins, health drill-down, the coordination engine) can use without
+    knowing which table a Box lives in.
     """
     bt = get(box_type)
     if bt.source_table == "ap_items":
@@ -115,7 +125,65 @@ def load_box(box_type: str, box_id: str, db: Any) -> Optional[Dict[str, Any]]:
     if bt.source_table == "bank_match_boxes":
         return db.get_bank_match(box_id)
     raise NotImplementedError(
-        f"load_box has no loader for source_table={bt.source_table!r}"
+        f"get_box has no loader for source_table={bt.source_table!r}"
+    )
+
+
+def load_box(box_type: str, box_id: str, db: Any) -> Optional[Dict[str, Any]]:
+    """Deprecated alias for :func:`get_box`. Retained for existing callers."""
+    return get_box(box_type, box_id, db)
+
+
+def create_box(box_type: str, payload: Dict[str, Any], db: Any) -> Dict[str, Any]:
+    """Create a Box of *box_type*. Dispatches to the per-type store insert.
+
+    Generic counterpart to :func:`get_box` so the engine can open a Box
+    without naming a table.
+    """
+    bt = get(box_type)
+    if bt.source_table == "ap_items":
+        return db.create_ap_item(payload)
+    if bt.source_table == "bank_match_boxes":
+        return db.create_bank_match(payload)
+    raise NotImplementedError(
+        f"create_box has no creator for source_table={bt.source_table!r}"
+    )
+
+
+def update_box(box_type: str, box_id: str, db: Any, **fields: Any) -> Any:
+    """Update a Box of *box_type*. Dispatches to the per-type store writer.
+
+    The two registered types have deliberately different write shapes and
+    this seam encodes that rather than papering over it:
+
+    - ``ap_items`` takes a whitelisted column patch (``update_ap_item``).
+    - ``bank_match_boxes`` has no arbitrary column patch — only a
+      validated state advance (``update_bank_match_state``), which
+      requires a ``state`` and a non-empty actor. We accept only
+      ``state`` / ``actor_id`` (or ``decided_by``) / ``reason`` and
+      reject any other field instead of silently dropping it.
+    """
+    bt = get(box_type)
+    if bt.source_table == "ap_items":
+        return db.update_ap_item(box_id, **fields)
+    if bt.source_table == "bank_match_boxes":
+        target_state = fields.pop("state", None)
+        if target_state is None:
+            raise ValueError(
+                "update_box for bank_match requires a 'state' field"
+            )
+        actor_id = fields.pop("actor_id", None) or fields.pop("decided_by", None) or ""
+        reason = fields.pop("reason", "")
+        if fields:
+            raise ValueError(
+                "update_box for bank_match accepts only state/actor_id/reason; "
+                f"got extra fields {sorted(fields)}"
+            )
+        return db.update_bank_match_state(
+            box_id, target_state, actor_id=actor_id, reason=reason
+        )
+    raise NotImplementedError(
+        f"update_box has no writer for source_table={bt.source_table!r}"
     )
 
 
@@ -141,6 +209,8 @@ register(BoxType(
     open_states=frozenset(_AP_OPEN),
     terminal_states=frozenset(_AP_TERMINAL),
     exception_states=frozenset(_AP_EXCEPTION),
+    initial_state=APState.RECEIVED.value,
+    exception_state=APState.NEEDS_INFO.value,
 ))
 
 
@@ -158,6 +228,8 @@ register(BoxType(
     open_states=frozenset(_BANK_MATCH_OPEN),
     terminal_states=frozenset(_BANK_MATCH_TERMINAL),
     exception_states=frozenset(),  # bank_match has no "stuck" state by design
+    initial_state=BankMatchState.PROPOSED.value,
+    exception_state=None,  # no human-stall state; raise an exception instead
 ))
 
 
@@ -166,5 +238,8 @@ __all__ = [
     "BOX_TYPES",
     "register",
     "get",
+    "get_box",
     "load_box",
+    "create_box",
+    "update_box",
 ]
