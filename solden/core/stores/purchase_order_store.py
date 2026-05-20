@@ -33,7 +33,28 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from solden.core.purchase_order_states import (
+    CURRENT_PO_POLICY_VERSION,
+    IllegalPurchaseOrderTransitionError,
+    validate_po_transition,
+)
+from solden.services.purchase_orders import POStatus
+
 logger = logging.getLogger(__name__)
+
+
+# Columns the box-aware state writer is allowed to patch. POs carry a
+# rich master-data shape; the Box lifecycle only ever touches state +
+# the approval/erp/audit-adjacent columns. Mirrors
+# ``_AP_ITEM_ALLOWED_COLUMNS`` / ``_BANK_MATCH_ALLOWED_UPDATE_COLUMNS``.
+_PURCHASE_ORDER_ALLOWED_COLUMNS = frozenset({
+    "status",
+    "approved_by",
+    "approved_at",
+    "erp_po_id",
+    "notes",
+    "updated_at",
+})
 
 
 def _now_iso() -> str:
@@ -69,6 +90,12 @@ class PurchaseOrderStore:
             return None
         data = dict(row) if not isinstance(row, dict) else row
         data["line_items"] = _decode_json_list(data.pop("line_items_json", None))
+        # Box-generic alias: the engine, box_summary, and box_registry
+        # read ``state`` / ``id``, but the PO table uses ``status`` /
+        # ``po_id``. Expose both so a PO rings through the generic
+        # primitives without per-reader special-casing.
+        data.setdefault("state", data.get("status"))
+        data.setdefault("id", data.get("po_id"))
         return data
 
     @staticmethod
@@ -261,6 +288,108 @@ class PurchaseOrderStore:
             cur.execute(sql, (organization_id, limit))
             rows = cur.fetchall()
         return [self._po_row_to_dict(r) for r in rows if r is not None]
+
+    # ------------------------------------------------------------------
+    # Box lifecycle (purchase_order BoxType)
+    #
+    # These are the box-aware writers the runtime dispatches to via
+    # box_registry.create_box / update_box. They sit alongside the
+    # legacy save_purchase_order / approve_po (used by ERP import) and
+    # add the audit_events funnel + transition validation a Box needs.
+    # ------------------------------------------------------------------
+
+    def create_purchase_order_box(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Persist a PO and emit its creation audit row.
+
+        Generic counterpart to ``create_bank_match``: reuses the existing
+        upsert, then writes the ``box_type='purchase_order'`` creation
+        event so the PO rings through the same audit funnel as AP.
+        """
+        saved = self.save_purchase_order(payload)
+        po_id = str(saved.get("po_id") or "")
+        state = str(saved.get("status") or POStatus.DRAFT.value)
+        if hasattr(self, "append_audit_event"):
+            self.append_audit_event({
+                "box_id": po_id,
+                "box_type": "purchase_order",
+                "event_type": "purchase_order_created",
+                "to_state": state,
+                "actor_type": "system",
+                "actor_id": payload.get("requested_by") or "procurement",
+                "organization_id": saved.get("organization_id"),
+                "policy_version": CURRENT_PO_POLICY_VERSION,
+                "payload_json": {
+                    "po_number": saved.get("po_number"),
+                    "vendor_name": saved.get("vendor_name"),
+                    "total_amount": saved.get("total_amount"),
+                },
+                "idempotency_key": f"po-created:{po_id}",
+            })
+        return saved
+
+    def update_purchase_order_state(
+        self,
+        po_id: str,
+        target_state: str,
+        *,
+        actor_id: str,
+        reason: str = "",
+    ) -> Dict[str, Any]:
+        """Advance a PO Box to a new state, validating the edge.
+
+        Mirrors ``update_bank_match_state``: a non-empty ``actor_id`` is
+        required (the audit trail is the source of truth for who decided
+        each transition), the edge is validated against the PO state
+        machine, and the audit_events row is written atomically with the
+        column patch. Raises
+        :class:`IllegalPurchaseOrderTransitionError` on an illegal edge.
+        """
+        if not str(actor_id or "").strip():
+            raise ValueError(
+                "update_purchase_order_state requires a non-empty actor_id "
+                "for audit-trail integrity"
+            )
+        existing = self.get_purchase_order(po_id)
+        if not existing:
+            raise ValueError(f"purchase_order {po_id!r} not found")
+        current_state = str(existing.get("status") or "")
+        if not validate_po_transition(current_state, target_state):
+            raise IllegalPurchaseOrderTransitionError(current_state, target_state)
+        now = _now_iso()
+        patch: Dict[str, Any] = {"status": target_state, "updated_at": now}
+        if target_state == POStatus.APPROVED.value:
+            patch["approved_by"] = actor_id
+            patch["approved_at"] = now
+        self._patch_purchase_order(po_id, patch)
+
+        if hasattr(self, "append_audit_event"):
+            self.append_audit_event({
+                "box_id": po_id,
+                "box_type": "purchase_order",
+                "event_type": f"purchase_order_{target_state}",
+                "from_state": current_state,
+                "to_state": target_state,
+                "actor_type": "user",
+                "actor_id": actor_id,
+                "organization_id": existing.get("organization_id"),
+                "policy_version": CURRENT_PO_POLICY_VERSION,
+                "decision_reason": reason or None,
+                "idempotency_key": f"po-{target_state}:{po_id}:{now}",
+            })
+        return self.get_purchase_order(po_id)  # type: ignore[return-value]
+
+    def _patch_purchase_order(self, po_id: str, kwargs: Dict[str, Any]) -> None:
+        bad = set(kwargs.keys()) - _PURCHASE_ORDER_ALLOWED_COLUMNS
+        if bad:
+            raise ValueError(f"Disallowed columns for purchase_order update: {bad}")
+        if not kwargs:
+            return
+        set_clause = ", ".join(f"{k} = %s" for k in kwargs.keys())
+        sql = f"UPDATE purchase_orders SET {set_clause} WHERE po_id = %s"
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(sql, (*kwargs.values(), po_id))
+            conn.commit()
 
     # ------------------------------------------------------------------
     # Goods Receipts

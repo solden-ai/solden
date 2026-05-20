@@ -120,6 +120,7 @@ from solden.api.ops import router as ops_router
 from solden.api.outbox_ops import router as outbox_ops_router
 from solden.api.outlook_routes import router as outlook_router
 from solden.api.bank_match_routes import router as bank_match_router
+from solden.api.purchase_order_routes import router as purchase_order_router
 from solden.api.box_export import router as box_export_router
 from solden.api.box_owner_routes import router as box_owner_router
 from solden.api.box_revert_routes import router as box_revert_router
@@ -799,6 +800,10 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         r"^/api/workspace/bank-matches/[^/]+/accept$",
         r"^/api/workspace/bank-matches/[^/]+/reject$",
         r"^/api/workspace/bank-matches/[^/]+/export$",
+        # purchase_order BoxType — Solden's third BoxType (first AP-peer).
+        r"^/api/workspace/purchase-orders$",
+        r"^/api/workspace/purchase-orders/[^/]+$",
+        r"^/api/workspace/purchase-orders/[^/]+/(submit|approve|reject|cancel|close)$",
         r"^/api/agent/intents/skills/[^/]+/readiness$",
         r"^/api/agent/sessions/[^/]+$",
         r"^/api/agent/sessions/[^/]+/commands$",
@@ -1753,6 +1758,7 @@ app.include_router(box_revert_router)
 # proposals. The architectural test for the manifesto's "the
 # pattern generalizes" claim.
 app.include_router(bank_match_router)
+app.include_router(purchase_order_router)
 
 # Wave 2 / C4: manual payment confirmation surface
 app.include_router(payment_confirmations_router)

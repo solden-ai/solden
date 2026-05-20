@@ -41,6 +41,8 @@ from solden.core.bank_match_states import (
     BANK_MATCH_TERMINAL_STATES,
     BankMatchState,
 )
+from solden.core.purchase_order_states import PO_TERMINAL_STATES
+from solden.services.purchase_orders import POStatus
 
 
 @dataclass(frozen=True)
@@ -124,6 +126,8 @@ def get_box(box_type: str, box_id: str, db: Any) -> Optional[Dict[str, Any]]:
         return db.get_ap_item(box_id)
     if bt.source_table == "bank_match_boxes":
         return db.get_bank_match(box_id)
+    if bt.source_table == "purchase_orders":
+        return db.get_purchase_order(box_id)
     raise NotImplementedError(
         f"get_box has no loader for source_table={bt.source_table!r}"
     )
@@ -140,6 +144,8 @@ def create_box(box_type: str, payload: Dict[str, Any], db: Any) -> Dict[str, Any
         return db.create_ap_item(payload)
     if bt.source_table == "bank_match_boxes":
         return db.create_bank_match(payload)
+    if bt.source_table == "purchase_orders":
+        return db.create_purchase_order_box(payload)
     raise NotImplementedError(
         f"create_box has no creator for source_table={bt.source_table!r}"
     )
@@ -186,6 +192,17 @@ def update_box(
                 f"got extra fields {sorted(fields)}"
             )
         return db.update_bank_match_state(
+            box_id, state, actor_id=actor_id or "", reason=reason or ""
+        )
+    if bt.source_table == "purchase_orders":
+        if state is None:
+            raise ValueError("update_box for purchase_order requires a 'state'")
+        if fields:
+            raise ValueError(
+                "update_box for purchase_order accepts only state/actor_id/reason; "
+                f"got extra fields {sorted(fields)}"
+            )
+        return db.update_purchase_order_state(
             box_id, state, actor_id=actor_id or "", reason=reason or ""
         )
     raise NotImplementedError(
@@ -236,6 +253,27 @@ register(BoxType(
     exception_states=frozenset(),  # bank_match has no "stuck" state by design
     initial_state=BankMatchState.PROPOSED.value,
     exception_state=None,  # no human-stall state; raise an exception instead
+))
+
+
+# purchase_order — Solden's third BoxType, and the first AP-*peer*
+# (bank_match was AP-subordinate via a parent FK; a PO stands alone).
+# Reuses the existing purchase_orders table as its source; the row's
+# ``status`` column is the state field (aliased to ``state`` by the
+# store deserializer). Like bank_match it has no human-stall state —
+# a failed action raises a box_exception rather than parking the box.
+_PO_TERMINAL = {s.value for s in PO_TERMINAL_STATES}
+_PO_OPEN = {s.value for s in POStatus} - _PO_TERMINAL
+
+register(BoxType(
+    name="purchase_order",
+    source_table="purchase_orders",
+    state_field="status",
+    open_states=frozenset(_PO_OPEN),
+    terminal_states=frozenset(_PO_TERMINAL),
+    exception_states=frozenset(),
+    initial_state=POStatus.DRAFT.value,
+    exception_state=None,
 ))
 
 
