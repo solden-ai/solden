@@ -356,7 +356,7 @@ body.theme-dark .nav__link--manifesto { color: var(--text-on-dark); }
   transition: opacity 0.4s ease;
 }
 /* On scroll, the brand collapses to a centered mark and the nav
-   cluster on the right fades out with it — leaving just the icon. */
+   cluster on the right fades out with it, leaving just the icon. */
 .topbar.is-scrolled .topbar__cta {
   opacity: 0;
   pointer-events: none;
@@ -544,7 +544,7 @@ body:not(.theme-dark) .btn--secondary:hover {
 
 .hero__sub strong { color: var(--text-on-dark); font-weight: 600; }
 
-/* Stanza treatment — each clause on its own line with a terminal
+/* Stanza treatment, each clause on its own line with a terminal
    period. The voice the manifesto wants: declarative, not run-on. */
 .hero__sub--stanza {
   display: flex;
@@ -638,7 +638,7 @@ body:not(.theme-dark) .footer-cta {
 /* ── Footer ──────────────────────────────────────────────────
    ModernRelay-style: cream slab, tagline + nav columns at top,
    HUGE wordmark splash across the bottom as the brand monument,
-   tiny legal strip at the very bottom. No background image — the
+   tiny legal strip at the very bottom. No background image, the
    wordmark IS the visual. */
 
 .footer--mr {
@@ -719,7 +719,7 @@ body:not(.theme-dark) .footer-cta {
 }
 .footer__col a:hover { color: rgba(31, 27, 22, 1); }
 
-/* Huge wordmark splash — the brand monument. Light cream-tan so
+/* Huge wordmark splash, the brand monument. Light cream-tan so
    it reads as decorative texture, not as content. Sized via vw so
    it scales with the viewport. The negative margin-bottom pulls the
    legal strip up over the lower portion of the glyphs and lets the
@@ -735,7 +735,7 @@ body:not(.theme-dark) .footer-cta {
   color: rgba(31, 27, 22, 0.1);
   /* Monument: anchored to the footer's bottom edge and pushed down so
      the lower ~38% of the glyphs bleeds past the edge and is clipped
-     by the footer's overflow:hidden — only the top of the letters
+     by the footer's overflow:hidden, only the top of the letters
      shows. left:50% + translateX(-50%) centres it on the viewport
      regardless of width; nowrap keeps "solden" on one line. Sits
      behind the footer content (z-index 0). */
@@ -812,7 +812,7 @@ body:not(.theme-dark) .footer-cta {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   Manifesto page — long-form reading mode
+   Manifesto page, long-form reading mode
    ───────────────────────────────────────────────────────────── */
 
 body.theme-manifesto {
@@ -943,7 +943,7 @@ body.theme-manifesto {
   position: relative;
 }
 .manifesto__creed li::before {
-  content: "—";
+  content: "–";
   position: absolute;
   left: 0;
   top: 0;
@@ -1104,7 +1104,7 @@ body.theme-manifesto {
    Worked-example spotlight + Time-to-value roadmap
    ───────────────────────────────────────────────────────────── */
 
-/* Spotlight — narrative prose between solution and product intro */
+/* Spotlight, narrative prose between solution and product intro */
 .spotlight {
   padding: 96px 0 48px;
 }
@@ -1151,7 +1151,7 @@ body.theme-manifesto {
   font-weight: 600;
 }
 
-/* Time-to-value — four weeks, stacked rows */
+/* Time-to-value, four weeks, stacked rows */
 .ttv { padding: 96px 0 88px; }
 
 .ttv__head {
@@ -1225,7 +1225,7 @@ body.theme-manifesto {
   color: var(--text-on-dark-soft);
 }
 
-/* Phase 4 — copy-tightening hooks */
+/* Phase 4, copy-tightening hooks */
 
 .problem-coda__em {
   display: block;
@@ -1248,7 +1248,7 @@ body.theme-manifesto {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   Subpage cover + content (dark theme — about, contact, security)
+   Subpage cover + content (dark theme, about, contact, security)
    ───────────────────────────────────────────────────────────── */
 
 body.theme-subpage {
@@ -1455,7 +1455,7 @@ body.theme-subpage {
 }
 .founder-card__bio strong { color: var(--text-on-dark); font-weight: 600; }
 
-/* Contact page — aside + form together */
+/* Contact page, aside + form together */
 .contact-shell {
   max-width: 720px;
   margin: 0 auto;
@@ -1606,7 +1606,7 @@ body.theme-dark .muted {
   color: var(--text-on-dark-faint, rgba(255, 255, 255, 0.5)) !important;
 }
 
-/* Make .prose readable on dark background — security page body */
+/* Make .prose readable on dark background, security page body */
 body.theme-dark .prose h2 {
   color: var(--text-on-dark);
   font-size: clamp(24px, 3vw, 32px);
@@ -1647,14 +1647,14 @@ body.theme-dark .footer-cta__sub {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   Manifesto lineage — editorial portrait cards
+   Manifesto lineage, editorial portrait cards
    ───────────────────────────────────────────────────────────── */
 
 /* The plate / caption / dates / name / contribution / body
    structure is more editorial than the monogram tiles. Classical
    serif initial dominates the plate like a 19th-century
    book-engraving; the caption block reads like a museum placard.
-   No photographs — typography carries the weight. */
+   No photographs, typography carries the weight. */
 
 .lineage {
   list-style: none;
@@ -1691,7 +1691,7 @@ body.theme-dark .footer-cta__sub {
   transform: translateY(-2px);
 }
 
-/* Portrait plate — the "engraving" field. Subtle radial vignette
+/* Portrait plate, the "engraving" field. Subtle radial vignette
    on top of a layered noise gradient evokes aged paper without
    loading any texture asset. */
 .lineage__plate {
@@ -1752,7 +1752,7 @@ body.theme-dark .footer-cta__sub {
   -webkit-text-fill-color: var(--teal-soft);
 }
 
-/* Caption block — museum-placard layout */
+/* Caption block, museum-placard layout */
 .lineage__caption {
   padding: 22px 22px 24px;
   display: flex;

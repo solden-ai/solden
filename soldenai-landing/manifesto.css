@@ -1,9 +1,9 @@
 /* ═════════════════════════════════════════════════════════════
-   MANIFESTO — light editorial mode
+   MANIFESTO, light editorial mode
    ───────────────────────────────────────────────────────────── */
 
 body.theme-manifesto-light {
-  /* Warm off-white, like a book page — not pure white */
+  /* Warm off-white, like a book page, not pure white */
   background: #F9F5EC;
   color: #1F1B16;
   font-family: var(--font);
@@ -42,7 +42,7 @@ body.theme-manifesto-light .btn--primary:hover {
   border-color: #0a0907;
 }
 
-/* Article shell — narrow editorial column, generous breathing */
+/* Article shell, narrow editorial column, generous breathing */
 .essay {
   position: relative;
   padding: 0 0 96px;
@@ -57,7 +57,7 @@ body.theme-manifesto-light .btn--primary:hover {
   .essay__shell { padding: 0 24px; }
 }
 
-/* Cover — restrained, lots of whitespace, no chunky gradient */
+/* Cover, restrained, lots of whitespace, no chunky gradient */
 .essay__cover {
   padding: 72px 0 56px;
 }
@@ -215,7 +215,7 @@ body.theme-manifesto-light .btn--primary:hover {
   width: 100%;
 }
 
-/* Section rhythm — sections butt directly against each other.
+/* Section rhythm, sections butt directly against each other.
    Breathing room comes from the H2 top margin alone, so the essay
    reads as continuous narration without empty gaps. */
 .essay__section {
@@ -261,7 +261,7 @@ body.theme-manifesto-light .btn--primary:hover {
   color: rgba(31, 27, 22, 0.92) !important;
 }
 
-/* Drop cap — first letter of opening paragraph */
+/* Drop cap, first letter of opening paragraph */
 .dropcap {
   float: left;
   font-family: "Iowan Old Style", "Georgia", serif;
@@ -272,7 +272,7 @@ body.theme-manifesto-light .btn--primary:hover {
   color: #1F1B16;
 }
 
-/* Pull quotes — italic, indented, with a vertical rule */
+/* Pull quotes, italic, indented, with a vertical rule */
 .essay__pull {
   font-family: "Iowan Old Style", "Georgia", serif;
   font-size: clamp(22px, 2.6vw, 28px) !important;
@@ -300,7 +300,7 @@ body.theme-manifesto-light .btn--primary:hover {
   font-style: italic;
 }
 
-/* Creed — numbered list with italic flourish */
+/* Creed, numbered list with italic flourish */
 .essay__creed {
   list-style: none;
   padding: 0;
@@ -332,7 +332,7 @@ body.theme-manifesto-light .btn--primary:hover {
   font-weight: 400;
 }
 
-/* Definition list — what the runtime holds */
+/* Definition list, what the runtime holds */
 .essay__defs {
   display: flex;
   flex-direction: column;
@@ -356,12 +356,12 @@ body.theme-manifesto-light .btn--primary:hover {
 }
 .essay__def dd em { color: #1F1B16; }
 
-/* Asterism dividers — hidden. Sections butt directly so the essay
+/* Asterism dividers, hidden. Sections butt directly so the essay
    reads as continuous narration; the H2 margin provides the only
    breathing room between movements. */
 .essay__divider { display: none; }
 
-/* Lineage list — museum-placard rows with B&W square portraits.
+/* Lineage list, museum-placard rows with B&W square portraits.
    Each entry: portrait + caption on the left, italic numeral + serif
    text block on the right. Same treatment as the bronze figure on
    the cover, so the gallery reads as a continuation of the exhibit. */
@@ -388,7 +388,7 @@ body.theme-manifesto-light .btn--primary:hover {
   .lineage-entry { grid-template-columns: 1fr; gap: 12px; }
 }
 
-/* Portrait figure — B&W square framed in the same museum style as
+/* Portrait figure, B&W square framed in the same museum style as
    the cover tablet, with an italic serif caption beneath. */
 .lineage-entry__portrait { margin: 0; }
 
@@ -501,7 +501,7 @@ body.theme-manifesto-light .btn--primary:hover {
   align-items: center;
 }
 
-/* Buttons — dark on light */
+/* Buttons, dark on light */
 .btn--dark {
   background: #1F1B16;
   color: #F9F5EC;
@@ -526,7 +526,7 @@ body.theme-manifesto-light .btn--primary:hover {
 .btn--text:hover { color: #4a3f30; }
 
 /* ═════════════════════════════════════════════════════════════
-   SUBPAGE LIGHT THEME — about / contact / security
+   SUBPAGE LIGHT THEME, about / contact / security
    Reuses .page-* classes from styles.css but overrides their
    dark treatment with the same editorial palette + serif type
    as the manifesto page.
@@ -661,7 +661,7 @@ body.theme-subpage-light .page-def dd {
   color: rgba(31, 27, 22, 0.82);
 }
 
-/* Founders cards — light museum-card treatment */
+/* Founders cards, light museum-card treatment */
 body.theme-subpage-light .founder-card {
   background: rgba(255, 255, 255, 0.5);
   border: 1px solid rgba(31, 27, 22, 0.14);
@@ -894,7 +894,7 @@ body.theme-subpage-light .btn--ghost:hover {
   border-color: #1F1B16;
 }
 
-/* Subpage topbar + footer — inherit the light editorial palette
+/* Subpage topbar + footer, inherit the light editorial palette
    without requiring per-page class changes on those elements. */
 body.theme-subpage-light .topbar {
   background: #F9F5EC;
@@ -902,7 +902,7 @@ body.theme-subpage-light .topbar {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   LANDING LIGHT THEME — index.html overrides
+   LANDING LIGHT THEME, index.html overrides
    Reuses all existing landing markup (hero, ribbon, flow, rules,
    audit, surfaces, outcomes, time-to-value, etc.) but overrides
    the dark palette + sans bold treatment with the editorial
@@ -1007,7 +1007,7 @@ body.theme-light-landing .strip__text {
 }
 body.theme-light-landing .strip__text strong { color: #1F1B16; font-weight: 600; }
 
-/* SECTION TITLES — replace bold sans with serif medium */
+/* SECTION TITLES, replace bold sans with serif medium */
 body.theme-light-landing .section-title {
   font-family: "Iowan Old Style", "Georgia", serif;
   font-size: clamp(32px, 4.4vw, 52px);
@@ -1109,7 +1109,7 @@ body.theme-light-landing .spotlight__close {
 }
 body.theme-light-landing .spotlight__close-em { color: #1F1B16; font-style: italic; }
 
-/* FLOW (5 stages with code) — keep code blocks dark like specimens
+/* FLOW (5 stages with code), keep code blocks dark like specimens
    in a print book; everything else light. */
 body.theme-light-landing .flow { background: transparent; }
 body.theme-light-landing .flow__intro p { color: rgba(31, 27, 22, 0.75); }
@@ -1141,7 +1141,7 @@ body.theme-light-landing .audit__code {
 /* RULES section */
 body.theme-light-landing .rules { background: transparent; }
 
-/* AUDIT chain visualization — keep the dark "specimen" box */
+/* AUDIT chain visualization, keep the dark "specimen" box */
 body.theme-light-landing .audit { background: transparent; }
 
 /* FITS / surfaces */
@@ -1207,7 +1207,7 @@ body.theme-light-landing .footer-cta__sub {
 }
 
 /* FOOTER */
-/* Generic text-color overrides — catch anything not explicitly themed */
+/* Generic text-color overrides, catch anything not explicitly themed */
 body.theme-light-landing { color: #1F1B16; }
 body.theme-light-landing p { color: rgba(31, 27, 22, 0.85); }
 body.theme-light-landing strong { color: #1F1B16; }
@@ -1270,7 +1270,7 @@ body.theme-light-landing .stage-card__code * {
   color: inherit;
 }
 
-/* Flow section step titles — were missed in the first override
+/* Flow section step titles, were missed in the first override
    pass because they use .flow__step-title, not .stage-card__h. */
 body.theme-light-landing .flow__step-title {
   font-family: "Iowan Old Style", "Georgia", serif;
@@ -1299,7 +1299,7 @@ body.theme-light-landing .flow__step-tag {
   letter-spacing: 0.02em;
 }
 
-/* Rules section — mode card titles */
+/* Rules section, mode card titles */
 body.theme-light-landing .rules__mode-title {
   font-family: "Iowan Old Style", "Georgia", serif;
   font-style: italic;
@@ -1309,7 +1309,7 @@ body.theme-light-landing .rules__mode-title {
   line-height: 1.2;
 }
 
-/* Footer-CTA category-pair lines — large heading pair at the
+/* Footer-CTA category-pair lines, large heading pair at the
    bottom of the landing. Was missed because they're not <h*>
    elements but <div class="category-pair__line">. */
 body.theme-light-landing .category-pair__line {
@@ -1327,7 +1327,7 @@ body.theme-light-landing .category-pair__line--accent {
 /* ─── Section eyebrow (Attio category-tag pattern) ────────────
    Small monospace caps tag above each section title. Gives each
    section a visible "chapter" label like Attio's tabs above their
-   product demo — but in-line rather than as nav. */
+   product demo, but in-line rather than as nav. */
 
 body.theme-light-landing .section-eyebrow {
   display: inline-block;
@@ -1347,7 +1347,7 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   HERO — welder background (manifesto in one frame)
+   HERO, welder background (manifesto in one frame)
    Fragmentation on the left, the bond on the right.
    The image carries the metaphor; copy carries the claim.
    ───────────────────────────────────────────────────────────── */
@@ -1439,7 +1439,7 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 
-/* Hero subtitle (thesis line) — single declarative beat under the H1.
+/* Hero subtitle (thesis line), single declarative beat under the H1.
    Regular serif, no italic, slightly larger than body, generous
    max-width so the trio reads as one phrase per line pair rather
    than fragmented. */
@@ -1487,7 +1487,7 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   PROBLEM — twenty tools, one thread
+   PROBLEM, twenty tools, one thread
    Three short paragraphs + a controller pull quote.
    No bullets. Editorial body weight.
    ───────────────────────────────────────────────────────────── */
@@ -1563,7 +1563,7 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   HOW SOLDEN WORKS — runtime concept timeline (Basis-style)
+   HOW SOLDEN WORKS, runtime concept timeline (Basis-style)
    Four concept bullets on a vertical timeline rail. As the reader
    scrolls, IntersectionObserver in site.js advances the active
    bullet (data-state: future → active → past). Active bullet shows
@@ -1689,7 +1689,7 @@ body.theme-light-landing .section-eyebrow::before {
   padding-bottom: 0;
 }
 
-/* Per-bullet connector line — always solid black, flex-equivalent
+/* Per-bullet connector line, always solid black, flex-equivalent
    via absolute positioning so it reaches the next dot regardless
    of body height. The state readout is carried by the dot (hollow
    vs filled) + heading size + body collapse. No fill animation. */
@@ -1707,7 +1707,7 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 /* Basis-style dot: 18px hollow circle default, fills solid black
-   on active. Same size in every state — visual hierarchy comes
+   on active. Same size in every state, visual hierarchy comes
    from the heading size and the body collapse, not the dot. */
 .runtime__dot {
   position: absolute;
@@ -1728,7 +1728,7 @@ body.theme-light-landing .section-eyebrow::before {
 
 /* Basis-style title: always visible, but smaller + faded when
    inactive. Active state scales up the font-size and brings to
-   full opacity. The size change is the visual cue — heading
+   full opacity. The size change is the visual cue, heading
    grows into focus, shrinks back out. Transitions size, opacity,
    and bottom margin together so the layout settles smoothly. */
 .runtime__bullet-title {
@@ -1890,7 +1890,7 @@ body.theme-light-landing .section-eyebrow::before {
   stroke: none;
 }
 
-/* Arrow tip — short filled triangle used where a connector ends
+/* Arrow tip, short filled triangle used where a connector ends
    at a surface card. The fill makes it read as direction. Used
    either as a standalone polygon or inside a <marker>. */
 .runtime__glyph .runtime__glyph-tip {
@@ -1904,7 +1904,7 @@ body.theme-light-landing .section-eyebrow::before {
 
 
 /* ═════════════════════════════════════════════════════════════
-   TRUST STRIP — runs-across word-marks inside the hero.
+   TRUST STRIP, runs-across word-marks inside the hero.
    No customer logos (we don't fabricate); the real trust signal
    is the systems Solden plugs into, plus one architectural fact
    (sha256 audit chain). Mono caps eyebrow + serif word-marks.
@@ -1969,7 +1969,7 @@ body.theme-light-landing .section-eyebrow::before {
 
 
 /* ═════════════════════════════════════════════════════════════
-   SCOPE — five back-office functions the runtime covers.
+   SCOPE, five back-office functions the runtime covers.
    Header on top (left-aligned editorial), then a 5-column grid
    below with vertical dividers between cells. Each cell carries
    its function name (serif H3) plus a one-line description of
@@ -2092,7 +2092,7 @@ body.theme-light-landing .section-eyebrow::before {
 
 
 /* ═════════════════════════════════════════════════════════════
-   SOVEREIGNTY — text-only runtime contract beat
+   SOVEREIGNTY, text-only runtime contract beat
    Replaces the bronze-plate aside. The belief stays as a serif H2
    with em-italic accent; gloss paragraph reads as editorial body.
    ───────────────────────────────────────────────────────────── */
@@ -2135,7 +2135,7 @@ body.theme-light-landing .section-eyebrow::before {
 
 
 /* ═════════════════════════════════════════════════════════════
-   FOR-WHOM — three-column buyer block
+   FOR-WHOM, three-column buyer block
    No icons. Header + body. Equal weight.
    ───────────────────────────────────────────────────────────── */
 
@@ -2193,7 +2193,7 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   THESIS — fragmentation grows with agents
+   THESIS, fragmentation grows with agents
    Narrow editorial column. Last paragraph stings.
    ───────────────────────────────────────────────────────────── */
 
@@ -2243,7 +2243,7 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   FOOTER CTA — trust line beneath the buttons
+   FOOTER CTA, trust line beneath the buttons
    ───────────────────────────────────────────────────────────── */
 
 .footer-cta__trust {
@@ -2256,7 +2256,7 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   PRIVACY PAGE — declarative posture page, same column system
+   PRIVACY PAGE, declarative posture page, same column system
    as the manifesto body. Short sections, mono caps headings.
    ───────────────────────────────────────────────────────────── */
 

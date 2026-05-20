@@ -114,7 +114,7 @@
       teams:    'teams',
       netsuite: 'netsuite',
       sap:      'sap',
-      agent:    null,  // hidden — see real workspace ribbon convention
+      agent:    null,  // hidden, see real workspace ribbon convention
     };
 
     function escape(s) {
@@ -286,7 +286,7 @@
     // Basis-style scroll mapping. Track is (count + 1) × viewport
     // tall. As the user scrolls past the track top, divide that
     // scrolled distance by one viewport to get the active index.
-    // Each bullet owns exactly one viewport of scroll — generous
+    // Each bullet owns exactly one viewport of scroll, generous
     // reading pace before handoff.
     function update() {
       var rect = track.getBoundingClientRect();
