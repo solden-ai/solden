@@ -3,11 +3,9 @@
  *
  * An admin defines a workflow type from data alone: states, transitions, and
  * actions. Validate against the backend, save a draft, activate a version.
- * Once a type is active, create boxes of it and drive them through their
- * declared actions — all against the generic /api/workspace/workflow-specs and
- * /api/workspace/workflows endpoints. No deploy, no code.
- *
- * NOTE: written to the established page patterns; pending browser QA.
+ * Once active, create boxes of it and drive them through their declared
+ * actions — all against /api/workspace/workflow-specs and
+ * /api/workspace/workflows. Uses the shared workspace design language.
  */
 import { h } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
@@ -18,6 +16,17 @@ import { EmptyState, LoadingSkeleton, ErrorRetry } from '../../components/StateP
 const html = htm.bind(h);
 
 const csv = (s) => String(s || '').split(',').map((x) => x.trim()).filter(Boolean);
+
+const STATUS_TONE = {
+  draft: { bg: '#F4F4F5', fg: '#52525B', bd: '#D4D4D8' },
+  active: { bg: '#ECFDF5', fg: '#0A663E', bd: '#86EFAC' },
+  archived: { bg: '#FEF2F2', fg: '#B91C1C', bd: '#FECACA' },
+};
+
+function statusChip(status) {
+  const t = STATUS_TONE[status] || STATUS_TONE.draft;
+  return html`<span class="secondary-chip" style=${`background:${t.bg};color:${t.fg};border-color:${t.bd}`}>${status}</span>`;
+}
 
 export default function WorkflowsPage({ api, orgId, toast }) {
   const [specs, setSpecs] = useState([]);
@@ -79,9 +88,7 @@ export default function WorkflowsPage({ api, orgId, toast }) {
   };
 
   const [validateSpec, validating] = useAction(async () => {
-    const res = await api('/api/workspace/workflow-specs/validate', {
-      method: 'POST', body: buildSpec(),
-    });
+    const res = await api('/api/workspace/workflow-specs/validate', { method: 'POST', body: buildSpec() });
     setErrors(res?.errors || []);
     toast?.(res?.valid ? 'Spec is valid.' : 'Spec has errors.', res?.valid ? 'success' : 'error');
   });
@@ -152,112 +159,139 @@ export default function WorkflowsPage({ api, orgId, toast }) {
     : [];
 
   return html`
-    <div class="panel">
-      <div class="panel__header"><h1>Workflows</h1></div>
+    <div class="secondary-banner">
+      <div class="secondary-banner-copy">
+        <h3>Workflows</h3>
+        <p class="muted">Define custom workflow types — states, transitions, and actions — with no code. Activate one, then run boxes through it on the same runtime as AP and Procurement.</p>
+      </div>
+    </div>
 
-      <section class="wf-builder" style="border:1px solid var(--cl-border, #ddd); border-radius:8px; padding:16px; margin-bottom:20px;">
-        <h2>New workflow type</h2>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <label>Type name (snake_case)
-            <input class="input" value=${boxType} onInput=${(e) => setBoxType(e.target.value)} placeholder="contract_review" />
-          </label>
-          <label>URL slug
-            <input class="input" value=${urlSlug} onInput=${(e) => setUrlSlug(e.target.value)} placeholder="contract-reviews" />
-          </label>
-          <label>States (comma-separated)
-            <input class="input wf-states" value=${statesText} onInput=${(e) => setStatesText(e.target.value)} placeholder="draft, in_review, approved, rejected" />
-          </label>
-        </div>
+    <div class="panel wf-builder">
+      <div class="panel-head compact"><h3>New workflow type</h3></div>
 
-        ${states.length > 0 && html`
-          <div style="margin-top:12px;">
+      <div class="secondary-form-grid">
+        <label>Type name (snake_case)
+          <input value=${boxType} onInput=${(e) => setBoxType(e.target.value)} placeholder="contract_review" />
+        </label>
+        <label>URL slug
+          <input value=${urlSlug} onInput=${(e) => setUrlSlug(e.target.value)} placeholder="contract-reviews" />
+        </label>
+      </div>
+      <div class="secondary-form-stack" style="margin-top:14px">
+        <label>States (comma-separated)
+          <input class="wf-states" value=${statesText} onInput=${(e) => setStatesText(e.target.value)} placeholder="draft, in_review, approved, rejected" />
+        </label>
+      </div>
+
+      ${states.length > 0 && html`
+        <div style="margin-top:18px; display:grid; gap:16px;">
+          <div class="secondary-form-grid">
             <label>Initial state
-              <select class="input" value=${initialState} onChange=${(e) => setInitialState(e.target.value)}>
+              <select value=${initialState} onChange=${(e) => setInitialState(e.target.value)}>
                 <option value="">— pick —</option>
                 ${states.map((s) => html`<option value=${s}>${s}</option>`)}
               </select>
             </label>
-            <div style="margin-top:8px;"><strong>Terminal states:</strong>
+          </div>
+
+          <div>
+            <div class="muted" style="font-weight:500; margin-bottom:8px">Terminal states</div>
+            <div class="secondary-card-tags">
               ${states.map((s) => html`
-                <label style="margin-left:8px;">
+                <label key=${s} class="secondary-chip" style="cursor:pointer; gap:6px; display:inline-flex; align-items:center">
                   <input type="checkbox" checked=${!!terminal[s]} onChange=${(e) => setTerminal({ ...terminal, [s]: e.target.checked })} /> ${s}
                 </label>`)}
             </div>
-            <div style="margin-top:8px;"><strong>Transitions</strong>
+          </div>
+
+          <div>
+            <div class="muted" style="font-weight:500; margin-bottom:8px">Transitions</div>
+            <div class="secondary-form-stack">
               ${states.map((s) => html`
-                <div key=${s} style="display:flex; gap:6px; align-items:center; margin:4px 0;">
-                  <span style="min-width:120px;">${s} →</span>
-                  <input class="input" placeholder="next states (comma)" value=${transText[s] || ''} onInput=${(e) => setTransText({ ...transText, [s]: e.target.value })} />
-                </div>`)}
+                <label key=${s}>${s} →
+                  <input placeholder="next states (comma-separated)" value=${transText[s] || ''} onInput=${(e) => setTransText({ ...transText, [s]: e.target.value })} />
+                </label>`)}
             </div>
-            <div style="margin-top:8px;"><strong>Actions</strong>
+          </div>
+
+          <div>
+            <div class="muted" style="font-weight:500; margin-bottom:8px">Actions (button → target state)</div>
+            <div class="secondary-form-stack">
               ${actions.map((a, i) => html`
-                <div key=${i} style="display:flex; gap:6px; margin:4px 0;">
-                  <input class="input" placeholder="action (e.g. approve)" value=${a.action} onInput=${(e) => setActions(actions.map((x, j) => j === i ? { ...x, action: e.target.value } : x))} />
-                  <select class="input" value=${a.target} onChange=${(e) => setActions(actions.map((x, j) => j === i ? { ...x, target: e.target.value } : x))}>
-                    <option value="">→ target</option>
-                    ${states.map((s) => html`<option value=${s}>${s}</option>`)}
-                  </select>
+                <div key=${i} class="secondary-form-grid" style="gap:8px">
+                  <label>Action name
+                    <input placeholder="approve" value=${a.action} onInput=${(e) => setActions(actions.map((x, j) => j === i ? { ...x, action: e.target.value } : x))} />
+                  </label>
+                  <label>Target state
+                    <select value=${a.target} onChange=${(e) => setActions(actions.map((x, j) => j === i ? { ...x, target: e.target.value } : x))}>
+                      <option value="">— pick —</option>
+                      ${states.map((s) => html`<option value=${s}>${s}</option>`)}
+                    </select>
+                  </label>
                 </div>`)}
-              <button class="btn btn--sm" onClick=${() => setActions([...actions, { action: '', target: '' }])}>+ action</button>
+              <div><button class="btn-ghost btn-sm" onClick=${() => setActions([...actions, { action: '', target: '' }])}>+ Add action</button></div>
             </div>
-          </div>`}
+          </div>
+        </div>`}
 
-        ${errors.length > 0 && html`
-          <ul class="wf-errors" style="color:var(--cl-danger,#b00); margin-top:10px;">
-            ${errors.map((e) => html`<li key=${e}>${e}</li>`)}
-          </ul>`}
+      ${errors.length > 0 && html`
+        <ul class="wf-errors" style="margin:14px 0 0; padding-left:18px">
+          ${errors.map((e) => html`<li key=${e} class="form-error" style="list-style:disc">${e}</li>`)}
+        </ul>`}
 
-        <div style="margin-top:12px; display:flex; gap:8px;">
-          <button class="btn" disabled=${validating} onClick=${validateSpec}>Validate</button>
-          <button class="btn btn--primary" disabled=${saving} onClick=${saveDraft}>${saving ? 'Saving…' : 'Save draft'}</button>
-        </div>
-      </section>
+      <div class="secondary-inline-actions" style="margin-top:18px">
+        <button class="btn-secondary" disabled=${validating} onClick=${validateSpec}>${validating ? 'Validating…' : 'Validate'}</button>
+        <button class="btn-primary" disabled=${saving} onClick=${saveDraft}>${saving ? 'Saving…' : 'Save draft'}</button>
+      </div>
+    </div>
 
-      <h2>Your workflow types</h2>
+    <div class="panel">
+      <div class="panel-head compact"><h3>Your workflow types</h3></div>
       ${specs.length === 0
         ? html`<${EmptyState} title="No workflow types yet" description="Define one above to get started." />`
         : html`
-          <table class="data-table">
-            <thead><tr><th>Type</th><th>Version</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody>
-              ${specs.map((s) => html`
-                <tr key=${s.box_type + ':' + s.version}>
-                  <td>${s.box_type}</td>
-                  <td>v${s.version}</td>
-                  <td><span class="badge">${s.status}</span></td>
-                  <td>
-                    ${s.status === 'draft' && html`<button class="btn btn--sm" onClick=${() => activate(s.box_type, s.version)}>Activate</button>`}
-                    ${s.status === 'active' && html`<button class="btn btn--sm" onClick=${() => viewBoxes(s.box_type)}>View boxes</button>`}
-                  </td>
-                </tr>`)}
-            </tbody>
-          </table>`}
-
-      ${selectedType && html`
-        <section class="wf-boxes" style="margin-top:20px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h2>${selectedType} boxes</h2>
-            <button class="btn btn--primary btn--sm" onClick=${createBox}>New box</button>
-          </div>
-          ${boxes.length === 0
-            ? html`<${EmptyState} title="No boxes" description="Create one to start." />`
-            : html`
-              <table class="data-table">
-                <thead><tr><th>ID</th><th>State</th><th>Actions</th></tr></thead>
-                <tbody>
-                  ${boxes.map((b) => html`
-                    <tr key=${b.id}>
-                      <td>${b.id}</td>
-                      <td><span class="badge">${b.state}</span></td>
-                      <td>
-                        ${selectedActions.map(([action]) => html`
-                          <button class="btn btn--sm" onClick=${() => actOnBox(b.id, action)}>${action}</button>`)}
-                      </td>
-                    </tr>`)}
-                </tbody>
-              </table>`}
-        </section>`}
+          <div class="secondary-card-list">
+            ${specs.map((s) => html`
+              <div key=${s.box_type + ':' + s.version} class="secondary-card">
+                <div class="secondary-card-head">
+                  <div class="secondary-card-copy">
+                    <strong class="secondary-card-title">${s.box_type}</strong>
+                    <div class="secondary-card-meta">version ${s.version}</div>
+                    <div class="secondary-card-tags">${statusChip(s.status)}</div>
+                  </div>
+                </div>
+                <div class="secondary-card-actions">
+                  ${s.status === 'draft' && html`<button class="btn-primary btn-sm" onClick=${() => activate(s.box_type, s.version)}>Activate</button>`}
+                  ${s.status === 'active' && html`<button class="btn-secondary btn-sm" onClick=${() => viewBoxes(s.box_type)}>View boxes</button>`}
+                </div>
+              </div>`)}
+          </div>`}
     </div>
+
+    ${selectedType && html`
+      <div class="panel">
+        <div class="panel-head compact" style="display:flex; justify-content:space-between; align-items:center">
+          <h3>${selectedType} boxes</h3>
+          <button class="btn-primary btn-sm" onClick=${createBox}>New box</button>
+        </div>
+        ${boxes.length === 0
+          ? html`<${EmptyState} title="No boxes" description="Create one to start." />`
+          : html`
+            <div class="secondary-card-list">
+              ${boxes.map((b) => html`
+                <div key=${b.id} class="secondary-card">
+                  <div class="secondary-card-head">
+                    <div class="secondary-card-copy">
+                      <strong class="secondary-card-title">${b.id}</strong>
+                      <div class="secondary-card-tags"><span class="secondary-chip">${b.state}</span></div>
+                    </div>
+                  </div>
+                  <div class="secondary-card-actions">
+                    ${selectedActions.map(([action]) => html`
+                      <button class="btn-secondary btn-sm" onClick=${() => actOnBox(b.id, action)}>${action}</button>`)}
+                  </div>
+                </div>`)}
+            </div>`}
+      </div>`}
   `;
 }

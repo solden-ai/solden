@@ -3,9 +3,8 @@
  *
  * Lists POs, creates a draft, and drives the approval lifecycle
  * (submit -> approve / reject -> close / cancel) against the
- * /api/workspace/purchase-orders endpoints. Mirrors VendorsPage.
- *
- * NOTE: written to the established page patterns but pending browser QA.
+ * /api/workspace/purchase-orders endpoints. Uses the shared workspace
+ * design language (secondary-banner / secondary-card / btn-*).
  */
 import { h } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
@@ -25,6 +24,23 @@ const ACTIONS_BY_STATE = {
   partially_received: [['receive', 'Receive more'], ['close', 'Close']],
   fully_received: [['close', 'Close']],
 };
+
+const STATUS_TONE = {
+  draft: { bg: '#F4F4F5', fg: '#52525B', bd: '#D4D4D8' },
+  pending_approval: { bg: '#FEF3C7', fg: '#92400E', bd: '#FDE68A' },
+  approved: { bg: '#ECFDF5', fg: '#0A663E', bd: '#86EFAC' },
+  partially_received: { bg: '#EFF6FF', fg: '#1E40AF', bd: '#BFDBFE' },
+  fully_received: { bg: '#EFF6FF', fg: '#1E40AF', bd: '#BFDBFE' },
+  closed: { bg: '#F4F4F5', fg: '#52525B', bd: '#D4D4D8' },
+  cancelled: { bg: '#FEF2F2', fg: '#B91C1C', bd: '#FECACA' },
+};
+
+function statusChip(status) {
+  const t = STATUS_TONE[status] || STATUS_TONE.draft;
+  return html`<span class="secondary-chip" style=${`background:${t.bg};color:${t.fg};border-color:${t.bd}`}>
+    ${String(status || '').replace(/_/g, ' ')}
+  </span>`;
+}
 
 export default function ProcurementPage({ api, orgId, toast }) {
   const [pos, setPos] = useState([]);
@@ -49,9 +65,7 @@ export default function ProcurementPage({ api, orgId, toast }) {
     }
   };
 
-  useEffect(() => {
-    void load({ silent: true });
-  }, [api, orgId]);
+  useEffect(() => { void load({ silent: true }); }, [api, orgId]);
 
   const [createPo, creating] = useAction(async () => {
     const name = String(vendorName || '').trim();
@@ -101,53 +115,58 @@ export default function ProcurementPage({ api, orgId, toast }) {
   }
 
   return html`
-    <div class="panel">
-      <div class="panel__header">
-        <h1>Procurement</h1>
-        <input
-          class="input"
-          placeholder="Search vendor or PO #"
-          value=${search}
-          onInput=${(e) => setSearch(e.target.value)}
-        />
+    <div class="secondary-banner">
+      <div class="secondary-banner-copy">
+        <h3>Procurement</h3>
+        <p class="muted">Purchase orders and their approval lifecycle. Create a PO, then drive it through approval, receipt, and close.</p>
       </div>
+    </div>
 
-      <div class="po-create" style="display:flex; gap:8px; align-items:flex-end; margin:12px 0;">
+    <div class="panel">
+      <div class="secondary-form-grid po-create">
         <label>Vendor
-          <input class="input" value=${vendorName} onInput=${(e) => setVendorName(e.target.value)} />
+          <input value=${vendorName} onInput=${(e) => setVendorName(e.target.value)} placeholder="e.g. Acme Supplies" />
         </label>
         <label>Amount
-          <input class="input" type="number" value=${amount} onInput=${(e) => setAmount(e.target.value)} />
+          <input type="number" value=${amount} onInput=${(e) => setAmount(e.target.value)} placeholder="0.00" />
         </label>
-        <button class="btn btn--primary" disabled=${creating} onClick=${createPo}>
+      </div>
+      <div class="secondary-inline-actions" style="margin-top:14px">
+        <button class="btn-primary" disabled=${creating} onClick=${createPo}>
           ${creating ? 'Creating…' : 'New PO'}
         </button>
       </div>
+    </div>
 
-      ${filtered.length === 0
-        ? html`<${EmptyState} title="No purchase orders" description="Create one to start the approval workflow." />`
-        : html`
-          <table class="data-table">
-            <thead><tr>
-              <th>PO #</th><th>Vendor</th><th>Amount</th><th>Status</th><th>Actions</th>
-            </tr></thead>
-            <tbody>
-              ${filtered.map((p) => html`
-                <tr key=${p.po_id}>
-                  <td>${p.po_number || p.po_id}</td>
-                  <td>${p.vendor_name || '—'}</td>
-                  <td>${formatAmount(p.total_amount, p.currency)}</td>
-                  <td><span class="badge">${p.status}</span></td>
-                  <td>
-                    ${(ACTIONS_BY_STATE[p.status] || []).map(([action, label]) => html`
-                      <button class="btn btn--sm" onClick=${() => act(p.po_id, action)}>${label}</button>
-                    `)}
-                  </td>
-                </tr>
-              `)}
-            </tbody>
-          </table>
-        `}
+    <div class="panel">
+      <div class="secondary-search-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" stroke-width="2" style="position:absolute;left:10px;top:50%;transform:translateY(-50%)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input placeholder="Search vendor or PO #" value=${search} onInput=${(e) => setSearch(e.target.value)} />
+      </div>
+
+      <div class="secondary-card-list" style="margin-top:14px">
+        ${filtered.length === 0
+          ? html`<${EmptyState} title="No purchase orders" description="Create one to start the approval workflow." />`
+          : filtered.map((p) => html`
+            <div key=${p.po_id} class="secondary-card">
+              <div class="secondary-card-head">
+                <div class="secondary-card-copy">
+                  <strong class="secondary-card-title">${p.po_number || p.po_id}</strong>
+                  <div class="secondary-card-meta">${p.vendor_name || 'Unknown vendor'}</div>
+                  <div class="secondary-card-tags">${statusChip(p.status)}</div>
+                </div>
+                <div class="secondary-card-stat">
+                  <strong>${formatAmount(p.total_amount, p.currency)}</strong>
+                </div>
+              </div>
+              <div class="secondary-card-actions">
+                ${(ACTIONS_BY_STATE[p.status] || []).map(([action, label]) => html`
+                  <button class="btn-secondary btn-sm" onClick=${() => act(p.po_id, action)}>${label}</button>
+                `)}
+              </div>
+            </div>
+          `)}
+      </div>
     </div>
   `;
 }
