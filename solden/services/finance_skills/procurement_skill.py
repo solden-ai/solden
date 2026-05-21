@@ -55,6 +55,7 @@ class ProcurementFinanceSkill(FinanceSkill):
             "create_purchase_order",
             "issue_purchase_order",
             "receive_purchase_order",
+            "amend_purchase_order",
             *_INTENT_TARGET.keys(),
         }
     )
@@ -165,6 +166,10 @@ class ProcurementFinanceSkill(FinanceSkill):
                 POStatus.APPROVED.value, POStatus.PARTIALLY_RECEIVED.value,
             }:
                 reason_codes.append("po_not_receivable")
+
+        if normalized == "amend_purchase_order":
+            if current != POStatus.DRAFT.value:
+                reason_codes.append("po_not_amendable")
 
         routing = None
         if normalized == "approve_purchase_order":
@@ -291,16 +296,34 @@ class ProcurementFinanceSkill(FinanceSkill):
                 "erp_result": result,
             }
 
+        if normalized == "amend_purchase_order":
+            box = runtime.db.amend_purchase_order_box(
+                context["po_id"], payload.get("fields") or {}, actor_id=actor_id,
+            )
+            return {
+                "skill_id": self.skill_id,
+                "intent": normalized,
+                "status": "amended",
+                "po_id": context["po_id"],
+                "state": box.get("state") if isinstance(box, dict) else None,
+            }
+
         if normalized == "receive_purchase_order":
             import uuid as _uuid
             po = runtime.db.get_purchase_order(context["po_id"])
-            partial = bool(payload.get("partial"))
-            target_state = (
-                POStatus.PARTIALLY_RECEIVED.value if partial
-                else POStatus.FULLY_RECEIVED.value
+            # Reconcile received quantities per line. received_lines omitted
+            # => receive all. ``partial=True`` forces partial regardless
+            # (back-compat / explicit partial delivery).
+            recon = runtime.db.record_po_receipt(
+                context["po_id"], payload.get("received_lines"), actor_id=actor_id,
             )
-            # record a goods receipt (best-effort; the box state is the
-            # source of truth for the lifecycle)
+            fully = recon.get("fully_received", True)
+            if payload.get("partial") is True:
+                fully = False
+            target_state = (
+                POStatus.FULLY_RECEIVED.value if fully
+                else POStatus.PARTIALLY_RECEIVED.value
+            )
             try:
                 runtime.db.save_goods_receipt({
                     "gr_id": f"GR-{_uuid.uuid4().hex[:16]}",
@@ -309,8 +332,8 @@ class ProcurementFinanceSkill(FinanceSkill):
                     "po_number": po.get("po_number", ""),
                     "vendor_name": po.get("vendor_name", ""),
                     "received_by": actor_id,
-                    "line_items": payload.get("line_items", []),
-                    "status": "partial" if partial else "received",
+                    "line_items": recon.get("line_items", []),
+                    "status": "received" if fully else "partial",
                 })
             except Exception:  # noqa: BLE001
                 logger.warning("[procurement] goods receipt save failed for %s", context["po_id"])
@@ -325,6 +348,7 @@ class ProcurementFinanceSkill(FinanceSkill):
                 "status": "ok",
                 "po_id": context["po_id"],
                 "state": box.get("state") if isinstance(box, dict) else target_state,
+                "fully_received": fully,
             }
 
         target = context["target_state"]

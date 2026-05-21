@@ -16,9 +16,10 @@ from solden.integrations import erp_po_write  # noqa: E402
 
 
 class _FakeResp:
-    def __init__(self, status_code, body):
+    def __init__(self, status_code, body, headers=None):
         self.status_code = status_code
         self._body = body
+        self.headers = headers or {}
 
     def json(self):
         return self._body
@@ -94,15 +95,49 @@ def test_xero_adapter_builds_request_and_returns_id(monkeypatch):
     assert kwargs["json"]["PurchaseOrders"][0]["Contact"]["Name"] == "Acme"
 
 
-def test_netsuite_and_sap_not_implemented(monkeypatch):
+def test_netsuite_adapter_builds_request_and_returns_id(monkeypatch):
     monkeypatch.setattr(erp_po_write, "is_procurement_erp_write_enabled", lambda: True)
-    for erp in ("netsuite", "sap"):
-        monkeypatch.setattr(
-            "solden.integrations.erp_router.get_erp_connection",
-            lambda org, _e=erp: _conn(_e),
-        )
-        out = asyncio.run(erp_po_write.create_purchase_order("org1", _po()))
-        assert out["status"] == "error" and out["reason"] == "po_write_not_implemented"
+    monkeypatch.setattr(
+        "solden.integrations.erp_router.get_erp_connection",
+        lambda org: _conn("netsuite", account_id="ACC1"),
+    )
+    monkeypatch.setattr("solden.integrations.erp_netsuite._oauth_header", lambda c, m, u: "OAuth sig")
+    fake = _FakeClient(_FakeResp(
+        204, None,
+        headers={"Location": "https://ACC1.suitetalk.api.netsuite.com/services/rest/record/v1/purchaseOrder/NS-PO-42"},
+    ))
+    monkeypatch.setattr(erp_po_write, "get_http_client", lambda: fake)
+    out = asyncio.run(erp_po_write.create_purchase_order("org1", _po()))
+    assert out["status"] == "success" and out["erp_po_id"] == "NS-PO-42"
+    url, kwargs = fake.calls[0]
+    assert "ACC1.suitetalk.api.netsuite.com" in url and url.endswith("/purchaseOrder")
+    assert kwargs["headers"]["Authorization"] == "OAuth sig"
+    assert kwargs["json"]["entity"]["id"] == "V1"
+
+
+def test_sap_adapter_builds_request_and_returns_id(monkeypatch):
+    monkeypatch.setattr(erp_po_write, "is_procurement_erp_write_enabled", lambda: True)
+    monkeypatch.setattr(
+        "solden.integrations.erp_router.get_erp_connection",
+        lambda org: _conn("sap", base_url="https://sap.example"),
+    )
+
+    async def _auth(conn):
+        return {"Authorization": "Bearer tok"}
+
+    async def _csrf(base, path, auth):
+        return "csrf123"
+
+    monkeypatch.setattr("solden.integrations.erp_sap_s4hana._build_auth_headers", _auth)
+    monkeypatch.setattr("solden.integrations.erp_sap_s4hana._fetch_csrf_token", _csrf)
+    fake = _FakeClient(_FakeResp(201, {"d": {"PurchaseOrder": "SAP-PO-1"}}))
+    monkeypatch.setattr(erp_po_write, "get_http_client", lambda: fake)
+    out = asyncio.run(erp_po_write.create_purchase_order("org1", _po()))
+    assert out["status"] == "success" and out["erp_po_id"] == "SAP-PO-1"
+    url, kwargs = fake.calls[0]
+    assert url.endswith("/API_PURCHASEORDER_PROCESS_SRV/A_PurchaseOrder")
+    assert kwargs["headers"]["X-CSRF-Token"] == "csrf123"
+    assert kwargs["json"]["Supplier"] == "V1"
 
 
 def test_no_connection(monkeypatch):

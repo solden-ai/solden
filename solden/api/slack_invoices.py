@@ -877,6 +877,51 @@ async def handle_invoice_interactive(request: Request, background_tasks: Backgro
             content={"response_type": "ephemeral", "text": "This Slack workspace isn't connected to any Solden tenant."},
         )
 
+    # Procurement PO approval clicks (po_approve_<id> / po_reject_<id>).
+    # Isolated from the AP normalization path; reuses the verified
+    # team->org binding above for tenancy. Feature-flagged.
+    if _chase_action_id.startswith("po_approve_") or _chase_action_id.startswith("po_reject_"):
+        from solden.core.feature_flags import is_procurement_chat_enabled
+        from solden.services.procurement_chat import dispatch_po_chat_decision
+
+        if not is_procurement_chat_enabled():
+            return {"response_type": "ephemeral", "text": "Procurement chat approvals aren't enabled."}
+        po_decision = "approve" if _chase_action_id.startswith("po_approve_") else "reject"
+        po_id = ""
+        if value.startswith("{"):
+            try:
+                _pv = json.loads(value)
+                if isinstance(_pv, dict) and _pv.get("box_type") == "purchase_order":
+                    po_id = str(_pv.get("po_id") or "")
+            except Exception:
+                po_id = ""
+        if not po_id:
+            po_id = _chase_action_id.replace("po_approve_", "").replace("po_reject_", "").strip()
+        po_row = db.get_purchase_order(po_id) if (po_id and hasattr(db, "get_purchase_order")) else None
+        if not po_row or str(po_row.get("organization_id") or "") != bound_org:
+            _audit_callback_event(
+                db, event_type="channel_action_invalid", source="slack",
+                organization_id=bound_org, idempotency_key=f"slack:po_tenant:{po_id}",
+                reason="po_not_found_or_cross_tenant", metadata={"po_id": po_id},
+            )
+            return JSONResponse(
+                status_code=404,
+                content={"response_type": "ephemeral", "text": "Purchase order not found."},
+            )
+        _slack_user = (payload.get("user") or {}) if isinstance(payload.get("user"), dict) else {}
+        _actor_id = str(_slack_user.get("id") or "").strip() or "slack_user"
+        _actor_email = str(_slack_user.get("email") or _slack_user.get("username") or "").strip() or None
+        result = await dispatch_po_chat_decision(
+            bound_org, po_id, po_decision, actor_id=_actor_id, actor_email=_actor_email,
+        )
+        if str(result.get("status") or "") == "ok":
+            verb = "approved" if po_decision == "approve" else "rejected"
+            return {"response_type": "ephemeral", "text": f"PO {po_row.get('po_number') or po_id} {verb}."}
+        return {
+            "response_type": "ephemeral",
+            "text": f"Couldn't {po_decision} the PO: {result.get('error') or result.get('status') or 'blocked'}",
+        }
+
     organization_id, ap_item_id = _resolve_ap_context(db, bound_org, gmail_candidate)
 
     # Defense in depth: if AP-item resolution returned a different

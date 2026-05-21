@@ -936,6 +936,67 @@ def test_slack_interactive_rejects_invalid_signature_and_audits(monkeypatch, cli
     assert any(str(evt.get("idempotency_key") or "").startswith("slack:unauthorized:") for evt in captured)
 
 
+def test_slack_interactive_po_approve_advances_box(monkeypatch, client, db):
+    monkeypatch.setenv("FEATURE_PROCUREMENT_CHAT", "true")
+    _seed_slack_install_for_default_org(db)
+    db.create_purchase_order_box({
+        "po_id": "PO-slack-1", "organization_id": "org-test", "po_number": "PO-1",
+        "vendor_name": "Acme", "total_amount": 200.0, "requested_by": "buyer",
+    })
+    db.update_purchase_order_state("PO-slack-1", "pending_approval", actor_id="buyer")
+
+    async def _return_body(request):
+        return await request.body()
+
+    monkeypatch.setattr("solden.api.slack_invoices._require_slack_signature", _return_body)
+    payload = {
+        "user": {"id": "U1", "email": "cfo@acme.test"},
+        "team": {"id": _TEST_SLACK_TEAM_ID},
+        "actions": [{
+            "action_id": "po_approve_PO-slack-1",
+            "value": json.dumps({"box_type": "purchase_order", "po_id": "PO-slack-1", "decision": "approve"}),
+        }],
+    }
+    resp = client.post(
+        "/slack/invoices/interactive",
+        content=_slack_form_body(payload),
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert resp.status_code == 200
+    assert "approved" in resp.json().get("text", "").lower()
+    assert db.get_purchase_order("PO-slack-1")["status"] == "approved"
+
+
+def test_slack_interactive_po_cross_tenant_blocked(monkeypatch, client, db):
+    monkeypatch.setenv("FEATURE_PROCUREMENT_CHAT", "true")
+    _seed_slack_install_for_default_org(db)  # team -> org-test
+    db.ensure_organization("other-org", organization_name="other")
+    db.create_purchase_order_box({
+        "po_id": "PO-other", "organization_id": "other-org",
+        "vendor_name": "X", "total_amount": 1.0, "requested_by": "u",
+    })
+
+    async def _return_body(request):
+        return await request.body()
+
+    monkeypatch.setattr("solden.api.slack_invoices._require_slack_signature", _return_body)
+    payload = {
+        "user": {"id": "U1"},
+        "team": {"id": _TEST_SLACK_TEAM_ID},
+        "actions": [{
+            "action_id": "po_approve_PO-other",
+            "value": json.dumps({"box_type": "purchase_order", "po_id": "PO-other", "decision": "approve"}),
+        }],
+    }
+    resp = client.post(
+        "/slack/invoices/interactive",
+        content=_slack_form_body(payload),
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert resp.status_code == 404
+    assert db.get_purchase_order("PO-other")["status"] == "draft"  # untouched
+
+
 def test_slack_interactive_invalid_payload_audits(monkeypatch, client, db):
     captured = []
     original_append = db.append_audit_event

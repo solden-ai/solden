@@ -144,6 +144,61 @@ def test_receive_purchase_order_partial_then_full(runtime):
     assert f["state"] == "fully_received"
 
 
+def test_amend_draft_purchase_order(runtime):
+    skill = ProcurementFinanceSkill()
+    created = asyncio.run(skill.execute(
+        runtime, "create_purchase_order", {"vendor_name": "Acme", "total_amount": 100.0},
+    ))
+    po_id = created["po_id"]
+    out = asyncio.run(skill.execute(
+        runtime, "amend_purchase_order",
+        {"po_id": po_id, "fields": {"vendor_name": "Acme Corp", "total_amount": 250.0}},
+    ))
+    assert out["status"] == "amended"
+    po = runtime.db.get_purchase_order(po_id)
+    assert po["vendor_name"] == "Acme Corp" and po["total_amount"] == 250.0
+
+
+def test_amend_blocked_after_submit(runtime):
+    skill = ProcurementFinanceSkill()
+    created = asyncio.run(skill.execute(
+        runtime, "create_purchase_order", {"vendor_name": "Acme", "total_amount": 100.0},
+    ))
+    po_id = created["po_id"]
+    asyncio.run(skill.execute(runtime, "submit_purchase_order", {"po_id": po_id}))
+    out = asyncio.run(skill.execute(
+        runtime, "amend_purchase_order", {"po_id": po_id, "fields": {"total_amount": 1.0}},
+    ))
+    assert out["status"] == "blocked"
+    assert "po_not_amendable" in out["policy_precheck"]["reason_codes"]
+
+
+def test_receive_line_reconciliation(runtime):
+    skill = ProcurementFinanceSkill()
+    created = asyncio.run(skill.execute(
+        runtime, "create_purchase_order",
+        {"vendor_name": "Acme", "total_amount": 25.0, "line_items": [
+            {"description": "A", "quantity": 2, "unit_price": 10.0},
+            {"description": "B", "quantity": 1, "unit_price": 5.0},
+        ]},
+    ))
+    po_id = created["po_id"]
+    asyncio.run(skill.execute(runtime, "submit_purchase_order", {"po_id": po_id}))
+    asyncio.run(skill.execute(runtime, "approve_purchase_order", {"po_id": po_id}))
+    # receive only line 0 fully -> partially_received
+    p = asyncio.run(skill.execute(
+        runtime, "receive_purchase_order",
+        {"po_id": po_id, "received_lines": [{"index": 0, "quantity_received": 2}]},
+    ))
+    assert p["state"] == "partially_received" and p["fully_received"] is False
+    # receive line 1 -> all lines fully received
+    f = asyncio.run(skill.execute(
+        runtime, "receive_purchase_order",
+        {"po_id": po_id, "received_lines": [{"index": 1, "quantity_received": 1}]},
+    ))
+    assert f["state"] == "fully_received" and f["fully_received"] is True
+
+
 def test_box_summary_po_extractor(runtime):
     from solden.core.box_summary import build_box_summary
     skill = ProcurementFinanceSkill()

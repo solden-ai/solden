@@ -407,6 +407,93 @@ class PurchaseOrderStore:
             })
         return self.get_purchase_order(po_id)
 
+    _PO_AMENDABLE_FIELDS = frozenset({
+        "vendor_name", "vendor_id", "po_number", "order_date", "expected_delivery",
+        "line_items", "subtotal", "tax_amount", "total_amount", "currency",
+        "notes", "department", "project", "ship_to_address",
+    })
+
+    def amend_purchase_order_box(
+        self, po_id: str, fields: Dict[str, Any], *, actor_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Edit a DRAFT PO's master-data fields + emit an audit row.
+
+        Amendments are master-data edits (vendor, amount, line items), not
+        state transitions, so they go through the full upsert rather than
+        the state machine. The caller (skill) gates this to ``draft`` —
+        editing after submission would bypass approval.
+        """
+        existing = self.get_purchase_order(po_id)
+        if not existing:
+            raise ValueError(f"purchase_order {po_id!r} not found")
+        merged = dict(existing)
+        changed = {}
+        for key, value in (fields or {}).items():
+            if key in self._PO_AMENDABLE_FIELDS:
+                merged[key] = value
+                changed[key] = value
+        merged["po_id"] = po_id
+        merged["organization_id"] = existing.get("organization_id")
+        self.save_purchase_order(merged)
+        if hasattr(self, "append_audit_event"):
+            self.append_audit_event({
+                "box_id": po_id,
+                "box_type": "purchase_order",
+                "event_type": "purchase_order_amended",
+                "actor_type": "user",
+                "actor_id": actor_id or "procurement",
+                "organization_id": existing.get("organization_id"),
+                "policy_version": CURRENT_PO_POLICY_VERSION,
+                "payload_json": {"changed_fields": sorted(changed.keys())},
+                "idempotency_key": f"po-amended:{po_id}:{_now_iso()}",
+            })
+        return self.get_purchase_order(po_id)
+
+    def record_po_receipt(
+        self,
+        po_id: str,
+        received_lines: Optional[List[Dict[str, Any]]] = None,
+        *,
+        actor_id: str,
+    ) -> Dict[str, Any]:
+        """Apply a goods receipt to a PO's lines and report fully-vs-partial.
+
+        ``received_lines`` is a list of ``{"index": i, "quantity_received": q}``
+        increments. When omitted, every line is marked fully received.
+        Updates each line's ``quantity_received`` and persists. Returns
+        ``{"fully_received": bool, "line_items": [...]}``. Does NOT move the
+        box state — the caller transitions to partially/fully_received based
+        on the returned flag.
+        """
+        existing = self.get_purchase_order(po_id)
+        if not existing:
+            raise ValueError(f"purchase_order {po_id!r} not found")
+        lines = list(existing.get("line_items") or [])
+
+        if received_lines is None:
+            for li in lines:
+                li["quantity_received"] = li.get("quantity") or 0
+        else:
+            by_index = {int(r.get("index", -1)): r for r in received_lines if isinstance(r, dict)}
+            for i, li in enumerate(lines):
+                r = by_index.get(i)
+                if r is not None:
+                    prior = float(li.get("quantity_received") or 0)
+                    li["quantity_received"] = prior + float(r.get("quantity_received") or 0)
+
+        def _fully(li: Dict[str, Any]) -> bool:
+            ordered = float(li.get("quantity") or 0)
+            return float(li.get("quantity_received") or 0) >= ordered if ordered else True
+
+        fully_received = all(_fully(li) for li in lines) if lines else True
+
+        merged = dict(existing)
+        merged["line_items"] = lines
+        merged["po_id"] = po_id
+        merged["organization_id"] = existing.get("organization_id")
+        self.save_purchase_order(merged)
+        return {"fully_received": fully_received, "line_items": lines}
+
     def _patch_purchase_order(self, po_id: str, kwargs: Dict[str, Any]) -> None:
         bad = set(kwargs.keys()) - _PURCHASE_ORDER_ALLOWED_COLUMNS
         if bad:

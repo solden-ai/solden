@@ -121,16 +121,110 @@ async def create_po_xero(
     return {"status": "success", "erp": "xero", "erp_po_id": erp_po_id}
 
 
-async def _create_po_not_implemented(erp: str):
-    async def _poster(connection: Any, po: Dict[str, Any], idempotency_key: Optional[str] = None) -> Dict[str, Any]:
-        return {"status": "error", "erp": erp, "reason": "po_write_not_implemented"}
-    return _poster
+def _po_item_lines(po: Dict[str, Any]) -> list:
+    return po.get("line_items") or []
+
+
+async def create_po_netsuite(
+    connection: Any, po: Dict[str, Any], idempotency_key: Optional[str] = None
+) -> Dict[str, Any]:
+    """Create a purchaseOrder via the NetSuite REST record API (OAuth1 TBA).
+
+    Reference implementation reusing the bill poster's OAuth1 header
+    builder. NetSuite returns 204 + a ``Location`` header pointing at the
+    new record. NEEDS live-sandbox validation.
+    """
+    account = getattr(connection, "account_id", None)
+    if not account:
+        return {"status": "error", "erp": "netsuite", "reason": "missing_credentials"}
+    from solden.integrations.erp_netsuite import _oauth_header
+
+    url = (
+        f"https://{account}.suitetalk.api.netsuite.com"
+        f"/services/rest/record/v1/purchaseOrder"
+    )
+    payload = {
+        "entity": {"id": str(po.get("vendor_id") or "")},
+        "item": {
+            "items": [
+                {
+                    "item": {"refName": li.get("description", "")},
+                    "quantity": li.get("quantity", 1),
+                    "rate": li.get("unit_price", 0.0),
+                }
+                for li in _po_item_lines(po)
+            ]
+        },
+    }
+    auth = _oauth_header(connection, "POST", url)
+    client = get_http_client()
+    resp = await client.post(
+        url, headers={"Authorization": auth, "Content-Type": "application/json"},
+        json=payload, timeout=20,
+    )
+    if resp.status_code == 401:
+        return {"status": "error", "erp": "netsuite", "needs_reauth": True}
+    if resp.status_code >= 300:
+        return {"status": "error", "erp": "netsuite", "reason": f"http_{resp.status_code}"}
+    location = (getattr(resp, "headers", {}) or {}).get("Location", "")
+    erp_po_id = location.rstrip("/").rsplit("/", 1)[-1] if location else None
+    return {"status": "success", "erp": "netsuite", "erp_po_id": erp_po_id}
+
+
+async def create_po_sap(
+    connection: Any, po: Dict[str, Any], idempotency_key: Optional[str] = None
+) -> Dict[str, Any]:
+    """Create an A_PurchaseOrder via SAP S/4HANA OData.
+
+    Reference implementation reusing the S/4HANA auth + CSRF helpers.
+    SAP writes require a CSRF token. NEEDS live-sandbox validation.
+    """
+    base_url = getattr(connection, "base_url", None)
+    if not base_url:
+        return {"status": "error", "erp": "sap", "reason": "missing_credentials"}
+    from solden.integrations.erp_sap_s4hana import _build_auth_headers, _fetch_csrf_token
+
+    service_path = "/sap/opu/odata/sap/API_PURCHASEORDER_PROCESS_SRV"
+    auth = await _build_auth_headers(connection)
+    if not auth or "Authorization" not in auth:
+        return {"status": "error", "erp": "sap", "reason": auth.get("error", "no_credentials")}
+    headers = dict(auth)
+    headers.update({"Content-Type": "application/json", "Accept": "application/json"})
+    csrf = await _fetch_csrf_token(base_url, service_path, auth)
+    if csrf:
+        headers["X-CSRF-Token"] = csrf
+    url = f"{base_url}{service_path}/A_PurchaseOrder"
+    payload = {
+        "Supplier": str(po.get("vendor_id") or ""),
+        "PurchaseOrderType": "NB",
+        "to_PurchaseOrderItem": {
+            "results": [
+                {
+                    "Material": li.get("description", ""),
+                    "OrderQuantity": str(li.get("quantity", 1)),
+                    "NetPriceAmount": str(li.get("unit_price", 0.0)),
+                }
+                for li in _po_item_lines(po)
+            ]
+        },
+    }
+    client = get_http_client()
+    resp = await client.post(url, headers=headers, json=payload, timeout=30)
+    if resp.status_code == 401:
+        return {"status": "error", "erp": "sap", "needs_reauth": True}
+    if resp.status_code >= 300:
+        return {"status": "error", "erp": "sap", "reason": f"http_{resp.status_code}"}
+    body = resp.json()
+    record = (body.get("d") if isinstance(body, dict) else None) or body or {}
+    return {"status": "success", "erp": "sap", "erp_po_id": record.get("PurchaseOrder")}
 
 
 # Per-ERP PO-create posters. patch.dict-able in tests, mirroring _BILL_FINDERS.
 _PO_POSTERS: Dict[str, Callable[..., Awaitable[Dict[str, Any]]]] = {
     "quickbooks": create_po_quickbooks,
     "xero": create_po_xero,
+    "netsuite": create_po_netsuite,
+    "sap": create_po_sap,
 }
 
 
