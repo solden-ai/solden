@@ -149,6 +149,19 @@ def test_version_pinning(client):
     assert client.post("/api/workspace/workflows/vendor_coi/COI-B2/approve", json={}).status_code == 404
 
 
+def test_type_quota_enforced(client, monkeypatch):
+    from solden.core.stores import workflow_spec_store
+    monkeypatch.setattr(workflow_spec_store, "MAX_WORKFLOW_TYPES_PER_ORG", 1)
+    # First distinct type: allowed.
+    assert client.post("/api/workspace/workflow-specs", json=SPEC_V1).status_code == 200
+    # Second distinct type: over quota -> 422. (Re-versioning SPEC_V1 still works.)
+    second = dict(SPEC_V1, box_type="another_type", url_slug="another-type")
+    r = client.post("/api/workspace/workflow-specs", json=second)
+    assert r.status_code == 422 and "quota" in r.json()["detail"]
+    # Re-versioning the existing type is still allowed despite the cap.
+    assert client.post("/api/workspace/workflow-specs", json=SPEC_V1).status_code == 200
+
+
 def test_non_admin_cannot_author(client):
     app.dependency_overrides[get_current_user] = lambda: _user("member")
     try:

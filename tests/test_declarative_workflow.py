@@ -220,6 +220,15 @@ def test_coordination_engine_drives_declared_type_end_to_end(db):
     assert loaded["state"] == "approved"
 
 
+def test_box_summary_surfaces_declared_fields(db):
+    from solden.core.box_summary import build_box_summary
+    _box(db, box_id="CR-sum")
+    summary = build_box_summary("CR-sum", db=db, box_type="contract_review")
+    assert summary.current_stage == "draft"
+    assert summary.key_fields.get("title") == "MSA renewal"
+    assert summary.key_fields.get("counterparty") == "Globex"
+
+
 def test_engine_exception_path_for_typeless_stall_state(db):
     # contract_review has exception_state=None; an illegal move must raise a
     # box_exception, NOT attempt the illegal state move.

@@ -34,6 +34,10 @@ logger = logging.getLogger(__name__)
 
 _VALID_STATUSES = ("draft", "active", "archived")
 
+# Per-tenant cap on the number of distinct declared Box types. A coarse abuse
+# guard; tune per-plan later. Existing types can always be re-versioned.
+MAX_WORKFLOW_TYPES_PER_ORG = 50
+
 
 class WorkflowSpecStore:
     """Mixin: per-tenant versioned WorkflowSpec CRUD + resolution."""
@@ -69,6 +73,20 @@ class WorkflowSpecStore:
             )
             row = cur.fetchone()
             next_version = int((dict(row).get("v") if row else 0) or 0) + 1
+            # Per-tenant quota: only enforce when adding a NEW type (re-versioning
+            # an existing type is always allowed).
+            if next_version == 1:
+                cur.execute(
+                    "SELECT COUNT(DISTINCT box_type) AS n FROM workflow_specs "
+                    "WHERE organization_id = %s",
+                    (organization_id,),
+                )
+                qrow = cur.fetchone()
+                distinct_types = int((dict(qrow).get("n") if qrow else 0) or 0)
+                if distinct_types >= MAX_WORKFLOW_TYPES_PER_ORG:
+                    raise ValueError(
+                        f"workflow_type_quota_exceeded:max={MAX_WORKFLOW_TYPES_PER_ORG}"
+                    )
             cur.execute(
                 """
                 INSERT INTO workflow_specs

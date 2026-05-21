@@ -122,6 +122,13 @@ def build_box_summary(
                 summary.match_result_summary = f"Issued to ERP ({item['erp_po_id']})"
             return summary
 
+        if isinstance(item.get("data"), dict):
+            # Declarative (WorkflowSpec) box: surface its declared data fields
+            # as the summary's key fields. The state is already set above.
+            data = item["data"]
+            summary.key_fields = {k: data[k] for k in list(data.keys())[:5]}
+            return summary
+
         if box_type != "ap_item":
             # No per-type extractor yet; the stage is the summary.
             return summary
