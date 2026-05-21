@@ -1,7 +1,7 @@
 /* ============================================================
  * pages.css, sub-page primitives layered on top of styles.css
  *
- * Used by: contact.html and privacy.html.
+ * Used by: contact.html, privacy.html, use-cases.html.
  * Keeps the homepage in styles.css uncluttered while sharing the
  * same design tokens (custom properties live on :root in styles.css).
  * ============================================================ */
@@ -383,4 +383,122 @@
   height: 1px;
   opacity: 0;
   pointer-events: none;
+}
+
+/* ── Use cases (use-cases.html) ──────────────────────────── */
+
+.usecases {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin: 8px 0 0;
+}
+
+@media (max-width: 760px) { .usecases { grid-template-columns: 1fr; } }
+
+.usecase {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+}
+
+.usecase__title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--navy);
+}
+
+.usecase__body {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+
+.usecase__flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.usecase__step {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy);
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.usecase__arrow {
+  color: var(--teal-deep);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* lighter "more workflows" grid */
+.more-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px 28px;
+  margin-top: 8px;
+}
+
+@media (max-width: 760px) { .more-grid { grid-template-columns: 1fr; } }
+
+.more-cell {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.more-cell h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.more-cell p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-soft);
+}
+
+/* closing CTA band */
+.usecase-cta {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.usecase-cta h2 {
+  margin: 0 0 12px;
+  font-size: clamp(24px, 3vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.usecase-cta p {
+  margin: 0 0 24px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+
+.more-head {
+  margin: 0 0 24px;
+  max-width: 760px;
+  font-size: clamp(22px, 2.6vw, 30px);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: var(--navy);
 }
