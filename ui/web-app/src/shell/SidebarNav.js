@@ -5,24 +5,25 @@ import { BrandMark } from './BrandMark.js';
 /**
  * Sidebar nav for the coordination-layer control center.
  *
- * Three groups, ordered by what the operator does here:
- *   primary  — live state of the coordination layer (Home, Activity, Exceptions)
- *   data     — directories and read-only surfaces (Records, Vendors, Reports, Audit log)
- *   admin    — policy + identity + render-target config (Rules, Connections, API keys, Settings)
+ * Four groups, ordered by what the operator does here:
+ *   primary   — live state of the coordination layer (Home, Activity, Exceptions)
+ *   workflows — the box types the operator works in (Records, Procurement, Builder)
+ *   data      — reference + read-only surfaces (Vendors, Reports, Audit log)
+ *   admin     — policy + identity + render-target config (Rules, Connections, API keys, Settings)
  *
- * The earlier "WORK" group (Records / Review queue / Exceptions / Vendors)
- * mirrored Streak/BILL grammar — a workflow desktop. The workspace
- * is not a workflow desktop. Approvals + vendor follow-up happen in
- * Slack/Teams/Gmail; the workspace shows live state, lets the
- * operator intervene when the agent escalates, and configures policy.
+ * Records / Procurement / Builder are the workflow surfaces (box types the
+ * runtime runs), so they group under WORKFLOWS, not DATA. DATA is for the
+ * reference surfaces: the vendor directory, reporting, and the audit log.
+ * (The /workflows page is the no-code builder, labeled "Builder" here so the
+ * group heading and the item don't read as "Workflows > Workflows".)
  */
 export const NAV_ITEMS = [
   { path: '/', label: 'Home', group: 'primary' },
   { path: '/activity', label: 'Activity', group: 'primary' },
   { path: '/exceptions', label: 'Exceptions', group: 'primary' },
-  { path: '/records', label: 'Records', group: 'data' },
-  { path: '/procurement', label: 'Procurement', group: 'data' },
-  { path: '/workflows', label: 'Workflows', group: 'data' },
+  { path: '/records', label: 'Records', group: 'workflows' },
+  { path: '/procurement', label: 'Procurement', group: 'workflows' },
+  { path: '/workflows', label: 'Builder', group: 'workflows' },
   { path: '/vendors', label: 'Vendors', group: 'data' },
   { path: '/reports', label: 'Reports', group: 'data' },
   { path: '/audit', label: 'Audit log', group: 'data' },
@@ -34,6 +35,7 @@ export const NAV_ITEMS = [
 
 const GROUP_LABELS = {
   primary: '',
+  workflows: 'WORKFLOWS',
   data: 'DATA',
   admin: 'ADMIN',
 };
@@ -41,7 +43,7 @@ const GROUP_LABELS = {
 export function SidebarNav() {
   const [pathname] = useLocation();
 
-  const groups = ['primary', 'data', 'admin'];
+  const groups = ['primary', 'workflows', 'data', 'admin'];
 
   return html`
     <nav class="cl-sidebar-nav" aria-label="Primary">
