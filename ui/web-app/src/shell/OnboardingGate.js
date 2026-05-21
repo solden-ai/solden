@@ -42,6 +42,8 @@ const ONBOARDING_PASSTHROUGH = new Set([
   '/records',
   '/exceptions',
   '/vendors',
+  '/procurement',
+  '/workflows',
   '/activity',
   '/reports',
   '/rules',
