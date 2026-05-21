@@ -70,15 +70,16 @@
           <section class="privacy__section">
             <h2 class="privacy__h">What the browser extensions do</h2>
             <p>Solden ships a Gmail extension and an Outlook add-in that surface a contextual sidebar on invoice threads. When you open an invoice email with one installed, Solden reads the email's content and metadata so the agent can extract bill details, run validation, and route the record for approval through the chat tool the approver lives in.</p>
-            <p>The Gmail extension uses Google's <code>gmail.modify</code> scope to:</p>
+            <p>When you open an invoice thread, the Gmail extension:</p>
             <ul>
               <li>Read the subject, sender, headers, body, and attachments on the active invoice thread.</li>
               <li>Read invoice attachments (PDF, image) and pass them to the extraction pipeline.</li>
               <li>Apply a Solden label to threads we've processed.</li>
               <li>Archive threads after the agent posts the bill to your ERP (configurable per workspace).</li>
             </ul>
-            <p>The Outlook add-in uses Microsoft Graph's <code>Mail.Read</code> and <code>Mail.ReadWrite</code> scopes for the same purpose on Microsoft 365 inboxes.</p>
+            <p>The Outlook add-in does the same on Microsoft 365 inboxes.</p>
             <p>Neither extension reads inbox contents beyond the threads you open with the sidebar, sends email on your behalf, or accesses your contacts. Neither extension approves or rejects invoices. Those decisions are routed to the chat-tool approval cards described below.</p>
+            <p>Solden's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
           </section>
 
           <section class="privacy__section">
