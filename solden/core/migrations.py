@@ -5601,3 +5601,51 @@ def _v91_purchase_order_status_check(cur, db):
         "'partially_invoiced', 'fully_invoiced', "
         "'closed', 'cancelled'))"
     )
+
+
+@migration(
+    92,
+    "boxes: generic Box table for declarative WorkflowSpec types "
+    "(the platform substrate — a new type needs zero bespoke Python)",
+)
+def _v92_generic_boxes(cur, db):
+    """Create the polymorphic ``boxes`` table.
+
+    The three original Box types each own a bespoke table (``ap_items``,
+    ``bank_match_boxes``, ``purchase_orders``). Declarative types defined by
+    a :class:`WorkflowSpec` instead share this one table: ``box_type``
+    identifies the type, ``state`` carries the lifecycle position, and
+    ``data`` (JSONB) holds the type's declared fields. The runtime's generic
+    primitives (CoordinationEngine, audit hash-chain, exception queue) already
+    dispatch on ``box_type``, so a row here is a first-class Box.
+
+    ``spec_version`` pins each Box to the spec version it was created under
+    (Phase 2): activating a new spec version must not retroactively change
+    the legal transitions of in-flight Boxes.
+
+    No DB-level CHECK on ``state``: unlike the closed enums of the bespoke
+    types, declared states are open and per-spec. The spec validator plus the
+    store's transition check are the integrity layer here.
+    """
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS boxes (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            box_type TEXT NOT NULL,
+            state TEXT NOT NULL,
+            spec_version INTEGER NOT NULL DEFAULT 1,
+            data JSONB NOT NULL DEFAULT '{}'::jsonb,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_boxes_org_type_state "
+        "ON boxes (organization_id, box_type, state)"
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_boxes_org_type_created "
+        "ON boxes (organization_id, box_type, created_at)"
+    )

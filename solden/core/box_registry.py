@@ -128,6 +128,8 @@ def get_box(box_type: str, box_id: str, db: Any) -> Optional[Dict[str, Any]]:
         return db.get_bank_match(box_id)
     if bt.source_table == "purchase_orders":
         return db.get_purchase_order(box_id)
+    if bt.source_table == "boxes":
+        return db.get_generic_box(box_type, box_id)
     raise NotImplementedError(
         f"get_box has no loader for source_table={bt.source_table!r}"
     )
@@ -146,6 +148,8 @@ def create_box(box_type: str, payload: Dict[str, Any], db: Any) -> Dict[str, Any
         return db.create_bank_match(payload)
     if bt.source_table == "purchase_orders":
         return db.create_purchase_order_box(payload)
+    if bt.source_table == "boxes":
+        return db.create_generic_box(box_type, payload)
     raise NotImplementedError(
         f"create_box has no creator for source_table={bt.source_table!r}"
     )
@@ -204,6 +208,17 @@ def update_box(
             )
         return db.update_purchase_order_state(
             box_id, state, actor_id=actor_id or "", reason=reason or ""
+        )
+    if bt.source_table == "boxes":
+        if state is None:
+            raise ValueError("update_box for boxes requires a 'state'")
+        if fields:
+            raise ValueError(
+                "update_box for boxes accepts only state/actor_id/reason; "
+                f"got extra fields {sorted(fields)}"
+            )
+        return db.update_generic_box_state(
+            box_type, box_id, state, actor_id=actor_id or "", reason=reason or ""
         )
     raise NotImplementedError(
         f"update_box has no writer for source_table={bt.source_table!r}"

@@ -146,6 +146,7 @@ def _load_store_symbols() -> None:
     global RulesStore
     global FxRateStore
     global BankMatchStore
+    global GenericBoxStore
 
     if "APStore" in globals():
         return
@@ -210,6 +211,9 @@ def _load_store_symbols() -> None:
     from solden.core.stores.bank_match_store import (
         BankMatchStore as _BankMatchStore,
     )
+    from solden.core.stores.generic_box_store import (
+        GenericBoxStore as _GenericBoxStore,
+    )
 
     APStore = _APStore
     APRuntimeStore = _APRuntimeStore
@@ -241,6 +245,7 @@ def _load_store_symbols() -> None:
     RulesStore = _RulesStore
     FxRateStore = _FxRateStore
     BankMatchStore = _BankMatchStore
+    GenericBoxStore = _GenericBoxStore
 
 
 class _SoldenDBBase:
@@ -1722,6 +1727,7 @@ def _get_db_impl_class():
             RulesStore,
             FxRateStore,
             BankMatchStore,
+            GenericBoxStore,
             _SoldenDBBase,
         ):
             pass
