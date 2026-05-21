@@ -1795,3 +1795,10 @@ body.theme-dark .footer-cta__sub {
 /* Hide the old monogram styles so the cleanup is complete in case
    any other surface re-uses the same class names. */
 .manifesto__portrait { display: none !important; }
+
+/* The topbar has no mobile menu; on phones the brand + links collide.
+   The "Use cases" nav link is hidden on narrow screens (still reachable
+   from the footer and the homepage scope link). */
+@media (max-width: 640px) {
+  .nav__link--usecases { display: none; }
+}
