@@ -1410,6 +1410,55 @@ def test_teams_interactive_invalid_payload_audits(monkeypatch, client, db):
     assert persisted.get("event_type") == "channel_action_invalid"
 
 
+def test_teams_interactive_po_approve_advances_box(monkeypatch, client, db):
+    monkeypatch.setenv("FEATURE_TEAMS_ENABLED", "true")
+    monkeypatch.setenv("FEATURE_PROCUREMENT_CHAT", "true")
+    _seed_teams_install_for_default_org(db)  # AAD tid -> org-test
+    db.create_purchase_order_box({
+        "po_id": "PO-teams-1", "organization_id": "org-test", "po_number": "PO-T1",
+        "vendor_name": "Acme", "total_amount": 200.0, "requested_by": "buyer",
+    })
+    db.update_purchase_order_state("PO-teams-1", "pending_approval", actor_id="buyer")
+    monkeypatch.setattr(
+        "solden.api.teams_invoices._verify_teams_token",
+        lambda _auth: _stub_teams_claims(),
+    )
+    payload = {
+        "box_type": "purchase_order", "po_id": "PO-teams-1", "decision": "approve",
+        "user_email": "cfo@acme.test",
+    }
+    resp = client.post(
+        "/teams/invoices/interactive",
+        json=payload,
+        headers={"Authorization": "Bearer test-token", "Content-Type": "application/json"},
+    )
+    assert resp.status_code == 200
+    assert "approved" in resp.json().get("text", "").lower()
+    assert db.get_purchase_order("PO-teams-1")["status"] == "approved"
+
+
+def test_teams_interactive_po_cross_tenant_blocked(monkeypatch, client, db):
+    monkeypatch.setenv("FEATURE_TEAMS_ENABLED", "true")
+    monkeypatch.setenv("FEATURE_PROCUREMENT_CHAT", "true")
+    _seed_teams_install_for_default_org(db)  # -> org-test
+    db.ensure_organization("other-org-teams", organization_name="other")
+    db.create_purchase_order_box({
+        "po_id": "PO-teams-other", "organization_id": "other-org-teams",
+        "vendor_name": "X", "total_amount": 1.0, "requested_by": "u",
+    })
+    monkeypatch.setattr(
+        "solden.api.teams_invoices._verify_teams_token",
+        lambda _auth: _stub_teams_claims(),
+    )
+    resp = client.post(
+        "/teams/invoices/interactive",
+        json={"box_type": "purchase_order", "po_id": "PO-teams-other", "decision": "approve"},
+        headers={"Authorization": "Bearer test-token", "Content-Type": "application/json"},
+    )
+    assert resp.status_code == 404
+    assert db.get_purchase_order("PO-teams-other")["status"] == "draft"
+
+
 def test_teams_interactive_common_contract_request_info_duplicate_invalid_and_stale(monkeypatch, client, db):
     monkeypatch.setenv("FEATURE_TEAMS_ENABLED", "true")
     _seed_teams_install_for_default_org(db)

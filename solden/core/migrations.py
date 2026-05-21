@@ -5566,3 +5566,38 @@ def _v89_two_axis_auth(cur, db):
             "'DEPRECATED 2026-05-19 by v89. Read users.workspace_role + "
             "user_box_roles. Scheduled drop: v90.'"
         )
+
+
+@migration(
+    91,
+    "purchase_orders.status CHECK — pin the PO box state machine at the DB layer",
+)
+def _v91_purchase_order_status_check(cur, db):
+    """Defense-in-depth for the purchase_order BoxType.
+
+    The box writers (``update_purchase_order_state``) already validate
+    every transition against ``purchase_order_states.VALID_PO_TRANSITIONS``.
+    This CHECK catches a *stray* write that bypasses the box path — a
+    legacy ERP importer, a manual SQL fix, a future code change — failing
+    it closed at the DB layer. Mirrors the AP / bank_match status guards.
+
+    (v90 is intentionally reserved for the planned ``users.role`` drop
+    noted in the v89 migration; this takes 91 to avoid colliding.)
+    """
+    cur.execute(
+        "SELECT 1 FROM information_schema.tables WHERE table_name = 'purchase_orders'"
+    )
+    if cur.fetchone() is None:
+        return  # table not created yet (v33) — nothing to constrain
+
+    cur.execute(
+        "ALTER TABLE purchase_orders DROP CONSTRAINT IF EXISTS po_status_check"
+    )
+    cur.execute(
+        "ALTER TABLE purchase_orders ADD CONSTRAINT po_status_check "
+        "CHECK (status IN ("
+        "'draft', 'pending_approval', 'approved', "
+        "'partially_received', 'fully_received', "
+        "'partially_invoiced', 'fully_invoiced', "
+        "'closed', 'cancelled'))"
+    )

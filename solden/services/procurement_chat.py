@@ -78,6 +78,42 @@ def build_po_approval_blocks(po: Dict[str, Any]) -> List[Dict[str, Any]]:
     ]
 
 
+def build_po_teams_card(po: Dict[str, Any]) -> Dict[str, Any]:
+    """Microsoft Teams Adaptive Card for a PO awaiting approval.
+
+    Teams buttons are ``Action.Submit`` carrying a ``data`` blob (not a
+    Slack-style action_id), so the decision context travels in ``data``;
+    the Teams interactive handler reads ``box_type``/``po_id``/``decision``.
+    """
+    po_id = _po_id(po)
+    vendor = str(po.get("vendor_name") or "Unknown vendor")
+    amount = po.get("total_amount") or 0.0
+    currency = str(po.get("currency") or "").strip()
+    po_number = str(po.get("po_number") or po_id)
+
+    def _action(title: str, decision: str) -> Dict[str, Any]:
+        return {
+            "type": "Action.Submit",
+            "title": title,
+            "data": {"box_type": "purchase_order", "po_id": po_id, "decision": decision},
+        }
+
+    return {
+        "type": "AdaptiveCard",
+        "version": "1.4",
+        "body": [
+            {"type": "TextBlock", "size": "Large", "weight": "Bolder",
+             "text": f"PO approval: {po_number}"},
+            {"type": "FactSet", "facts": [
+                {"title": "Vendor", "value": vendor},
+                {"title": "Amount", "value": f"{currency} {amount:,.2f}".strip()},
+                {"title": "PO #", "value": po_number},
+            ]},
+        ],
+        "actions": [_action("Approve", "approve"), _action("Reject", "reject")],
+    }
+
+
 async def send_po_approval(
     po: Dict[str, Any],
     organization_id: str,

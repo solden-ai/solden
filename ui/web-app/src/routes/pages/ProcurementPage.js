@@ -17,11 +17,12 @@ import { EmptyState, LoadingSkeleton, ErrorRetry } from '../../components/StateP
 const html = htm.bind(h);
 
 // Which lifecycle actions are offered for a PO in a given state.
+// Each maps to a POST /purchase-orders/{id}/{action} endpoint.
 const ACTIONS_BY_STATE = {
   draft: [['submit', 'Submit for approval'], ['cancel', 'Cancel']],
   pending_approval: [['approve', 'Approve'], ['reject', 'Reject'], ['cancel', 'Cancel']],
-  approved: [['close', 'Close']],
-  partially_received: [['close', 'Close']],
+  approved: [['issue', 'Issue to ERP'], ['receive', 'Receive goods'], ['close', 'Close']],
+  partially_received: [['receive', 'Receive more'], ['close', 'Close']],
   fully_received: [['close', 'Close']],
 };
 

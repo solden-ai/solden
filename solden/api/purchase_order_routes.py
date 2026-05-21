@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -187,3 +187,66 @@ def cancel_purchase_order(po_id: str, body: DecisionRequest, _user=Depends(get_c
 def close_purchase_order(po_id: str, body: DecisionRequest, _user=Depends(get_current_user)) -> Dict[str, Any]:
     """-> CLOSED (terminal)."""
     return _advance(po_id, "close", body, _user)
+
+
+# --- Non-transition actions (receive / issue / amend) -----------------
+# These route through ProcurementFinanceSkill so they reuse the exact
+# validated logic the agent uses (precheck, thresholds, ERP write,
+# receipt reconciliation, audit) rather than duplicating it.
+
+class ReceiveRequest(BaseModel):
+    received_lines: Optional[List[Dict[str, Any]]] = None
+    partial: bool = False
+    reason: str = Field("", max_length=2000)
+
+
+class AmendRequest(BaseModel):
+    fields: Dict[str, Any] = Field(default_factory=dict)
+
+
+async def _skill_action(po_id: str, intent: str, payload: Dict[str, Any], user: Any) -> Dict[str, Any]:
+    organization_id = _session_org(user)
+    actor_id = _actor_id(user)
+    db = get_db()
+    _require_po(db, po_id, organization_id)
+    from solden.services.agent_command_dispatch import build_channel_runtime
+    from solden.services.finance_skills.procurement_skill import ProcurementFinanceSkill
+
+    runtime = build_channel_runtime(
+        organization_id=organization_id,
+        actor_id=actor_id,
+        actor_email=str(getattr(user, "email", "") or actor_id),
+        fallback_actor="user",
+        actor_type="user",
+    )
+    result = await ProcurementFinanceSkill().execute(
+        runtime, intent, {"po_id": po_id, **payload},
+    )
+    if str(result.get("status") or "") == "blocked":
+        raise HTTPException(
+            status_code=409,
+            detail=result.get("policy_precheck") or result.get("error") or "blocked",
+        )
+    return result
+
+
+@router.post("/purchase-orders/{po_id}/receive")
+async def receive_purchase_order_route(po_id: str, body: ReceiveRequest, _user=Depends(get_current_user)) -> Dict[str, Any]:
+    """Record a goods receipt -> partially/fully_received (per-line reconciliation)."""
+    return await _skill_action(
+        po_id, "receive_purchase_order",
+        {"received_lines": body.received_lines, "partial": body.partial, "reason": body.reason.strip()},
+        _user,
+    )
+
+
+@router.post("/purchase-orders/{po_id}/issue")
+async def issue_purchase_order_route(po_id: str, body: DecisionRequest, _user=Depends(get_current_user)) -> Dict[str, Any]:
+    """Issue an APPROVED PO to the ERP (stamps erp_po_id). Behind FEATURE_PROCUREMENT_ERP_WRITE."""
+    return await _skill_action(po_id, "issue_purchase_order", {"reason": body.reason.strip()}, _user)
+
+
+@router.post("/purchase-orders/{po_id}/amend")
+async def amend_purchase_order_route(po_id: str, body: AmendRequest, _user=Depends(get_current_user)) -> Dict[str, Any]:
+    """Edit a DRAFT PO's master-data fields."""
+    return await _skill_action(po_id, "amend_purchase_order", {"fields": body.fields}, _user)

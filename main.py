@@ -803,7 +803,7 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         # purchase_order BoxType — Solden's third BoxType (first AP-peer).
         r"^/api/workspace/purchase-orders$",
         r"^/api/workspace/purchase-orders/[^/]+$",
-        r"^/api/workspace/purchase-orders/[^/]+/(submit|approve|reject|cancel|close)$",
+        r"^/api/workspace/purchase-orders/[^/]+/(submit|approve|reject|cancel|close|receive|issue|amend)$",
         r"^/api/agent/intents/skills/[^/]+/readiness$",
         r"^/api/agent/sessions/[^/]+$",
         r"^/api/agent/sessions/[^/]+/commands$",

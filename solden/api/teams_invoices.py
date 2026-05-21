@@ -349,6 +349,39 @@ async def handle_teams_interactive(request: Request) -> Dict[str, Any]:
         # resource on the surface.
         raise HTTPException(status_code=403, detail="aad_tenant_not_provisioned")
 
+    # Procurement PO approval clicks (Adaptive Card Action.Submit with
+    # box_type="purchase_order"). Isolated from the AP path; reuses the
+    # AAD->org binding for tenancy. Feature-flagged.
+    if str(payload.get("box_type") or "") == "purchase_order":
+        from solden.core.feature_flags import is_procurement_chat_enabled
+        from solden.services.procurement_chat import dispatch_po_chat_decision
+
+        if not is_procurement_chat_enabled():
+            return {"status": "disabled", "text": "Procurement chat approvals aren't enabled."}
+        po_id = str(payload.get("po_id") or "").strip()
+        po_decision = str(payload.get("decision") or "").strip().lower()
+        po_row = db.get_purchase_order(po_id) if (po_id and hasattr(db, "get_purchase_order")) else None
+        if not po_row or str(po_row.get("organization_id") or "") != organization_id_from_install:
+            _audit_callback_event(
+                db, event_type="channel_action_invalid",
+                organization_id=organization_id_from_install,
+                idempotency_key=f"teams:po_tenant:{po_id}",
+                reason="po_not_found_or_cross_tenant", metadata={"po_id": po_id},
+            )
+            raise HTTPException(status_code=404, detail="purchase_order_not_found")
+        actor = str(
+            payload.get("user_email") or payload.get("actor")
+            or (claims or {}).get("upn") or "teams_user"
+        ).strip() or "teams_user"
+        result = await dispatch_po_chat_decision(
+            organization_id_from_install, po_id, po_decision,
+            actor_id=actor, actor_email=actor,
+        )
+        if str(result.get("status") or "") == "ok":
+            verb = "approved" if po_decision == "approve" else "rejected"
+            return {"status": "ok", "text": f"PO {po_row.get('po_number') or po_id} {verb}."}
+        return {"status": result.get("status", "error"), "text": f"Couldn't {po_decision} the PO."}
+
     organization_id, ap_item_id = _resolve_ap_context(
         db,
         organization_id_from_install,
