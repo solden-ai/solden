@@ -59,6 +59,10 @@ class SpecBody(BaseModel):
     policy_version: str = "v1"
     hooks: Dict[str, Any] = Field(default_factory=dict)
     conditions: Dict[str, Any] = Field(default_factory=dict)
+    # Spec-driven LLM extraction + summary surfaces (validated by validate_spec).
+    llm_fields: List[Dict[str, Any]] = Field(default_factory=list)
+    domain_hint: str = Field("", max_length=500)
+    summary_fields: List[str] = Field(default_factory=list)
 
 
 @router.post("/workflow-specs/validate")

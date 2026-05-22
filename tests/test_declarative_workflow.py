@@ -350,6 +350,151 @@ def test_invalid_condition_is_rejected_at_registration():
     assert any("transition edge" in e for e in workflow_spec.validate_spec(bad_key))
 
 
+def test_full_runtime_for_a_declared_type_end_to_end(db, monkeypatch):
+    # The capstone: ONE declared type, zero bespoke Python, gets the agent's
+    # full runtime — read (extraction), guard (condition), drive (engine),
+    # and exception-handle (box_exception) — plus a spec-driven summary.
+    spec = WorkflowSpec(
+        box_type="grant_app",
+        url_slug="grant-apps",
+        states=("received", "validated", "approved", "blocked"),
+        initial_state="received",
+        terminal_states=("approved",),
+        transitions={
+            "received": {"validated", "blocked"},
+            "validated": {"approved", "blocked"},
+            "blocked": {"received"},
+        },
+        action_states={
+            "validate": "validated", "approve": "approved",
+            "block": "blocked", "reopen": "received",
+        },
+        fields=("applicant", "amount"),
+        llm_fields=(
+            {"name": "applicant", "type": "string", "description": "who applied"},
+            {"name": "amount", "type": "number", "description": "requested amount"},
+        ),
+        conditions={"received->validated": "amount <= 10000"},
+        exception_state="blocked",
+        summary_fields=("applicant", "amount"),
+    )
+    workflow_spec.register_spec(spec)
+    try:
+        # 1) READ: the agent extracts the declared fields from raw text.
+        import solden.core.llm_gateway as gw
+
+        def fake_call_sync(action, messages, **k):
+            return type("R", (), {"content": '{"applicant":"Acme","amount":5000}'})()
+        monkeypatch.setattr(gw.get_llm_gateway(), "call_sync", fake_call_sync, raising=True)
+        from solden.services.box_extraction import extract_box_fields
+        data = extract_box_fields("grant_app", ORG, text="Acme requests $5,000")
+        assert data == {"applicant": "Acme", "amount": 5000}
+        box_registry.create_box("grant_app", {"id": "GA-1", "organization_id": ORG, **data}, db)
+
+        # 2) GUARD + DRIVE: amount<=10000 passes the condition -> engine validates.
+        engine = CoordinationEngine(db=db, organization_id=ORG)
+        ok = asyncio.run(engine.execute(Plan(
+            event_type="grant_decision",
+            actions=[Action("move_box_stage", "DET", {"target": "validated", "actor_id": "officer"})],
+            box_id="GA-1", box_type="grant_app", organization_id=ORG,
+        )))
+        assert ok.status == "completed"
+        assert box_registry.get_box("grant_app", "GA-1", db)["state"] == "validated"
+
+        # GUARD blocks an over-threshold box driven through the engine.
+        box_registry.create_box("grant_app", {
+            "id": "GA-2", "organization_id": ORG, "applicant": "BigCo", "amount": 50000,
+        }, db)
+        blocked = asyncio.run(engine.execute(Plan(
+            event_type="grant_decision",
+            actions=[Action("move_box_stage", "DET", {"target": "validated", "actor_id": "officer"})],
+            box_id="GA-2", box_type="grant_app", organization_id=ORG,
+        )))
+        assert blocked.status == "failed"
+        # The guard denied the validate; the engine then parks the box in its
+        # declared exception_state (and raises a box_exception) for a human.
+        assert box_registry.get_box("grant_app", "GA-2", db)["state"] == "blocked"
+        ga2_excs = db.list_box_exceptions(box_id="GA-2", box_type="grant_app")
+        assert any(e.get("exception_type") == "grant_app_exception" for e in ga2_excs)
+
+        # 3) EXCEPTION: entering the declared exception_state raises a box_exception.
+        box_registry.update_box(
+            "grant_app", "GA-1", db, state="blocked", actor_id="officer", reason="needs review",
+        )
+        excs = db.list_box_exceptions(box_id="GA-1", box_type="grant_app")
+        assert any(e.get("exception_type") == "grant_app_exception" for e in excs)
+
+        # 4) SUMMARY honors the spec's declared summary_fields.
+        from solden.core.box_summary import build_box_summary
+        s = build_box_summary("GA-1", db=db, box_type="grant_app")
+        assert list(s.key_fields.keys()) == ["applicant", "amount"]
+    finally:
+        workflow_spec.unregister_spec("grant_app")
+
+
+def test_engine_moves_declarative_box_to_declared_exception_state(db):
+    # Regression for the _move_to_exception bug: a declarative type WITH a
+    # declared exception_state must actually land there on failure (the engine
+    # used to pass an AP-only exception_reason kwarg that update_box rejected for
+    # the boxes table, so the box silently never moved). Re-entry dedups to one
+    # box_exception (stable idempotency key).
+    spec = WorkflowSpec(
+        box_type="review_flow", url_slug="review-flows",
+        states=("draft", "in_review", "approved", "stuck"),
+        initial_state="draft", terminal_states=("approved",),
+        transitions={
+            "draft": {"in_review", "stuck"},
+            "in_review": {"approved", "stuck"},
+            "stuck": {"draft"},
+        },
+        action_states={"submit": "in_review", "approve": "approved",
+                       "park": "stuck", "reopen": "draft"},
+        exception_state="stuck",
+    )
+    workflow_spec.register_spec(spec)
+    try:
+        box_registry.create_box("review_flow", {"id": "RF-1", "organization_id": ORG}, db)
+        engine = CoordinationEngine(db=db, organization_id=ORG)
+        # Illegal move (draft->approved) fails -> engine routes to exception_state.
+        r = asyncio.run(engine.execute(Plan(
+            event_type="review",
+            actions=[Action("move_box_stage", "DET", {"target": "approved", "actor_id": "u"})],
+            box_id="RF-1", box_type="review_flow", organization_id=ORG,
+        )))
+        assert r.status == "failed"
+        assert box_registry.get_box("review_flow", "RF-1", db)["state"] == "stuck"
+        excs = db.list_box_exceptions(box_id="RF-1", box_type="review_flow")
+        assert any(e.get("exception_type") == "review_flow_exception" for e in excs)
+
+        # Re-enter the exception state -> still one exception row (stable key).
+        box_registry.update_box("review_flow", "RF-1", db, state="draft", actor_id="u")
+        box_registry.update_box("review_flow", "RF-1", db, state="stuck", actor_id="u")
+        excs2 = db.list_box_exceptions(box_id="RF-1", box_type="review_flow")
+        only = [e for e in excs2 if e.get("exception_type") == "review_flow_exception"]
+        assert len(only) == 1
+    finally:
+        workflow_spec.unregister_spec("review_flow")
+
+
+def test_on_enter_condition_key_is_accepted():
+    # on_enter:{state} guards are honored by the dispatcher, so validate_spec
+    # must accept them (not only "from->to" edges).
+    good = WorkflowSpec(
+        box_type="oe", url_slug="oe", states=("open", "closed"), initial_state="open",
+        terminal_states=("closed",), transitions={"open": {"closed"}},
+        action_states={"go": "closed"},
+        fields=("amount",), conditions={"on_enter:closed": "amount <= 100"},
+    )
+    assert workflow_spec.validate_spec(good) == []
+    bad = WorkflowSpec(
+        box_type="oe2", url_slug="oe2", states=("open", "closed"), initial_state="open",
+        terminal_states=("closed",), transitions={"open": {"closed"}},
+        action_states={"go": "closed"},
+        conditions={"on_enter:nope": "1 == 1"},
+    )
+    assert any("not declared" in e for e in workflow_spec.validate_spec(bad))
+
+
 def test_engine_exception_path_for_typeless_stall_state(db):
     # contract_review has exception_state=None; an illegal move must raise a
     # box_exception, NOT attempt the illegal state move.

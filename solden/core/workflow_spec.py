@@ -105,7 +105,11 @@ class WorkflowSpec:
         self.fields = tuple(self.fields or ())
         self.hooks = dict(self.hooks or {})
         self.conditions = dict(self.conditions or {})
-        self.llm_fields = tuple(dict(f) for f in (self.llm_fields or ()))
+        # Keep non-mapping entries as-is so validate_spec can report a clean
+        # error instead of crashing here on a malformed from_json payload.
+        self.llm_fields = tuple(
+            dict(f) if isinstance(f, dict) else f for f in (self.llm_fields or ())
+        )
         self.domain_hint = str(self.domain_hint or "")
         self.summary_fields = tuple(self.summary_fields or ())
 
@@ -220,20 +224,30 @@ def validate_spec(spec: WorkflowSpec) -> List[str]:
             validate_expression,
         )
         for key, expr in spec.conditions.items():
-            src, sep, tgt = str(key).partition("->")
-            if sep != "->":
-                errors.append(
-                    f"condition key {key!r} must be a transition edge 'from->to'"
-                )
-                continue
-            if src not in states:
-                errors.append(
-                    f"condition {key!r} source {src!r} is not a declared state"
-                )
-            if tgt not in states:
-                errors.append(
-                    f"condition {key!r} target {tgt!r} is not a declared state"
-                )
+            key_str = str(key)
+            if key_str.startswith("on_enter:"):
+                # State-entry guard form, also honored by the dispatcher.
+                state = key_str[len("on_enter:"):]
+                if state not in states:
+                    errors.append(
+                        f"condition {key!r} target state {state!r} is not declared"
+                    )
+            else:
+                src, sep, tgt = key_str.partition("->")
+                if sep != "->":
+                    errors.append(
+                        f"condition key {key!r} must be a transition edge "
+                        "'from->to' or 'on_enter:state'"
+                    )
+                    continue
+                if src not in states:
+                    errors.append(
+                        f"condition {key!r} source {src!r} is not a declared state"
+                    )
+                if tgt not in states:
+                    errors.append(
+                        f"condition {key!r} target {tgt!r} is not a declared state"
+                    )
             if not isinstance(expr, str) or not expr.strip():
                 errors.append(
                     f"condition {key!r} must be a non-empty expression string"

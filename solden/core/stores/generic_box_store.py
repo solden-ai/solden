@@ -247,7 +247,9 @@ class GenericBoxStore:
                     metadata={"source": "update_generic_box_state", "state": target_state},
                     raised_by=str(actor_id or "system"),
                     raised_actor_type="user",
-                    idempotency_key=f"{box_type}-excp:{box_id}:{target_state}:{now}",
+                    # Stable key (no timestamp): re-entering the exception state
+                    # dedups to one row instead of spamming the queue/webhooks.
+                    idempotency_key=f"{box_type}-excp:{box_id}:{target_state}",
                 )
             except Exception as mirror_exc:
                 logger.warning(

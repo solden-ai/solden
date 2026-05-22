@@ -6,6 +6,26 @@
 
 ---
 
+## ✅ 2026-05-22 — Runtime made FULL for declarative Box types ("skeleton → full runtime")
+
+An audit found a clean split: the runtime **skeleton** (box_registry dispatch, planning/coordination engines, the generic `boxes` store) and the **declarative platform** (WorkflowSpec) were genuinely box-type-agnostic, but the agent's **intelligence** — the LLM boundary and governance — was still bolted to AP. A tenant-declared Box type got tracked + audited but not *read*, *governed*, or *exception-handled* like AP. Six phases closed that gap so a declared workflow gets the agent's full runtime, not just its mechanics. No DB migration (everything rides in `workflow_specs.spec_json` / existing `box_exceptions`).
+
+| Phase | Commit | Change |
+|---|---|---|
+| A | `5466203a` | Routed `create_box` / `post_bill` / `schedule_payment` (and later `reverse_erp_post`) through `box_registry` instead of hardcoded `db.*_ap_item` — generic dispatch + errors on the action path. |
+| B | `0a8ebcdf` | Per-box-type governance: `BoxType.gated_actions` + `governance_skill_id`; the gate resolves governance from the type. A risky action on a type without declared `ap_v1` governance **fails closed** (require human) instead of running ungated. |
+| C | `b2465095` | Declarative Boxes raise first-class `box_exceptions` on entry to their spec's `exception_state` (parity with AP's needs_info). |
+| D | `b55a02e6` | Spec `conditions` (safe AST expression layer, no `eval`) are **always enforced** as transition guards; only customer *code* hooks remain behind `FEATURE_WORKFLOW_HOOKS`. Validated at registration. |
+| E | `5248cfc6` | Spec-driven LLM extraction: `WorkflowSpec.llm_fields` + `domain_hint`; new `extract_box_fields` builds a generic prompt from the spec and runs it through the gateway (`LLMAction.EXTRACT_BOX_FIELDS`). A declared type now gets read by the model. AP prompt builders untouched. |
+| F | `2912de6b` | `WorkflowSpec.summary_fields` drive the declarative box summary. |
+| G | (this) | Adversarial `code-reviewer` pass (0 critical, 0 high after fixes; **no governance bypass, no cross-tenant exposure**). Fixed: `_move_to_exception` crash/swallow for declarative types with a declared `exception_state` (now parks correctly + raises one deduped exception); `on_enter:{state}` condition keys accepted at validation; stable box_exception idempotency key; the new spec fields exposed on the authoring API. End-to-end capstone test proves read → guard → drive → exception → summary for a declared type with zero bespoke Python.
+
+**Remaining frontier (deliberately not shipped):**
+- **Customer-supplied *code* hooks** (WASM/Wasmtime sandbox) stay behind `FEATURE_WORKFLOW_HOOKS` pending the security pentest + sign-off. The safe declarative *condition* layer ships in their place.
+- **Tenant-spec custom governance**: a tenant spec can't yet declare its own AP-style autonomy gate over arbitrary actions — declarative gating today is via conditions (Phase D); the AP autonomy gate (Phase B) is the AP skill's. Wiring tenant-declared `gated_actions` into the autonomy gate is future work.
+
+---
+
 ## ✅ Phase 2 Vendor Identity & IBAN Security — Shipped
 
 The entire P0 vendor-identity + IBAN-security ship-blocker cluster (#5, #6, #7 Group B, #8, #19) shipped between 2026-04-09 commits `253a41c` and `3894e82`. **234 net new tests added. Test suite: 1581 → 1815 passing.**

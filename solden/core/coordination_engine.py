@@ -1113,13 +1113,15 @@ class CoordinationEngine:
           surfaces a real diagnostic instead of a swallowed ``pass``.
         """
         from solden.core.ap_states import IllegalTransitionError
+        from solden.core.workflow_spec import IllegalWorkflowTransitionError
 
         try:
-            exc_state = box_registry.resolve(
-                box_type, self.organization_id
-            ).exception_state
+            _bt = box_registry.resolve(box_type, self.organization_id)
+            exc_state = _bt.exception_state
+            source_table = _bt.source_table
         except Exception:
             exc_state = None
+            source_table = ""
 
         if exc_state is None:
             # No human-stall state for this type — record an exception
@@ -1147,16 +1149,30 @@ class CoordinationEngine:
             return
 
         try:
-            box_registry.update_box(
-                box_type, box_id, self.db,
-                state=exc_state,
-                exception_reason=f"{action_name}: {error[:200]}",
-            )
+            if source_table == "ap_items":
+                box_registry.update_box(
+                    box_type, box_id, self.db,
+                    state=exc_state,
+                    exception_reason=f"{action_name}: {error[:200]}",
+                )
+            else:
+                # Declarative / non-AP types take a plain validated state move
+                # (``exception_reason`` is an AP-only column). The generic store
+                # raises the box_exception on entry to the exception_state
+                # (Phase C), so the failure is still recorded.
+                box_registry.update_box(
+                    box_type, box_id, self.db,
+                    state=exc_state,
+                    actor_id="coordination_engine",
+                    reason=f"{action_name}: {error[:200]}",
+                )
             return
-        except IllegalTransitionError as exc:
+        except (IllegalTransitionError, IllegalWorkflowTransitionError) as exc:
+            exc_current = getattr(exc, "current", "?")
+            exc_target = getattr(exc, "target", exc_state)
             logger.error(
                 "[CoordinationEngine] cannot move %s to %s from %s after %s failure: %s",
-                box_id, exc_state, exc.current, action_name, error,
+                box_id, exc_state, exc_current, action_name, error,
             )
             org_id = ""
             try:
@@ -1173,8 +1189,8 @@ class CoordinationEngine:
                     "actor_id": "coordination_engine",
                     "organization_id": org_id,
                     "payload_json": {
-                        "from_state": exc.current,
-                        "to_state": exc.target,
+                        "from_state": exc_current,
+                        "to_state": exc_target,
                         "trigger": action_name,
                         "underlying_error": error[:500],
                     },
@@ -1189,7 +1205,7 @@ class CoordinationEngine:
                         organization_id=org_id,
                         exception_type="illegal_state_transition",
                         severity="high",
-                        reason=f"{action_name} failed and box is in terminal state {exc.current}: {error[:200]}",
+                        reason=f"{action_name} failed and box is in terminal state {exc_current}: {error[:200]}",
                         raised_by="coordination_engine",
                         raised_actor_type="agent",
                     )
@@ -2907,7 +2923,9 @@ class CoordinationEngine:
         """§3: Reverse a previously posted bill in the ERP (disaster recovery, CFO-only)."""
         if not plan.box_id:
             return {"_abort": True, "error": "No box_id for reversal"}
-        item = await asyncio.to_thread(self.db.get_ap_item, plan.box_id)
+        item = await asyncio.to_thread(
+            box_registry.get_box, plan.box_type, plan.box_id, self.db
+        )
         erp_ref = (item or {}).get("erp_reference", "")
         if not erp_ref:
             return {"_abort": True, "error": "No ERP reference to reverse"}
@@ -2915,8 +2933,9 @@ class CoordinationEngine:
         logger.warning("[CoordinationEngine] reverse_erp_post requested for %s (ref=%s, reason=%s)", plan.box_id, erp_ref, reason)
         # ERP reversal would call the connector — for now, mark as reversed in DB
         await asyncio.to_thread(
-            self.db.update_ap_item,
-            plan.box_id, state="reversed", last_error=f"reversed: {reason}",
+            box_registry.update_box,
+            plan.box_type, plan.box_id, self.db,
+            state="reversed", last_error=f"reversed: {reason}",
         )
         return {"ok": True, "reversed": True, "erp_reference": erp_ref}
 
