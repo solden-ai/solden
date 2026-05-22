@@ -124,7 +124,6 @@ def _load_store_symbols() -> None:
     global IntegrationStore
     global MetricsStore
     global PolicyStore
-    global TaskStore
     global VendorStore
     global ReconStore
     global EntityStore
@@ -163,7 +162,6 @@ def _load_store_symbols() -> None:
     from solden.core.stores.integration_store import IntegrationStore as _IntegrationStore
     from solden.core.stores.metrics_store import MetricsStore as _MetricsStore
     from solden.core.stores.policy_store import PolicyStore as _PolicyStore
-    from solden.core.stores.task_store import TaskStore as _TaskStore
     from solden.core.stores.vendor_store import VendorStore as _VendorStore
     from solden.core.stores.recon_store import ReconStore as _ReconStore
     from solden.core.stores.entity_store import EntityStore as _EntityStore
@@ -231,7 +229,6 @@ def _load_store_symbols() -> None:
     IntegrationStore = _IntegrationStore
     MetricsStore = _MetricsStore
     PolicyStore = _PolicyStore
-    TaskStore = _TaskStore
     VendorStore = _VendorStore
     ReconStore = _ReconStore
     EntityStore = _EntityStore
@@ -1615,13 +1612,6 @@ class _SoldenDBBase:
                 "ON approval_steps(chain_id, step_index)"
             )
 
-            # Agent task run checkpoint table (durable planning loop)
-            cur.execute(TaskStore.TASK_RUNS_TABLE_SQL)
-            cur.execute(
-                "CREATE INDEX IF NOT EXISTS idx_task_runs_org_status "
-                "ON task_runs(organization_id, status)"
-            )
-
             # AP runtime compatibility tables (legacy reconciliation stack removed).
             for table_sql in AP_RUNTIME_COMPAT_TABLES:
                 cur.execute(table_sql)
@@ -1716,7 +1706,6 @@ def _get_db_impl_class():
             IntegrationStore,
             PolicyStore,
             MetricsStore,
-            TaskStore,
             VendorStore,
             OnboardingTokenStore,
             ReconStore,

@@ -93,7 +93,7 @@ Each mixin handles one domain's SQL. `SoldenDB` inherits all of them; read/write
 - `box_lifecycle_store.py` — `box_exceptions` (multiple per Box, severity + raised_by + resolved_by) and `box_outcomes` (UNIQUE per Box, terminal record). Every mutation narrates to `audit_events` AND emits a `box.exception_raised` / `box.exception_resolved` / `box.outcome_recorded` webhook to subscribed customers.
 - `vendor_store.py` — vendor profiles, vendor_invoice_history, vendor onboarding sessions.
 - `onboarding_token_store.py` — magic-link tokens for vendor portal.
-- `task_store.py` — task_runs (crash-resume primitive).
+- `agent_retry_jobs.py` — durable retry queue (ERP-post crash recovery; drained on startup + every tick).
 - `purchase_order_store.py` — POs, GRs, 3-way matches.
 - `approval_chain_store.py` — approval policy chains.
 - `bank_details.py` — Fernet-encrypted bank details.

@@ -55,7 +55,7 @@ This part is external-facing. Every claim on the Problem + Solution slides is ma
 - **Planning engine** — [DeterministicPlanningEngine](../clearledgr/core/planning_engine.py#L30). Dispatches 20 event types ([planning_engine.py:50-71](../clearledgr/core/planning_engine.py#L50-L71)) to typed handlers. Pure deterministic — no Claude calls at the planning layer (file header: "No Claude calls. Claude is only called WITHIN specific Actions during execution").
 - **Coordination engine** — [CoordinationEngine](../clearledgr/core/coordination_engine.py#L95). Registers 50+ action handlers covering every category in Agent Spec §3 (Email, Classification, ERP, Box/State, Communication, Vendor, Fraud).
 - **Runtime facade** — [FinanceAgentRuntime](../clearledgr/services/finance_agent_runtime.py#L94) is the public surface.
-- **Durability** — [TaskStore](../clearledgr/core/stores/task_store.py#L28) + `task_runs` table + resume on startup (see `get_platform_finance_runtime().resume_pending_agent_tasks()` called from `main.py`). A crash mid-plan is recoverable.
+- **Durability** — event-sourced recovery: a durable Redis Streams event queue with consumer-group reclaim of crashed work ([RedisEventQueue](../solden/core/event_queue.py)), Celery `task_acks_late` (tasks redelivered on worker crash), the `agent_retry_jobs` durable retry queue drained on startup + every tick (`resume_pending_agent_tasks` → `drain_agent_retry_jobs`), and Postgres-persisted `pending_plan` resumed via CAS-guarded `_cas_clear_pending_plan` (no double-execution). A crash mid-plan is recoverable.
 - **Rule 1 enforcement** — [_Rule1PreWriteFailed](../clearledgr/core/coordination_engine.py#L73) exception aborts the action if the pre-write timeline entry can't land. No side effect happens without a corresponding audit row.
 - **19-step invoice plan** — Agent Spec §9.1 is implemented at [planning_engine.py:120+](../clearledgr/core/planning_engine.py#L120) (`_plan_email_received`).
 
@@ -266,7 +266,7 @@ For fast reference when questions come up mid-deck-prep.
 | Agent loop (observe→deliberate→act) | `FinanceAgentLoopService` | [finance_agent_loop.py](../clearledgr/services/finance_agent_loop.py) |
 | Governance gate | `finance_agent_governance` | [finance_agent_governance.py](../clearledgr/services/finance_agent_governance.py) |
 | Runtime facade | `FinanceAgentRuntime`, `APActionContext` | [finance_agent_runtime.py:94](../clearledgr/services/finance_agent_runtime.py#L94) |
-| Durability | `TaskStore`, `task_runs` | [task_store.py:28](../clearledgr/core/stores/task_store.py#L28) |
+| Durability | Redis Streams + Celery `acks_late` + `agent_retry_jobs` + `pending_plan`/CAS | [event_queue.py](../solden/core/event_queue.py), [agent_retry_jobs.py](../solden/services/agent_retry_jobs.py) |
 | LLM Gateway + closed action registry | `LLMAction` enum | [llm_gateway.py:47](../clearledgr/core/llm_gateway.py#L47) |
 | Secrets hardening | `require_secret()` | [secrets.py:22](../clearledgr/core/secrets.py#L22) |
 | ERP router | `post_bill()` | [erp_router.py:801](../clearledgr/integrations/erp_router.py#L801) |

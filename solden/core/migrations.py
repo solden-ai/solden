@@ -5850,3 +5850,21 @@ def _v96_vendor_gl_learning_store(cur, db):
         )
         """
     )
+
+
+@migration(97, "drop the vestigial task_runs table (never written; superseded by agent_retry_jobs + Redis Streams)")
+def _v97_drop_task_runs(cur, db):
+    """Remove the dead ``task_runs`` table + index.
+
+    ``task_runs`` was a checkpoint store for a durable planning loop that was
+    never wired: nothing ever called ``create_task_run`` / ``update_task_run_step``
+    / ``complete_task_run``, so the table was always empty. Its docstring even
+    claimed a ``resume_pending_tasks()`` startup sweep that did not exist. The
+    real durability layer is ``agent_retry_jobs`` (durable retry queue, drained
+    on startup + every tick) + Redis Streams (crashed-consumer reclaim) + Celery
+    ``acks_late`` + Postgres ``pending_plan`` with CAS-guarded resume. Dropping
+    the empty table removes a misleading half-built parallel system. (Mirrors
+    v32, which dropped the equally-dead ``workflow_runs`` Temporal fallback.)
+    """
+    cur.execute("DROP INDEX IF EXISTS idx_task_runs_org_status")
+    cur.execute("DROP TABLE IF EXISTS task_runs")

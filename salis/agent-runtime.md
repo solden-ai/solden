@@ -257,7 +257,7 @@ If the process dies mid-plan, the next worker picks up the event from the queue 
 
 See ADR 007 for the full idempotency story.
 
-`task_runs` table + `FinanceAgentRuntime.resume_pending_agent_tasks` runs at startup to reclaim any task interrupted mid-way. `app_startup.py` calls it once per process start.
+Recovery is event-sourced: Redis Streams reclaims a crashed consumer's un-acked entries (`xautoclaim`) and re-delivers them; Celery `task_acks_late` redelivers crashed tasks; `FinanceAgentRuntime.resume_pending_agent_tasks` (called once per process start from `app_startup.py`) drains the `agent_retry_jobs` durable retry queue; and a box's persisted `pending_plan` resumes via the CAS-guarded `_cas_clear_pending_plan`. No checkpoint store — recovery rides the durable event/retry layers + persisted state.
 
 ---
 

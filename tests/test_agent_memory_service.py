@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-
 from solden.core.database import SoldenDB
 from solden.services.agent_memory import AgentMemoryService
 
@@ -180,14 +178,6 @@ def test_agent_memory_surface_aggregates_semantic_and_episodic_context(tmp_path,
             "status": "pending",
         }
     )
-    db.create_task_run(
-        id="task-run-ap-3",
-        org_id="test-org",
-        task_type="ap_invoice_processing",
-        input_payload=json.dumps({"ap_item_id": "ap-3"}),
-        correlation_id="corr-task-ap-3",
-    )
-
     service = AgentMemoryService("test-org", db=db)
     service.capture_runtime_state(
         skill_id="ap_v1",
@@ -206,8 +196,8 @@ def test_agent_memory_surface_aggregates_semantic_and_episodic_context(tmp_path,
     assert surface["semantic_memory"]["vendor_profile"]["payment_terms"] == "Net 15"
     assert surface["semantic_memory"]["vendor_feedback_summary"]["total_feedback"] == 1
     assert "workflow_runs" not in surface["episodic_memory"]
+    assert "task_runs" not in surface["episodic_memory"]
     assert surface["episodic_memory"]["retry_jobs"]
-    assert surface["episodic_memory"]["task_runs"]
 
 
 def test_agent_memory_compacts_old_events_and_persists_eval_snapshot(tmp_path, monkeypatch):

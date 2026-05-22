@@ -1944,49 +1944,6 @@ async def get_invoice_pipeline_status(
     }
 
 
-@router.get("/workflow/{workflow_id}")
-async def get_workflow_status(
-    workflow_id: str,
-    user=Depends(get_current_user),
-):
-    """Get the status of an agent task by its run ID.
-
-    Used by the Gmail extension to poll for completion of async agent
-    tasks. Backed by the `task_runs` table (agent planning engine
-    checkpoint store) — the id here is a task_run id, not a legacy
-    workflow id.
-    """
-    db = get_db()
-    if not hasattr(db, "get_task_run"):
-        raise HTTPException(status_code=404, detail="workflow_not_found")
-    row = db.get_task_run(workflow_id)
-    if not row:
-        raise HTTPException(status_code=404, detail="workflow_not_found")
-    # M19+: M19b deleted the post-fetch tenant-access check as part of
-    # the verify_org_access redundancy sweep. But this route has no
-    # _require_item upstream — the row is fetched purely by
-    # workflow_id (i.e. task_run id, which is global). The delete
-    # silently dropped tenant scope, letting any authenticated user
-    # iterate task_run ids and read any tenant's workflow status +
-    # last_error contents. Restore the post-fetch tenant check (404,
-    # not 403, so existence doesn't leak).
-    row_org = str(row.get("organization_id") or "").strip()
-    if row_org != require_org(user):
-        raise HTTPException(status_code=404, detail="workflow_not_found")
-    return {
-        "workflow_id": row.get("id"),
-        "status": row.get("status"),
-        "task_type": row.get("task_type"),
-        "current_step": row.get("current_step"),
-        "retry_count": row.get("retry_count"),
-        "last_error": row.get("last_error"),
-        "organization_id": row.get("organization_id"),
-        "created_at": row.get("created_at"),
-        "updated_at": row.get("updated_at"),
-        "completed_at": row.get("completed_at"),
-    }
-
-
 @router.get("/ap/{ap_item_id}/explain")
 def explain_ap_item(
     ap_item_id: str,

@@ -2505,7 +2505,6 @@ class TestExtensionEndpoints:
         assert client.get("/extension/pipeline?organization_id=org-test").status_code == 401
         assert client.get("/extension/invoice-pipeline/default").status_code == 401
         assert client.get("/extension/invoice-status/email-1").status_code == 401
-        assert client.get("/extension/workflow/wf-1").status_code == 401
         assert client.get("/extension/ap/AP-1/explain").status_code == 401
         # Field-correction is a runtime-owned mutation route and still requires auth.
         assert client.post(

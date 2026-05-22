@@ -123,26 +123,6 @@ class AgentMemoryService:
                 return {}
         return {}
 
-    @classmethod
-    def _parse_task_payload(cls, task_run: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        row = task_run if isinstance(task_run, dict) else {}
-        return cls._load_json(row.get("input_payload"), {})
-
-    @classmethod
-    def _task_run_ap_item_id(cls, task_run: Optional[Dict[str, Any]]) -> Optional[str]:
-        payload = cls._parse_task_payload(task_run)
-        candidates = [
-            payload.get("ap_item_id"),
-            payload.get("entity_id"),
-            (payload.get("ap_item") or {}).get("id") if isinstance(payload.get("ap_item"), dict) else None,
-            (payload.get("invoice") or {}).get("ap_item_id") if isinstance(payload.get("invoice"), dict) else None,
-        ]
-        for candidate in candidates:
-            resolved = str(candidate or "").strip()
-            if resolved:
-                return resolved
-        return None
-
     def _init_tables(self) -> None:
         with self.db.connect() as conn:
             cur = conn.cursor()
@@ -1421,7 +1401,6 @@ class AgentMemoryService:
                     "episode": {},
                     "recent_events": [],
                     "retry_jobs": [],
-                    "task_runs": [],
                 },
                 "semantic_memory": {},
                 "identity_memory": self.default_profile(skill_id=skill_id),
@@ -1462,33 +1441,10 @@ class AgentMemoryService:
             except Exception:
                 retry_jobs = []
 
-        task_runs: List[Dict[str, Any]] = []
-        if hasattr(self.db, "list_task_runs"):
-            try:
-                runs = self.db.list_task_runs(self.organization_id, limit=50) or []
-                task_runs = [
-                    {
-                        "id": row.get("id"),
-                        "task_type": row.get("task_type"),
-                        "status": row.get("status"),
-                        "current_step": row.get("current_step"),
-                        "correlation_id": row.get("correlation_id"),
-                        "last_error": row.get("last_error"),
-                        "created_at": row.get("created_at"),
-                        "updated_at": row.get("updated_at"),
-                        "completed_at": row.get("completed_at"),
-                    }
-                    for row in runs
-                    if self._task_run_ap_item_id(row) == resolved_ap_item_id
-                ][:5]
-            except Exception:
-                task_runs = []
-
         episodic_memory = {
             "episode": episode if isinstance(episode, dict) else {},
             "recent_events": recent_events,
             "retry_jobs": retry_jobs,
-            "task_runs": task_runs,
         }
 
         semantic_memory: Dict[str, Any] = {

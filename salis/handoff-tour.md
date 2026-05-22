@@ -132,8 +132,8 @@ Imagine a vendor sends an invoice to the customer's AP inbox. Here's the code pa
 6. **Validation gate → `clearledgr/services/invoice_validation.py`**
    Deterministic rules: PO required? Duplicate? Over threshold? Each rule produces a reason code. If any rule fails hard, the Box moves to `needs_info` and surfaces in the sidebar with a reason.
 
-7. **Planning → `clearledgr/core/agent_runtime.py`**
-   The `AgentPlanningEngine` runs a Claude tool-use loop to decide the next actions. The plan is written to `task_runs` for crash-resume.
+7. **Planning → `solden/core/planning_engine.py`**
+   The `DeterministicPlanningEngine` (rules-first, no LLM) decides the next actions. The plan is durable: a box's remaining plan is persisted to `pending_plan` at async waits and resumed via the CAS-guarded `_cas_clear_pending_plan`; crashed work is recovered by Redis Streams reclaim + Celery `acks_late` + the `agent_retry_jobs` drain.
 
 8. **Coordination → `clearledgr/core/coordination_engine.py`**
    The engine consumes the plan, one action at a time, with Rule 1 pre-writes between every step.
@@ -166,7 +166,7 @@ For each step, the pre-write at step N means an audit row exists that says "abou
 | **Planning engine** | `clearledgr/core/agent_runtime.py` | `AgentPlanningEngine`. Runs the Claude tool-use loop. Produces Plans. |
 | **Finance agent runtime** | `clearledgr/services/finance_agent_runtime.py` | The public facade. `execute_ap_invoice_processing()` is what `agent_orchestrator.process_invoice` calls. |
 | **Event queue** | `clearledgr/core/event_queue.py` | Redis Streams in prod, in-memory in dev. Events drive the planning engine. |
-| **TaskRun** | `clearledgr/core/stores/task_store.py` | Crash-resume primitive. Idempotency key on `(task_type, key)`. |
+| **Agent retry jobs** | `solden/services/agent_retry_jobs.py` | Durable retry queue (ERP-post recovery). Drained on startup + every tick, backoff + dead-letter. |
 | **audit_events** | `clearledgr/core/stores/ap_store.py:append_audit_event` | The universal timeline. Every write goes through this funnel. |
 | **channel_threads** | `clearledgr/core/stores/ap_store.py:upsert_channel_thread` | Per-Box per-channel state (Slack thread, Teams conversation). |
 | **box_links** | `clearledgr/core/stores/pipeline_store.py:link_boxes` | Cross-Box relationships. Invoice ↔ vendor-onboarding. |
@@ -184,7 +184,7 @@ This is the question that will confuse every new engineer. Write it down once, i
 - **Timeline** → `audit_events`. Keyed on `(box_id, box_type)`. Append-only.
 - **Cross-surface state** → `channel_threads` for Slack/Teams per-Box state. Not in the Box record.
 - **Cross-Box relationships** → `box_links`. Pair-oriented.
-- **Planning + retry state** → `task_runs`. Survives process crash.
+- **Planning state** → a box's `pending_plan` column (persisted at async waits, CAS-resumed). **Retry state** → `agent_retry_jobs`. Both survive process crash; recovery also rides Redis Streams reclaim + Celery `acks_late`.
 - **Agent event log** → `agent_events` + Redis streams (if REDIS_URL set).
 - **LLM cost + linkage** → `llm_call_log`.
 - **ERP state** → ERP is the source of truth post-post. We reflect `ap_items.erp_reference`, never mirror the full ERP record.

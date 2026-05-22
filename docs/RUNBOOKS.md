@@ -344,7 +344,7 @@ Each needs CS/on-call input to author properly (response steps depend on product
 - **Stuck waiting conditions**: boxes parked in `set_waiting_condition` whose timer never fires (bug, timer storage drift, Celery Beat dead). Detection + manual unblock procedure.
 
 ### Infrastructure
-- **Postgres failover / replica lag**: primary down, read replicas behind. What happens to in-flight plans? (Task durability via `task_runs` + `pending_plan` should survive; untested in a real failover drill.)
+- **Postgres failover / replica lag**: primary down, read replicas behind. What happens to in-flight plans? (Durability via persisted `pending_plan` + `agent_retry_jobs` + Redis Streams reclaim should survive; untested in a real failover drill.)
 - **Redis cache / stream failure**: event queue unreachable. `core/event_queue.py` has an in-process fallback but it's not durable — a production Redis outage is a hard event.
 - **Celery fleet down**: no workers consuming `process_agent_event`. Events pile up in Redis Streams. Detection + worker restart procedure.
 

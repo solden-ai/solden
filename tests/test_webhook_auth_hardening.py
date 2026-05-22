@@ -900,28 +900,6 @@ def test_field_review_resolution_passes_org_to_require_item():
     )
 
 
-def test_gmail_extension_workflow_status_checks_row_org():
-    """M19+ regression: ``GET /api/gmail-extension/workflow/{id}`` was
-    fetching ``task_runs`` rows by primary key only. M19b deleted the
-    ``_assert_user_org_access(user, row.org or "default")`` line as
-    redundant, but this route has NO ``_require_item`` upstream — the
-    tenant check went away entirely. Pin the post-fetch row_org check.
-    """
-    from pathlib import Path
-
-    repo_root = Path(__file__).resolve().parent.parent
-    src = (repo_root / "solden" / "api" / "gmail_extension.py").read_text()
-    # Find the route handler body.
-    marker = '/workflow/{workflow_id}'
-    if marker in src:
-        chunk = src.split(marker, 1)[1].split("\n@router.", 1)[0]
-        assert "row_org" in chunk and "require_org" in chunk, (
-            "/workflow/{id} handler must check row.organization_id "
-            "against the session org — pre-fix the line existed; "
-            "M19b's redundancy sweep removed it."
-        )
-
-
 def test_or_default_regex_catches_alternate_rewrite_shapes():
     """M16: the regression-test detector ``_OR_DEFAULT_RE`` previously
     matched only a literal ``or "default"``. The sub-agent review

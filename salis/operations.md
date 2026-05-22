@@ -89,7 +89,7 @@ Map the `state` to what should come next:
 
 **If the audit timeline ends with a `*_failed` event** — read the failure reason. Check whether the ERP / Gmail / Slack actually rejected our call or we hit a retryable error.
 
-**If the timeline ends mid-plan with no failure** — the coordinator crashed mid-action. `task_runs` table has the pending task; `FinanceAgentRuntime.resume_pending_agent_tasks` runs on every process start and should re-pick it up.
+**If the timeline ends mid-plan with no failure** — the coordinator crashed mid-action. Recovery is event-sourced: the un-acked Redis Streams entry is reclaimed by another consumer (`xautoclaim`) and re-delivered, re-driving the box (idempotency keys + the CAS-guarded `pending_plan` resume prevent double-execution). ERP-post retries also drain from `agent_retry_jobs` via `FinanceAgentRuntime.resume_pending_agent_tasks` on every process start. If a box is genuinely stuck, re-trigger the originating event.
 
 **If no timeline progress at all** — the event never entered the queue, or the worker isn't consuming. Check:
 - Redis event queue length (`redis-cli XLEN clearledgr:events`).

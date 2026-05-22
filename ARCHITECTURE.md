@@ -481,7 +481,7 @@ This is critical for safe multi-mailbox operation. Without mailbox identity on r
 
 ### 10.4 Durability stack
 
-The durable runtime is Celery + Redis Streams + Postgres task_runs (see §11.2 of AGENT_DESIGN_SPECIFICATION.md). Redis provides the durable event queue with consumer groups and exactly-once delivery. Postgres task_runs tracks per-step checkpointing for crash-resumable agent plans. Celery Beat fires time-based events (GRN polling, approval timeouts, override-window close, vendor chases).
+The durable runtime is Celery (`task_acks_late`) + Redis Streams + the `agent_retry_jobs` retry queue + Postgres state (see §11.2 of AGENT_DESIGN_SPECIFICATION.md). Redis provides the durable event queue with consumer groups; a crashed consumer's un-acked entries are reclaimed (`xautoclaim`) and re-delivered. Recovery is event-sourced: redelivery re-drives the box, with idempotency keys + the CAS-guarded `pending_plan` resume preventing double-execution, and `agent_retry_jobs` handling ERP-post retries (drained on startup + every tick). Celery Beat fires time-based events (GRN polling, approval timeouts, override-window close, vendor chases).
 
 ## 11. Mailbox-Centric Gmail Orchestration
 

@@ -894,7 +894,6 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         r"^/extension/invoice-status/[^/]+$",
         r"^/extension/needs-info-draft/[^/]+$",
         r"^/extension/suggestions/form-prefill/[^/]+$",
-        r"^/extension/workflow/[^/]+$",
         r"^/extension/by-thread/[^/]+$",
         r"^/gmail/status/[^/]+$",
         r"^/api/workspace/ap/items/[^/]+/originals$",
