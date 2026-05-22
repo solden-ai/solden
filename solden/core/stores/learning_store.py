@@ -128,6 +128,114 @@ class LearningStore:
             ))
             conn.commit()
 
+    # ------------------------------------------------------------------ #
+    # Vendor -> GL patterns (LearningService, learned from approvals)
+    # ------------------------------------------------------------------ #
+    def list_vendor_gl_patterns(self, organization_id: str) -> List[Dict[str, Any]]:
+        """All learned vendor->GL patterns for one org."""
+        self.initialize()
+        sql = (
+            "SELECT vendor_normalized, gl_code, vendor_name, gl_description, "
+            "occurrence_count, total_amount, avg_amount, currency, last_used, confidence "
+            "FROM learning_vendor_patterns WHERE organization_id = %s"
+        )
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(sql, (organization_id,))
+            return [dict(r) for r in cur.fetchall()]
+
+    def save_vendor_gl_pattern(
+        self,
+        organization_id: str,
+        pattern: Dict[str, Any],
+    ) -> None:
+        """Upsert one vendor->GL pattern, scoped to (org, vendor_normalized, gl_code)."""
+        self.initialize()
+        now = datetime.now(timezone.utc).isoformat()
+        sql = (
+            "INSERT INTO learning_vendor_patterns "
+            "(organization_id, vendor_normalized, gl_code, vendor_name, gl_description, "
+            " occurrence_count, total_amount, avg_amount, currency, last_used, confidence, "
+            " created_at, updated_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
+            "ON CONFLICT (organization_id, vendor_normalized, gl_code) DO UPDATE SET "
+            "  vendor_name = EXCLUDED.vendor_name, "
+            "  gl_description = EXCLUDED.gl_description, "
+            "  occurrence_count = EXCLUDED.occurrence_count, "
+            "  total_amount = EXCLUDED.total_amount, "
+            "  avg_amount = EXCLUDED.avg_amount, "
+            "  currency = EXCLUDED.currency, "
+            "  last_used = EXCLUDED.last_used, "
+            "  confidence = EXCLUDED.confidence, "
+            "  updated_at = EXCLUDED.updated_at"
+        )
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(sql, (
+                organization_id,
+                pattern["vendor_normalized"],
+                pattern["gl_code"],
+                pattern.get("vendor_name") or "",
+                pattern.get("gl_description"),
+                int(pattern.get("occurrence_count") or 0),
+                float(pattern.get("total_amount") or 0.0),
+                float(pattern.get("avg_amount") or 0.0),
+                pattern.get("currency") or "USD",
+                pattern.get("last_used"),
+                float(pattern.get("confidence") or 0.0),
+                now,
+                now,
+            ))
+            conn.commit()
+
+    def get_learning_org_stats(self, organization_id: str) -> Dict[str, Any]:
+        """Cumulative learning counters for one org (zeros if none yet)."""
+        self.initialize()
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT total_learned, corrections_received, auto_approved_count "
+                "FROM learning_org_stats WHERE organization_id = %s",
+                (organization_id,),
+            )
+            row = cur.fetchone()
+        if not row:
+            return {"total_learned": 0, "corrections_received": 0, "auto_approved_count": 0}
+        return {
+            "total_learned": int(row.get("total_learned") or 0),
+            "corrections_received": int(row.get("corrections_received") or 0),
+            "auto_approved_count": int(row.get("auto_approved_count") or 0),
+        }
+
+    def save_learning_org_stats(
+        self,
+        organization_id: str,
+        stats: Dict[str, Any],
+    ) -> None:
+        """Upsert the per-org cumulative learning counters."""
+        self.initialize()
+        now = datetime.now(timezone.utc).isoformat()
+        sql = (
+            "INSERT INTO learning_org_stats "
+            "(organization_id, total_learned, corrections_received, auto_approved_count, updated_at) "
+            "VALUES (%s, %s, %s, %s, %s) "
+            "ON CONFLICT (organization_id) DO UPDATE SET "
+            "  total_learned = EXCLUDED.total_learned, "
+            "  corrections_received = EXCLUDED.corrections_received, "
+            "  auto_approved_count = EXCLUDED.auto_approved_count, "
+            "  updated_at = EXCLUDED.updated_at"
+        )
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(sql, (
+                organization_id,
+                int(stats.get("total_learned") or 0),
+                int(stats.get("corrections_received") or 0),
+                int(stats.get("auto_approved_count") or 0),
+                now,
+            ))
+            conn.commit()
+
     def learning_metrics(self, organization_id: str) -> Dict[str, Any]:
         """Aggregate learning metrics for one org (recomputed, not stored)."""
         self.initialize()

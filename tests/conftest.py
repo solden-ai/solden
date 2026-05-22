@@ -127,6 +127,13 @@ def reset_service_singletons():
         _cl_mod._learning_service = None
     except Exception:
         pass
+    # LearningService keeps a per-org singleton with a write-through pattern
+    # cache; clear it for the same reason as above.
+    try:
+        from solden.services.learning import _learning_services
+        _learning_services.clear()
+    except Exception:
+        pass
     # SubscriptionService caches `self.db` at construction (subscription.py:432).
     # If a test swaps DATABASE_URL / CLEARLEDGR_DB_PATH but the singleton
     # stayed alive from an earlier test, it would keep writing to the old

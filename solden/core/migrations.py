@@ -5798,3 +5798,55 @@ def _v95_compounding_learning_store(cur, db):
         "CREATE INDEX IF NOT EXISTS idx_learning_corrections_org_type "
         "ON learning_corrections (organization_id, correction_type)"
     )
+
+
+@migration(
+    96,
+    "learning_vendor_patterns + learning_org_stats: org-scoped Postgres store for "
+    "LearningService (vendor->GL patterns learned from approvals; replaces the "
+    "in-memory-only state that reset on every deploy)",
+)
+def _v96_vendor_gl_learning_store(cur, db):
+    """Persist LearningService's vendor->GL learning to Postgres.
+
+    LearningService was already org-isolated (singleton keyed by org) but kept its
+    learned vendor->GL patterns purely in memory, so everything it learned reset on
+    every deploy/restart. These tables give it the same durable, org-scoped backing
+    the compounding-learning store got in v95. ``organization_id`` is part of the
+    primary key on both tables.
+    """
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS learning_vendor_patterns (
+            organization_id TEXT NOT NULL,
+            vendor_normalized TEXT NOT NULL,
+            gl_code TEXT NOT NULL,
+            vendor_name TEXT NOT NULL,
+            gl_description TEXT,
+            occurrence_count INTEGER NOT NULL DEFAULT 1,
+            total_amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+            avg_amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+            currency TEXT NOT NULL DEFAULT 'USD',
+            last_used TEXT,
+            confidence DOUBLE PRECISION NOT NULL DEFAULT 0.5,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (organization_id, vendor_normalized, gl_code)
+        )
+        """
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_learning_vendor_patterns_org_vendor "
+        "ON learning_vendor_patterns (organization_id, vendor_normalized)"
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS learning_org_stats (
+            organization_id TEXT PRIMARY KEY,
+            total_learned INTEGER NOT NULL DEFAULT 0,
+            corrections_received INTEGER NOT NULL DEFAULT 0,
+            auto_approved_count INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )

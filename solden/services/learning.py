@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -45,16 +46,6 @@ class VendorPattern:
         self.confidence = min(0.99, 0.5 + (self.occurrence_count * 0.05))
 
 
-@dataclass
-class AmountPattern:
-    """Learned pattern for amount ranges."""
-    vendor_name: str
-    min_amount: float
-    max_amount: float
-    gl_code: str
-    occurrence_count: int = 1
-
-
 class LearningService:
     """
     Learns from user actions to improve predictions.
@@ -65,10 +56,14 @@ class LearningService:
     - User corrections (learn from overrides)
     
     Storage:
-    - In-memory for fast access
-    - Backed by database for persistence
+    - Postgres-backed (LearningStore mixin), org-scoped: tables
+      ``learning_vendor_patterns`` + ``learning_org_stats``.
+    - In-memory write-through cache for fast reads, reloaded from Postgres on a
+      TTL so the learning survives deploys and stays consistent across workers.
     """
-    
+
+    _CACHE_REFRESH_INTERVAL: int = 300  # 5-minute refresh window
+
     def __init__(self, organization_id: str):
         self.organization_id = assert_org_id(
             organization_id, context="LearningService"
@@ -77,21 +72,99 @@ class LearningService:
         # Vendor → GL patterns (most common mapping wins)
         # Key: normalized vendor name, Value: dict of gl_code → VendorPattern
         self.vendor_patterns: Dict[str, Dict[str, VendorPattern]] = defaultdict(dict)
-        
-        # Amount-based patterns (e.g., "Stripe > $1000 → Payment Processing Large")
-        self.amount_patterns: List[AmountPattern] = []
-        
-        # Recent corrections (for detecting systematic errors)
-        self.corrections: List[Dict[str, Any]] = []
-        
-        # Statistics
+
+        # Statistics (cumulative counters, persisted per-org)
         self.stats = {
             "total_learned": 0,
             "corrections_received": 0,
             "auto_approved_count": 0,
             "accuracy_rate": 0.0,
         }
-    
+
+        self._loaded = False
+        self._last_refresh = 0.0
+
+    # ------------------------------------------------------------------ #
+    # Persistence + cache helpers
+    # ------------------------------------------------------------------ #
+    def _db(self):
+        from solden.core.database import get_db
+        return get_db()
+
+    def _ensure_loaded(self) -> None:
+        """Load (or TTL-refresh) this org's patterns + stats from Postgres."""
+        now = time.time()
+        if self._loaded and (now - self._last_refresh) <= self._CACHE_REFRESH_INTERVAL:
+            return
+        self._load_from_db()
+
+    def _load_from_db(self) -> None:
+        """Destructive reload of this org's cache from Postgres.
+
+        Invariant: every in-memory mutator (currently only ``record_approval`` /
+        ``import_patterns``) MUST write-through to Postgres before returning,
+        because this method fully replaces ``self.vendor_patterns``. An
+        un-persisted in-memory write would be silently dropped on the next
+        TTL refresh.
+        """
+        load_ok = True
+        vendor_patterns: Dict[str, Dict[str, VendorPattern]] = defaultdict(dict)
+        try:
+            rows = self._db().list_vendor_gl_patterns(self.organization_id)
+        except Exception as exc:
+            logger.warning(
+                "Could not load vendor patterns for org %s: %s", self.organization_id, exc
+            )
+            rows = []
+            load_ok = False
+        for row in rows:
+            last_used = row.get("last_used")
+            vendor_patterns[row["vendor_normalized"]][row["gl_code"]] = VendorPattern(
+                vendor_name=row.get("vendor_name") or "",
+                gl_code=row["gl_code"],
+                gl_description=row.get("gl_description") or "",
+                occurrence_count=int(row.get("occurrence_count") or 0),
+                total_amount=float(row.get("total_amount") or 0.0),
+                avg_amount=float(row.get("avg_amount") or 0.0),
+                currency=row.get("currency") or "USD",
+                last_used=datetime.fromisoformat(last_used) if last_used else datetime.now(timezone.utc),
+                confidence=float(row.get("confidence") or 0.5),
+            )
+        self.vendor_patterns = vendor_patterns
+        try:
+            self.stats.update(self._db().get_learning_org_stats(self.organization_id))
+        except Exception as exc:
+            logger.warning(
+                "Could not load learning stats for org %s: %s", self.organization_id, exc
+            )
+            load_ok = False
+        self._loaded = True
+        # On a failed/partial load, don't hold the empty state for the full TTL —
+        # leave _last_refresh at 0 so the next call retries instead of serving
+        # stale-empty (and degraded suggestions) for 5 minutes after a DB blip.
+        self._last_refresh = time.time() if load_ok else 0.0
+
+    def _persist_pattern(self, normalized: str, pattern: VendorPattern) -> None:
+        self._db().save_vendor_gl_pattern(self.organization_id, {
+            "vendor_normalized": normalized,
+            "gl_code": pattern.gl_code,
+            "vendor_name": pattern.vendor_name,
+            "gl_description": pattern.gl_description,
+            "occurrence_count": pattern.occurrence_count,
+            "total_amount": pattern.total_amount,
+            "avg_amount": pattern.avg_amount,
+            "currency": pattern.currency,
+            "last_used": pattern.last_used.isoformat() if pattern.last_used else None,
+            "confidence": pattern.confidence,
+        })
+
+    def _persist_stats(self) -> None:
+        self._db().save_learning_org_stats(self.organization_id, {
+            "total_learned": self.stats.get("total_learned", 0),
+            "corrections_received": self.stats.get("corrections_received", 0),
+            "auto_approved_count": self.stats.get("auto_approved_count", 0),
+        })
+
     def record_approval(
         self,
         vendor: str,
@@ -108,8 +181,9 @@ class LearningService:
         
         Called when user approves an invoice (or system auto-approves).
         """
+        self._ensure_loaded()
         normalized = self._normalize_vendor(vendor)
-        
+
         # Get or create pattern for this vendor/GL combo
         if gl_code not in self.vendor_patterns[normalized]:
             self.vendor_patterns[normalized][gl_code] = VendorPattern(
@@ -118,34 +192,32 @@ class LearningService:
                 gl_description=gl_description,
                 currency=currency,
             )
-        
+
         pattern = self.vendor_patterns[normalized][gl_code]
         pattern.update(amount)
-        
+
         # Track corrections
         if was_corrected and original_suggestion:
-            self.corrections.append({
-                "vendor": vendor,
-                "original_gl": original_suggestion,
-                "corrected_gl": gl_code,
-                "amount": amount,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            })
             self.stats["corrections_received"] += 1
-            
+
             # Learn from correction: boost confidence for the corrected GL
             pattern.confidence = min(0.99, pattern.confidence + 0.1)
-            
+
             # Decrease confidence for the wrongly suggested GL
             if original_suggestion in self.vendor_patterns[normalized]:
                 orig_pattern = self.vendor_patterns[normalized][original_suggestion]
                 orig_pattern.confidence = max(0.1, orig_pattern.confidence - 0.1)
-        
+                self._persist_pattern(normalized, orig_pattern)
+
         # Update statistics
         self.stats["total_learned"] += 1
         if was_auto_approved:
             self.stats["auto_approved_count"] += 1
-        
+
+        # Write through to Postgres so the learning survives deploys.
+        self._persist_pattern(normalized, pattern)
+        self._persist_stats()
+
         logger.info(f"Learned: {vendor} → GL {gl_code} (confidence: {pattern.confidence:.2f})")
     
     def suggest_gl_code(
@@ -161,8 +233,9 @@ class LearningService:
             Dict with gl_code, gl_description, confidence, source
             or None if no pattern found
         """
+        self._ensure_loaded()
         normalized = self._normalize_vendor(vendor)
-        
+
         # Check vendor patterns
         if normalized in self.vendor_patterns:
             patterns = self.vendor_patterns[normalized]
@@ -192,23 +265,13 @@ class LearningService:
                         if code != best.gl_code
                     ][:3],
                 }
-        
-        # Check amount-based patterns
-        if amount and self.amount_patterns:
-            for pattern in self.amount_patterns:
-                if (self._normalize_vendor(pattern.vendor_name) == normalized and
-                    pattern.min_amount <= amount <= pattern.max_amount):
-                    return {
-                        "gl_code": pattern.gl_code,
-                        "confidence": 0.7,
-                        "source": "amount_range",
-                    }
-        
+
         # No pattern found
         return None
     
     def get_vendor_history(self, vendor: str) -> Dict[str, Any]:
         """Get full history for a vendor."""
+        self._ensure_loaded()
         normalized = self._normalize_vendor(vendor)
         
         if normalized not in self.vendor_patterns:
@@ -238,6 +301,7 @@ class LearningService:
     
     def get_all_patterns(self) -> List[Dict[str, Any]]:
         """Get all learned vendor patterns."""
+        self._ensure_loaded()
         all_patterns = []
         
         for vendor_key, patterns in self.vendor_patterns.items():
@@ -259,6 +323,7 @@ class LearningService:
     
     def get_statistics(self) -> Dict[str, Any]:
         """Get learning statistics."""
+        self._ensure_loaded()
         total_vendors = len(self.vendor_patterns)
         total_patterns = sum(len(p) for p in self.vendor_patterns.values())
         
@@ -278,6 +343,7 @@ class LearningService:
     
     def export_patterns(self) -> str:
         """Export patterns as JSON for backup/transfer."""
+        self._ensure_loaded()
         data = {
             "organization_id": self.organization_id,
             "exported_at": datetime.now(timezone.utc).isoformat(),
@@ -310,12 +376,13 @@ class LearningService:
         
         Returns count of patterns imported.
         """
+        self._ensure_loaded()
         data = json.loads(json_data)
         count = 0
-        
+
         for vendor_key, patterns in data.get("vendor_patterns", {}).items():
             for p in patterns:
-                self.vendor_patterns[vendor_key][p["gl_code"]] = VendorPattern(
+                pattern = VendorPattern(
                     vendor_name=p["vendor_name"],
                     gl_code=p["gl_code"],
                     gl_description=p["gl_description"],
@@ -326,8 +393,10 @@ class LearningService:
                     last_used=datetime.fromisoformat(p["last_used"]),
                     confidence=p["confidence"],
                 )
+                self.vendor_patterns[vendor_key][p["gl_code"]] = pattern
+                self._persist_pattern(vendor_key, pattern)
                 count += 1
-        
+
         logger.info(f"Imported {count} patterns")
         return count
     
