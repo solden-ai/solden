@@ -179,9 +179,10 @@ class GenericBoxStore:
                 f"{target_state!r} (box_id={box_id})"
             )
 
-        # Hooks/conditions/effects — a complete no-op unless FEATURE_WORKFLOW_HOOKS
-        # is on. A deny here vetoes the transition; an allow may carry a
-        # whitelisted data patch (reserved columns can never be patched).
+        # Transition guards + hooks. Condition guards (safe expression layer)
+        # are ALWAYS enforced; customer code hooks/effects require
+        # FEATURE_WORKFLOW_HOOKS. A deny vetoes the transition; an allow may
+        # carry a whitelisted data patch (reserved columns can never be patched).
         from solden.core.hooks.dispatcher import HookDenied, run_transition_hooks
         decision = run_transition_hooks(
             spec, existing, current_state, target_state, actor=actor_id,

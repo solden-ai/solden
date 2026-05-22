@@ -247,11 +247,19 @@ def test_condition_guard_denies_transition(hooks_on):
     assert d.allow is False and "condition_failed" in d.deny_reason
 
 
-def test_dispatcher_noop_when_flag_off():
-    # No monkeypatch -> flag default off -> always allow regardless of conditions.
-    spec = _spec(conditions={"draft->submitted": "amount <= 0"})
+def test_conditions_enforced_but_code_hooks_gated_when_flag_off():
+    # Phase D contract: condition guards (safe AST expressions) are ALWAYS
+    # enforced — they execute no code, so they need no flag. Customer code
+    # hooks still require FEATURE_WORKFLOW_HOOKS. Flag is default-off here.
+    cond_spec = _spec(conditions={"draft->submitted": "amount <= 0"})
     box = {"id": "L3", "box_type": "loan_review", "organization_id": ORG, "data": {"amount": 999}}
-    assert run_transition_hooks(spec, box, "draft", "submitted").allow is True
+    # condition fails (999 > 0) -> denied even with the flag off
+    assert run_transition_hooks(cond_spec, box, "draft", "submitted").allow is False
+
+    # a code hook that would deny is NOT run when the flag is off -> allow
+    hook_spec = _spec(hooks={"draft->submitted": {"expr": "amount <= 0"}})
+    box2 = {"id": "L4", "box_type": "loan_review", "organization_id": ORG, "data": {"amount": 999}}
+    assert run_transition_hooks(hook_spec, box2, "draft", "submitted").allow is True
 
 
 @pytest.fixture()

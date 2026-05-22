@@ -197,6 +197,40 @@ def validate_spec(spec: WorkflowSpec) -> List[str]:
         if f in RESERVED_DATA_KEYS:
             errors.append(f"field {f!r} collides with a reserved box column")
 
+    # Conditions are transition guards over box fields, evaluated by the safe
+    # expression layer at runtime. Validate the edge-key format + that each
+    # expression is structurally safe at authoring time, so a bad guard is
+    # rejected up front instead of silently failing closed on every transition.
+    if spec.conditions:
+        from solden.core.hooks.expressions import (
+            ExpressionError,
+            validate_expression,
+        )
+        for key, expr in spec.conditions.items():
+            src, sep, tgt = str(key).partition("->")
+            if sep != "->":
+                errors.append(
+                    f"condition key {key!r} must be a transition edge 'from->to'"
+                )
+                continue
+            if src not in states:
+                errors.append(
+                    f"condition {key!r} source {src!r} is not a declared state"
+                )
+            if tgt not in states:
+                errors.append(
+                    f"condition {key!r} target {tgt!r} is not a declared state"
+                )
+            if not isinstance(expr, str) or not expr.strip():
+                errors.append(
+                    f"condition {key!r} must be a non-empty expression string"
+                )
+                continue
+            try:
+                validate_expression(expr)
+            except ExpressionError as exc:
+                errors.append(f"condition {key!r} is not a valid expression: {exc}")
+
     return errors
 
 

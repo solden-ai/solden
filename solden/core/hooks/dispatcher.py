@@ -69,29 +69,41 @@ def run_transition_hooks(
 ) -> HookDecision:
     """Evaluate guards + hooks for a transition and apply effects.
 
-    No-op (ALLOW) unless ``FEATURE_WORKFLOW_HOOKS`` is on. Raises nothing; the
-    caller inspects ``decision.allow``.
+    Condition guards (the safe AST expression layer) are ALWAYS enforced — they
+    execute no code, so they need no flag. Customer code hooks + effects require
+    ``FEATURE_WORKFLOW_HOOKS``. Raises nothing; the caller inspects
+    ``decision.allow``.
     """
-    if not is_workflow_hooks_enabled():
-        return HookDecision()
-
     conditions = getattr(spec, "conditions", None) or {}
     hooks = getattr(spec, "hooks", None) or {}
-    if not conditions and not hooks:
+    run_hooks = bool(hooks) and is_workflow_hooks_enabled()
+    if not conditions and not run_hooks:
         return HookDecision()
 
     import time
     started = time.monotonic()
     ctx = _build_context(box, from_state, to_state, actor)
     keys = _hook_keys(from_state, to_state)
-    decision = _evaluate(conditions, hooks, keys, ctx, box)
-    elapsed_ms = int((time.monotonic() - started) * 1000)
-    _record(box, keys, decision, elapsed_ms)
+
+    # 1. Condition guards — always.
+    cond_decision = _evaluate_conditions(conditions, keys, ctx)
+    if not cond_decision.allow:
+        # Only the WASM-hook tier records to workflow_hook_runs; a plain
+        # condition denial surfaces through the raised error, not the hook log.
+        if run_hooks:
+            _record(box, keys, cond_decision, int((time.monotonic() - started) * 1000))
+        return cond_decision
+
+    # 2. Code hooks + effects — flag-gated.
+    if not run_hooks:
+        return HookDecision()
+    decision = _evaluate_hooks(hooks, keys, ctx, box)
+    _record(box, keys, decision, int((time.monotonic() - started) * 1000))
     return decision
 
 
-def _evaluate(conditions, hooks, keys, ctx, box) -> HookDecision:
-    # 1. Condition guards (safe expression layer).
+def _evaluate_conditions(conditions, keys, ctx) -> HookDecision:
+    """Safe-expression transition guards. A False/invalid guard denies."""
     from solden.core.hooks.expressions import ExpressionError, evaluate_condition
     for key in keys:
         expr = conditions.get(key)
@@ -103,8 +115,11 @@ def _evaluate(conditions, hooks, keys, ctx, box) -> HookDecision:
         except ExpressionError as exc:
             logger.warning("[hooks] invalid condition %r: %s", key, exc)
             return HookDecision(allow=False, deny_reason=f"condition_invalid:{key}")
+    return HookDecision()
 
-    # 2. Code hooks (expression result or WASM sandbox).
+
+def _evaluate_hooks(hooks, keys, ctx, box) -> HookDecision:
+    # Code hooks (expression result or WASM sandbox).
     from solden.core.effects.catalog import apply_effects
     patch: Dict[str, Any] = {}
     effects: List[Dict[str, Any]] = []

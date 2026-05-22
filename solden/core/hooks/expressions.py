@@ -185,6 +185,16 @@ def evaluate_expression(expr: str, context: Dict[str, Any]) -> Any:
     return _eval(tree, dict(context or {}))
 
 
+def validate_expression(expr: str) -> None:
+    """Structurally validate *expr* (syntax + node allowlist) at authoring time.
+
+    Raises :class:`ExpressionError` if the expression is unparseable or uses a
+    disallowed construct. Does NOT check that referenced names exist — that
+    depends on the box's data at evaluation time.
+    """
+    _compile(expr)
+
+
 def evaluate_condition(expr: str, context: Dict[str, Any]) -> bool:
     """Evaluate *expr* as a boolean guard.
 

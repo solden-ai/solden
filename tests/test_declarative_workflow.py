@@ -270,6 +270,63 @@ def test_entering_declared_exception_state_raises_box_exception(db):
         workflow_spec.unregister_spec("vendor_kyc")
 
 
+def test_condition_guards_a_transition(db):
+    # A spec-declared condition ("amount <= 1000") gates the submitted->approved
+    # edge, evaluated by the safe expression layer against the box's data. No
+    # bespoke Python, no WASM.
+    spec = WorkflowSpec(
+        box_type="expense_claim",
+        url_slug="expense-claims",
+        states=("submitted", "approved", "rejected"),
+        initial_state="submitted",
+        terminal_states=("approved", "rejected"),
+        transitions={"submitted": {"approved", "rejected"}},
+        action_states={"approve": "approved", "reject": "rejected"},
+        fields=("amount",),
+        conditions={"submitted->approved": "amount <= 1000"},
+    )
+    workflow_spec.register_spec(spec)
+    try:
+        # within policy -> guard passes
+        box_registry.create_box(
+            "expense_claim", {"id": "EX-ok", "organization_id": ORG, "amount": 500}, db,
+        )
+        box_registry.update_box("expense_claim", "EX-ok", db, state="approved", actor_id="mgr")
+        assert box_registry.get_box("expense_claim", "EX-ok", db)["state"] == "approved"
+
+        # over policy -> guard blocks the transition (vetoed, like a hook deny)
+        from solden.core.hooks.dispatcher import HookDenied
+        box_registry.create_box(
+            "expense_claim", {"id": "EX-no", "organization_id": ORG, "amount": 5000}, db,
+        )
+        with pytest.raises(HookDenied):
+            box_registry.update_box("expense_claim", "EX-no", db, state="approved", actor_id="mgr")
+        assert box_registry.get_box("expense_claim", "EX-no", db)["state"] == "submitted"
+    finally:
+        workflow_spec.unregister_spec("expense_claim")
+
+
+def test_invalid_condition_is_rejected_at_registration():
+    # A condition that isn't a safe expression is caught at spec validation.
+    bad_expr = WorkflowSpec(
+        box_type="bad_cond", url_slug="bad-cond",
+        states=("a", "b"), initial_state="a", terminal_states=("b",),
+        transitions={"a": {"b"}}, action_states={"go": "b"},
+        conditions={"a->b": "__import__('os').system('rm -rf /')"},
+    )
+    assert any(
+        "not a valid expression" in e for e in workflow_spec.validate_spec(bad_expr)
+    )
+    # A condition key that isn't a transition edge is caught too.
+    bad_key = WorkflowSpec(
+        box_type="bad_cond2", url_slug="bad-cond2",
+        states=("a", "b"), initial_state="a", terminal_states=("b",),
+        transitions={"a": {"b"}}, action_states={"go": "b"},
+        conditions={"not_an_edge": "1 == 1"},
+    )
+    assert any("transition edge" in e for e in workflow_spec.validate_spec(bad_key))
+
+
 def test_engine_exception_path_for_typeless_stall_state(db):
     # contract_review has exception_state=None; an illegal move must raise a
     # box_exception, NOT attempt the illegal state move.
