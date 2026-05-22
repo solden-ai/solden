@@ -1493,30 +1493,30 @@ class TestGmailWebhooks:
                     )
                 ]
 
-        async def _fake_process_single_email(*, message, organization_id, **_kwargs):
+        async def _fake_process_single_email(*, message_id, organization_id, **_kwargs):
             created = fake_db.create_ap_item({
                 "organization_id": organization_id,
                 "thread_id": "thread-school-1",
-                "message_id": message.id,
+                "message_id": message_id,
                 "state": "needs_approval",
                 "vendor_name": "My Son's School",
                 "invoice_number": "SCH-2026-04",
                 "amount": 250.0,
                 "currency": "USD",
-                "subject": message.subject,
-                "sender": message.sender,
+                "subject": "Fwd: School fee invoice",
+                "sender": "mo@clearledgr.com",
                 "confidence": 0.91,
                 "metadata": {
                     "primary_source": {
                         "thread_id": "thread-school-1",
-                        "message_id": message.id,
+                        "message_id": message_id,
                     },
                 },
             })
             fake_db.link_ap_item_source({
                 "ap_item_id": created["id"],
                 "source_type": "gmail_message",
-                "source_ref": message.id,
+                "source_ref": message_id,
                 "source_label": "Source email",
                 "metadata_json": {},
             })
@@ -1533,7 +1533,7 @@ class TestGmailWebhooks:
         try:
             with patch.object(gmail_extension_module, "get_db", return_value=fake_db):
                 with patch.object(gmail_extension_module, "_gmail_api_client", _FakeGmailAPIClient):
-                    with patch("solden.api.gmail_webhooks.process_single_email", AsyncMock(side_effect=_fake_process_single_email)) as process_mock:
+                    with patch("solden.api.gmail_webhooks.process_single_email", autospec=True, side_effect=_fake_process_single_email) as process_mock:
                         recover_response = client.post("/extension/by-thread/thread-school-1/recover", params={"organization_id": "org-test"})
         finally:
             app.dependency_overrides.pop(gmail_extension_module.get_current_user, None)

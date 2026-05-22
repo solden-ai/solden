@@ -250,10 +250,9 @@ async def _recover_ap_item_for_thread(
 
                 await process_single_email(
                     client=gmail_client,
-                    message=message,
+                    message_id=message.id,
                     user_id=user_id,
                     organization_id=organization_id,
-                    confidence=0.0,
                 )
             except Exception:
                 continue
