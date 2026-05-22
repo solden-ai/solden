@@ -60,3 +60,31 @@ generalizes.
   Recording the version satisfies the primitive today; the registry is the next
   step, not drift.
 - **Verdict:** aligned; header drift fixed.
+
+### `solden/core/coordination_engine.py` — ALIGNED (the "no chokepoint" proof)
+- **For:** the reactive dispatcher. Takes a deterministic `Plan` and coordinates
+  its execution one `Action` at a time — writes the timeline BEFORE each action
+  (Rule 1, `_pre_write`), never assumes success (Rule 2, confirmation before
+  advance), routes approvals to humans, persists `pending_plan` + `waiting_condition`
+  atomically on async waits, and resumes via CAS (`_handle_resume_plan` /
+  `_cas_clear_pending_plan`) so redelivery never double-executes.
+- **Fit:** this file *is* the manifesto's "coordination through shared state, not
+  orchestration through a chokepoint." Verified the header's claims against the
+  body: no LLM decides the next action (plans come from
+  `DeterministicPlanningEngine`); risky financial writes (`post_bill`,
+  `schedule_payment`, `reverse_erp_post`, `freeze_vendor_payments`) route through
+  `_evaluate_governance_for_action` with fail-closed + per-box-type gating; the
+  Box record (`ap_items`, `audit_events`, `bank_match_boxes`) is the substrate, the
+  engine a pure consumer/producer; reversibility is structural via `_pre_write`.
+  The honest header note — the name predates the manifesto, `ReactiveDispatcher`
+  fits better, rename blast radius (100+ callsites) isn't worth it — stays. Strong.
+- **Drift fixed:** (1) line 24 stale package path `clearledgr/core/planning_engine.py`
+  → `solden/core/...`. (2) "No LLM in the loop" read literally was slightly
+  overclaimed — the engine *does* invoke the LLM gateway for bounded actions
+  (`classify_vendor_reply`, `generate_exception_reason`, email parse). Tightened to
+  "No LLM in the **decision** loop" with an explicit note that the model reads
+  unstructured input + writes operator prose only when the deterministic plan
+  already chose that action ("rules decide, the model describes"). Now unimpeachable
+  under diligence.
+- **Verdict:** aligned; two doc drifts fixed. Tests: engine resume/idempotency/
+  governance-event/box-lock/async-hygiene clusters green (55 passed).

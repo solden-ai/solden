@@ -20,9 +20,15 @@ workflow engine routing everything through a chokepoint" pattern.
 ``CoordinationEngine`` is **not** that pattern. To pre-empt the
 naming-induced confusion:
 
-  * No LLM in the loop. Plans are produced by a fully deterministic
-    ``DeterministicPlanningEngine`` (clearledgr/core/planning_engine.py).
-    There is no "giant prompt" deciding what action to take next.
+  * No LLM in the decision loop. Plans are produced by a fully
+    deterministic ``DeterministicPlanningEngine``
+    (solden/core/planning_engine.py). There is no "giant prompt"
+    deciding what action to take next. The engine *does* invoke the
+    LLM gateway for individual bounded actions (classify an inbound
+    reply, write an operator-facing exception reason) — but only when
+    the deterministic plan already chose that action. The LLM reads
+    unstructured input and writes operator prose; it never decides a
+    transition. "Rules decide, the model describes."
   * No chokepoint over decisions. Routing, validation, approval gates,
     confidence thresholds, three-way match, and override policy all
     live in their own deterministic modules
