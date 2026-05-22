@@ -124,9 +124,20 @@ def build_box_summary(
 
         if isinstance(item.get("data"), dict):
             # Declarative (WorkflowSpec) box: surface its declared data fields
-            # as the summary's key fields. The state is already set above.
+            # as the summary's key fields. If the spec declares summary_fields,
+            # use them (in order); otherwise fall back to the first few keys.
             data = item["data"]
-            summary.key_fields = {k: data[k] for k in list(data.keys())[:5]}
+            summary_fields: tuple = ()
+            try:
+                from solden.core.workflow_spec import resolve_spec
+                spec = resolve_spec(box_type, item.get("organization_id"))
+                summary_fields = tuple(getattr(spec, "summary_fields", ()) or ()) if spec else ()
+            except Exception:
+                summary_fields = ()
+            if summary_fields:
+                summary.key_fields = {k: data[k] for k in summary_fields if k in data}
+            else:
+                summary.key_fields = {k: data[k] for k in list(data.keys())[:5]}
             return summary
 
         if box_type != "ap_item":

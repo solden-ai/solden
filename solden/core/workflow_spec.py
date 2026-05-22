@@ -90,6 +90,9 @@ class WorkflowSpec:
     # software vendor contracts.").
     llm_fields: Tuple[Dict[str, Any], ...] = ()
     domain_hint: str = ""
+    # Declared fields to surface (in order) in the Box summary / list views.
+    # Empty = fall back to the first few data keys.
+    summary_fields: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         # Normalize so inline sets/lists and JSON-loaded lists behave the same.
@@ -104,6 +107,7 @@ class WorkflowSpec:
         self.conditions = dict(self.conditions or {})
         self.llm_fields = tuple(dict(f) for f in (self.llm_fields or ()))
         self.domain_hint = str(self.domain_hint or "")
+        self.summary_fields = tuple(self.summary_fields or ())
 
     def next_states(self, current: str) -> FrozenSet[str]:
         return self.transitions.get(current, frozenset())
@@ -263,6 +267,18 @@ def validate_spec(spec: WorkflowSpec) -> List[str]:
                 f"{sorted(_LLM_FIELD_TYPES)}"
             )
 
+    # summary_fields must reference declared data fields (declared `fields` or
+    # an llm_field name), so a typo surfaces at authoring time.
+    declared_names = set(spec.fields) | {
+        str(f.get("name") or "") for f in spec.llm_fields if isinstance(f, dict)
+    }
+    for sf in spec.summary_fields:
+        if sf not in declared_names:
+            errors.append(
+                f"summary_field {sf!r} is not a declared field "
+                "(must be in fields or llm_fields)"
+            )
+
     return errors
 
 
@@ -390,6 +406,7 @@ def to_json(spec: WorkflowSpec) -> Dict[str, Any]:
         "conditions": dict(spec.conditions),
         "llm_fields": [dict(f) for f in spec.llm_fields],
         "domain_hint": spec.domain_hint,
+        "summary_fields": list(spec.summary_fields),
     }
 
 
@@ -411,4 +428,5 @@ def from_json(data: Dict[str, Any]) -> WorkflowSpec:
         conditions=dict(data.get("conditions") or {}),
         llm_fields=tuple(dict(f) for f in (data.get("llm_fields") or ())),
         domain_hint=data.get("domain_hint") or "",
+        summary_fields=tuple(data.get("summary_fields") or ()),
     )

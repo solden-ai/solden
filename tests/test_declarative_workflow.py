@@ -270,6 +270,29 @@ def test_entering_declared_exception_state_raises_box_exception(db):
         workflow_spec.unregister_spec("vendor_kyc")
 
 
+def test_box_summary_respects_declared_summary_fields(db):
+    from solden.core.box_summary import build_box_summary
+    spec = WorkflowSpec(
+        box_type="ticket", url_slug="tickets",
+        states=("open", "closed"), initial_state="open", terminal_states=("closed",),
+        transitions={"open": {"closed"}}, action_states={"close": "closed"},
+        fields=("priority", "assignee", "note", "extra"),
+        summary_fields=("priority", "assignee"),
+    )
+    workflow_spec.register_spec(spec)
+    try:
+        box_registry.create_box("ticket", {
+            "id": "TK-1", "organization_id": ORG,
+            "priority": "high", "assignee": "sam", "note": "x", "extra": "y",
+        }, db)
+        s = build_box_summary("TK-1", db=db, box_type="ticket")
+        # only the declared summary fields, in declared order
+        assert list(s.key_fields.keys()) == ["priority", "assignee"]
+        assert s.key_fields["priority"] == "high"
+    finally:
+        workflow_spec.unregister_spec("ticket")
+
+
 def test_condition_guards_a_transition(db):
     # A spec-declared condition ("amount <= 1000") gates the submitted->approved
     # edge, evaluated by the safe expression layer against the box's data. No
