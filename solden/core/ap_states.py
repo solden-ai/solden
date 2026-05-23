@@ -434,33 +434,9 @@ class OverrideContext:
         return d
 
 
-# ==================== WorkflowStateMachine protocol conformance ====================
-
-AP_TERMINAL_STATES: FrozenSet[APState] = frozenset({APState.REJECTED, APState.CLOSED})
-
-
-class _APStateMachine:
-    """Satisfies WorkflowStateMachine protocol via structural typing."""
-
-    @staticmethod
-    def states() -> FrozenSet[str]:
-        return frozenset(s.value for s in APState)
-
-    @staticmethod
-    def transitions() -> Dict[str, FrozenSet[str]]:
-        return {k.value: frozenset(v.value for v in vs) for k, vs in VALID_TRANSITIONS.items()}
-
-    @staticmethod
-    def terminal_states() -> FrozenSet[str]:
-        return frozenset(s.value for s in AP_TERMINAL_STATES)
-
-    @staticmethod
-    def validate_transition(current: str, target: str) -> bool:
-        return validate_transition(current, target)
-
-    @staticmethod
-    def normalize(raw: str) -> str:
-        return normalize_state(raw)
-
-
-AP_STATE_MACHINE = _APStateMachine()
+# NOTE: the `_APStateMachine` / `AP_STATE_MACHINE` structural-conformance shim
+# (and the `WorkflowStateMachine` Protocol in the deleted core/workflow_states.py)
+# was removed 2026-05-23 (manifesto audit). It was never imported or wired — the
+# runtime's cross-box-type generality is delivered by box_registry + workflow_spec
+# + the generic boxes table, not by that Protocol. APState + VALID_TRANSITIONS +
+# validate_transition/transition_or_raise above are the live State primitive.
