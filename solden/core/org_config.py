@@ -15,7 +15,7 @@ a European SaaS using Stripe.
 import json
 import logging
 from typing import Dict, Any, Optional, List
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, asdict, fields as dataclass_fields
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -262,7 +262,61 @@ class OrganizationConfig:
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
-    
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "OrganizationConfig":
+        """Reconstruct an OrganizationConfig from its ``to_dict()`` output.
+
+        The inverse of :meth:`to_dict`. This method used to be MISSING — every
+        ``get_org_config()`` call hit an ``AttributeError`` that was swallowed
+        into a ``None`` return, so a saved config was never read back and
+        ``get_or_create_config()`` then re-saved defaults over it (silent
+        config data loss across the org-config API). It is restored here.
+
+        Tolerant of missing/extra keys: an unknown key is ignored and a
+        missing nested block falls back to that dataclass's defaults, so a
+        future schema change degrades one field rather than breaking the whole
+        load (which is exactly how this rotted the first time).
+        """
+        data = data or {}
+
+        def _nested(target_cls, raw):
+            """Build a nested dataclass from its dict, ignoring unknown keys."""
+            names = {f.name for f in dataclass_fields(target_cls)}
+            if not isinstance(raw, dict):
+                raw = {}
+            return target_cls(**{k: v for k, v in raw.items() if k in names})
+
+        def _nested_map(target_cls, raw_map):
+            """Build a dict of nested dataclasses, skipping malformed entries."""
+            out = {}
+            for key, raw in (raw_map or {}).items():
+                if not isinstance(raw, dict):
+                    continue
+                try:
+                    out[key] = _nested(target_cls, raw)
+                except TypeError:
+                    # A required field is absent from a stored entry — skip it
+                    # rather than failing the whole config load.
+                    logger.warning(
+                        "Skipping malformed %s entry %r in org_config",
+                        target_cls.__name__, key,
+                    )
+            return out
+
+        return cls(
+            organization_id=data.get("organization_id") or "",
+            organization_name=data.get("organization_name") or "",
+            gl_mappings=_nested_map(GLAccountMapping, data.get("gl_mappings")),
+            thresholds=_nested(ConfidenceThresholds, data.get("thresholds")),
+            locale=_nested(LocaleSettings, data.get("locale")),
+            features=_nested(FeatureFlags, data.get("features")),
+            payment_gateways=_nested_map(PaymentGatewayConfig, data.get("payment_gateways")),
+            data_residency=_nested(DataResidencyConfig, data.get("data_residency")),
+            created_at=data.get("created_at") or "",
+            updated_at=data.get("updated_at") or "",
+        )
+
     def get_gl_account(self, account_type: str) -> Optional[str]:
         """Get GL account code for a transaction type."""
         mapping = self.gl_mappings.get(account_type)
