@@ -15,6 +15,7 @@ Different from invoices - these are ad-hoc payment requests without formal invoi
 """
 
 import re
+import json
 import uuid
 import logging
 from datetime import datetime, timezone
@@ -120,6 +121,55 @@ class PaymentRequest:
             "metadata": self.metadata,
         }
 
+    @classmethod
+    def from_row(cls, row: Dict[str, Any]) -> "PaymentRequest":
+        """Reconstruct a PaymentRequest from a ``payment_requests`` DB row."""
+        def _dt(v):
+            if not v:
+                return None
+            try:
+                return datetime.fromisoformat(str(v))
+            except (ValueError, TypeError):
+                return None
+
+        md = row.get("metadata_json")
+        if md is None:
+            md = row.get("metadata")
+        if isinstance(md, str):
+            try:
+                md = json.loads(md) if md.strip() else {}
+            except (ValueError, TypeError):
+                md = {}
+        if not isinstance(md, dict):
+            md = {}
+        # payment_id is a column; surface it under metadata too so callers that
+        # read metadata["payment_id"] (the pre-persistence contract) still work.
+        if row.get("payment_id") and "payment_id" not in md:
+            md["payment_id"] = row.get("payment_id")
+        return cls(
+            request_id=row["id"],
+            source=RequestSource(row.get("source") or "api"),
+            source_id=row.get("source_id") or "",
+            requester_name=row.get("requester_name") or "",
+            requester_email=row.get("requester_email"),
+            request_type=RequestType(row.get("request_type") or "other"),
+            payee_name=row.get("payee_name") or "",
+            payee_email=row.get("payee_email"),
+            amount=float(row.get("amount") or 0.0),
+            currency=row.get("currency") or "USD",
+            description=row.get("description") or "",
+            gl_code=row.get("gl_code"),
+            cost_center=row.get("cost_center"),
+            status=RequestStatus(row.get("status") or "pending"),
+            approved_by=row.get("approved_by"),
+            approved_at=_dt(row.get("approved_at")),
+            rejection_reason=row.get("rejection_reason"),
+            created_at=_dt(row.get("created_at")) or datetime.now(timezone.utc),
+            updated_at=_dt(row.get("updated_at")) or datetime.now(timezone.utc),
+            organization_id=row.get("organization_id"),
+            metadata=md,
+        )
+
 
 class PaymentRequestService:
     """
@@ -132,7 +182,64 @@ class PaymentRequestService:
         self.organization_id = assert_org_id(
             organization_id, context="PaymentRequestService"
         )
-        self._requests: Dict[str, PaymentRequest] = {}
+
+    @property
+    def db(self):
+        # Resolve the process-wide DB singleton per access rather than caching
+        # it: this service is cached per-org in _instances, and a pool reset
+        # (RDS failover, test teardown) would otherwise leave a stale handle.
+        from solden.core.database import get_db
+        return get_db()
+
+    # ------------------------------------------------------------------
+    # Persistence helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _to_payload(r: PaymentRequest) -> Dict[str, Any]:
+        return {
+            "id": r.request_id,
+            "organization_id": r.organization_id,
+            "source": r.source.value,
+            "source_id": r.source_id,
+            "requester_name": r.requester_name,
+            "requester_email": r.requester_email,
+            "request_type": r.request_type.value,
+            "payee_name": r.payee_name,
+            "payee_email": r.payee_email,
+            "amount": r.amount,
+            "currency": r.currency,
+            "description": r.description,
+            "gl_code": r.gl_code,
+            "cost_center": r.cost_center,
+            "status": r.status.value,
+            "metadata": r.metadata,
+            "created_at": r.created_at.isoformat() if isinstance(r.created_at, datetime) else r.created_at,
+            "updated_at": r.updated_at.isoformat() if isinstance(r.updated_at, datetime) else r.updated_at,
+        }
+
+    def _persist_new(self, request: PaymentRequest) -> PaymentRequest:
+        self.db.create_payment_request(self._to_payload(request))
+        return request
+
+    def _emit_audit(self, request_id: str, event_type: str, actor_id: Optional[str],
+                    payload: Dict[str, Any]) -> None:
+        """Best-effort audit of a payment-request state change. The
+        payment_requests row (status/approved_by/approved_at) is the durable
+        attributable record; this adds the unified-timeline narration."""
+        try:
+            self.db.append_audit_event({
+                "ap_item_id": "",  # org/request-scoped, not invoice-scoped
+                "event_type": event_type,
+                "actor_type": "user",
+                "actor_id": actor_id or "system",
+                "organization_id": self.organization_id,
+                "metadata": {"entity_type": "payment_request",
+                             "entity_id": request_id, **payload},
+                "source": "payment_request_service",
+            })
+        except Exception as exc:
+            logger.warning("payment_request audit emit failed for %s: %s", request_id, exc)
     
     # =========================================================================
     # CREATE REQUESTS
@@ -185,9 +292,9 @@ class PaymentRequestService:
             }
         )
         
-        self._requests[request.request_id] = request
+        self._persist_new(request)
         logger.info(f"Created payment request {request.request_id} from email: {subject}")
-        
+
         return request
     
     def create_from_slack(
@@ -239,9 +346,9 @@ class PaymentRequestService:
             }
         )
         
-        self._requests[request.request_id] = request
+        self._persist_new(request)
         logger.info(f"Created payment request {request.request_id} from Slack: {description[:50]}")
-        
+
         return request
     
     def create_from_ui(
@@ -274,9 +381,9 @@ class PaymentRequestService:
             organization_id=self.organization_id,
         )
         
-        self._requests[request.request_id] = request
+        self._persist_new(request)
         logger.info(f"Created payment request {request.request_id} from UI")
-        
+
         return request
     
     # =========================================================================
@@ -284,20 +391,26 @@ class PaymentRequestService:
     # =========================================================================
     
     def get_request(self, request_id: str) -> Optional[PaymentRequest]:
-        """Get a payment request by ID."""
-        return self._requests.get(request_id)
-    
+        """Get a payment request by ID (org-scoped)."""
+        row = self.db.get_payment_request(request_id, self.organization_id)
+        return PaymentRequest.from_row(row) if row else None
+
     def get_pending_requests(self) -> List[PaymentRequest]:
         """Get all pending payment requests."""
-        return [r for r in self._requests.values() if r.status == RequestStatus.PENDING]
-    
+        rows = self.db.list_payment_requests(
+            self.organization_id, status=RequestStatus.PENDING.value,
+        )
+        return [PaymentRequest.from_row(r) for r in rows]
+
     def get_requests_by_source(self, source: RequestSource) -> List[PaymentRequest]:
         """Get requests from a specific source."""
-        return [r for r in self._requests.values() if r.source == source]
-    
+        rows = self.db.list_payment_requests(self.organization_id, source=source.value)
+        return [PaymentRequest.from_row(r) for r in rows]
+
     def get_requests_by_requester(self, email: str) -> List[PaymentRequest]:
         """Get requests from a specific requester."""
-        return [r for r in self._requests.values() if r.requester_email == email]
+        rows = self.db.list_payment_requests(self.organization_id, requester_email=email)
+        return [PaymentRequest.from_row(r) for r in rows]
     
     def approve_request(
         self,
@@ -312,24 +425,28 @@ class PaymentRequestService:
         moves money). The customer's ERP/bank pays out-of-band; ``mark_paid``
         later records the external payment reference.
         """
-        request = self._requests.get(request_id)
-        if not request:
+        row = self.db.get_payment_request(request_id, self.organization_id)
+        if not row:
             raise ValueError(f"Request {request_id} not found")
-        
-        if request.status != RequestStatus.PENDING:
+        if str(row.get("status")) != RequestStatus.PENDING.value:
             raise ValueError(f"Request {request_id} is not pending")
-        
-        request.status = RequestStatus.APPROVED
-        request.approved_by = approved_by
-        request.approved_at = datetime.now(timezone.utc)
-        request.updated_at = datetime.now(timezone.utc)
-        
+
+        approved_at = datetime.now(timezone.utc).isoformat()
+        updates: Dict[str, Any] = {
+            "status": RequestStatus.APPROVED.value,
+            "approved_by": approved_by,
+            "approved_at": approved_at,
+        }
         if gl_code:
-            request.gl_code = gl_code
-        
+            updates["gl_code"] = gl_code
+        self.db.update_payment_request(request_id, self.organization_id, **updates)
+        self._emit_audit(request_id, "payment_request_approved", approved_by,
+                         {"amount": row.get("amount"), "gl_code": gl_code})
         logger.info(f"Payment request {request_id} approved by {approved_by}")
-        
-        return request
+
+        return PaymentRequest.from_row(
+            self.db.get_payment_request(request_id, self.organization_id)
+        )
     
     def reject_request(
         self,
@@ -338,32 +455,45 @@ class PaymentRequestService:
         reason: str,
     ) -> PaymentRequest:
         """Reject a payment request."""
-        request = self._requests.get(request_id)
-        if not request:
+        row = self.db.get_payment_request(request_id, self.organization_id)
+        if not row:
             raise ValueError(f"Request {request_id} not found")
-        
-        request.status = RequestStatus.REJECTED
-        request.rejection_reason = reason
-        request.updated_at = datetime.now(timezone.utc)
-        request.metadata["rejected_by"] = rejected_by
-        
+
+        metadata = dict(row.get("metadata_json") or {})
+        metadata["rejected_by"] = rejected_by
+        self.db.update_payment_request(
+            request_id, self.organization_id,
+            status=RequestStatus.REJECTED.value,
+            rejection_reason=reason,
+            metadata_json=metadata,
+        )
+        self._emit_audit(request_id, "payment_request_rejected", rejected_by,
+                         {"reason": reason})
         logger.info(f"Payment request {request_id} rejected: {reason}")
-        
-        return request
+
+        return PaymentRequest.from_row(
+            self.db.get_payment_request(request_id, self.organization_id)
+        )
     
     def mark_paid(self, request_id: str, payment_id: str) -> PaymentRequest:
         """Record that an EXTERNAL system paid this request (stores its
         ``payment_id``). Solden does not execute payment; this only reflects a
         payment the ERP/bank already made."""
-        request = self._requests.get(request_id)
-        if not request:
+        row = self.db.get_payment_request(request_id, self.organization_id)
+        if not row:
             raise ValueError(f"Request {request_id} not found")
-        
-        request.status = RequestStatus.PAID
-        request.updated_at = datetime.now(timezone.utc)
-        request.metadata["payment_id"] = payment_id
-        
-        return request
+
+        self.db.update_payment_request(
+            request_id, self.organization_id,
+            status=RequestStatus.PAID.value,
+            payment_id=payment_id,
+        )
+        self._emit_audit(request_id, "payment_request_marked_paid", None,
+                         {"payment_id": payment_id})
+
+        return PaymentRequest.from_row(
+            self.db.get_payment_request(request_id, self.organization_id)
+        )
     
     # =========================================================================
     # PARSING HELPERS
@@ -452,9 +582,12 @@ class PaymentRequestService:
     # =========================================================================
     
     def get_summary(self) -> Dict[str, Any]:
-        """Get summary statistics."""
-        requests = list(self._requests.values())
-        
+        """Get summary statistics (org-scoped)."""
+        requests = [
+            PaymentRequest.from_row(r)
+            for r in self.db.list_payment_requests(self.organization_id, limit=1000)
+        ]
+
         pending = [r for r in requests if r.status == RequestStatus.PENDING]
         approved = [r for r in requests if r.status == RequestStatus.APPROVED]
         paid = [r for r in requests if r.status == RequestStatus.PAID]

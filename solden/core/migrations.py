@@ -5868,3 +5868,45 @@ def _v97_drop_task_runs(cur, db):
     """
     cur.execute("DROP INDEX IF EXISTS idx_task_runs_org_status")
     cur.execute("DROP TABLE IF EXISTS task_runs")
+
+
+@migration(98, "payment_requests table — persist ad-hoc payment-request lifecycle")
+def _v98_payment_requests_table(cur, db):
+    """Durable home for ad-hoc payment requests (PaymentRequestService).
+
+    Previously the service held requests + their approve/reject/mark_paid
+    lifecycle in a process-memory dict, so a restart lost every pending
+    request and no state change was audited — on a financial-adjacent surface
+    that's a real History gap. This table makes the request a persistent,
+    org-scoped, attributable record; state transitions emit audit_events.
+    """
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS payment_requests (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            source TEXT NOT NULL,
+            source_id TEXT,
+            requester_name TEXT,
+            requester_email TEXT,
+            request_type TEXT NOT NULL DEFAULT 'other',
+            payee_name TEXT,
+            payee_email TEXT,
+            amount DOUBLE PRECISION DEFAULT 0,
+            currency TEXT DEFAULT 'USD',
+            description TEXT,
+            gl_code TEXT,
+            cost_center TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            approved_by TEXT,
+            approved_at TEXT,
+            rejection_reason TEXT,
+            payment_id TEXT,
+            metadata_json TEXT DEFAULT '{}',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_payment_requests_org_status "
+        "ON payment_requests(organization_id, status)"
+    )

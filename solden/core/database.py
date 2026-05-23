@@ -130,6 +130,7 @@ def _load_store_symbols() -> None:
     global PaymentStore
     global WebhookStore
     global DisputeStore
+    global PaymentRequestStore
     global OverrideWindowStore
     global OnboardingTokenStore
     global PipelineStore
@@ -168,6 +169,9 @@ def _load_store_symbols() -> None:
     from solden.core.stores.payment_store import PaymentStore as _PaymentStore
     from solden.core.stores.webhook_store import WebhookStore as _WebhookStore
     from solden.core.stores.dispute_store import DisputeStore as _DisputeStore
+    from solden.core.stores.payment_request_store import (
+        PaymentRequestStore as _PaymentRequestStore,
+    )
     from solden.core.stores.override_window_store import (
         OverrideWindowStore as _OverrideWindowStore,
     )
@@ -235,6 +239,7 @@ def _load_store_symbols() -> None:
     PaymentStore = _PaymentStore
     WebhookStore = _WebhookStore
     DisputeStore = _DisputeStore
+    PaymentRequestStore = _PaymentRequestStore
     OverrideWindowStore = _OverrideWindowStore
     OnboardingTokenStore = _OnboardingTokenStore
     PipelineStore = _PipelineStore
@@ -1712,6 +1717,7 @@ def _get_db_impl_class():
             PaymentStore,
             WebhookStore,
             DisputeStore,
+            PaymentRequestStore,
             OverrideWindowStore,
             PipelineStore,
             PurchaseOrderStore,
