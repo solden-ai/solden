@@ -236,12 +236,18 @@ class TestAmountAnomaly:
 
 
 # ---------------------------------------------------------------------------
-# Strategy: Vendor Not Found (auto-resolves on success)
+# Strategy: Vendor Not Found — surfaces to operator, NEVER auto-creates
 # ---------------------------------------------------------------------------
 
 
 class TestVendorNotFound:
-    def test_vendor_created_successfully(self):
+    """Solden must NOT autonomously author a vendor master record. The
+    auto-resolve-by-create path was removed (manifesto audit 2026-05-23): the
+    background sweep was writing new vendors into the customer's ERP with no
+    operator and no governance gate. The exception now surfaces for operator
+    action and create_vendor is never called from the resolver."""
+
+    def test_surfaces_unresolved_and_never_creates_vendor(self):
         resolver = ExceptionResolver("org-1")
         db = _FakeDB()
         resolver._db = db
@@ -252,60 +258,16 @@ class TestVendorNotFound:
             _PATCH_CREATE_VENDOR,
             new_callable=AsyncMock,
             return_value={"status": "success", "vendor_id": "V-42"},
-        ):
+        ) as create_mock:
             result = _run(resolver.resolve(item, "erp_vendor_not_found"))
 
-        assert result["resolved"] is True
-        assert result["action"] == "vendor_created_in_erp"
-        assert result["vendor_id"] == "V-42"
-        assert len(db.updates) == 1
-        assert db.updates[0]["exception_code"] is None
-
-    def test_vendor_creation_fails(self):
-        resolver = ExceptionResolver("org-1")
-        db = _FakeDB()
-        resolver._db = db
-
-        item = _make_ap_item(exception_code="erp_vendor_not_found")
-
-        with patch(
-            _PATCH_CREATE_VENDOR,
-            new_callable=AsyncMock,
-            side_effect=RuntimeError("ERP down"),
-        ):
-            result = _run(resolver.resolve(item, "erp_vendor_not_found"))
-
+        # The agent must not write vendor master data.
+        create_mock.assert_not_called()
         assert result["resolved"] is False
-        assert "vendor_creation_failed" in result["reason"]
+        assert result["reason"] == "vendor_not_in_erp_operator_action_required"
+        assert "suggestion" in result
+        # The item is NOT auto-cleared — it stays in the operator exception queue.
         assert len(db.updates) == 0
-
-    def test_vendor_creation_no_id_returned(self):
-        resolver = ExceptionResolver("org-1")
-        db = _FakeDB()
-        resolver._db = db
-
-        item = _make_ap_item(exception_code="erp_vendor_not_found")
-
-        with patch(
-            _PATCH_CREATE_VENDOR,
-            new_callable=AsyncMock,
-            return_value={"status": "error", "reason": "quota_exceeded"},
-        ):
-            result = _run(resolver.resolve(item, "erp_vendor_not_found"))
-
-        assert result["resolved"] is False
-        assert result["reason"] == "vendor_creation_returned_no_id"
-
-    def test_no_vendor_name(self):
-        resolver = ExceptionResolver("org-1")
-        db = _FakeDB()
-        resolver._db = db
-
-        item = _make_ap_item(vendor_name="")
-        result = _run(resolver.resolve(item, "erp_vendor_not_found"))
-
-        assert result["resolved"] is False
-        assert result["reason"] == "no_vendor_name_on_item"
 
 
 # ---------------------------------------------------------------------------

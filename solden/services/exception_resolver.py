@@ -49,7 +49,7 @@ class ExceptionResolver:
             "missing_required_field_po_number": self._resolve_missing_po,
             "amount_anomaly_high": self._resolve_amount_anomaly,
             "amount_anomaly_moderate": self._resolve_amount_anomaly,
-            "erp_vendor_not_found": self._resolve_vendor_not_found,
+            "erp_vendor_not_found": self._surface_vendor_not_found,
             "erp_duplicate_bill": self._resolve_duplicate_invoice,
             "duplicate_invoice": self._resolve_duplicate_invoice,
             "confidence_field_review_required": self._resolve_low_confidence,
@@ -332,54 +332,34 @@ Respond in ONE sentence with the most likely explanation and whether this needs 
         return ""
 
     # ------------------------------------------------------------------
-    # Strategy: Vendor Not Found in ERP (auto-resolves)
+    # Strategy: Vendor Not Found in ERP — surface to operator, NEVER auto-create
     # ------------------------------------------------------------------
 
-    async def _resolve_vendor_not_found(
+    async def _surface_vendor_not_found(
         self, ap_item: Dict[str, Any], exception_code: str
     ) -> Dict[str, Any]:
-        """Attempt to create vendor in ERP."""
-        try:
-            from solden.integrations.erp_router import create_vendor, Vendor
-        except ImportError:
-            return {"resolved": False, "reason": "erp_router_unavailable"}
+        """Surface an unknown-vendor exception to the operator.
 
-        vendor_name = ap_item.get("vendor_name") or ""
-        if not vendor_name:
-            return {"resolved": False, "reason": "no_vendor_name_on_item"}
+        Previously this auto-RESOLVED by calling ``erp_router.create_vendor`` —
+        the background sweep (every ~45 min, no operator, no governance gate)
+        wrote a new vendor MASTER record into the customer's ERP. That violates
+        the invariant that Solden runs cross-checks but does NOT author vendor
+        master data (memory: project_vendor_onboarding_subordinate; one Box type,
+        ap_item). The agent must not own the customer's vendor master.
 
-        try:
-            vendor = Vendor(name=vendor_name)
-            result = await create_vendor(
-                organization_id=self.organization_id,
-                vendor=vendor,
-            )
-            if result.get("vendor_id"):
-                self.db.update_ap_item(
-                    ap_item["id"],
-                    exception_code=None,
-                    exception_severity=None,
-                )
-                return {
-                    "resolved": True,
-                    "action": "vendor_created_in_erp",
-                    "vendor_id": result["vendor_id"],
-                }
-            if result.get("status") == "success":
-                self.db.update_ap_item(
-                    ap_item["id"],
-                    exception_code=None,
-                    exception_severity=None,
-                )
-                return {
-                    "resolved": True,
-                    "action": "vendor_created_in_erp",
-                    "vendor_id": result.get("vendor_id", "unknown"),
-                }
-        except Exception as exc:
-            return {"resolved": False, "reason": f"vendor_creation_failed: {exc}"}
-
-        return {"resolved": False, "reason": "vendor_creation_returned_no_id"}
+        Now it returns unresolved with an operator-actionable reason, so the item
+        stays in the exception queue for a human to add the vendor in the ERP.
+        """
+        vendor_name = ap_item.get("vendor_name") or "the vendor"
+        return {
+            "resolved": False,
+            "reason": "vendor_not_in_erp_operator_action_required",
+            "suggestion": (
+                f"{vendor_name} is not in your ERP's vendor master. Add the vendor "
+                f"in your ERP, then retry posting. Solden does not create vendor "
+                f"master records on your behalf."
+            ),
+        }
 
     # ------------------------------------------------------------------
     # Strategy: Duplicate Invoice (never auto-resolves)
