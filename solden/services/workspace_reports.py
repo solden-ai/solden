@@ -973,7 +973,7 @@ def csv_filename(report_type: str, params: Dict[str, Any]) -> str:
     safe = report_type.replace("_", "-")
     from_ts = (params.get("from") or "")[:10] or "all"
     to_ts = (params.get("to") or "")[:10] or "all"
-    return f"clearledgr-{safe}-{from_ts}-to-{to_ts}.csv"
+    return f"solden-{safe}-{from_ts}-to-{to_ts}.csv"
 
 
 def pdf_filename(report_type: str, params: Dict[str, Any]) -> str:
@@ -981,7 +981,7 @@ def pdf_filename(report_type: str, params: Dict[str, Any]) -> str:
     safe = report_type.replace("_", "-")
     from_ts = (params.get("from") or "")[:10] or "all"
     to_ts = (params.get("to") or "")[:10] or "all"
-    return f"clearledgr-{safe}-{from_ts}-to-{to_ts}.pdf"
+    return f"solden-{safe}-{from_ts}-to-{to_ts}.pdf"
 
 
 _REPORT_TITLES = {

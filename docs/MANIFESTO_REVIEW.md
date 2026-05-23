@@ -231,3 +231,38 @@ clean:** zero `execute_payment` / `send_money` / `initiate_payment` / `transfer_
   wired + docstring fixed, 2 stale paths fixed. Tests: audit-export / ap_decision /
   invoice-workflow-controls / runtime-state-transitions green (97 passed). `import main`
   clean.
+
+---
+
+## Surfaces + periphery (invariant sweep)
+
+The boundary files (Slack / Gmail / Teams / ERP adapters, dozens of files) were swept
+for the manifesto invariants that matter at the surface, not read line-by-line.
+
+- **Zero vendor-facing text — HOLDS (strongly).** `gmail.send` is deliberately out of
+  the OAuth scope list; no send/draft functions exist in `gmail_api.py` (removed
+  2026-05-02); every `send_vendor_email` / `draft_vendor_response` handler is gone from
+  the engine + planner with explanatory comments. The remaining `send_vendor_*` are
+  Slack notifications to OPERATORS (vendor is the subject, not the recipient). The
+  dormant `draft_vendor_master_record` lives only on the VO-gated path.
+- **No money movement — HOLDS.** Confirmed across AP core; surfaces post to ERP / mark
+  ready-to-pay, never move money.
+- **No LLM vendor name on operator surfaces — HOLDS.** The "Claude" hits on surface
+  files are all docstrings + `logger.*` server logs (internal dev surfaces), not
+  operator-facing UI strings. The rule is marketing/operator-visible only; logs and
+  docstrings are exempt. No fix.
+- **Brand drift fixed (user-visible artifacts):** download filenames
+  `clearledgr-account-*.json` (workspace_shell), `clearledgr-*.csv/.pdf`
+  (workspace_reports) → `solden-*` (Content-Disposition; what the customer downloads).
+  Updated the test that locked the old prefix. Slack digest confidence-note emoji
+  `:clearledgr:` (renders literally in the operator's Slack if the custom emoji isn't
+  uploaded) → standard `:bar_chart:` (always renders).
+- **Deliberately left:** internal Redis namespace keys (`clearledgr:events:*`, consumer
+  groups, locks, semaphores), health-endpoint service identifiers (`clearledgr-core`),
+  and external config identifiers (XSUAA audience, launch URL) — same intentionally-
+  untouched backend-identifier bucket as env vars + the runtime domain; renaming risks
+  orphaning live state / breaking monitoring with no customer-facing benefit. The 24
+  comment-only stale `clearledgr/` path refs are cosmetic; not churned.
+- **Verdict:** invariants hold; 4 user-visible brand drifts fixed (3 filenames + 1
+  Slack emoji) + 1 test updated. Tests: workspace-reports / report-export / slack /
+  vendor-activation green. `import main` clean.

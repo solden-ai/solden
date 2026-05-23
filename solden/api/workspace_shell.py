@@ -5958,7 +5958,7 @@ def export_full_account(
 
     import json as _json
     body = _json.dumps(payload, default=str, separators=(",", ":"))
-    filename = f"clearledgr-account-{org_id}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"
+    filename = f"solden-account-{org_id}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"
     return Response(
         content=body,
         media_type="application/json; charset=utf-8",

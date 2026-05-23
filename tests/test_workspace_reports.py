@@ -451,7 +451,7 @@ class TestCSVExport:
         assert resp.text.startswith("﻿") or resp.content.startswith(b"\xef\xbb\xbf")
         # Filename hint
         assert "attachment" in resp.headers["content-disposition"]
-        assert "clearledgr-volume" in resp.headers["content-disposition"]
+        assert "solden-volume" in resp.headers["content-disposition"]
         # Header row matches the volume series shape
         body = resp.text.lstrip("﻿")
         assert body.startswith("bucket,invoice_count,total_amount")
