@@ -1,5 +1,16 @@
 """MatchEngine protocol + MatchRecord primitive (Gap 3).
 
+STATUS (2026-05-23): this generic match-engine registry is NOT wired into
+production. Nothing imports ``match_engines/`` at runtime, so the
+``register_match_engine`` calls never execute and ``run_match`` has no
+production callers (only tests). Live matching runs through the bespoke
+per-domain paths: AP 3-way via ``api/three_way_match.py`` +
+``PurchaseOrderService``; bank reconciliation via
+``services/bank_reconciliation_matcher.py``. This module is option-value
+scaffolding for a FUTURE unified match registry — kept (it's a real
+generalization target on the roadmap below) but honestly dormant. Do not cite
+it as the live matching plumbing.
+
 Matching is a fundamental operation that recurs across finance:
 
 * **AP 3-way match** — invoice + PO + GRN
@@ -36,8 +47,11 @@ This module is the abstraction:
    matches would have failed?" replays use the same Gap-2 endpoint.
 
 4. **Concrete implementations** plug in by registering with
-   :func:`register_match_engine`. Today: AP 3-way and bank
-   reconciliation. Future: AR, intercompany, vendor statement.
+   :func:`register_match_engine`. Engines exist in ``match_engines/``
+   (ap_three_way, bank_reconciliation) but are NOT imported in production
+   yet (see STATUS above), so the registry is empty at runtime. Wiring a
+   surface through ``run_match`` is what would make them live. Future:
+   AR, intercompany, vendor statement.
 """
 from __future__ import annotations
 
