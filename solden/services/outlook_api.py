@@ -53,7 +53,9 @@ OUTLOOK_SCOPES = [
     "offline_access",            # Needed for refresh tokens
     "Mail.Read",                 # Read emails
     "Mail.ReadWrite",            # Manage folders/categories
-    "Mail.Send",                 # Send emails (vendor follow-ups)
+    # Mail.Send dropped 2026-05-23: Solden sends no vendor email and authors no
+    # vendor-facing text (2026-05-02); the send_message() path was removed. Do
+    # not re-add a send scope — it widens the grant for a capability we don't use.
 ]
 
 
@@ -409,32 +411,12 @@ class OutlookAPIClient:
         content_bytes = data.get("contentBytes", "")
         return base64.b64decode(content_bytes) if content_bytes else b""
 
-    async def send_message(
-        self,
-        to: str,
-        subject: str,
-        body: str,
-        conversation_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """Send an email via Microsoft Graph."""
-        message = {
-            "subject": subject,
-            "body": {"contentType": "HTML", "content": body},
-            "toRecipients": [{"emailAddress": {"address": to}}],
-        }
-        if conversation_id:
-            message["conversationId"] = conversation_id
-
-        url = f"{GRAPH_API_BASE}/me/sendMail"
-        client = get_http_client()
-        response = await client.post(
-            url,
-            headers=self._headers(),
-            json={"message": message, "saveToSentItems": True},
-            timeout=30,
-        )
-        response.raise_for_status()
-        return {"status": "sent", "to": to}
+    # REMOVED 2026-05-23 (manifesto audit): send_message() POSTed to Graph
+    # /me/sendMail with an arbitrary recipient — an outbound vendor-facing email
+    # path. It had zero callers, and Solden authors no vendor-facing text / sends
+    # no vendor email (2026-05-02). The Gmail side dropped its send scope then;
+    # this is the Outlook twin. The Mail.Send OAuth scope is dropped too (below),
+    # so the grant no longer requests send capability. Do not reintroduce.
 
     async def create_category(self, name: str, color: str = "preset0") -> Dict[str, Any]:
         """Create an Outlook category (equivalent of Gmail label)."""
