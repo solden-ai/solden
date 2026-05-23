@@ -157,3 +157,31 @@ Reviewed as a cluster because they carry three of the five primitives.
   No drift. No stale paths / vendor-name issues.
 - **Verdict:** both aligned; 1 planning_engine doc-coherence fix. Tests: planning /
   vo-deprecation / governance / governance-event-path green (56 passed).
+
+### `solden/core/llm_gateway.py` — ALIGNED (the bounded-LLM chokepoint)
+- **For:** the single funnel for every LLM call. `LLMAction` enum + `ACTION_REGISTRY`
+  whitelist every permitted action with per-action caps (model tier, max output/input
+  tokens, timeout); deterministic actions are NOT in the enum and cannot reach the
+  model. Budget enforcement + input truncation + retry are centralized here.
+- **Fit:** this is the manifesto's "the agent is bounded — rules decide, the model
+  describes" enforced structurally. The 14 actions split cleanly into the two permitted
+  roles: read unstructured input (classify_email, extract_invoice_fields,
+  classify_vendor_response, duplicate_evaluation, po_line_match, single_pass_extract,
+  extract_box_fields) and write operator-facing prose (generate_exception_reason,
+  explain_state, slack_query, explain_anomaly, narrate_insight, ask_the_agent).
+  `DRAFT_VENDOR_RESPONSE` is already gone (zero vendor-facing authoring). Verified
+  `agent_planning` does NOT make the executable plan (that's the deterministic engine):
+  it writes an advisory needs_info recovery suggestion, steps drawn from a fixed safe
+  whitelist (no post_to_erp / money / auto-approve), persisted to metadata for operator
+  display, "never executed automatically" (invoice_workflow.py:1296).
+- **Drift fixed (structural — a lying surface):** removed `LLMAction.AP_DECISION` from
+  the enum + registry. It had **zero callers** (every `"ap_decision"` in the tree is the
+  DETERMINISTIC `APDecisionService`'s recommendation string, not a gateway action) AND
+  it advertised an LLM-makes-the-AP-decision capability that directly contradicts "rules
+  decide, the model never routes." Same class as the vestigial `task_runs` removal. Also
+  fixed the leftover `LLMAction.AP_DECISION` reference at the system-prompt branch
+  (would have `AttributeError`'d) and added a registry clarifier on `agent_planning`.
+- **Verdict:** aligned; 1 dead+contradictory action removed, 1 leftover ref fixed, 2
+  clarifiers added. Grep-verified zero callers + `import main` clean. Tests: gateway /
+  budget-cap / call-box-link / cost-summary / email-parser / needs-info-recovery green
+  (65 passed).

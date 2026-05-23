@@ -56,8 +56,15 @@ class LLMAction(str, Enum):
     GENERATE_EXCEPTION = "generate_exception_reason"
     CLASSIFY_VENDOR = "classify_vendor_response"
 
-    # Extended actions (beyond spec — codebase already uses these)
-    AP_DECISION = "ap_decision"
+    # Extended actions (beyond spec — codebase already uses these).
+    # NOTE: there is deliberately NO ``ap_decision`` action. The AP
+    # routing decision (approve / needs_info / escalate / reject) is
+    # made by the DETERMINISTIC ``APDecisionService`` — "rules decide,
+    # the model describes." A registered LLM action named "ap_decision"
+    # would advertise a capability the architecture never crosses, so it
+    # was removed (it had zero callers; the ``ap_decision`` key seen
+    # elsewhere is that deterministic service's recommendation string,
+    # not a gateway action).
     AGENT_PLANNING = "agent_planning"
     DUPLICATE_EVALUATION = "duplicate_evaluation"
     PO_LINE_MATCH = "po_line_match"
@@ -97,7 +104,11 @@ ACTION_REGISTRY: Dict[LLMAction, ActionConfig] = {
     LLMAction.EXTRACT_INVOICE_FIELDS: ActionConfig(max_output_tokens=4000, model_tier="sonnet"),
     LLMAction.GENERATE_EXCEPTION:     ActionConfig(max_output_tokens=1000, model_tier="haiku"),
     LLMAction.CLASSIFY_VENDOR:        ActionConfig(max_output_tokens=2000, model_tier="haiku"),
-    LLMAction.AP_DECISION:            ActionConfig(max_output_tokens=512,  model_tier="sonnet"),
+    # AGENT_PLANNING does NOT make the executable plan (that's the
+    # deterministic DeterministicPlanningEngine). It writes an ADVISORY
+    # recovery suggestion for a needs_info item — steps drawn from a
+    # fixed whitelist, persisted to metadata for operator display, never
+    # auto-executed (see needs_info_recovery.py + invoice_workflow.py).
     LLMAction.AGENT_PLANNING:         ActionConfig(max_output_tokens=4096, model_tier="sonnet", timeout_seconds=120),
     LLMAction.DUPLICATE_EVALUATION:   ActionConfig(max_output_tokens=500,  model_tier="haiku", timeout_seconds=15),
     LLMAction.PO_LINE_MATCH:          ActionConfig(max_output_tokens=100,  model_tier="haiku", timeout_seconds=10),
@@ -775,7 +786,7 @@ class LLMGateway:
         # against the budget.
         if system_prompt:
             effective_system = system_prompt
-        elif action not in (LLMAction.AGENT_PLANNING, LLMAction.AP_DECISION):
+        elif action is not LLMAction.AGENT_PLANNING:
             effective_system = build_system_prompt()
         else:
             effective_system = ""
