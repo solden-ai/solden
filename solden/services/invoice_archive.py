@@ -17,11 +17,13 @@ Tamper evidence:
   * Postgres triggers REJECT every UPDATE and DELETE (installed by
     ``database._install_audit_append_only_guards``). Mutation of the
     archived bytes is a database error, not an application check.
-  * ``retention_until`` is set at INSERT and never changes. The
-    reaper service deletes rows older than ``retention_until`` —
-    that's the only legitimate path that bypasses the DELETE
-    trigger, via a privileged RLS policy granted only to the
-    reaper role.
+  * ``retention_until`` is set at INSERT and is ADVISORY metadata
+    only. There is no purge/reaper today: the DELETE trigger blocks
+    every delete, so originals are retained indefinitely (the
+    conservative SOX posture — you never want to silently drop the
+    immutable copy). A future retention-purge would need a privileged
+    path the trigger explicitly permits; none exists yet, so nothing
+    reads ``retention_until`` to delete anything.
 
 Tenant isolation:
   * Primary key is ``(organization_id, content_hash)`` — same file
@@ -55,8 +57,10 @@ logger = logging.getLogger(__name__)
 
 # SOX retention default — 7 years, matching IRS/HMRC/most-jurisdiction
 # audit retention requirements. Operator can override per-tenant via
-# settings_json["retention_years"]; the reaper reads this at run time
-# so a customer extending retention doesn't immediately re-purge.
+# settings_json["retention_years"]. This only sets the advisory
+# ``retention_until`` stamp at INSERT; there is no reaper consuming it
+# today (the no-DELETE trigger keeps originals indefinitely), so
+# changing it triggers no deletion.
 DEFAULT_RETENTION_YEARS = 7
 
 # Hard cap on stored content. PDFs over this are rejected at the
