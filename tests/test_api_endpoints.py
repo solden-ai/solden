@@ -3472,6 +3472,39 @@ class TestSettingsEndpoints:
         assert response.status_code == 401
         assert response.json().get("detail") != "endpoint_disabled_in_ap_v1_profile"
 
+    def _authed_as(self, org: str):
+        from solden.core.auth import get_current_user
+        app.dependency_overrides[get_current_user] = lambda: TokenData(
+            user_id="u1", email="u1@test.com", role="admin",
+            organization_id=org,
+            exp=datetime.now(timezone.utc) + timedelta(hours=1),
+        )
+
+    def test_get_settings_blocks_cross_tenant(self):
+        """A user authenticated for org A must not read org B's financial
+        controls by changing the path id — the router enforces org match."""
+        self._authed_as("tenant-a")
+        # Own org: allowed (not a 403 org_mismatch).
+        own = client.get("/settings/tenant-a")
+        assert own.status_code != 403, own.text
+        # Cross-tenant: blocked.
+        cross = client.get("/settings/tenant-b")
+        assert cross.status_code == 403
+        assert cross.json().get("detail") == "org_mismatch"
+
+    def test_update_thresholds_blocks_cross_tenant(self):
+        """Cross-tenant WRITE of approval thresholds (financial controls) is
+        rejected — this was the actual hole: any authed user could overwrite
+        another tenant's controls."""
+        self._authed_as("tenant-a")
+        resp = client.put("/settings/tenant-b/approval-thresholds", json={
+            "auto_approve_limit": 1,
+            "manager_approval_limit": 2,
+            "executive_approval_limit": 3,
+        })
+        assert resp.status_code == 403
+        assert resp.json().get("detail") == "org_mismatch"
+
 
 class TestAgentIntentEndpoints:
     @staticmethod

@@ -44,10 +44,31 @@ def _enforce_deployment_window():
     except ImportError:
         pass  # deployment_window module not available
 
+def _require_org_match(
+    organization_id: str,
+    user: TokenData = Depends(get_current_user),
+) -> TokenData:
+    """Enforce that the path org matches the caller's authenticated org.
+
+    Every ``/settings/{organization_id}/*`` route reads or writes financial
+    controls (approval thresholds, GL mappings, auto-approve rules, migration
+    cutover). Without this guard the router only authenticated the caller and
+    then trusted the path ``organization_id`` verbatim, so any authenticated
+    user could read OR overwrite another tenant's controls by changing the id.
+    Applied at the router level so no handler can forget it. 403 on mismatch
+    (a spoof attempt), matching the ``_assert_org_match`` convention elsewhere.
+    """
+    caller_org = str(getattr(user, "organization_id", "") or "").strip()
+    requested = str(organization_id or "").strip()
+    if not caller_org or not requested or caller_org != requested:
+        raise HTTPException(status_code=403, detail="org_mismatch")
+    return user
+
+
 router = APIRouter(
     prefix="/settings",
     tags=["settings"],
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(_require_org_match)],
 )
 
 
