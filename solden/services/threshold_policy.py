@@ -30,9 +30,57 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
+
+
+def _emit_threshold_audit(
+    db,
+    *,
+    organization_id: str,
+    entity_type: str,
+    entity_id: str,
+    previous: Dict[str, Any],
+    current: Dict[str, Any],
+    modified_by: str,
+) -> None:
+    """Write an audit row for a routing-threshold change.
+
+    Mirrors ``save_fraud_controls``: thresholds are a financial control, so a
+    change must land in the audit trail (History primitive). Emitted only when
+    an actor is supplied — the API boundary always supplies ``user.user_id``;
+    internal/test callers that pass no actor skip it. Fail-closed: an audit
+    write failure raises so the change is never silently unrecorded.
+    """
+    if not modified_by:
+        return
+    diff = {
+        k: {"from": previous.get(k), "to": current.get(k)}
+        for k in set(previous) | set(current)
+        if previous.get(k) != current.get(k)
+    }
+    db.append_audit_event({
+        "ap_item_id": "",  # org/vendor-scoped policy change, not invoice-scoped
+        "event_type": "routing_threshold_modified",
+        "actor_type": "user",
+        "actor_id": modified_by,
+        "reason": (
+            "Routing thresholds updated" if diff
+            else "Routing thresholds re-saved (no value changes)"
+        ),
+        "metadata": {
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "previous": previous,
+            "current": current,
+            "diff": diff,
+            "modified_at": datetime.now(timezone.utc).isoformat(),
+        },
+        "organization_id": organization_id,
+        "source": "threshold_policy_api",
+    })
 
 
 _DEFAULT_AUTO_APPROVE_MIN = 0.95
@@ -134,10 +182,13 @@ def set_org_thresholds(
     auto_approve_min: Optional[float] = None,
     escalate_below: Optional[float] = None,
     po_required_above: Optional[float] = None,
+    modified_by: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Persist org-level thresholds. Partial writes preserve any
-    fields not present in the call."""
+    fields not present in the call. When ``modified_by`` is supplied the
+    change is written to the audit trail (the API always supplies it)."""
     _validate_threshold_pair(auto_approve_min, escalate_below)
+    previous = dict(get_org_thresholds(db, organization_id))
     org = db.get_organization(organization_id) or {}
     settings: Any = org.get("settings") or org.get("settings_json") or {}
     if isinstance(settings, str):
@@ -162,6 +213,15 @@ def set_org_thresholds(
         block["po_required_above"] = _coerce_amount(po_required_above)
     settings["routing_thresholds"] = block
     db.update_organization(organization_id, settings=settings)
+    _emit_threshold_audit(
+        db,
+        organization_id=organization_id,
+        entity_type="routing_threshold",
+        entity_id=organization_id,
+        previous=previous,
+        current=block,
+        modified_by=modified_by or "",
+    )
     return block
 
 
@@ -205,9 +265,11 @@ def set_vendor_threshold_overrides(
     escalate_below: Optional[float] = None,
     po_required_above: Optional[float] = None,
     clear: bool = False,
+    modified_by: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Persist per-vendor manual overrides. ``clear=True`` wipes the
-    block entirely (revert to org default + learned)."""
+    block entirely (revert to org default + learned). When ``modified_by``
+    is supplied the change is written to the audit trail."""
     _validate_threshold_pair(auto_approve_min, escalate_below)
     profile = db.get_vendor_profile(organization_id, vendor_name)
     if not profile:
@@ -220,9 +282,19 @@ def set_vendor_threshold_overrides(
             meta = {}
     if not isinstance(meta, dict):
         meta = {}
+    previous = dict(meta.get("threshold_override") or {}) if isinstance(meta.get("threshold_override"), dict) else {}
     if clear:
         meta.pop("threshold_override", None)
         db.upsert_vendor_profile(organization_id, vendor_name, metadata=meta)
+        _emit_threshold_audit(
+            db,
+            organization_id=organization_id,
+            entity_type="vendor_routing_threshold",
+            entity_id=vendor_name,
+            previous=previous,
+            current={},
+            modified_by=modified_by or "",
+        )
         return {}
     block = meta.get("threshold_override") or {}
     if not isinstance(block, dict):
@@ -239,6 +311,15 @@ def set_vendor_threshold_overrides(
         block["po_required_above"] = _coerce_amount(po_required_above)
     meta["threshold_override"] = block
     db.upsert_vendor_profile(organization_id, vendor_name, metadata=meta)
+    _emit_threshold_audit(
+        db,
+        organization_id=organization_id,
+        entity_type="vendor_routing_threshold",
+        entity_id=vendor_name,
+        previous=previous,
+        current=block,
+        modified_by=modified_by or "",
+    )
     return block
 
 

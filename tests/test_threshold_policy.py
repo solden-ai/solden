@@ -237,6 +237,24 @@ def test_api_get_put_org_thresholds(db, client_orgA):
     assert put_resp.json()["auto_approve_min"] == 0.92
 
 
+def test_api_put_org_thresholds_writes_audit(db, client_orgA):
+    """A routing-threshold change (financial control) must land in the audit
+    trail — History primitive. Was previously unrecorded."""
+    put = client_orgA.put(
+        "/api/workspace/policy/thresholds",
+        json={"auto_approve_min": 0.93, "escalate_below": 0.66},
+    )
+    assert put.status_code == 200
+    with db.connect() as conn:
+        rows = conn.execute(
+            "SELECT actor_id, event_type FROM audit_events "
+            "WHERE organization_id = %s AND event_type = %s",
+            ("orgA", "routing_threshold_modified"),
+        ).fetchall()
+    assert rows, "threshold change must write a routing_threshold_modified audit row"
+    assert any(str(dict(r).get("actor_id")) == "user-1" for r in rows)
+
+
 def test_api_invalid_pair_400(client_orgA):
     resp = client_orgA.put(
         "/api/workspace/policy/thresholds",

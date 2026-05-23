@@ -99,6 +99,7 @@ def put_org_threshold_policy(
             auto_approve_min=body.auto_approve_min,
             escalate_below=body.escalate_below,
             po_required_above=body.po_required_above,
+            modified_by=user.user_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -147,6 +148,7 @@ def put_vendor_threshold_policy(
             auto_approve_min=body.auto_approve_min,
             escalate_below=body.escalate_below,
             po_required_above=body.po_required_above,
+            modified_by=user.user_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -170,6 +172,7 @@ def clear_vendor_threshold_policy(
         user.organization_id,
         vendor_name,
         clear=True,
+        modified_by=user.user_id,
     )
     return ThresholdsOut()
 
