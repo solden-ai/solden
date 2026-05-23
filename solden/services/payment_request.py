@@ -1,11 +1,15 @@
 """
 Payment Request Service
 
-Handles payment requests from multiple sources:
+Captures ad-hoc payment REQUESTS (not invoices) from multiple sources:
 - Email requests ("Please pay $500 to John")
-- Slack requests (/clearledgr pay @vendor $1000)
+- Slack requests
 - Internal requests (employee reimbursements)
 - Manual requests via UI
+
+Solden RECORDS and routes these requests for approval; it never executes the
+payment. ``mark_paid`` only records an external payment reference once the
+customer's ERP/bank has paid. There is no payment-execution path here.
 
 Different from invoices - these are ad-hoc payment requests without formal invoicing.
 """
@@ -196,12 +200,13 @@ class PaymentRequestService:
         parsed_command: Optional[Dict] = None,
     ) -> PaymentRequest:
         """
-        Create payment request from Slack message or command.
-        
+        Create a payment REQUEST from a Slack message or command (captures it
+        for approval — Solden does not execute the payment).
+
         Supports formats like:
-        - /clearledgr pay @john $500 for consulting
+        - /solden pay @john $500 for consulting
         - /pay 1000 to Acme Corp for services
-        - @clearledgr please pay $250 to vendor
+        - @solden please pay $250 to vendor
         """
         # Parse the slack message
         if parsed_command:
@@ -302,9 +307,10 @@ class PaymentRequestService:
     ) -> PaymentRequest:
         """
         Approve a payment request.
-        
-        This doesn't execute the payment - just marks it approved.
-        Use PaymentExecutionService to actually pay.
+
+        Marks the request approved — it does NOT execute payment (Solden never
+        moves money). The customer's ERP/bank pays out-of-band; ``mark_paid``
+        later records the external payment reference.
         """
         request = self._requests.get(request_id)
         if not request:
@@ -346,7 +352,9 @@ class PaymentRequestService:
         return request
     
     def mark_paid(self, request_id: str, payment_id: str) -> PaymentRequest:
-        """Mark request as paid after payment execution."""
+        """Record that an EXTERNAL system paid this request (stores its
+        ``payment_id``). Solden does not execute payment; this only reflects a
+        payment the ERP/bank already made."""
         request = self._requests.get(request_id)
         if not request:
             raise ValueError(f"Request {request_id} not found")
