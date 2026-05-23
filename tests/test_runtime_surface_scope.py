@@ -299,8 +299,10 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
             # /saml/{org_id}/sp-metadata, /saml/{org_id}/login,
             # /saml/{org_id}/acs are reachable without auth (the SAML
             # signature is the auth on ACS); per-tenant scoping is
-            # enforced inside the handlers.
-            "/saml/",
+            # enforced inside the handlers. NO trailing slash — see the
+            # matcher (startswith(f"{prefix}/")); "/saml/" silently 404'd
+            # every SAML sub-path. Locked by the sub-path asserts below.
+            "/saml",
             # Workspace SPA module surfaces (each surface is org-
             # scoped + admin-role gated in the handlers). The strict
             # profile allows the prefix; the handlers enforce auth.
@@ -326,6 +328,20 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         # that the rebrand-era cleanup unmounted. The corresponding
         # ``vendor_inquiry.lookup`` read-only status block is the only
         # surviving vendor-facing surface.
+
+
+def test_strict_profile_allows_saml_sso_subpaths(monkeypatch):
+    """SAML SSO IdP-facing sub-paths must resolve ALLOWED by the real matcher.
+
+    Regression for the trailing-slash bug: the prefix was "/saml/" while the
+    matcher tests startswith(f"{prefix}/") == startswith("/saml//"), so every
+    /saml/{org}/* path silently 404'd in strict-profile prod. The prefix-set
+    assertion alone never caught this (it checked the string, not the match).
+    """
+    matcher = _main_module()._is_strict_profile_allowed_path
+    for sub in ("sp-metadata", "login", "acs", "logout", "slo"):
+        path = f"/saml/acme/{sub}"
+        assert matcher(path) is True, f"{path} should be allowlisted but is dropped"
 
 
 def test_strict_profile_blocks_unknown_prefixed_routes(monkeypatch):

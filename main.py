@@ -548,7 +548,10 @@ STRICT_PROFILE_ALLOWED_PREFIXES = (
     # and both SP-metadata and ACS use sub-paths so the prefix gate
     # is the right shape. The handlers enforce per-tenant scoping
     # (no auth needed — the SAML signature is the auth on ACS).
-    "/saml/",
+    # NB: NO trailing slash. The matcher tests startswith(f"{prefix}/"), so
+    # "/saml/" would check for "/saml//" and never match /saml/{org}/acs —
+    # that bug silently 404'd all SAML SSO in strict-profile prod.
+    "/saml",
     # Workspace shell — sub-routers shipped per module. Each is its
     # own APIRouter with the prefix shown, mounted unconditionally in
     # the include_router block below. Prefix-allow rather than per-
