@@ -44,8 +44,9 @@ _ADMIN_ROLES = {"admin", "owner"}
 _VALID_SEVERITIES = {"low", "medium", "high", "critical"}
 # Display precedence: critical first, then high, medium, low. The
 # underlying store returns rows ordered by ``severity DESC`` which is
-# a lexicographic sort in SQLite — it puts "medium" > "low" > "high"
-# > "critical", not what any operator expects. We re-sort here.
+# a lexicographic text sort in SQL — it puts "medium" > "low" > "high"
+# > "critical" (m > l > h > c), not what any operator expects. We
+# re-sort here by semantic rank.
 _SEVERITY_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3}
 
 

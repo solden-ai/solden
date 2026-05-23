@@ -119,6 +119,46 @@ def test_export_returns_documented_top_level_keys(db, client_orgA):
     assert doc["links"] == {"parent_box": None, "child_boxes": []}
 
 
+def test_export_sources_exceptions_and_outcome_from_structured_tables(db, client_orgA):
+    """The reconstructable record reads ``box_exceptions`` and
+    ``box_outcomes`` directly — not the audit_events narration of them.
+
+    This is what makes the History primitive robust: an exception/outcome
+    is a first-class atomic single-INSERT row, and the export merges it
+    in independently of whether the (best-effort) timeline narration was
+    written. Raise an exception + record an outcome, then assert both
+    surface in the export by their structured fields.
+    """
+    item = _make_ap_item_with_history(db, item_id="AP-export-structured")
+    db.raise_box_exception(
+        box_id=item["id"],
+        box_type="ap_item",
+        organization_id="orgA",
+        exception_type="missing_po",
+        reason="No purchase order on file",
+        raised_by="test-agent",
+        severity="high",
+    )
+    db.record_box_outcome(
+        box_id=item["id"],
+        box_type="ap_item",
+        organization_id="orgA",
+        outcome_type="posted_to_erp",
+        recorded_by="test-agent",
+    )
+
+    doc = client_orgA.get(f"/api/workspace/ap-items/{item['id']}/export").json()
+
+    exc_types = {e["exception_type"] for e in doc["exceptions"]}
+    assert "missing_po" in exc_types
+    raised = next(e for e in doc["exceptions"] if e["exception_type"] == "missing_po")
+    assert raised["reason"] == "No purchase order on file"
+    assert raised["severity"] == "high"
+
+    assert doc["outcome"] is not None
+    assert doc["outcome"]["outcome_type"] == "posted_to_erp"
+
+
 def test_export_history_includes_every_audit_event(db, client_orgA):
     item = _make_ap_item_with_history(db, item_id="AP-export-history")
     resp = client_orgA.get(f"/api/workspace/ap-items/{item['id']}/export")

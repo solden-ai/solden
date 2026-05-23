@@ -21,9 +21,20 @@ This mixin makes the other two first-class too:
   (``posted_to_erp`` / ``rejected`` / ``vendor_activated`` /
   ``closed_unsuccessful`` / ``reversed``) with attributable context.
 
-Both writes emit an audit_events row through the canonical funnel so
-the timeline narrates the lifecycle faithfully: "exception raised" →
-"exception resolved" → "outcome recorded."
+Durability model (read this before "shouldn't the audit be atomic?"):
+the ``box_exceptions`` / ``box_outcomes`` row IS the durable, attributable
+source of truth for that primitive — each is a single-INSERT, inherently
+atomic write. After it commits, we ALSO emit an ``audit_events`` row
+through the canonical funnel as a best-effort mirror into the unified
+timeline ("exception raised" / "exception resolved" / "outcome
+recorded"). That mirror is non-fatal by design: if it ever drops, the
+exception/outcome is NOT lost, because the reconstructable record
+(``box_export.py``, ``box_projection.py``) reads all three sources —
+``audit_events`` + ``box_exceptions`` + ``box_outcomes`` — and merges
+them. So the History primitive holds without forcing a two-table
+transaction here. (Contrast state transitions, where ``audit_events`` is
+the SOLE record of a transition, so that write IS co-committed with the
+state UPDATE — see ``test_state_audit_atomicity.py``.)
 
 Schema owned by migration v43.
 """

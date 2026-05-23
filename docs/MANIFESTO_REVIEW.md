@@ -88,3 +88,43 @@ generalizes.
   under diligence.
 - **Verdict:** aligned; two doc drifts fixed. Tests: engine resume/idempotency/
   governance-event/box-lock/async-hygiene clusters green (55 passed).
+
+### Audit / Exception / Ownership stores — ALIGNED (History + Exceptions + Ownership)
+Reviewed as a cluster because they carry three of the five primitives.
+
+- **`solden/core/stores/box_lifecycle_store.py`** (Exceptions + Outcomes) — the
+  `box_exceptions` / `box_outcomes` rows: structured, attributable, idempotent,
+  cross-box-type, with an org-wide unresolved queue (`list_unresolved_exceptions`).
+  **Gap investigated, found NOT a hole:** the structured-row INSERT commits, then a
+  narration `audit_events` row is emitted best-effort in a *separate* txn — which
+  looked like a torn-write hazard against the codebase's own atomicity bar
+  (`test_state_audit_atomicity`, `set_ap_item_owner_atomic`). Traced the read path:
+  the reconstructable-record surfaces (`box_export.py`, `box_projection.py`) read
+  `audit_events` + `box_exceptions` + `box_outcomes` as three independent sources
+  and merge them, so a dropped narration never loses an exception/outcome. State
+  transitions DO need atomicity (audit_events is their sole record — and it's
+  enforced); exceptions/outcomes have their own atomic single-INSERT tables, so they
+  don't. **Fixed:** the docstring claimed "the timeline narrates the lifecycle
+  faithfully" (overclaim) → rewrote it to state the real durability model (structured
+  row is source of truth; narration is a best-effort mirror; the export/projection
+  merge of three sources is what holds the History primitive). **Proven by** a new
+  test `test_box_export_api.py::test_export_sources_exceptions_and_outcome_from_structured_tables`
+  — raises an exception + records an outcome, asserts both surface in the export by
+  their structured fields.
+- **`solden/api/box_owner_routes.py`** (Ownership) — clean. Manual reassign override;
+  auto-assignment lives in the engine hook + `services/box_owner`; uses the atomic
+  owner write; tenant-scoped 404-not-403; "the audit event is the source of truth for
+  reassignment history, the column is just current state." No drift.
+- **`solden/api/box_exceptions_admin.py`** (Exceptions surface) — strong: org-scoped
+  severity-ranked queue, stats, attributed resolve, the cause-clustering exception
+  graph (the richest "what's stuck and why" view), tenant isolation with
+  defense-in-depth. **Fixed:** stale "lexicographic sort in SQLite" comment (Postgres-
+  only since C.2/C.3) → "lexicographic text sort in SQL"; the re-sort logic stays (text
+  `severity DESC` mis-orders in Postgres too).
+- **`solden/core/box_summary.py`** (read-side context view) — reads `last_3_actions`
+  from `audit_events` and open issues from fraud_flags/field_confidences. Honest (no
+  fabricated currency). Not the reconstructable record (that's box_export); a 3-item
+  agent-context view. No drift.
+- **Verdict:** aligned; History/Exceptions/Ownership all hold. 2 doc drifts fixed +
+  1 robustness test added. Tests: export/owner/audit-chain/atomicity/exceptions-admin/
+  policy-version/entity-scope clusters green (61 passed).
