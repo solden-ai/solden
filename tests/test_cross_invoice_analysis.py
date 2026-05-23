@@ -233,3 +233,51 @@ class TestDbFailure:
         assert len(result.duplicates) == 0
         assert len(result.anomalies) == 0
         assert result.vendor_stats["is_new_vendor"] is True
+
+
+# ── Bounded-agent: the model can't relax a deterministic HIGH duplicate ──
+
+
+class TestDuplicateDowngradeBound:
+    """The LLM may relax a WEAK duplicate match, but must NOT downgrade a
+    deterministic high-confidence duplicate (match_score >= 0.8) toward
+    approval — that would let the model erase a fraud/duplicate gate."""
+
+    def _run(self, monkeypatch, severity, verdict):
+        from solden.services import cross_invoice_analysis as cia
+        from solden.services.cross_invoice_analysis import (
+            _ai_evaluate_duplicates, DuplicateAlert,
+        )
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+        alert = DuplicateAlert(
+            severity=severity,
+            message="dup",
+            matching_invoice_id="inv-prev",
+            match_score=0.9 if severity == "high" else 0.6,
+            details={"matching_invoice_number": "INV-1"},
+        )
+        gw = MagicMock()
+        gw.call_sync.return_value = MagicMock(
+            content='[{"invoice_number": "INV-1", "verdict": "%s", "confidence": 0.9, "reasoning": "r"}]' % verdict
+        )
+        with patch("solden.core.llm_gateway.get_llm_gateway", return_value=gw):
+            return _ai_evaluate_duplicates("Acme", 100.0, "INV-1", None, [alert])[0]
+
+    def test_high_duplicate_not_downgraded_by_unrelated_verdict(self, monkeypatch):
+        out = self._run(monkeypatch, "high", "unrelated")
+        # Gate holds: severity + score preserved, model verdict is context only.
+        assert out.severity == "high"
+        assert out.match_score == 0.9
+        assert out.details.get("ai_relabel_suppressed") is True
+        assert out.details.get("ai_verdict") == "unrelated"
+
+    def test_high_duplicate_not_downgraded_by_amendment_verdict(self, monkeypatch):
+        out = self._run(monkeypatch, "high", "amendment")
+        assert out.severity == "high"
+        assert out.match_score == 0.9
+
+    def test_weak_match_still_downgradable(self, monkeypatch):
+        # A "warning" match CAN be relaxed by the model (it's not a strong signal).
+        out = self._run(monkeypatch, "warning", "unrelated")
+        assert out.severity == "info"
+        assert out.match_score < 0.6

@@ -95,8 +95,27 @@ Return ONLY valid JSON."""
                 dup.details["ai_reasoning"] = v.get("reasoning", "")
                 dup.details["ai_confidence"] = v.get("confidence", 0.5)
 
-                # Downgrade score for non-duplicates
-                if verdict in ("recurring", "unrelated"):
+                # BOUND (manifesto: rules decide, the model describes; the model
+                # may pull toward stricter review but never toward approval). The
+                # model may RELAX a WEAK deterministic match (severity "warning",
+                # match_score < 0.8) when it reads context the cross-invoice
+                # evaluator can't. It must NOT relax a HIGH-confidence duplicate
+                # (match_score >= 0.8): that would let the model erase a
+                # fraud/duplicate gate that ap_decision keys on severity=="high"
+                # and route a likely double-payment toward auto-approval. For a
+                # high match the verdict becomes operator context only — the gate
+                # holds and the item still routes to a human.
+                if dup.severity == "high":
+                    if verdict in ("recurring", "unrelated", "amendment"):
+                        dup.details["ai_relabel_suppressed"] = True
+                        if verdict == "amendment":
+                            dup.details["is_amendment"] = True
+                        dup.message = (
+                            f"High-confidence duplicate (rules); model suggests "
+                            f"{verdict}: {v.get('reasoning', '')}. Routed to human."
+                        )
+                    # severity + match_score left UNCHANGED → gate holds.
+                elif verdict in ("recurring", "unrelated"):
                     dup = DuplicateAlert(
                         severity="info",
                         message=f"{verdict.title()}: {v.get('reasoning', dup.message)}",
