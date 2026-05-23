@@ -554,22 +554,13 @@ async def get_erp_routing_strategy(
     }
 
 
-@router.get("/tenant-health/all")
-async def get_all_tenant_health(
-    user: TokenData = Depends(get_current_user),
-) -> Dict[str, List[Dict[str, Any]]]:
-    _require_admin(user)
-    db = get_db()
-    orgs = db.list_organizations_with_ap_items() or []
-    health = [
-        db.get_operational_metrics(
-            org_id,
-            approval_sla_minutes=_approval_sla_minutes(org_id),
-            workflow_stuck_minutes=_workflow_stuck_minutes(),
-        )
-        for org_id in orgs
-    ]
-    return {"health": health}
+# REMOVED 2026-05-23 (manifesto audit): GET /tenant-health/all returned EVERY
+# org's operational metrics behind only a tenant-admin role — a cross-tenant
+# leak. There is no super-admin on the tenant API (see _assert_org_access). It
+# had zero consumers and the per-org GET /tenant-health already serves a tenant
+# its own data, so this all-tenant aggregate had no legitimate tenant use. If
+# Solden-staff all-tenant monitoring is needed, it belongs on a separate
+# internal-ops-auth router, not here.
 
 
 @router.get("/autopilot-status")

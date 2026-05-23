@@ -597,7 +597,6 @@ STRICT_PROFILE_ALLOWED_OPS_PATHS = {
     "/api/ops/ap-aggregation",
     "/api/ops/browser-agent",
     "/api/ops/erp-routing-strategy",
-    "/api/ops/tenant-health/all",
     "/api/ops/autopilot-status",
     "/api/ops/extraction-quality",
     "/api/ops/ap-decision-health",
