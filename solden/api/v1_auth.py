@@ -24,7 +24,7 @@ Every rejection raises the typed ``AuthorizationDenied`` from
 emits the ``authorization_denied`` audit row before returning the
 401/403 response.
 
-Scope vocabulary: lives in ``clearledgr/api/api_keys.py:_SCOPE_CATALOG``
+Scope vocabulary: lives in ``solden/api/api_keys.py:_SCOPE_CATALOG``
 (``read:ap_items``, ``write:ap_items``, ``read:audit``, ...). The /v1
 routes map onto that vocabulary so a single key can grant access to
 both the workspace and the /v1 surface without a parallel taxonomy.

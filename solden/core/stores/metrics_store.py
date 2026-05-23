@@ -12,7 +12,7 @@ expects the concrete class that inherits it to provide:
 * ``self.list_approvals()``                -- lists approvals for an organization
 * ``self.list_audit_events()``             -- lists audit events for an organization
 
-All methods are copied verbatim from ``clearledgr/core/database.py`` so that
+All methods are copied verbatim from ``solden/core/database.py`` so that
 ``SoldenDB(MetricsStore, ...)`` inherits them without any behavioural change.
 """
 from __future__ import annotations

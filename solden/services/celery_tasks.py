@@ -585,7 +585,7 @@ def reap_expired_seats_task() -> dict:
 
 
 ## §13 Agent Activity retention is enforced as a query-time filter in
-## clearledgr/api/ap_audit.py, not a reaper — audit_events is
+## solden/api/ap_audit.py, not a reaper — audit_events is
 ## architecturally append-only (§7.6 audit trail as evidence of trust).
 ## See list_recent_ap_audit_events_with_retention on the AP store.
 

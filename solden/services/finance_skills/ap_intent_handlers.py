@@ -2349,7 +2349,7 @@ class ResubmitInvoiceHandler(APIntentHandler):
             "next_step": "follow_new_item",
         }
         # Use the legacy event_type tokens recognised by
-        # clearledgr/services/ap_operator_audit.py — source side is
+        # solden/services/ap_operator_audit.py — source side is
         # ``ap_item_resubmitted``, new-item side is
         # ``ap_item_resubmission_created``. Operator timeline rendering
         # keys off these names; renaming would silently drop entries.
@@ -2522,7 +2522,7 @@ class SplitInvoiceHandler(APIntentHandler):
 
             try:
                 # Legacy token recognised by
-                # clearledgr/services/ap_operator_audit.py — keep
+                # solden/services/ap_operator_audit.py — keep
                 # ``ap_item_split_created`` for the child item so the
                 # operator timeline picks it up. The parent-side rollup
                 # below uses the new ``invoice_split`` token (no legacy
@@ -2860,7 +2860,7 @@ class MergeInvoicesHandler(APIntentHandler):
             "next_step": "review_target",
         }
         # Use the legacy event_type tokens recognised by
-        # clearledgr/services/ap_operator_audit.py — target side is
+        # solden/services/ap_operator_audit.py — target side is
         # ``ap_item_merged`` (the receiver), source side is
         # ``ap_item_merged_into`` (the absorbed). Operator timeline
         # rendering keys off these names; renaming would silently drop

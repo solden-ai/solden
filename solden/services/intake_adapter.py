@@ -123,7 +123,7 @@ class IntakeAdapter(Protocol):
     """Contract every intake channel implements.
 
     Concrete implementations live alongside their integration code
-    (e.g. ``clearledgr/integrations/erp_netsuite_intake_adapter.py``)
+    (e.g. ``solden/integrations/erp_netsuite_intake_adapter.py``)
     and are registered via :func:`register_adapter` at module-import
     time.
     """

@@ -1015,7 +1015,7 @@ def _v25_object_model(cur, db):
     #   Paid   = lifecycle complete, money has left the account
     # Collapsing the two hides the window finance teams care about most.
     # ``reversed`` lives in Exception (and is terminal — see
-    # clearledgr/core/ap_states.py) so a reversed-then-closed item does
+    # solden/core/ap_states.py) so a reversed-then-closed item does
     # not leak into Paid.
     ap_stages = [
         ("received", "Received", "#94A3B8", ["received"], 0),
@@ -2637,7 +2637,7 @@ def _v53_custom_roles(cur, db):
 
     The scope spec (``Solden_Workspace_Scope_GA.md`` §Module 6)
     permits up to 10 custom roles per customer, each composed from the
-    bounded permission catalog in ``clearledgr/core/permissions.py``.
+    bounded permission catalog in ``solden/core/permissions.py``.
     Standard roles stay code-defined; custom roles persist here.
 
     A user's role binding can reference either:
@@ -3999,7 +3999,7 @@ def _v74_api_keys_scopes(cur, db):
     don't break on the migration boundary; new keys are scoped from
     creation).
 
-    Scope vocabulary lives in clearledgr/api/api_keys.py:_SCOPE_CATALOG;
+    Scope vocabulary lives in solden/api/api_keys.py:_SCOPE_CATALOG;
     enforcement is via the scope-check helper any guarded route can
     invoke. Initial guarded surfaces: write paths on AP items + audit
     export. Read paths stay open to all valid keys until we have a

@@ -2741,7 +2741,7 @@ def patch_org_settings(
     }
 
 
-# /user/preferences moved to clearledgr/api/user_preferences.py
+# /user/preferences moved to solden/api/user_preferences.py
 # (per-user data — doesn't belong under the /api/workspace/* ops surface)
 
 
@@ -3007,7 +3007,7 @@ async def export_report(
 # Backed by audit_events (already shipped, with governance_verdict +
 # agent_confidence columns from migration v50). Append-only Postgres
 # triggers reject UPDATE/DELETE on this table — see
-# clearledgr/core/database.py:374. The dashboard is purely a read
+# solden/core/database.py:374. The dashboard is purely a read
 # surface; nothing mutates the audit log here.
 # ---------------------------------------------------------------------------
 
@@ -4927,7 +4927,7 @@ def get_admin_health(
 # The leader maps non-default ERP field IDs (NetSuite custom-bodies, SAP
 # Z-fields, QB classes, Xero tracking categories) to the bounded set of
 # Solden fields the agent runtime understands. Backed by:
-#   * clearledgr/integrations/field_mapping_catalog.py — the catalog
+#   * solden/integrations/field_mapping_catalog.py — the catalog
 #     defines what's mappable and the per-ERP regex each value must match
 #   * settings_json["erp_field_mappings"][erp_type] — persistence
 #   * audit_events row (event_type=erp_admin_action:field_mapping_updated)
@@ -4989,7 +4989,7 @@ def _emit_field_mapping_audit(
     Best-effort: if the audit write fails we still return success to
     the operator (we'd rather complete the user's intent than block on
     telemetry), but we log so the gap is visible. Mirrors the pattern
-    in clearledgr/api/erp_connections._audit_erp_admin_action.
+    in solden/api/erp_connections._audit_erp_admin_action.
     """
     try:
         db = get_db()
@@ -5202,7 +5202,7 @@ def get_connection_health(
 # Per scope §Module 6: standard roles cover 80% of cases; the
 # remaining 20% need leader-composed custom roles. The 8 canonical
 # permissions and the standard role taxonomy live in
-# clearledgr/core/permissions.py. Custom roles persist in the
+# solden/core/permissions.py. Custom roles persist in the
 # ``custom_roles`` table (migration v53), bounded to 10 per org.
 # ---------------------------------------------------------------------------
 
@@ -5449,7 +5449,7 @@ def delete_custom_role(
 # A user's effective role can vary per legal entity (Sara is AP
 # Manager in EU, Read-only in US). Per-amount approval ceilings
 # compose with that. Backed by the user_entity_roles table
-# (migration v54) and resolved by clearledgr/services/role_resolver.py.
+# (migration v54) and resolved by solden/services/role_resolver.py.
 # ---------------------------------------------------------------------------
 
 from solden.core.permissions import ROLE_PERMISSIONS as _ROLE_PERMISSIONS  # noqa: E402

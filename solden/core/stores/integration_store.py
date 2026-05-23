@@ -9,7 +9,7 @@ and expects the concrete class that inherits it to provide:
 * ``self._encrypt_secret()``       -- Fernet-encrypts a plaintext secret
 * ``self._decrypt_secret()``       -- Fernet-decrypts an encrypted secret
 
-All methods are copied verbatim from ``clearledgr/core/database.py`` so that
+All methods are copied verbatim from ``solden/core/database.py`` so that
 ``SoldenDB(IntegrationStore, ...)`` inherits them without any behavioural change.
 """
 from __future__ import annotations
@@ -775,7 +775,7 @@ class IntegrationStore:
         data["onboarding_completed"] = bool(data.get("onboarding_completed"))
         return data
 
-    # Convenience alias used by clearledgr/api/paddle_billing.py — same
+    # Convenience alias used by solden/api/paddle_billing.py — same
     # row, less ambiguous name when the caller doesn't care about the
     # JSON-decoded structured fields.
     def get_subscription_row(self, organization_id: str) -> Optional[Dict[str, Any]]:

@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 # Hash chain formula constants must match
-# clearledgr/core/migrations.py:_v77_audit_events_hash_chain exactly.
+# solden/core/migrations.py:_v77_audit_events_hash_chain exactly.
 
 GENESIS_PREFIX = "solden:audit:genesis:"
 HASH_FIELD_SEPARATOR = "|"

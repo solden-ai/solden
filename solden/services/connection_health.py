@@ -112,7 +112,7 @@ def build_connection_health(db, organization_id: str, *, window_hours: int = 24)
     """Assemble the full connection-health response for one tenant.
 
     Returns a dict ready to JSON-serialise; see
-    ``clearledgr/api/workspace_shell.get_connection_health`` for the
+    ``solden/api/workspace_shell.get_connection_health`` for the
     HTTP shape.
     """
     aggregates = db.get_connection_health_aggregates(

@@ -226,7 +226,7 @@ def _check_ooo_and_get_backup(
     # Google Calendar freeBusy check — works for approvers who are
     # Solden users (their Google OAuth token is on file). External
     # approvers without tokens fall through fail-open. See
-    # clearledgr/services/calendar_ooo.py for the fail-open rationale.
+    # solden/services/calendar_ooo.py for the fail-open rationale.
     try:
         from solden.services.calendar_ooo import is_approver_ooo_sync
         if is_approver_ooo_sync(approver_email):

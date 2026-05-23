@@ -1,7 +1,7 @@
 """Public /v1/intents/* router — customer-side agent intent dispatch.
 
 This is the same intent runtime the JWT-authenticated workspace uses
-([clearledgr/api/agent_intents.py](agent_intents.py)), re-exposed under
+([solden/api/agent_intents.py](agent_intents.py)), re-exposed under
 the public ``/v1`` namespace with API-key authentication.
 
 Endpoints:

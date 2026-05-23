@@ -340,6 +340,22 @@ The most sensitive boundary — money movement + the structured-vs-unstructured 
 
 ---
 
+### Exhaustive stale-`clearledgr/`-path sweep — 31 cosmetic + 1 real bug
+Batch-fixed all 31 comment/docstring `clearledgr/` package-path references →
+`solden/` (cosmetic; the package was renamed). The sweep was NOT purely cosmetic:
+- **Real bug found:** `slack_digest.py` "See all exceptions" button deep-linked to
+  `https://mail.google.com/mail/u/0/#clearledgr/invoices` — a Gmail label that no
+  longer exists (the rebrand renamed labels to `Solden/Invoice/*`). An operator
+  clicking it landed nowhere. **Fixed** with `_gmail_exception_label_url()` that builds
+  a Gmail search URL from the canonical label name in `gmail_labels` — so a future
+  rename can't silently rot it again.
+- **Left (functional infra identifiers):** `gmail_api.py` GCP Pub/Sub topic default
+  `projects/clearledgr/topics/gmail-push` (env-overridable, real GCP project name);
+  the internal `CLEARLEDGR_LABELS` dict *variable name* (its values are already
+  `Solden/...`); Redis keys; `clearledgr.com` runtime domain; `clearledgr_test` DB.
+- **Verdict:** repo is free of stale `clearledgr/` path refs except the one functional
+  GCP default; one broken operator deep-link fixed.
+
 ## Coverage summary (this review pass)
 
 Reviewed against the manifesto, top to bottom: the **spine** (box_registry, ap_states,

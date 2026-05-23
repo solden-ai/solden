@@ -6,7 +6,7 @@ expects the concrete class that inherits it to provide:
 * ``self.connect()``      -- returns a DB connection (context manager)
 * ``self.initialize()``   -- ensures tables exist
 
-All methods are copied verbatim from ``clearledgr/core/database.py`` so that
+All methods are copied verbatim from ``solden/core/database.py`` so that
 ``SoldenDB(PolicyStore, ...)`` inherits them without any behavioural change.
 """
 from __future__ import annotations

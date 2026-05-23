@@ -6,7 +6,7 @@ Two real-world cases break that shape:
 
   A) **One PDF with N invoices in it.** Vendors (especially in the EU)
      bulk-export a month of invoices into a single PDF and email the
-     stack. ``clearledgr/services/multi_invoice_splitter.py`` already
+     stack. ``solden/services/multi_invoice_splitter.py`` already
      detects boundaries and writes per-invoice sub-PDFs; this module
      calls it.
 

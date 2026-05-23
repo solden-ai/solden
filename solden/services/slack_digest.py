@@ -24,6 +24,23 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 
+def _gmail_exception_label_url() -> str:
+    """Deep-link to the Gmail view of exception invoices.
+
+    Built from the canonical label name (``gmail_labels``) so a future
+    label rename can't silently break this digest button — that is exactly
+    how the old hardcoded ``#clearledgr/invoices`` link rotted after the
+    Solden rebrand renamed the labels to ``Solden/Invoice/*``.
+    """
+    import urllib.parse
+
+    from solden.services.gmail_labels import CLEARLEDGR_LABELS
+
+    label = CLEARLEDGR_LABELS.get("invoice_exception", "Solden/Invoice/Exception")
+    query = urllib.parse.quote(f'label:"{label}"')
+    return f"https://mail.google.com/mail/u/0/#search/{query}"
+
+
 def _is_working_day(dt: datetime) -> bool:
     """Monday=0 .. Friday=4 are working days."""
     return dt.weekday() < 5
@@ -309,7 +326,7 @@ def _build_digest_blocks(
                     "type": "button",
                     "text": {"type": "plain_text", "text": f"See all {total_needs_action}"},
                     "action_id": "digest_open_exceptions",
-                    "url": "https://mail.google.com/mail/u/0/#clearledgr/invoices",
+                    "url": _gmail_exception_label_url(),
                 }],
             })
         blocks.append({"type": "divider"})

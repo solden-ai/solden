@@ -299,7 +299,7 @@ async def login_with_password(
 
     Generic 401 on every failure mode — never reveal whether an email
     exists. Rate limiting + lockout is the existing global middleware's
-    responsibility (see clearledgr/services/rate_limit.py); this
+    responsibility (see solden/services/rate_limit.py); this
     handler stays focused on credential check + cookie issuance.
     """
     from solden.core.auth import get_user_by_email, verify_password

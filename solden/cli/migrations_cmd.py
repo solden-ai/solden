@@ -6,7 +6,7 @@ Subcommands:
   in code, and a count of unapplied migrations (delta indicates a
   deploy that hasn't run init yet).
 * ``list`` — every migration registered in
-  ``clearledgr/core/migrations.py`` with its applied/unapplied flag.
+  ``solden/core/migrations.py`` with its applied/unapplied flag.
 
 Useful for ops verifying that a freshly-deployed pod has run init,
 and for CI guards that block ``solden`` deploys when pending

@@ -593,7 +593,7 @@ async def netsuite_webhook(
     # handler too (idempotent, defence-in-depth) and skip the audit
     # event we already wrote. NetSuite-specific dispatch logic
     # (envelope parsing, enrichment, state derivation) lives in the
-    # NetSuiteIntakeAdapter — see clearledgr/integrations/erp_netsuite_intake_adapter.py.
+    # NetSuiteIntakeAdapter — see solden/integrations/erp_netsuite_intake_adapter.py.
     _record_webhook_event(
         organization_id=organization_id,
         erp_type="netsuite",
@@ -696,7 +696,7 @@ async def sap_webhook(
     # specific event-shape normalization (CloudEvents vs ABAP-BAdI),
     # enrichment, and state derivation live in
     # SapS4HanaIntakeAdapter — see
-    # clearledgr/integrations/erp_sap_s4hana_intake_adapter.py.
+    # solden/integrations/erp_sap_s4hana_intake_adapter.py.
     _record_webhook_event(
         organization_id=organization_id,
         erp_type="sap",

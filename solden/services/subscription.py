@@ -43,7 +43,7 @@ class PlanLimits:
     ai_credits_per_month: int
     # §13 tier comparison — "Saved Views — Show in Inbox: Starter 3
     # per pipeline, Pro+ Unlimited". Enforced at saved-view creation
-    # in clearledgr/api/pipelines.py.
+    # in solden/api/pipelines.py.
     saved_views_per_pipeline: int = -1
     # §13 tier comparison — "Agent Activity feed retention:
     # Starter 30 days, Pro+ Statutory minimum — default 7 years".

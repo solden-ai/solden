@@ -67,7 +67,7 @@ def _generate_raw_key() -> str:
 # Scopes are resource:action tokens. The catalog below is the
 # canonical set; create / rotate validate against it. Routes that
 # want to enforce a scope check call ``require_scope(user, "...")``
-# from clearledgr/core/auth.py — when the auth path was an API key,
+# from solden/core/auth.py — when the auth path was an API key,
 # the granted scopes are on the TokenData; cookie + bearer paths
 # pass through untouched (the customer-side scopes are explicitly an
 # API-key-only mechanism).

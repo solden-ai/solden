@@ -151,7 +151,7 @@ _AUDIT_CONTRACTS: Dict[str, Dict[str, Any]] = {
         "idempotent": True,
         "mutates_ap_state": True,
         # Legacy event tokens for the success path are preserved so
-        # operator-audit timeline rendering (clearledgr/services/
+        # operator-audit timeline rendering (solden/services/
         # ap_operator_audit.py) keeps recognising them. The
         # blocked/failed tokens are new since no legacy code keys
         # off them.
