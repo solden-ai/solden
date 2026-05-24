@@ -1183,27 +1183,6 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
             except Exception:
                 pass
 
-        # §7.7 Shadow mode: run candidate model alongside production (non-blocking)
-        try:
-            if os.environ.get("SHADOW_MODEL"):
-                from solden.services.shadow_mode import run_shadow_decision
-                await run_shadow_decision(
-                    invoice_data={
-                        "invoice": invoice,
-                        "validation_gate": validation_gate,
-                        "vendor_profile": vendor_profile,
-                        "ap_item_id": invoice_id,
-                    },
-                    production_decision={
-                        "recommendation": ap_decision.recommendation if ap_decision else None,
-                        "confidence": ap_decision.confidence if ap_decision else None,
-                    },
-                    organization_id=self.organization_id,
-                    db=self.db,
-                )
-        except Exception:
-            pass  # Shadow mode is non-blocking — never affects production
-
         # In parallel mode, override any autonomous decision to force human review
         if _parallel_mode and ap_decision and ap_decision.recommendation == "approve":
             ap_decision.recommendation = "escalate"
