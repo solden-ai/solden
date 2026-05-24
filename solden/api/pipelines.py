@@ -229,7 +229,7 @@ class CreateBoxLinkRequest(BaseModel):
 @box_links_router.post("")
 def create_box_link(
     request: CreateBoxLinkRequest,
-    _user=Depends(require_ops_user),
+    user=Depends(require_ops_user),
 ):
     """Link two Boxes together (e.g. invoice ↔ vendor onboarding)."""
     db = get_db()
@@ -237,6 +237,7 @@ def create_box_link(
         request.source_box_id, request.source_box_type,
         request.target_box_id, request.target_box_type,
         request.link_type,
+        organization_id=user.organization_id,
     )
     return link
 
@@ -245,9 +246,9 @@ def create_box_link(
 def get_box_links(
     box_id: str = Query(...),
     box_type: str = Query(default="invoice"),
-    _user=Depends(get_current_user),
+    user=Depends(get_current_user),
 ):
-    """Get all links for a Box."""
+    """Get all links for a Box (scoped to the caller's org)."""
     db = get_db()
-    links = db.get_box_links(box_id, box_type)
+    links = db.get_box_links(box_id, box_type, organization_id=user.organization_id)
     return {"links": links}

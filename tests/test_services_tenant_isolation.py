@@ -338,3 +338,28 @@ class TestReconStoreTenantIsolation:
         # Owner update works.
         assert db.update_recon_item(item_id, "recon-org-a", state="matched") is True
         assert db.list_recon_items(sid, "recon-org-a")[0]["state"] == "matched"
+
+
+# ─── box_links: cross-tenant fence ──────────────────────────────────
+
+
+class TestBoxLinksTenantIsolation:
+    """box_links must be org-scoped: a link created in org A is invisible to
+    org B, and a link can't be created without an org (the table had no org
+    column / the store didn't filter — any authed user could read the graph)."""
+
+    def test_link_boxes_requires_org(self, db):
+        with pytest.raises(ValueError, match="organization_id"):
+            db.link_boxes("AP-1", "ap_item", "AP-2", "ap_item", "related", organization_id="")
+
+    def test_get_box_links_requires_org(self, db):
+        with pytest.raises(ValueError, match="organization_id"):
+            db.get_box_links("AP-1", "ap_item", organization_id="")
+
+    def test_links_are_org_scoped(self, db):
+        db.link_boxes("BL-SRC", "ap_item", "BL-TGT", "ap_item", "related",
+                      organization_id="bl-org-a")
+        # Owner sees it.
+        assert len(db.get_box_links("BL-SRC", "ap_item", organization_id="bl-org-a")) == 1
+        # Another tenant sees nothing for the same box id.
+        assert db.get_box_links("BL-SRC", "ap_item", organization_id="bl-org-b") == []

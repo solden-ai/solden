@@ -5910,3 +5910,21 @@ def _v98_payment_requests_table(cur, db):
         "CREATE INDEX IF NOT EXISTS idx_payment_requests_org_status "
         "ON payment_requests(organization_id, status)"
     )
+
+
+@migration(99, "box_links.organization_id — tenant-scope the box link graph")
+def _v99_box_links_org(cur, db):
+    """Add organization_id to box_links so links are tenant-scoped.
+
+    box_links had no org column, and create_box_link/get_box_links filtered
+    only on box id+type — any authed user could read or create links across
+    tenants. New links are stamped with the caller's org and reads filter by
+    it. Pre-existing rows (org NULL) become invisible to org-scoped reads, a
+    clean cutover (links re-create on next use); we don't backfill across the
+    heterogeneous box-type source tables.
+    """
+    cur.execute("ALTER TABLE box_links ADD COLUMN IF NOT EXISTS organization_id TEXT")
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_box_links_org "
+        "ON box_links(organization_id, source_box_id)"
+    )

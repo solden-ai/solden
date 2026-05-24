@@ -329,30 +329,44 @@ class PipelineStore:
         target_box_id: str,
         target_box_type: str,
         link_type: str = "related",
+        organization_id: str = "",
     ) -> Dict[str, Any]:
-        """Create a link between two Boxes (e.g. invoice ↔ vendor onboarding)."""
+        """Create a link between two Boxes, stamped with the caller's org.
+
+        ``organization_id`` is required: links are tenant-scoped (a link can
+        only be read back within the org that created it) so the box link graph
+        can't be read or written across tenants.
+        """
         self.initialize()
+        org = str(organization_id or "").strip()
+        if not org:
+            raise ValueError("link_boxes requires a non-empty organization_id")
         link_id = f"BL-{uuid.uuid4().hex[:12]}"
         now = datetime.now(timezone.utc).isoformat()
         sql = (
-            "INSERT INTO box_links (id, source_box_id, source_box_type, target_box_id, target_box_type, link_type, created_at) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s) "
+            "INSERT INTO box_links (id, organization_id, source_box_id, source_box_type, "
+            "target_box_id, target_box_type, link_type, created_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
             "ON CONFLICT DO NOTHING"
         )
         with self.connect() as conn:
-            conn.execute(sql, (link_id, source_box_id, source_box_type, target_box_id, target_box_type, link_type, now))
+            conn.execute(sql, (link_id, org, source_box_id, source_box_type, target_box_id, target_box_type, link_type, now))
             conn.commit()
-        return {"id": link_id, "source_box_id": source_box_id, "target_box_id": target_box_id, "link_type": link_type}
+        return {"id": link_id, "organization_id": org, "source_box_id": source_box_id, "target_box_id": target_box_id, "link_type": link_type}
 
-    def get_box_links(self, box_id: str, box_type: str) -> List[Dict[str, Any]]:
-        """Get all links for a Box (both directions)."""
+    def get_box_links(self, box_id: str, box_type: str, organization_id: str = "") -> List[Dict[str, Any]]:
+        """Get all links for a Box (both directions), scoped to the org."""
         self.initialize()
+        org = str(organization_id or "").strip()
+        if not org:
+            raise ValueError("get_box_links requires a non-empty organization_id")
         sql = (
-            "SELECT * FROM box_links WHERE (source_box_id = %s AND source_box_type = %s) "
-            "OR (target_box_id = %s AND target_box_type = %s) ORDER BY created_at DESC"
+            "SELECT * FROM box_links WHERE organization_id = %s AND "
+            "((source_box_id = %s AND source_box_type = %s) "
+            "OR (target_box_id = %s AND target_box_type = %s)) ORDER BY created_at DESC"
         )
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (box_id, box_type, box_id, box_type))
+            cur.execute(sql, (org, box_id, box_type, box_id, box_type))
             rows = cur.fetchall()
         return [dict(row) for row in rows]
