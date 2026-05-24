@@ -44,12 +44,15 @@ def db():
     return inst
 
 
-def _user(org: str = "orgA") -> SimpleNamespace:
+def _user(org: str = "orgA", workspace_role: str = "admin") -> SimpleNamespace:
+    # Rule mutations require workspace admin; default the fixture user to
+    # admin so the CRUD tests exercise the happy path.
     return SimpleNamespace(
         user_id=f"leader@{org}.com",
         email=f"leader@{org}.com",
         organization_id=org,
         role="user",
+        workspace_role=workspace_role,
     )
 
 
@@ -386,6 +389,20 @@ class TestAPI:
         assert resp.status_code == 200
         body = resp.json()
         assert body["rule"]["name"] == "Auto-approve <$1K USD"
+
+    def test_create_rule_requires_admin(self, db):
+        # A non-admin (member) must not be able to create approval rules.
+        app = FastAPI()
+        app.include_router(rule_routes.router)
+        app.dependency_overrides[get_current_user] = lambda: _user(
+            "orgA", workspace_role="member"
+        )
+        member_client = TestClient(app)
+        resp = member_client.post(
+            "/api/workspace/rules",
+            json=_create_rule_payload(),
+        )
+        assert resp.status_code == 403
 
     def test_create_with_invalid_body_returns_422(self, client_orgA):
         resp = client_orgA.post(

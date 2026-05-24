@@ -30,7 +30,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from solden.core.auth import TokenData, get_current_user
+from solden.core.auth import TokenData, get_current_user, require_workspace_admin
 from solden.core.database import get_db
 from solden.core.org_utils import require_org
 from solden.core.stores.rules_store import VALID_RULE_STATUSES, VALID_WORKFLOWS
@@ -108,7 +108,7 @@ def list_templates(
 
 @router.post("/seed-defaults")
 def seed_default_rules(
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
     """Module 10 spec line 322: default rule sets pre-built for common patterns.
 
@@ -232,7 +232,7 @@ def test_rule(
 @router.post("")
 def create_rule(
     body: RuleCreateRequest,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
     if body.workflow not in VALID_WORKFLOWS:
         raise HTTPException(
@@ -307,7 +307,7 @@ def create_rule(
 def update_rule(
     rule_id: str,
     body: RulePatchRequest,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
     db = get_db()
     existing = db.get_rule(rule_id)
@@ -394,7 +394,7 @@ def update_rule(
 @router.delete("/{rule_id}")
 def delete_rule(
     rule_id: str,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
     db = get_db()
     existing = db.get_rule(rule_id)
@@ -421,7 +421,7 @@ def list_versions(
 @router.post("/{rule_id}/revert/{version}")
 def revert_version(
     rule_id: str, version: int,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
     db = get_db()
     existing = db.get_rule(rule_id)
