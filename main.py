@@ -709,6 +709,10 @@ STRICT_PROFILE_ALLOWED_WORKSPACE_PATHS = {
     "/api/workspace/integrations/erp/test",
     "/api/workspace/chart-of-accounts",
     "/api/workspace/gl-corrections/stats",
+    "/api/workspace/payments",
+    "/api/workspace/payments/summary",
+    "/api/workspace/vendor-intelligence/profiles",
+    "/api/workspace/implementation/complete-step",
     "/api/workspace/ops/connector-readiness",
     "/api/workspace/ops/learning-calibration",
     "/api/workspace/ops/learning-calibration/recompute",
@@ -938,7 +942,12 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         r"^/extension/by-thread/[^/]+$",
         r"^/gmail/status/[^/]+$",
         r"^/api/workspace/ap/items/[^/]+/originals$",
-        r"^/api/workspace/ap/items/originals/[a-f0-9]{64}$",
+        # Match both the route template ({content_hash}) and a real 64-hex
+        # request path. The same predicate runs at route-removal (against the
+        # template) and per-request; a bare [a-f0-9]{64} matched requests but
+        # not the template, so route-removal silently dropped this endpoint in
+        # prod even though tests (on an unfiltered app) passed.
+        r"^/api/workspace/ap/items/originals/(\{content_hash\}|[a-f0-9]{64})$",
         r"^/api/workspace/audit/event/[^/]+$",
         r"^/api/workspace/audit/exports/[^/]+$",
         r"^/api/workspace/entities/[^/]+$",
@@ -948,8 +957,10 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         r"^/api/workspace/webhooks/[^/]+$",
         r"^/api/workspace/webhooks/[^/]+/deliveries$",
         r"^/api/workspace/webhooks/[^/]+/test$",
+        r"^/api/workspace/vendor-intelligence/profiles/[^/]+$",
         r"^/api/workspace/vendor-intelligence/profiles/[^/]+/aliases$",
         r"^/api/workspace/vendor-intelligence/profiles/[^/]+/aliases/[^/]+$",
+        r"^/api/workspace/payments/[^/]+$",
         r"^/api/workspace/disputes/[^/]+/resolve$",
         r"^/api/workspace/disputes/[^/]+/escalate$",
         r"^/api/workspace/delegation-rules/[^/]+/deactivate$",
