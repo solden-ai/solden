@@ -567,10 +567,13 @@ class APRuntimeStore:
         now = datetime.now(timezone.utc)
         last_30 = (now - timedelta(days=30)).isoformat()
         prior_30 = (now - timedelta(days=60)).isoformat()
+        # Distinct aliases are required: two unnamed SUM() columns both get
+        # named "sum" by psycopg, and the dict-style row factory collapses
+        # the duplicate key (dropping the second value).
         trend_sql = (
             "SELECT "
-            "SUM(CASE WHEN corrected_at >= %s THEN 1 ELSE 0 END), "
-            "SUM(CASE WHEN corrected_at >= %s AND corrected_at < %s THEN 1 ELSE 0 END) "
+            "SUM(CASE WHEN corrected_at >= %s THEN 1 ELSE 0 END) AS recent_count, "
+            "SUM(CASE WHEN corrected_at >= %s AND corrected_at < %s THEN 1 ELSE 0 END) AS prior_count "
             "FROM gl_corrections WHERE organization_id=%s"
         )
 

@@ -2909,6 +2909,26 @@ async def get_chart_of_accounts_endpoint(
     }
 
 
+# ------------------------------------------------------------------
+# GL correction analytics
+# ------------------------------------------------------------------
+
+@router.get("/gl-corrections/stats")
+async def get_gl_correction_stats_endpoint(
+    organization_id: Optional[str] = Query(default=None),
+    user: TokenData = Depends(get_current_user),
+):
+    """GL correction analytics for the workspace.
+
+    Returns totals, corrections by vendor, the most common GL remaps, and a
+    30/60-day trend, computed from this org's gl_corrections history.
+    """
+    org_id = _resolve_org_id(user, organization_id)
+    from solden.services.gl_correction import get_gl_correction
+
+    return get_gl_correction(org_id).get_correction_stats()
+
+
 @router.get("/reports/export")
 async def export_report(
     report_type: str = Query(..., description="Report type: ap_aging, vendor_spend, posting_status"),

@@ -50,6 +50,9 @@ class GLCorrection:
     
     def to_dict(self) -> Dict[str, Any]:
         return {
+            # ``id`` is the gl_corrections PK; keep it in sync with the
+            # service-level correction_id so a stored row round-trips.
+            "id": self.correction_id,
             "correction_id": self.correction_id,
             "invoice_id": self.invoice_id,
             "vendor": self.vendor,
@@ -119,35 +122,72 @@ DEFAULT_GL_ACCOUNTS = [
 
 
 class GLCorrectionService:
+    """GL code correction persistence + analytics (org-scoped, DB-backed).
+
+    The correction -> learning loop has two halves:
+      - Learning rules (vendor/field patterns) are owned by the generic
+        ``finance_learning.record_manual_field_correction`` path, which the
+        live operator-correction sites already call for every field.
+      - This service owns the GL-specific persistence layer: it writes each
+        GL correction to the ``gl_corrections`` table and reads it back for
+        history, analytics, and a corrections-history suggestion source.
+
+    All reads and writes go through the DB (no in-process cache), so history
+    and stats are correct across workers and restarts.
     """
-    Manage GL code corrections with learning feedback.
-    
-    Features:
-    - Accept corrections from UI
-    - Feed corrections to learning service
-    - Track correction history
-    - Provide GL account suggestions
-    """
-    
+
     def __init__(self, organization_id: str):
         self.organization_id = assert_org_id(
             organization_id, context="GLCorrectionService"
         )
-        self.db = get_db()
-        self._corrections: Dict[str, GLCorrection] = {}
+        # Built-in label map only. The real chart of accounts is ERP-sourced
+        # via /api/workspace/chart-of-accounts; this list just renders a human
+        # description next to a GL code.
         self._gl_accounts: List[GLAccount] = list(DEFAULT_GL_ACCOUNTS)
-        self._load_custom_accounts()
-    
-    def _load_custom_accounts(self):
-        """Load any custom GL accounts from database."""
-        try:
-            custom = self.db.get_gl_accounts(self.organization_id)
-            if custom:
-                for acc in custom:
-                    self._gl_accounts.append(GLAccount(**acc))
-        except Exception as exc:
-            logger.debug("Custom GL account load failed: %s", exc)
-    
+
+    @property
+    def db(self):
+        """Resolve the DB lazily so a cached singleton never holds a stale handle."""
+        return get_db()
+
+    # ------------------------------------------------------------------ #
+    # Writes                                                             #
+    # ------------------------------------------------------------------ #
+
+    def persist_correction(
+        self,
+        *,
+        invoice_id: str,
+        vendor: str,
+        original_gl: str,
+        corrected_gl: str,
+        corrected_by: str = "user",
+        amount: Optional[float] = None,
+        category: Optional[str] = None,
+        reason: Optional[str] = None,
+    ) -> GLCorrection:
+        """Persist a GL correction to the gl_corrections table.
+
+        Write-only: does NOT record a learning rule. Call this from a site
+        that already records the generic field correction (the live
+        operator-correction path), so learning stays single-pathed.
+        """
+        correction = GLCorrection(
+            correction_id=f"GLC-{uuid.uuid4().hex[:8]}",
+            invoice_id=invoice_id,
+            vendor=vendor,
+            original_gl=original_gl,
+            original_gl_description=self._get_gl_description(original_gl),
+            corrected_gl=corrected_gl,
+            corrected_gl_description=self._get_gl_description(corrected_gl),
+            amount=amount,
+            category=category,
+            reason=reason,
+            corrected_by=corrected_by,
+        )
+        self._save_correction(correction)
+        return correction
+
     def correct_gl_code(
         self,
         invoice_id: str,
@@ -159,45 +199,23 @@ class GLCorrectionService:
         category: Optional[str] = None,
         reason: Optional[str] = None,
     ) -> GLCorrection:
+        """Standalone GL correction entry: persist AND record learning.
+
+        Use this when the caller is NOT already on the generic
+        ``record_manual_field_correction`` path. The live operator-correction
+        sites call :meth:`persist_correction` instead (learning is recorded
+        upstream there), so this never double-records.
         """
-        Record a GL code correction and feed to learning.
-        
-        Args:
-            invoice_id: The invoice being corrected
-            vendor: Vendor name (for learning)
-            original_gl: The GL code that was suggested/wrong
-            corrected_gl: The correct GL code
-            corrected_by: User who made the correction
-            amount: Invoice amount (for context)
-            category: Category if known
-            reason: Optional reason for correction
-        
-        Returns:
-            GLCorrection object
-        """
-        correction_id = f"GLC-{uuid.uuid4().hex[:8]}"
-        
-        # Get descriptions
-        original_desc = self._get_gl_description(original_gl)
-        corrected_desc = self._get_gl_description(corrected_gl)
-        
-        correction = GLCorrection(
-            correction_id=correction_id,
+        correction = self.persist_correction(
             invoice_id=invoice_id,
             vendor=vendor,
             original_gl=original_gl,
-            original_gl_description=original_desc,
             corrected_gl=corrected_gl,
-            corrected_gl_description=corrected_desc,
+            corrected_by=corrected_by,
             amount=amount,
             category=category,
             reason=reason,
-            corrected_by=corrected_by,
         )
-        
-        self._corrections[correction_id] = correction
-        
-        # Feed to learning service
         try:
             learning = get_finance_learning_service(self.organization_id, db=self.db)
             learning.record_manual_field_correction(
@@ -208,272 +226,98 @@ class GLCorrectionService:
                     "vendor": vendor,
                     "amount": amount,
                     "category": category,
-                    "original_description": original_desc,
-                    "corrected_description": corrected_desc,
+                    "original_description": correction.original_gl_description,
+                    "corrected_description": correction.corrected_gl_description,
                 },
                 actor_id=corrected_by,
                 invoice_id=invoice_id,
                 feedback=reason,
             )
             correction.learned = True
-            logger.info(f"GL correction recorded and learned: {vendor} {original_gl} → {corrected_gl}")
-        except Exception as e:
-            logger.warning(f"Failed to record GL correction for learning: {e}")
-        
-        # Save to database
-        self._save_correction(correction)
-        
+        except Exception as exc:
+            logger.warning("Failed to record GL correction for learning: %s", exc)
         return correction
-    
-    def get_gl_accounts(
-        self,
-        account_type: Optional[str] = None,
-        category: Optional[str] = None,
-        search: Optional[str] = None,
-    ) -> List[GLAccount]:
-        """
-        Get available GL accounts with optional filtering.
-        
-        Args:
-            account_type: Filter by type (expense, asset, etc.)
-            category: Filter by category
-            search: Search in code or name
-        
-        Returns:
-            List of matching GL accounts
-        """
-        accounts = [a for a in self._gl_accounts if a.is_active]
-        
-        if account_type:
-            accounts = [a for a in accounts if a.account_type == account_type]
-        
-        if category:
-            accounts = [a for a in accounts if a.category == category]
-        
-        if search:
-            search_lower = search.lower()
-            accounts = [
-                a for a in accounts
-                if search_lower in a.code.lower() or search_lower in a.name.lower()
-            ]
-        
-        return sorted(accounts, key=lambda a: a.code)
-    
-    def get_suggested_gl(
-        self,
-        vendor: str,
-        amount: Optional[float] = None,
-        category: Optional[str] = None,
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Get a suggested GL code based on vendor and context.
-        Uses learning service if available.
 
-        Collects suggestions from all available sources and flags conflicts
-        when multiple sources disagree on the GL code.
-        """
-        def _with_alias(d: Dict[str, Any]) -> Dict[str, Any]:
-            """Ensure suggested_gl alias is present alongside gl_code."""
-            if "gl_code" in d and "suggested_gl" not in d:
-                d["suggested_gl"] = d["gl_code"]
-            return d
-
-        # Collect candidates from all sources to detect conflicts.
-        candidates: List[Dict[str, Any]] = []
-
-        # Check local corrections history first (most vendor-specific)
-        vendor_lower = vendor.lower()
-        vendor_corrections = [
-            c for c in self._corrections.values()
-            if vendor_lower in c.vendor.lower()
-        ]
-        if vendor_corrections:
-            # Count which corrected_gl is most common for this vendor
-            gl_counts: Dict[str, int] = {}
-            for c in vendor_corrections:
-                gl_counts[c.corrected_gl] = gl_counts.get(c.corrected_gl, 0) + 1
-            best_gl = max(gl_counts, key=lambda k: gl_counts[k])
-            total = len(vendor_corrections)
-            confidence = min(0.95, gl_counts[best_gl] / total * (0.5 + total * 0.1))
-            if confidence > 0.5:
-                candidates.append({
-                    "gl_code": best_gl,
-                    "suggested_gl": best_gl,
-                    "gl_description": self._get_gl_description(best_gl),
-                    "confidence": round(confidence, 2),
-                    "source": "corrections_history",
-                })
-
+    def _save_correction(self, correction: GLCorrection) -> None:
+        """Persist a correction row to the gl_corrections table."""
         try:
-            learning = get_finance_learning_service(self.organization_id, db=self.db)
-            suggestion = learning.suggest_gl_code(vendor=vendor, amount=amount)
-            if suggestion and suggestion.get("confidence", 0) > 0.5:
-                candidates.append({
-                    "gl_code": suggestion["gl_code"],
-                    "gl_description": self._get_gl_description(suggestion["gl_code"]),
-                    "confidence": suggestion["confidence"],
-                    "source": "learning",
-                })
+            self.db.save_gl_correction(self.organization_id, correction.to_dict())
         except Exception as exc:
-            logger.debug("GL learning suggestion failed: %s", exc)
+            logger.warning("Failed to save GL correction: %s", exc)
 
-        # Vendor intelligence
-        try:
-            from solden.services.vendor_intelligence import get_vendor_intelligence
-            vi = get_vendor_intelligence()
-            vendor_info = vi.get_suggestion(vendor)
-            if vendor_info and vendor_info.get("suggested_gl"):
-                candidates.append({
-                    "gl_code": vendor_info["suggested_gl"],
-                    "gl_description": vendor_info.get("gl_description", ""),
-                    "confidence": 0.7,
-                    "source": "vendor_intelligence",
-                })
-        except Exception as exc:
-            logger.debug("Vendor intelligence GL suggestion failed: %s", exc)
+    # ------------------------------------------------------------------ #
+    # Reads (DB-backed, org-scoped)                                      #
+    # ------------------------------------------------------------------ #
 
-        if not candidates:
-            # Default to general operating expenses
-            return {
-                "gl_code": "5000",
-                "suggested_gl": "5000",
-                "gl_description": "Operating Expenses",
-                "confidence": 0.3,
-                "source": "default",
-            }
-
-        # H6: Detect conflicts — multiple sources suggest different GL codes
-        unique_codes = set(c["gl_code"] for c in candidates)
-        # Pick the highest-confidence candidate
-        best = max(candidates, key=lambda c: c.get("confidence", 0))
-        result = _with_alias(dict(best))
-
-        if len(unique_codes) > 1:
-            result["gl_conflict"] = True
-            result["gl_conflict_details"] = [
-                {"gl_code": c["gl_code"], "source": c["source"], "confidence": c.get("confidence")}
-                for c in candidates
-            ]
-            logger.warning(
-                "GL code conflict for vendor %r: %s (selected %s from %s with confidence %.2f)",
-                vendor,
-                ", ".join(f"{c['gl_code']}({c['source']})" for c in candidates),
-                best["gl_code"],
-                best["source"],
-                best.get("confidence", 0),
-            )
-
-        return result
-    
     def get_recent_corrections(
         self,
         vendor: Optional[str] = None,
         limit: int = 20,
-    ) -> List[GLCorrection]:
-        """Get recent GL corrections."""
-        corrections = list(self._corrections.values())
-        
+    ) -> List[Dict[str, Any]]:
+        """Recent GL corrections for the org, newest first.
+
+        Returns plain row dicts (id, invoice_id, vendor, original_gl,
+        corrected_gl, reason, corrected_by, corrected_at, ...).
+        """
+        fetch_limit = 500 if vendor else limit
+        rows = self.db.get_gl_corrections(self.organization_id, limit=fetch_limit)
         if vendor:
-            vendor_lower = vendor.lower()
-            corrections = [c for c in corrections if vendor_lower in c.vendor.lower()]
-        
-        # Sort by timestamp descending
-        corrections.sort(key=lambda c: c.timestamp, reverse=True)
-        
-        return corrections[:limit]
-    
+            vl = vendor.lower()
+            rows = [r for r in rows if vl in str(r.get("vendor", "")).lower()]
+        return rows[:limit]
+
     def get_correction_stats(self) -> Dict[str, Any]:
-        """Get statistics about GL corrections."""
-        corrections = list(self._corrections.values())
+        """GL correction analytics: totals, by-vendor, common remaps, 30/60-day trend."""
+        stats = self.db.get_gl_stats(self.organization_id)
+        stats["unique_vendors"] = len(stats.get("by_vendor") or [])
+        return stats
 
-        if not corrections:
-            return {
-                "total_corrections": 0,
-                "unique_vendors": 0,
-                "top_corrected_gl": [],
-                "learned_count": 0,
-                "accuracy": 0.0,
-                "learned_rules": 0,
-            }
+    def get_history_suggestion(self, vendor: str) -> Optional[Dict[str, Any]]:
+        """Suggest a GL code from this org's correction history for a vendor.
 
-        # Count corrections by GL
-        from_gl_counts: Dict[str, int] = {}
-        to_gl_counts: Dict[str, int] = {}
-        vendors = set()
-
-        for c in corrections:
-            vendors.add(c.vendor)
-            from_gl_counts[c.original_gl] = from_gl_counts.get(c.original_gl, 0) + 1
-            to_gl_counts[c.corrected_gl] = to_gl_counts.get(c.corrected_gl, 0) + 1
-
-        learned_count = len([c for c in corrections if c.learned])
-        accuracy = round(learned_count / len(corrections), 2) if corrections else 0.0
-
+        Returns the most frequently corrected-to GL code for the vendor
+        (with a frequency-weighted confidence), or None when there isn't
+        enough signal. DB-backed and org-scoped.
+        """
+        if not vendor:
+            return None
+        rows = self.get_recent_corrections(vendor=vendor, limit=200)
+        if not rows:
+            return None
+        gl_counts: Dict[str, int] = {}
+        for r in rows:
+            code = r.get("corrected_gl")
+            if code:
+                gl_counts[code] = gl_counts.get(code, 0) + 1
+        if not gl_counts:
+            return None
+        best = max(gl_counts, key=lambda k: gl_counts[k])
+        total = len(rows)
+        confidence = min(0.95, gl_counts[best] / total * (0.5 + total * 0.1))
+        if confidence <= 0.5:
+            return None
         return {
-            "total_corrections": len(corrections),
-            "unique_vendors": len(vendors),
-            "top_corrected_from": sorted(
-                from_gl_counts.items(), key=lambda x: x[1], reverse=True
-            )[:5],
-            "top_corrected_to": sorted(
-                to_gl_counts.items(), key=lambda x: x[1], reverse=True
-            )[:5],
-            "learned_count": learned_count,
-            "accuracy": accuracy,
-            "learned_rules": len(to_gl_counts),
+            "gl_code": best,
+            "suggested_gl": best,
+            "gl_description": self._get_gl_description(best),
+            "confidence": round(confidence, 2),
+            "source": "corrections_history",
         }
-    
-    def add_gl_account(
-        self,
-        code: str,
-        name: str,
-        account_type: str = "expense",
-        category: Optional[str] = None,
-    ) -> GLAccount:
-        """Add a custom GL account."""
-        # Check for duplicate — return existing account (idempotent)
-        existing = next((a for a in self._gl_accounts if a.code == code), None)
-        if existing:
-            return existing
-        
-        account = GLAccount(
-            code=code,
-            name=name,
-            account_type=account_type,
-            category=category,
-        )
-        
-        self._gl_accounts.append(account)
-        
-        # Save to database
-        try:
-            self.db.save_gl_account(self.organization_id, account.to_dict())
-        except Exception as e:
-            logger.warning(f"Failed to save GL account: {e}")
-        
-        return account
-    
+
     def _get_gl_description(self, gl_code: str) -> str:
-        """Get description for a GL code."""
+        """Human-readable description for a GL code, from the built-in label map."""
         for account in self._gl_accounts:
             if account.code == gl_code:
                 return account.name
         return "Unknown Account"
-    
-    def _save_correction(self, correction: GLCorrection) -> None:
-        """Save correction to database."""
-        try:
-            self.db.save_gl_correction(self.organization_id, correction.to_dict())
-        except Exception as e:
-            logger.warning(f"Failed to save GL correction: {e}")
 
 
-# Singleton
+# Singleton (per org)
 _gl_correction_services: Dict[str, GLCorrectionService] = {}
 
 
 def get_gl_correction(organization_id: str) -> GLCorrectionService:
-    """Get GL correction service for an organization."""
+    """Get the GL correction service for an organization."""
     organization_id = assert_org_id(
         organization_id, context="get_gl_correction"
     )

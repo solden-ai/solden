@@ -709,6 +709,7 @@ STRICT_PROFILE_ALLOWED_WORKSPACE_PATHS = {
     "/api/workspace/audit/retention",
     "/api/workspace/integrations/erp/test",
     "/api/workspace/chart-of-accounts",
+    "/api/workspace/gl-corrections/stats",
     "/api/workspace/ops/connector-readiness",
     "/api/workspace/ops/learning-calibration",
     "/api/workspace/ops/learning-calibration/recompute",

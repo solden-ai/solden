@@ -2975,6 +2975,27 @@ async def _execute_field_review_resolution(
             invoice_id=item.get("thread_id") or item.get("message_id"),
             feedback=str(request.note or "").strip() or None,
         )
+        # GL corrections additionally persist to gl_corrections for the
+        # workspace history / analytics surface. Learning is already
+        # recorded above, so this is persistence-only (no double-record).
+        if normalized_field == "gl_code":
+            from solden.services.gl_correction import get_gl_correction
+            get_gl_correction(
+                assert_org_id(
+                    item.get("organization_id") or organization_id,
+                    context="_execute_field_review_resolution.gl_correction",
+                )
+            ).persist_correction(
+                invoice_id=item.get("thread_id") or item.get("message_id"),
+                vendor=item.get("vendor_name") or "",
+                original_gl=str(
+                    (blocker.get("selected_value") if isinstance(blocker, dict) else item.get(normalized_field))
+                    or ""
+                ),
+                corrected_gl=str(resolved_value or ""),
+                corrected_by=actor_id,
+                reason=str(request.note or "").strip() or None,
+            )
     except Exception:
         logger.exception("field review correction learning capture failed for %s", ap_item_id)
 

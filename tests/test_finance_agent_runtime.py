@@ -1976,6 +1976,67 @@ def test_record_field_correction_appends_runtime_audit():
     assert db.audit_rows[-1]["event_type"] == "field_correction"
 
 
+def test_record_field_correction_persists_gl_correction_for_gl_code():
+    """A gl_code correction also lands in the GL-corrections store.
+
+    Learning is recorded for every field; GL corrections additionally
+    persist to gl_corrections so the workspace can show history/analytics.
+    Non-GL fields must NOT hit that store.
+    """
+    db = _FakeDB()
+    runtime = _runtime(db)
+
+    class _FakeFinanceLearning:
+        def record_manual_field_correction(self, **kwargs):
+            return {}
+
+    class _RecordingGLService:
+        def __init__(self):
+            self.calls = []
+
+        def persist_correction(self, **kwargs):
+            self.calls.append(dict(kwargs))
+
+    gl_svc = _RecordingGLService()
+
+    with patch(
+        "solden.services.finance_learning.get_finance_learning_service",
+        return_value=_FakeFinanceLearning(),
+    ), patch(
+        "solden.services.gl_correction.get_gl_correction",
+        return_value=gl_svc,
+    ):
+        runtime.record_field_correction(
+            ap_item_id="ap-route-1",
+            field="gl_code",
+            original_value="5000",
+            corrected_value="5200",
+            feedback="Reclassified to software",
+        )
+
+    assert len(gl_svc.calls) == 1
+    call = gl_svc.calls[0]
+    assert call["original_gl"] == "5000"
+    assert call["corrected_gl"] == "5200"
+
+    # A non-GL field must not touch the GL store.
+    gl_svc.calls.clear()
+    with patch(
+        "solden.services.finance_learning.get_finance_learning_service",
+        return_value=_FakeFinanceLearning(),
+    ), patch(
+        "solden.services.gl_correction.get_gl_correction",
+        return_value=gl_svc,
+    ):
+        runtime.record_field_correction(
+            ap_item_id="ap-route-1",
+            field="invoice_number",
+            original_value="INV-1",
+            corrected_value="INV-2",
+        )
+    assert gl_svc.calls == []
+
+
 def test_append_runtime_audit_syncs_agent_memory_when_service_available():
     db = _FakeDB()
     runtime = _runtime(db)

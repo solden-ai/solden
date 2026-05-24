@@ -580,12 +580,35 @@ def build_gl_suggestion_payload(
                         "reason": "Also used for similar vendors",
                     }
                 )
+    # Corrections-history source — this org's own past GL corrections for
+    # the vendor. DB-backed and org-scoped via GLCorrectionService.
+    try:
+        from solden.services.gl_correction import get_gl_correction
+        history = get_gl_correction(organization_id).get_history_suggestion(vendor_name)
+    except Exception:
+        history = None
+    if history and history.get("gl_code"):
+        if not any(s["gl_code"] == history["gl_code"] for s in suggestions):
+            suggestions.append(
+                {
+                    "gl_code": history["gl_code"],
+                    "gl_name": history.get("gl_description", ""),
+                    "confidence": history.get("confidence", 0.6),
+                    "source": "corrections_history",
+                    "reason": "Matches your past corrections for this vendor",
+                }
+            )
+
     suggestions.sort(key=lambda entry: entry["confidence"], reverse=True)
+    # Flag when sources disagree on the GL code so the operator sees the
+    # split rather than a single confident-looking answer.
+    gl_conflict = len({s["gl_code"] for s in suggestions}) > 1
     return {
         "vendor_name": vendor_name,
         "primary": suggestions[0] if suggestions else None,
         "alternatives": suggestions[1:3] if len(suggestions) > 1 else [],
         "has_suggestion": len(suggestions) > 0,
+        "gl_conflict": gl_conflict,
     }
 
 

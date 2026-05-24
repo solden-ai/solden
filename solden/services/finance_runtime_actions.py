@@ -581,6 +581,23 @@ def record_field_correction(
         logger.warning("finance_learning.record_manual_field_correction failed: %s", exc)
         learning_result = {}
 
+    # GL corrections additionally land in the gl_corrections table so the
+    # workspace can show correction history / analytics. Learning is already
+    # recorded above, so this is a persistence-only call (no double-record).
+    if field == "gl_code":
+        try:
+            from solden.services.gl_correction import get_gl_correction
+            get_gl_correction(runtime.organization_id).persist_correction(
+                invoice_id=ap_item.get("thread_id") or resolved_ap_item_id,
+                vendor=ap_item.get("vendor_name") or "",
+                original_gl=str(original_value or ""),
+                corrected_gl=str(corrected_value or ""),
+                corrected_by=resolved_actor,
+                reason=feedback,
+            )
+        except Exception as exc:
+            logger.warning("gl_correction.persist_correction failed: %s", exc)
+
     audit_meta = {
         "field": field,
         "original_value": str(original_value) if original_value is not None else None,
