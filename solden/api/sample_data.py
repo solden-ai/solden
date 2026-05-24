@@ -6,9 +6,9 @@
   GET  /api/workspace/onboarding/sample-data/preview — list rows the
                                                        dashboard renders
 
-Admin-gated (admin / cfo / financial_controller). Cross-tenant writes
-are blocked at the SQL layer — every helper takes organization_id and
-filters with it.
+Mutations (load / clear) require workspace admin; reads (status / preview)
+are available to any member. Cross-tenant writes are blocked at the SQL
+layer — every helper takes organization_id and filters with it.
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, Query
 
-from solden.core.auth import TokenData, get_current_user
+from solden.core.auth import TokenData, get_current_user, require_workspace_admin
 from solden.core.database import get_db
 from solden.services import sample_data
 
@@ -45,7 +45,7 @@ def get_status(
 
 @router.post("/load")
 def load(
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
     db = get_db()
     summary = sample_data.load_sample_data(db, user.organization_id)
@@ -55,7 +55,7 @@ def load(
 
 @router.post("/clear")
 def clear(
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
     db = get_db()
     summary = sample_data.clear_sample_data(db, user.organization_id)

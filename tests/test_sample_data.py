@@ -226,6 +226,19 @@ class TestAPI:
         assert status["sample_count"] == 10
         assert status["loaded"] is True
 
+    def test_load_and_clear_require_admin(self, db):
+        # A non-admin (member) must not be able to load or clear sample data.
+        member = SimpleNamespace(
+            user_id="member@orgA.com", email="member@orgA.com",
+            organization_id="orgA", role="member", workspace_role="member",
+        )
+        app = FastAPI()
+        app.include_router(sample_routes.router)
+        app.dependency_overrides[get_current_user] = lambda: member
+        member_client = TestClient(app)
+        assert member_client.post("/api/workspace/onboarding/sample-data/load").status_code == 403
+        assert member_client.post("/api/workspace/onboarding/sample-data/clear").status_code == 403
+
     def test_load_idempotent_via_api(self, client_orgA):
         client_orgA.post("/api/workspace/onboarding/sample-data/load")
         again = client_orgA.post(
