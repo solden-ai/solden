@@ -17,7 +17,7 @@ const FINGERPRINT_PATH = path.join(DIST_ROOT, 'inboxsdk-layer.meta.json');
 const BUN_BIN = process.env.CLEARLEDGR_BUN_BIN || 'bun';
 const BUILD_DEBUG = process.env.CLEARLEDGR_BUILD_DEBUG === '1';
 const BUILD_DEBUG_FILE = String(process.env.CLEARLEDGR_BUILD_DEBUG_FILE || '').trim();
-const UNPACKED_STATIC_FILES = ['manifest.json', 'background.js', 'queue-manager.js', 'content-script.js', 'route-capture.js'];
+const UNPACKED_STATIC_FILES = ['manifest.json', 'background.js', 'queue-manager.js', 'route-capture.js'];
 const UNPACKED_STATIC_DIRS = ['icons', 'clients', 'workflows', 'vendor', 'engines'];
 
 function parseArgs(argv) {
