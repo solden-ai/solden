@@ -16,7 +16,20 @@ from solden.core.database import get_db
 
 logger = logging.getLogger(__name__)
 
-db = get_db()
+
+class _LazyDB:
+    """Resolve the DB lazily per attribute access.
+
+    Avoids binding one SoldenDB at import time (which called get_db() before
+    DATABASE_URL was guaranteed set, and held a stale instance across the
+    test singleton reset). All ``db.<method>`` call sites resolve fresh.
+    """
+
+    def __getattr__(self, name):
+        return getattr(get_db(), name)
+
+
+db = _LazyDB()
 
 
 def _make_id(prefix: str) -> str:
@@ -468,12 +481,13 @@ class TaskStatus:
     CANCELLED = "cancelled"
 
 
-# Initialize on import
-init_tasks_db()
-
-# E8: Verify database connectivity at startup
+# Initialize on import (best-effort). In prod/tests DATABASE_URL is set, so the
+# idempotent table creation + connectivity check run here as before. Guarded so
+# that merely importing this module (e.g. during test collection before the DB
+# env is configured) does not hard-fail.
 try:
+    init_tasks_db()
     db.execute("SELECT 1")
     logger.info("Email tasks database verified")
 except Exception as _db_check_exc:
-    logger.error("Email tasks database verification failed: %s", _db_check_exc)
+    logger.debug("Email tasks DB init skipped (no DB at import): %s", _db_check_exc)
