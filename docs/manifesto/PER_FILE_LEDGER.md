@@ -382,104 +382,104 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/services/logging.py` — MECHANICAL: structured JSON/console logging helpers
 - `solden/services/match_engine.py` — DEAD:generic match-engine registry never imported in prod (empty registry, run_match test-only); self-documented dormant
 - `solden/services/metrics.py` — MECHANICAL: HTTP/recon metrics with durable DB + in-memory fallback; observability
-- `solden/services/monitoring.py` — PENDING
-- `solden/services/multi_invoice_intake.py` — PENDING
-- `solden/services/multi_invoice_splitter.py` — PENDING
-- `solden/services/needs_info_recovery.py` — PENDING
-- `solden/services/notification_preferences.py` — PENDING
-- `solden/services/opencorporates_verifier.py` — PENDING
-- `solden/services/outbox.py` — PENDING
-- `solden/services/outlook_api.py` — PENDING
-- `solden/services/outlook_autopilot.py` — PENDING
-- `solden/services/outlook_email_processor.py` — PENDING
-- `solden/services/override_window.py` — PENDING
-- `solden/services/paddle_billing.py` — PENDING
-- `solden/services/pattern_store.py` — PENDING
-- `solden/services/payment_models.py` — PENDING
-- `solden/services/payment_request.py` — PENDING
-- `solden/services/payment_tracking.py` — PENDING
-- `solden/services/peppol_ubl_generator.py` — PENDING
-- `solden/services/peppol_ubl_parser.py` — PENDING
-- `solden/services/period_close.py` — PENDING
-- `solden/services/policy_compliance.py` — PENDING
-- `solden/services/policy_linter.py` — PENDING
-- `solden/services/policy_service.py` — PENDING
-- `solden/services/priority_detection.py` — PENDING
-- `solden/services/proactive_insights.py` — PENDING
-- `solden/services/procurement_chat.py` — PENDING
-- `solden/services/purchase_orders.py` — PENDING
-- `solden/services/rate_limit.py` — PENDING
-- `solden/services/reclassification_je.py` — PENDING
-- `solden/services/report_delivery.py` — PENDING
-- `solden/services/report_export.py` — PENDING
-- `solden/services/role_resolver.py` — PENDING
-- `solden/services/rule_engine.py` — PENDING
-- `solden/services/saml_sso.py` — PENDING
-- `solden/services/saml_validator.py` — PENDING
-- `solden/services/sample_data.py` — PENDING
-- `solden/services/sanctions_screening.py` — PENDING
-- `solden/services/scheduled_reports.py` — PENDING
-- `solden/services/sheets_api.py` — PENDING
-- `solden/services/sheets_export.py` — PENDING
-- `solden/services/single_pass_cache.py` — PENDING
-- `solden/services/single_pass_processor.py` — PENDING
-- `solden/services/slack_api.py` — PENDING
-- `solden/services/slack_cards.py` — PENDING
-- `solden/services/slack_digest.py` — PENDING
-- `solden/services/slack_notifications.py` — PENDING
-- `solden/services/sod_check.py` — PENDING
-- `solden/services/specialist_agent.py` — PENDING
-- `solden/services/specialist_circuit_breaker.py` — PENDING
-- `solden/services/specialist_router.py` — PENDING
-- `solden/services/spend_analysis.py` — PENDING
-- `solden/services/state_observers.py` — PENDING
-- `solden/services/subscription.py` — PENDING
-- `solden/services/task_notifications.py` — PENDING
-- `solden/services/task_scheduler.py` — PENDING
-- `solden/services/tax_compliance.py` — PENDING
-- `solden/services/team_invite_email.py` — PENDING
-- `solden/services/teams_api.py` — PENDING
-- `solden/services/teams_notifications.py` — PENDING
-- `solden/services/three_way_match_runner.py` — PENDING
-- `solden/services/threshold_policy.py` — PENDING
-- `solden/services/transactional_email.py` — PENDING
-- `solden/services/trust_arc.py` — PENDING
-- `solden/services/user_offboarding.py` — PENDING
-- `solden/services/vat_calculator.py` — PENDING
-- `solden/services/vat_return.py` — PENDING
-- `solden/services/vat_return_forms.py` — PENDING
-- `solden/services/vendor_attribute_matcher.py` — PENDING
-- `solden/services/vendor_bootstrap.py` — PENDING
-- `solden/services/vendor_csv_import.py` — PENDING
-- `solden/services/vendor_dedup.py` — PENDING
-- `solden/services/vendor_domain_lock.py` — PENDING
-- `solden/services/vendor_domain_lookalike.py` — PENDING
-- `solden/services/vendor_enrichment.py` — PENDING
-- `solden/services/vendor_erp_push.py` — PENDING
-- `solden/services/vendor_erp_sync.py` — PENDING
-- `solden/services/vendor_inquiry.py` — PENDING
-- `solden/services/vendor_intelligence.py` — PENDING
-- `solden/services/vendor_master_check.py` — PENDING
-- `solden/services/vendor_onboarding_exceptions.py` — PENDING
-- `solden/services/vendor_onboarding_lifecycle.py` — PENDING
-- `solden/services/vendor_revalidation.py` — PENDING
-- `solden/services/vendor_risk.py` — PENDING
-- `solden/services/vendor_search.py` — PENDING
-- `solden/services/vendor_statement_recon.py` — PENDING
-- `solden/services/webhook_delivery.py` — PENDING
-- `solden/services/worker_runtime.py` — PENDING
-- `solden/services/workspace_fx.py` — PENDING
-- `solden/services/workspace_reports.py` — PENDING
-- `solden/services/workspace_semaphore.py` — PENDING
+- `solden/services/monitoring.py` — ALIGNED: org-scoped health checks; gmail-watch join scopes to tenant; alerts non-blocking
+- `solden/services/multi_invoice_intake.py` — MECHANICAL: pre-split bridge producing intake units; no decisions
+- `solden/services/multi_invoice_splitter.py` — MECHANICAL: deterministic regex boundary + pypdf split, no LLM
+- `solden/services/needs_info_recovery.py` — ALIGNED: LLM proposes advisory plan only (whitelist), persisted as metadata, executes nothing
+- `solden/services/notification_preferences.py` — ALIGNED: typed schema over users.preferences_json, DB-backed, per-user
+- `solden/services/opencorporates_verifier.py` — ALIGNED: external registry read for due-diligence, audit envelope, no writes
+- `solden/services/outbox.py` — ALIGNED: transactional outbox, org-scoped, FOR UPDATE SKIP LOCKED, dead-letter
+- `solden/services/outlook_api.py` — ALIGNED: Graph client; Mail.Send dropped, send_message removed, no vendor email
+- `solden/services/outlook_autopilot.py` — ALIGNED: per-user org resolution skips unbound users; in-memory _status is transient ops only
+- `solden/services/outlook_email_processor.py` — ALIGNED: bridges Outlook attachments into shared triage path
+- `solden/services/override_window.py` — ALIGNED: reversal via erp_router, audited transitions, agent never moves money, org-scoped
+- `solden/services/paddle_billing.py` — ALIGNED: own-SaaS billing; webhook HMAC-verified, refuses unsigned, org-marker enforced
+- `solden/services/pattern_store.py` — DEAD:orphaned (only lazy __init__ shim, no real callers/tests; also lacks org column)
+- `solden/services/payment_models.py` — MECHANICAL: DTO + status/method frozensets; agent never executes payment
+- `solden/services/payment_request.py` — ALIGNED: records/routes requests, DB-backed + audited, mark_paid records external ref only
+- `solden/services/payment_tracking.py` — ALIGNED: records bank-confirmed payments, sanctions-gated, idempotent; no vendor email
+- `solden/services/peppol_ubl_generator.py` — ALIGNED: generates UBL the operator transmits; Solden sends nothing to vendors
+- `solden/services/peppol_ubl_parser.py` — ALIGNED: stdlib deterministic UBL parse, provenance METHOD_UBL_PARSER (not LLM)
+- `solden/services/period_close.py` — ALIGNED: org-scoped close/accrual/lock, settings_json-backed, deterministic
+- `solden/services/policy_compliance.py` — ALIGNED: deterministic rule cascade -> routing recommendation, org-scoped, DB-backed
+- `solden/services/policy_linter.py` — MECHANICAL: static-analysis rules over threshold bands, no I/O
+- `solden/services/policy_service.py` — ALIGNED: versioned/branchable policy store, org-scoped, mirrors to settings_json, audited
+- `solden/services/priority_detection.py` — ALIGNED: deterministic weighted prioritization (advisory), org-scoped
+- `solden/services/proactive_insights.py` — ALIGNED: rules decide which insights surface; LLM narrates operator prose only, rule fallback
+- `solden/services/procurement_chat.py` — ALIGNED: PO card + decision routes through skill (policy precheck + audit), flag-gated
+- `solden/services/purchase_orders.py` — ALIGNED: deterministic 3-way/2-way match, audited override; LLM only maps invoice->PO line after deterministic fail
+- `solden/services/rate_limit.py` — ALIGNED: Redis-backed fail-closed in prod; in-memory only with explicit dev override
+- `solden/services/reclassification_je.py` — ALIGNED: additive JE proposal, org-scoped, idempotent + audited, never amends original
+- `solden/services/report_delivery.py` — ALIGNED: scheduled report email, per-subscription isolation, auto-pause on failure
+- `solden/services/report_export.py` — ALIGNED: read-only CSV/JSON, org-scoped, never raises; onboarding report hasattr-guarded (VO dormant)
+- `solden/services/role_resolver.py` — ALIGNED: read-only per-entity/org role resolution, tenant-scoped custom roles, fail-closed
+- `solden/services/rule_engine.py` — ALIGNED: deterministic schema-validated rule eval + conflict detection
+- `solden/services/saml_sso.py` — ALIGNED: per-tenant SAML, signature-verified assertions, replay-protected, JIT-provision org-scoped
+- `solden/services/saml_validator.py` — ALIGNED: hardened XML parse + pinned-cert verify (no SHA-1/skip), full conditions/audience
+- `solden/services/sample_data.py` — ALIGNED: is_sample-tagged rows, idempotent, org-scoped, clear deletes only samples
+- `solden/services/sanctions_screening.py` — ALIGNED: provider screen persisted + audited, hard pre-payment block, org-scoped
+- `solden/services/scheduled_reports.py` — DRIFT:_deliver_to_sheets calls SheetsAPIClient.extract_spreadsheet_id (module fn, not a method) -> AttributeError swallowed; sheets channel silently broken
+- `solden/services/sheets_api.py` — MECHANICAL: thin Google Sheets REST client reusing Gmail OAuth; extract_spreadsheet_id is module-level (correct)
+- `solden/services/sheets_export.py` — ALIGNED: org-scoped export (assert_org_id); writes operator's own Sheet, no agent action
+- `solden/services/single_pass_cache.py` — ALIGNED: content-keyed idempotency cache; caches LLM extraction, org context applied post-hit
+- `solden/services/single_pass_processor.py` — ALIGNED: LLM reads unstructured intake only; routing explicitly out of scope, fail-to-None
+- `solden/services/slack_api.py` — ALIGNED: per-org token+channel via resolve_slack_runtime, shared fallback default-off, fail-closed
+- `solden/services/slack_cards.py` — ALIGNED: undo/reversal cards resolve org channel; reversible override window, operator decides
+- `solden/services/slack_digest.py` — DRIFT:send_digest reads runtime['channel']/['token'] but resolver returns approval_channel/bot_token -> every digest send fails (wired via coordination_engine)
+- `solden/services/slack_notifications.py` — DRIFT:send_vendor_response/escalation_notification are dead orphans referencing the deleted vendor-followup feature (zero callers)
+- `solden/services/sod_check.py` — ALIGNED: deterministic SoD gate, org-scoped audit query, per-tenant mode
+- `solden/services/specialist_agent.py` — ALIGNED: error-boundary wrapper around skills, per-specialist actor_id audit, stateless
+- `solden/services/specialist_circuit_breaker.py` — MECHANICAL: in-process three-state breaker; process-local by design
+- `solden/services/specialist_router.py` — ALIGNED: per-runtime tenant-scoped intent->specialist dispatch with breaker
+- `solden/services/spend_analysis.py` — ALIGNED: org-filtered (assert_org_id) read-only analytics, never raises
+- `solden/services/state_observers.py` — ALIGNED: durable outbox fan-out, org-scoped writer; override-window observer reversible
+- `solden/services/subscription.py` — ALIGNED: no vendor_outreach_draft key present; entity-aware billing, pool-ledger gating, LLM cost cap
+- `solden/services/task_notifications.py` — ALIGNED: per-org Slack via resolve_slack_runtime, skips when no Slack, no global channel
+- `solden/services/task_scheduler.py` — ALIGNED: per-org scans (org-scoped), reminders tenant-scoped
+- `solden/services/tax_compliance.py` — ALIGNED: deterministic VAT/WHT/reverse-charge, org-scoped, per-tenant config
+- `solden/services/team_invite_email.py` — MECHANICAL: operator/team invite compose+send; not vendor-facing
+- `solden/services/teams_api.py` — ALIGNED: per-org webhook via get_organization_integration; approval cards, reversible, retries
+- `solden/services/teams_notifications.py` — ALIGNED: Bot Framework cards (note: uses TEAMS_APP_SECRET vs teams_api TEAMS_APP_PASSWORD)
+- `solden/services/three_way_match_runner.py` — ALIGNED: deterministic PO/GR/invoice match, idempotent audit, no LLM/money
+- `solden/services/threshold_policy.py` — ALIGNED: layered deterministic threshold resolution; control changes fail-closed audited, clamped
+- `solden/services/transactional_email.py` — MECHANICAL: stdlib SMTP relay; no-op when unconfigured, operator-facing
+- `solden/services/trust_arc.py` — DRIFT:_send_slack_message calls _post_slack_blocks(org_id,text,...) but signature is (blocks,text,...,organization_id) -> wrong arg order, milestones misfire (wired via agent_background)
+- `solden/services/user_offboarding.py` — ALIGNED: org-scoped soft-delete + cross-surface revoke, best-effort, audited
+- `solden/services/vat_calculator.py` — MECHANICAL: deterministic VAT split (Decimal), fail-closed on unknown treatment
+- `solden/services/vat_return.py` — ALIGNED: deterministic 9-box rollup over org-scoped posted bills; draft/supersede, parameterized SQL
+- `solden/services/vat_return_forms.py` — MECHANICAL: per-country box-mapping of canonical rollup; raises on unsupported jurisdiction
+- `solden/services/vendor_attribute_matcher.py` — ALIGNED: multi-attribute fraud scoring; IBAN-mismatch wins; org-scoped entry
+- `solden/services/vendor_bootstrap.py` — DEAD:dormant-VO (deliberate): backfills vendor_profiles/history; tied to deferred VO scaffolding
+- `solden/services/vendor_csv_import.py` — DEAD:dormant-VO (deliberate): bulk vendor master import; deferred vendor-onboarding feature
+- `solden/services/vendor_dedup.py` — ALIGNED: org-scoped RRF dedup + merge with AP reassignment; deterministic, parameterized SQL
+- `solden/services/vendor_domain_lock.py` — ALIGNED: deterministic sender-domain allowlist gate, TOFU via observer, audited, org-scoped
+- `solden/services/vendor_domain_lookalike.py` — MECHANICAL: homoglyph/TLD/edit-distance detection; never raises
+- `solden/services/vendor_enrichment.py` — DRIFT:audit actor_type='agent' for deterministic registry fetch (mislabel, low; otherwise org-scoped best-effort)
+- `solden/services/vendor_erp_push.py` — DEAD:dormant-VO (deliberate): reverse vendor-master push to ERP; deferred VO (bank details excluded)
+- `solden/services/vendor_erp_sync.py` — ALIGNED: pull ERP vendor master into profiles, org-scoped upsert, change detection, never raises
+- `solden/services/vendor_inquiry.py` — ALIGNED: read-only sanitized status lookup operator copies into own reply; Solden sends nothing
+- `solden/services/vendor_intelligence.py` — ALIGNED: static vendor-enrichment/GL-suggestion helper, read-only, wired into validation+sidebar; suggests never decides
+- `solden/services/vendor_master_check.py` — ALIGNED: AP-side ERP-master gate, three-tier read-only lookup, org-scoped, no auto-bind
+- `solden/services/vendor_onboarding_exceptions.py` — DEAD:dormant-VO (deliberate): read-only exception rows for parked VO Box type
+- `solden/services/vendor_onboarding_lifecycle.py` — DEAD:dormant-VO (deliberate): chase loop operator-facing (no vendor email); vendor-master author only on unregistered VO path
+- `solden/services/vendor_revalidation.py` — ALIGNED: eager flag-propagation to in-flight AP items, org-scoped, idempotent, audited, signals only
+- `solden/services/vendor_risk.py` — ALIGNED: deterministic read-time risk score from profile, no I/O, no LLM, additive formula
+- `solden/services/vendor_search.py` — MECHANICAL: RRF fusion ranking over passed-in candidates, no DB/network/LLM
+- `solden/services/vendor_statement_recon.py` — ALIGNED: org-scoped read-only reconciliation report, money-safe, never raises, no writes
+- `solden/services/webhook_delivery.py` — ALIGNED: HMAC-signed outbound, canonical X-Solden headers + retry-queue, org-scoped lookup
+- `solden/services/worker_runtime.py` — MECHANICAL: process-role entrypoint wiring startup + signal shutdown
+- `solden/services/workspace_fx.py` — ALIGNED: org-stored-rate FX conversion, Decimal math, None on no-rate, never raises
+- `solden/services/workspace_reports.py` — ALIGNED: five org-scoped read-only reports, parameterized SQL, FX-aware, empty-but-valid on failure
+- `solden/services/workspace_semaphore.py` — DRIFT:stale 'clearledgr:semaphore:' Redis key namespace (backend-untouched brand; soft)
 
 ## solden/services/annotation_targets  (7)
-- `solden/services/annotation_targets/__init__.py` — PENDING
-- `solden/services/annotation_targets/base.py` — PENDING
-- `solden/services/annotation_targets/customer_webhook.py` — PENDING
-- `solden/services/annotation_targets/gmail_label.py` — PENDING
-- `solden/services/annotation_targets/netsuite_custom_field.py` — PENDING
-- `solden/services/annotation_targets/sap_z_field.py` — PENDING
-- `solden/services/annotation_targets/slack_card_update.py` — PENDING
+- `solden/services/annotation_targets/__init__.py` — MECHANICAL: imports the five concrete targets so they self-register
+- `solden/services/annotation_targets/base.py` — ALIGNED: protocol + registry + outbox-backed dispatcher; per-attempt audit; per-tenant policy-gated
+- `solden/services/annotation_targets/customer_webhook.py` — ALIGNED: HMAC-signed fan-out to org subscriptions; is_active=1 matches INTEGER schema; raises for retry
+- `solden/services/annotation_targets/gmail_label.py` — ALIGNED: skips ERP-native/non-Gmail, applies finance labels, org-scoped via AP-item
+- `solden/services/annotation_targets/netsuite_custom_field.py` — ALIGNED: SuiteTalk PATCH custbody_clearledgr_state; doc matches code; 4xx surfaced
+- `solden/services/annotation_targets/sap_z_field.py` — DRIFT:docstring says Z_CLEARLEDGR_STATE but code default is YY1_CLEARLEDGR_STATE (doc-vs-code)
+- `solden/services/annotation_targets/slack_card_update.py` — ALIGNED: chat.update existing card, skips no-op/no-thread, permanent errors surfaced
 
 ## solden/services/erp  (3)
 - `solden/services/erp/__init__.py` — MECHANICAL: re-exports SAPAdapter + bill-adapter contracts
@@ -487,15 +487,15 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/services/erp/sap.py` — ALIGNED: honest dry-run; non-dry-run park fails closed (FEATURE_SAP_LIVE_WRITE off)
 
 ## solden/services/finance_skills  (9)
-- `solden/services/finance_skills/__init__.py` — PENDING
-- `solden/services/finance_skills/ap_intent_contracts.py` — PENDING
-- `solden/services/finance_skills/ap_intent_handlers.py` — PENDING
-- `solden/services/finance_skills/ap_skill.py` — PENDING
-- `solden/services/finance_skills/base.py` — PENDING
-- `solden/services/finance_skills/procurement_skill.py` — PENDING
-- `solden/services/finance_skills/recon_skill.py` — PENDING
-- `solden/services/finance_skills/vendor_compliance_skill.py` — PENDING
-- `solden/services/finance_skills/workflow_health_skill.py` — PENDING
+- `solden/services/finance_skills/__init__.py` — MECHANICAL: re-exports skill classes (recon+procurement intentionally not exported here)
+- `solden/services/finance_skills/ap_intent_contracts.py` — MECHANICAL: per-intent audit-contract + operator-copy tables + pure lookups
+- `solden/services/finance_skills/ap_intent_handlers.py` — ALIGNED: 20 bounded handlers, deterministic prechecks, money/ERP only via workflow/override-window, audited, org-asserted
+- `solden/services/finance_skills/ap_skill.py` — ALIGNED: AP skill behind runtime, bounded intents, deterministic prechecks (confirmed via handlers)
+- `solden/services/finance_skills/base.py` — MECHANICAL: FinanceSkill ABC + preview_contract/execute_contract wrappers
+- `solden/services/finance_skills/procurement_skill.py` — ALIGNED: PO intents via box_registry; _fetch_po org-checks agent path; refuses autonomy above dual-approval
+- `solden/services/finance_skills/recon_skill.py` — DRIFT:contract-mismatch — registered but overrides preview/execute with SkillRequest sigs + SYNC execute; runtime execute_contract awaits execute(runtime,intent,payload) -> breaks at dispatch
+- `solden/services/finance_skills/vendor_compliance_skill.py` — ALIGNED: read-only org-scoped vendor compliance snapshot, matches base contract, bounds-clamped
+- `solden/services/finance_skills/workflow_health_skill.py` — ALIGNED: read-only org-scoped AP queue health, matches base contract, bounds-clamped
 
 ## solden/services/match_engines  (3)
 - `solden/services/match_engines/__init__.py` — MECHANICAL: eager-imports engines so they self-register
@@ -503,11 +503,11 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/services/match_engines/bank_reconciliation.py` — DRIFT:date window filtered on created_at (import time) not business posted_at it scores on
 
 ## solden/services/onboarding  (5)
-- `solden/services/onboarding/__init__.py` — PENDING
-- `solden/services/onboarding/bank_verifier.py` — PENDING
-- `solden/services/onboarding/complyadvantage_provider.py` — PENDING
-- `solden/services/onboarding/kyc_policy.py` — PENDING
-- `solden/services/onboarding/kyc_provider.py` — PENDING
+- `solden/services/onboarding/__init__.py` — DEAD:dormant-VO (deliberate): re-exports KYC/bank-verifier abstractions for parked VO
+- `solden/services/onboarding/bank_verifier.py` — DEAD:dormant-VO (deliberate): ABC + NotConfigured default + factory; only parked VO planner calls it
+- `solden/services/onboarding/complyadvantage_provider.py` — DEAD:dormant-VO (deliberate): real KYC adapter self-registers only for unregistered VO path
+- `solden/services/onboarding/kyc_policy.py` — DEAD:dormant-VO (deliberate): tier resolver from settings_json; only parked VO planner consumes
+- `solden/services/onboarding/kyc_provider.py` — DEAD:dormant-VO (deliberate): KYC provider ABC + NotConfigured default + factory
 
 ## solden/workflows  (2)
 - `solden/workflows/__init__.py` — MECHANICAL: package docstring pointing at gmail_activities
@@ -1085,3 +1085,18 @@ STILL OPEN:
 - [ ] DRIFT `solden/services/email_tasks.py` — module-level `db = get_db()` at import (breaks test singleton reset / per-worker rebind).
 - [ ] DEAD `solden/services/match_engine.py` — generic match registry never imported in prod (self-documented dormant; LOW).
 - [ ] LOW `solden/services/gmail_api.py` — EXCHANGE_DIAG_* warn logs dump OAuth payload (client_id/secret-len/code-prefix) + Google body; remove pre-GA.
+
+### Wave 3b (2026-05-25) — services ad/ae/af (110 files); solden/ COMPLETE (454/454)
+REAL broken-live-path bugs:
+- [ ] DRIFT `solden/services/slack_digest.py` — send_digest reads runtime['channel']/['token'] but resolve_slack_runtime returns approval_channel/bot_token → every digest send fails (wired via coordination_engine send_slack_digest).
+- [ ] DRIFT `solden/services/trust_arc.py` — _send_slack_message calls _post_slack_blocks(org_id, text, ...) but signature is (blocks, text, ..., organization_id) → wrong arg order, trust-arc milestones misfire (wired via agent_background.run_trust_arc_tick).
+- [ ] DRIFT `solden/services/scheduled_reports.py` — _deliver_to_sheets calls SheetsAPIClient.extract_spreadsheet_id (a module-level fn, not a method) → AttributeError swallowed by broad except; sheets delivery silently broken.
+- [ ] DRIFT `solden/services/finance_skills/recon_skill.py` — registered but overrides preview/execute with SkillRequest signatures + a SYNC execute; runtime execute_contract awaits execute(runtime,intent,payload) → recon intents break at dispatch.
+LOWER:
+- [ ] DRIFT `solden/services/slack_notifications.py` — send_vendor_response/escalation_notification are dead orphans (deleted vendor-followup feature; zero callers).
+- [ ] DRIFT `solden/services/vendor_enrichment.py` — audit actor_type='agent' for a deterministic registry fetch (mislabel).
+- [ ] DRIFT `solden/services/workspace_semaphore.py` — 'clearledgr:semaphore:' Redis key (backend brand untouched; soft).
+- [ ] DRIFT `solden/services/annotation_targets/sap_z_field.py` — docstring Z_CLEARLEDGR_STATE vs code default YY1_CLEARLEDGR_STATE.
+- [ ] DEAD `solden/services/pattern_store.py` — orphaned (lazy shim only, no callers/tests, no org column).
+- [ ] NOTE: teams_notifications uses TEAMS_APP_SECRET vs teams_api TEAMS_APP_PASSWORD (cross-file cred inconsistency).
+DEAD:dormant-VO (deliberate, deferred 2026-04-30): vendor_bootstrap, vendor_csv_import, vendor_erp_push, vendor_onboarding_exceptions, vendor_onboarding_lifecycle, onboarding/{__init__,bank_verifier,complyadvantage_provider,kyc_policy,kyc_provider}.
