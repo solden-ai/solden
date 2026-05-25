@@ -28,96 +28,96 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/_envboot.py` — ALIGNED: side-effect dotenv loader; E402 rationale accurate
 
 ## solden/api  (90)
-- `solden/api/__init__.py` — PENDING
-- `solden/api/accrual_journal_entry.py` — PENDING
-- `solden/api/africa_einvoice.py` — PENDING
-- `solden/api/agent_intents.py` — PENDING
-- `solden/api/ap_audit.py` — PENDING
-- `solden/api/ap_item_contracts.py` — PENDING
-- `solden/api/ap_item_detail.py` — PENDING
-- `solden/api/ap_items.py` — PENDING
-- `solden/api/ap_items_action_routes.py` — PENDING
-- `solden/api/ap_items_read_routes.py` — PENDING
-- `solden/api/ap_policies.py` — PENDING
-- `solden/api/api_keys.py` — PENDING
-- `solden/api/audit_chain.py` — PENDING
-- `solden/api/auth.py` — PENDING
-- `solden/api/bank_match_routes.py` — PENDING
-- `solden/api/bank_statements.py` — PENDING
-- `solden/api/box_exceptions_admin.py` — PENDING
-- `solden/api/box_export.py` — PENDING
-- `solden/api/box_owner_routes.py` — PENDING
-- `solden/api/box_revert_routes.py` — PENDING
-- `solden/api/cycle_time_metrics.py` — PENDING
-- `solden/api/dashboard.py` — PENDING
-- `solden/api/deps.py` — PENDING
-- `solden/api/dispute_reopen.py` — PENDING
-- `solden/api/dual_approval.py` — PENDING
-- `solden/api/erp_connection_ops.py` — PENDING
-- `solden/api/erp_connections.py` — PENDING
-- `solden/api/erp_oauth.py` — PENDING
-- `solden/api/erp_webhooks.py` — PENDING
-- `solden/api/escalation_policies.py` — PENDING
-- `solden/api/fraud_controls.py` — PENDING
-- `solden/api/fx_rates.py` — PENDING
-- `solden/api/gdpr.py` — PENDING
-- `solden/api/gmail_extension.py` — PENDING
-- `solden/api/gmail_extension_common.py` — PENDING
-- `solden/api/gmail_extension_models.py` — PENDING
-- `solden/api/gmail_extension_support_routes.py` — PENDING
-- `solden/api/gmail_webhooks.py` — PENDING
-- `solden/api/iban_verification.py` — PENDING
-- `solden/api/journal_entry_preview.py` — PENDING
-- `solden/api/leads.py` — PENDING
-- `solden/api/match_config.py` — PENDING
-- `solden/api/multi_invoice_split.py` — PENDING
-- `solden/api/netsuite_panel.py` — PENDING
-- `solden/api/notification_preferences.py` — PENDING
-- `solden/api/ops.py` — PENDING
-- `solden/api/org_config.py` — PENDING
-- `solden/api/outbox_ops.py` — PENDING
-- `solden/api/outlook_routes.py` — PENDING
-- `solden/api/paddle_billing.py` — PENDING
-- `solden/api/payment_confirmations.py` — PENDING
-- `solden/api/peppol.py` — PENDING
-- `solden/api/pipelines.py` — PENDING
-- `solden/api/policies.py` — PENDING
-- `solden/api/projections_ops.py` — PENDING
-- `solden/api/purchase_order_routes.py` — PENDING
-- `solden/api/reclassification_je.py` — PENDING
-- `solden/api/report_subscriptions.py` — PENDING
-- `solden/api/saml.py` — PENDING
-- `solden/api/sample_data.py` — PENDING
-- `solden/api/sanctions.py` — PENDING
-- `solden/api/sap_extension.py` — PENDING
-- `solden/api/settings.py` — PENDING
-- `solden/api/slack_invoices.py` — PENDING
-- `solden/api/team_offboarding.py` — PENDING
-- `solden/api/teams_invoices.py` — PENDING
-- `solden/api/three_way_match.py` — PENDING
-- `solden/api/threshold_policy.py` — PENDING
-- `solden/api/ui_perf.py` — PENDING
-- `solden/api/user_preferences.py` — PENDING
-- `solden/api/v1.py` — PENDING
-- `solden/api/v1_auth.py` — PENDING
-- `solden/api/v1_idempotency.py` — PENDING
-- `solden/api/v1_intents.py` — PENDING
-- `solden/api/v1_rate_limit.py` — PENDING
-- `solden/api/v1_records.py` — PENDING
-- `solden/api/v1_webhooks.py` — PENDING
-- `solden/api/vat.py` — PENDING
-- `solden/api/vendor_domains.py` — PENDING
-- `solden/api/vendor_inquiry.py` — PENDING
-- `solden/api/vendor_kyc.py` — PENDING
-- `solden/api/vendor_match.py` — PENDING
-- `solden/api/vendor_onboarding.py` — PENDING
-- `solden/api/vendor_portal.py` — PENDING
-- `solden/api/vendor_status.py` — PENDING
-- `solden/api/workflow_routes.py` — PENDING
-- `solden/api/workflow_spec_routes.py` — PENDING
-- `solden/api/workspace_reports.py` — PENDING
-- `solden/api/workspace_rules.py` — PENDING
-- `solden/api/workspace_shell.py` — PENDING
+- `solden/api/__init__.py` — MECHANICAL: lazy router-shim via __getattr__
+- `solden/api/accrual_journal_entry.py` — ALIGNED: authed, org from session, by-id verifies org; allowlisted; JE gated upstream
+- `solden/api/africa_einvoice.py` — ALIGNED: authed, org from session, by-id caller-org checks; allowlisted
+- `solden/api/agent_intents.py` — ALIGNED: preview get_current_user, execute require_ops_user; org via runtime; allowlisted
+- `solden/api/ap_audit.py` — ALIGNED: read-only, require_org rejects body-org; allowlisted
+- `solden/api/ap_item_contracts.py` — MECHANICAL: pure pydantic request models
+- `solden/api/ap_item_detail.py` — DRIFT:stale 'mint-green' brand + 'Sonnet path' LLM-vendor tell in docstrings
+- `solden/api/ap_items.py` — MECHANICAL: router composition (read + action sub-routers)
+- `solden/api/ap_items_action_routes.py` — ALIGNED: mutators require_ops_user, _session_org, _require_item enforce caller-org
+- `solden/api/ap_items_read_routes.py` — DRIFT:/consolidated calls undefined verify_org_access (NameError 500); /audit/export not allowlisted (prod 404)
+- `solden/api/ap_policies.py` — DRIFT:PUT policy mutates AP business policy but guards only get_current_user (member-writable)
+- `solden/api/api_keys.py` — ALIGNED: ops scoped to user.organization_id, show-once secret; allowlisted
+- `solden/api/audit_chain.py` — ALIGNED: read-only, org from session no-default 403; allowlisted
+- `solden/api/auth.py` — ALIGNED: OAuth/login/invite; org from invite/domain, state HMAC+TTL, mutations admin-gated
+- `solden/api/bank_match_routes.py` — ALIGNED: authed, _session_org, _require_bank_match + parent-AP gate verify org
+- `solden/api/bank_statements.py` — ALIGNED: authed, org from session, by-id reads verify caller org
+- `solden/api/box_exceptions_admin.py` — ALIGNED: get_current_user + _require_admin + _assert_org_match
+- `solden/api/box_export.py` — DRIFT:docstring frames bank-match/generic export as 'future' but already implemented in-file
+- `solden/api/box_owner_routes.py` — ALIGNED: reassign authed, org from session, AP-item cross-tenant 404
+- `solden/api/box_revert_routes.py` — ALIGNED: bounded approval-revert authed, org from session, tenant 404
+- `solden/api/cycle_time_metrics.py` — ALIGNED: read-only report, org from user.organization_id; allowlisted
+- `solden/api/dashboard.py` — ALIGNED: read/SSE authed, org strictly from session; allowlisted
+- `solden/api/deps.py` — ALIGNED: org-isolation helpers; soft_org_guard/verify_org_access enforce token-vs-claimed
+- `solden/api/dispute_reopen.py` — ALIGNED: reopen/read authed, org from session, by-id verifies org; correction bill within boundary
+- `solden/api/dual_approval.py` — DRIFT:PUT /policy/dual-approval sets second-signature threshold but member-writable (no admin guard)
+- `solden/api/erp_connection_ops.py` — DRIFT:/rotate-credentials + /test are credential governance but member-writable (no admin guard)
+- `solden/api/erp_connections.py` — DRIFT:connect/disconnect/gl-map mutations member-writable; defines unused _ADMIN_ROLES
+- `solden/api/erp_oauth.py` — ALIGNED: org from session not URL/body, OAuth state bound to (org,user); allowlisted
+- `solden/api/erp_webhooks.py` — ALIGNED: HMAC-as-auth, per-tenant secret constant-time, cross-tenant guards, fail-closed
+- `solden/api/escalation_policies.py` — DRIFT:full CRUD over governance escalation policies member-writable (no admin guard)
+- `solden/api/fraud_controls.py` — ALIGNED: mutating PUT requires CFO + cross-tenant guard; allowlisted
+- `solden/api/fx_rates.py` — ALIGNED: authed, org from session, delete org-scoped; allowlisted
+- `solden/api/gdpr.py` — ALIGNED: allowlisted, authed, by-id verifies org (404 no leak)
+- `solden/api/gmail_extension.py` — ALIGNED: fail-closed org resolution, routes allowlisted, no vendor email
+- `solden/api/gmail_extension_common.py` — MECHANICAL: helper module; tenant guards fail-closed
+- `solden/api/gmail_extension_models.py` — MECHANICAL: pure pydantic request models
+- `solden/api/gmail_extension_support_routes.py` — ALIGNED: under /extension, authed + org-scoped, allowlisted
+- `solden/api/gmail_webhooks.py` — DRIFT:OAuth success page stale Streak-era cream/green serif, not Solden navy/teal
+- `solden/api/iban_verification.py` — ALIGNED: write factors require CFO + cross-tenant guard; allowlisted
+- `solden/api/journal_entry_preview.py` — ALIGNED: read-only, authed, org-scoped; allowlisted
+- `solden/api/leads.py` — ALIGNED: intentionally public marketing endpoint, allowlisted, parameterized SQL
+- `solden/api/match_config.py` — ALIGNED: PUT requires admin, GET member-read, org from session; allowlisted
+- `solden/api/multi_invoice_split.py` — ALIGNED: stateless PDF utility, both POSTs authed; allowlisted
+- `solden/api/netsuite_panel.py` — DRIFT:POST approve/reject/request-info paths not allowlisted (prod 404)
+- `solden/api/notification_preferences.py` — ALIGNED: per-user data keyed by JWT, self-scoped PATCH; allowlisted
+- `solden/api/ops.py` — DRIFT:/api/ops/box-health mounted but not allowlisted (prod 404); retry/skip cross-tenant fixed
+- `solden/api/org_config.py` — DRIFT:governance PUT/PATCH lack admin gate, member-writable (router disabled in strict prod)
+- `solden/api/outbox_ops.py` — ALIGNED: writes require ops/admin, by-id verifies org; allowlisted
+- `solden/api/outlook_routes.py` — ALIGNED: flag-gated, allowlisted, fail-closed webhook constant-time, self-scoped OAuth
+- `solden/api/paddle_billing.py` — ALIGNED: billing mutations require admin; webhook HMAC-verified fail-closed
+- `solden/api/payment_confirmations.py` — DRIFT:remittance-config docstring claims active vendor auto-send (sender deleted; zero vendor email)
+- `solden/api/peppol.py` — ALIGNED: authed, import writes AP item from session org, credit-note verifies org, no vendor email
+- `solden/api/pipelines.py` — DRIFT:delete_saved_view keyed by id only, NO org filter — cross-tenant deletion
+- `solden/api/policies.py` — DRIFT:POST create-version/rollback of governance policies member-writable (no admin gate)
+- `solden/api/projections_ops.py` — ALIGNED: reads require_org, rebuild require ops/admin + verify_org_access; allowlisted
+- `solden/api/purchase_order_routes.py` — ALIGNED: 8 actions allowlisted via pattern, org from session, by-id 404
+- `solden/api/reclassification_je.py` — ALIGNED: pattern-allowlisted, authed, org-scoped, ERP does the post
+- `solden/api/report_subscriptions.py` — ALIGNED: CRUD authed, by-id verifies org, update/delete pass org; allowlisted
+- `solden/api/saml.py` — ALIGNED: admin config requires admin+org; public IdP flows signature-authed, ACS redirect-guarded
+- `solden/api/sample_data.py` — ALIGNED: load/clear require workspace admin, reads member; org from session; allowlisted
+- `solden/api/sanctions.py` — ALIGNED: authed, org from session, by-id org match; sanctions is money boundary
+- `solden/api/sap_extension.py` — ALIGNED: per-tenant XSUAA RS256, org from issuer not body, cross-tenant guards, audited
+- `solden/api/settings.py` — ALIGNED: router-level _require_org_match 403; migration cutover financial_controller-gated
+- `solden/api/slack_invoices.py` — ALIGNED: signature-verified, team->org fail-closed, tenant-mismatch refused, idempotent
+- `solden/api/team_offboarding.py` — ALIGNED: admin-gated, cross-tenant 404, self/last-owner protection, key-cascade + audit
+- `solden/api/teams_invoices.py` — ALIGNED: 404 off-flag, tid->install org binding, ap-item org-mismatch refused, audited
+- `solden/api/three_way_match.py` — ALIGNED: authed, org from session, runner scoped by org; per-id allowlisted
+- `solden/api/threshold_policy.py` — ALIGNED: writes require_admin_user, reads get_current_user, org from session
+- `solden/api/ui_perf.py` — ALIGNED: intentionally unauth telemetry beacon, drops unscoped, always-200
+- `solden/api/user_preferences.py` — ALIGNED: self-scoped, org_access_denied on mismatch
+- `solden/api/v1.py` — ALIGNED: API-key auth, audit pinned to agent.organization_id server-side
+- `solden/api/v1_auth.py` — ALIGNED: hash-validated keys, revoked/expired fail-closed, scope+org enforced
+- `solden/api/v1_idempotency.py` — ALIGNED: org+key scoped cache, payload-hash 409, fail-open lookup
+- `solden/api/v1_intents.py` — ALIGNED: scope-gated execute/preview, org from key, idempotent, typed errors
+- `solden/api/v1_rate_limit.py` — ALIGNED: per-key+per-org windows, Redis/memory, fail-open, audit
+- `solden/api/v1_records.py` — ALIGNED: deny-by-default field allowlist, org-pinned SQL, cross-tenant id 404
+- `solden/api/v1_webhooks.py` — ALIGNED: scope-gated CRUD, org-pinned, secret-once+redaction, HTTPS-only
+- `solden/api/vat.py` — ALIGNED: authed, org from session, by-id verifies org; VAT is money boundary
+- `solden/api/vendor_domains.py` — ALIGNED: read members, add/remove require_cfo, _assert_same_org, audited
+- `solden/api/vendor_inquiry.py` — ALIGNED: read-only sanitized lookup, org from session, Solden sends nothing
+- `solden/api/vendor_kyc.py` — DEAD:dormant-VO (deliberate): FC-gated + org-guarded but feeds parked VO surface
+- `solden/api/vendor_match.py` — ALIGNED: authed, org from session, matcher scoped by org; per-id allowlisted
+- `solden/api/vendor_onboarding.py` — DEAD:dormant-VO (deliberate): router not mounted per 2026-04-30 deferral
+- `solden/api/vendor_portal.py` — DEAD:dormant-VO (deliberate): public magic-link portal not mounted; bank Fernet-encrypted
+- `solden/api/vendor_status.py` — DRIFT:verify-registration POST not admin-gated + auto-creates vendor stub (siblings are gated)
+- `solden/api/workflow_routes.py` — ALIGNED: org from session 403-if-missing, by-id verifies org+box_type, pinned spec
+- `solden/api/workflow_spec_routes.py` — ALIGNED: writes require_workspace_admin, reads member, validation before persist
+- `solden/api/workspace_reports.py` — ALIGNED: every report org-scoped, read-only, fixed five-report set
+- `solden/api/workspace_rules.py` — ALIGNED: writes require_workspace_admin, by-id verifies org, conflict-gated
+- `solden/api/workspace_shell.py` — ALIGNED: governance mutations _require_admin, _resolve_org_id clamps to session, by-id org-checked
 
 ## solden/box_specs  (1)
 - `solden/box_specs/__init__.py` — ALIGNED: eagerly imported by main.py; empty-but-registered declarative package
@@ -133,58 +133,58 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/cli/tenants.py` — ALIGNED: list/info over SoldenDB; dotted settings_json lookup correct
 
 ## solden/core  (52)
-- `solden/core/__init__.py` — PENDING
-- `solden/core/ap_confidence.py` — PENDING
-- `solden/core/ap_entity_routing.py` — PENDING
-- `solden/core/ap_item_resolution.py` — PENDING
-- `solden/core/ap_states.py` — PENDING
-- `solden/core/approval_action_contract.py` — PENDING
-- `solden/core/auth.py` — PENDING
-- `solden/core/authorization.py` — PENDING
-- `solden/core/bank_match_states.py` — PENDING
-- `solden/core/box_lock.py` — PENDING
-- `solden/core/box_registry.py` — PENDING
-- `solden/core/box_summary.py` — PENDING
-- `solden/core/business_days.py` — PENDING
-- `solden/core/clock.py` — PENDING
-- `solden/core/coordination_engine.py` — PENDING
-- `solden/core/database.py` — PENDING
-- `solden/core/deployment_window.py` — PENDING
-- `solden/core/erp_webhook_verify.py` — PENDING
-- `solden/core/error_codes.py` — PENDING
-- `solden/core/errors.py` — PENDING
-- `solden/core/event_queue.py` — PENDING
-- `solden/core/events.py` — PENDING
-- `solden/core/feature_flags.py` — PENDING
-- `solden/core/finance_contracts.py` — PENDING
-- `solden/core/fraud_controls.py` — PENDING
-- `solden/core/http_client.py` — PENDING
-- `solden/core/idempotency.py` — PENDING
-- `solden/core/launch_controls.py` — PENDING
-- `solden/core/llm_gateway.py` — PENDING
-- `solden/core/migrations.py` — PENDING
-- `solden/core/models.py` — PENDING
-- `solden/core/money.py` — PENDING
-- `solden/core/observability.py` — PENDING
-- `solden/core/org_config.py` — PENDING
-- `solden/core/org_utils.py` — PENDING
-- `solden/core/permissions.py` — PENDING
-- `solden/core/plan.py` — PENDING
-- `solden/core/planning_engine.py` — PENDING
-- `solden/core/portal_auth.py` — PENDING
-- `solden/core/portal_input.py` — PENDING
-- `solden/core/procurement_thresholds.py` — PENDING
-- `solden/core/prompt_guard.py` — PENDING
-- `solden/core/purchase_order_states.py` — PENDING
-- `solden/core/secrets.py` — PENDING
-- `solden/core/sentry_config.py` — PENDING
-- `solden/core/sla_tracker.py` — PENDING
-- `solden/core/slack_verify.py` — PENDING
-- `solden/core/teams_verify.py` — PENDING
-- `solden/core/typed_dicts.py` — PENDING
-- `solden/core/utils.py` — PENDING
-- `solden/core/vendor_onboarding_states.py` — PENDING
-- `solden/core/workflow_spec.py` — PENDING
+- `solden/core/__init__.py` — MECHANICAL: package marker
+- `solden/core/ap_confidence.py` — ALIGNED: deterministic per-field confidence gate, severity tiers
+- `solden/core/ap_entity_routing.py` — ALIGNED: deterministic entity routing; DB source-of-truth, no LLM
+- `solden/core/ap_item_resolution.py` — ALIGNED: org-scoped lookups, fails closed on foreign-org rows
+- `solden/core/ap_states.py` — ALIGNED: State primitive; transitions/override/dual-approval coherent
+- `solden/core/approval_action_contract.py` — ALIGNED: action normalize + SoD + approver-auth + state preflight
+- `solden/core/auth.py` — ALIGNED: two-axis v89 auth (workspace_role + user_box_roles), JWT
+- `solden/core/authorization.py` — ALIGNED: typed denials into org-scoped audit; never raises on audit fail
+- `solden/core/bank_match_states.py` — ALIGNED: AP-subordinate state machine, terminal states, policy version
+- `solden/core/box_lock.py` — ALIGNED: per-(org,box) advisory locks; no cross-org collision
+- `solden/core/box_registry.py` — ALIGNED: flat BoxType registry, three types + dynamic resolver
+- `solden/core/box_summary.py` — ALIGNED: context-efficient Box summary from timeline
+- `solden/core/business_days.py` — MECHANICAL: Mon-Fri elapsed-day arithmetic
+- `solden/core/clock.py` — MECHANICAL: tz-aware UTC datetime helpers
+- `solden/core/coordination_engine.py` — ALIGNED: executes plans, DET/LLM boundary, never-assume-success, audited
+- `solden/core/database.py` — ALIGNED: Postgres-only, org-scoped sha256 audit hash-chain, org-keyed
+- `solden/core/deployment_window.py` — ALIGNED: Tue-Thu deploy gate; wired in settings.py
+- `solden/core/erp_webhook_verify.py` — ALIGNED: per-ERP HMAC, fail-closed, constant-time compare
+- `solden/core/error_codes.py` — DEAD:zero importers; live ErrorCode enum is services/errors.py (never migrated)
+- `solden/core/errors.py` — ALIGNED: safe_error logs trace, returns only ref ID
+- `solden/core/event_queue.py` — ALIGNED: durable Redis-streams + in-memory fallback; dedup/reclaim/priority
+- `solden/core/events.py` — ALIGNED: AgentEvent DTO; from_dict asserts org_id
+- `solden/core/feature_flags.py` — ALIGNED: V1 + money-write gates default-false, single source
+- `solden/core/finance_contracts.py` — ALIGNED: skill request/response/audit DTOs; from_intent asserts org_id
+- `solden/core/fraud_controls.py` — ALIGNED: CFO-only, audit-fails-the-save, fail-closed FX ceiling
+- `solden/core/http_client.py` — MECHANICAL: shared httpx AsyncClient lifecycle
+- `solden/core/idempotency.py` — ALIGNED: replay protection on unique audit_events key
+- `solden/core/launch_controls.py` — ALIGNED: GA-readiness + rollback kill switches in org settings
+- `solden/core/llm_gateway.py` — ALIGNED: ACTION_REGISTRY has no ap_decision; model describes, never decides
+- `solden/core/migrations.py` — ALIGNED: additive idempotent advisory-locked; clearledgr_* DB names intentional
+- `solden/core/models.py` — MECHANICAL: convenience DTOs + id aliases; authoritative store is ap_items
+- `solden/core/money.py` — ALIGNED: penny-exact Decimal; JSON-number boundary documented
+- `solden/core/observability.py` — MECHANICAL: background-loop exception capture; never raises
+- `solden/core/org_config.py` — ALIGNED: per-org config with restored from_dict + CAS save
+- `solden/core/org_utils.py` — ALIGNED: org-id resolver rejects default/_unprovisioned, fails closed
+- `solden/core/permissions.py` — ALIGNED: bounded permission catalog, no open-ended grants
+- `solden/core/plan.py` — ALIGNED: Plan/Action DTOs box_type-agnostic; from_json asserts org_id
+- `solden/core/planning_engine.py` — ALIGNED: pure deterministic planner; rules decide
+- `solden/core/portal_auth.py` — ALIGNED: magic-link portal auth (dormant VO, still imported by router)
+- `solden/core/portal_input.py` — ALIGNED: vendor-portal input validation; imported by router
+- `solden/core/procurement_thresholds.py` — ALIGNED: tiered PO routing, audited save, PO-currency comparison
+- `solden/core/prompt_guard.py` — ALIGNED: fail-closed injection detector; gate rejects, no sanitize-continue
+- `solden/core/purchase_order_states.py` — ALIGNED: AP-peer PO state machine, terminal states, policy version
+- `solden/core/secrets.py` — ALIGNED: prod crashes on missing secret, dev fallback; dual-read window
+- `solden/core/sentry_config.py` — ALIGNED: before_send scrubs PII/secrets; never drops event
+- `solden/core/sla_tracker.py` — ALIGNED: per-step SLA metrics, per-tenant (asserts org_id)
+- `solden/core/slack_verify.py` — ALIGNED: HMAC v0 verify + 5-min replay window, constant-time
+- `solden/core/teams_verify.py` — ALIGNED: Bot Framework JWT verify against JWKS, fail-closed
+- `solden/core/typed_dicts.py` — MECHANICAL: documentation-only TypedDict shapes
+- `solden/core/utils.py` — MECHANICAL: safe_int/safe_float coercion
+- `solden/core/vendor_onboarding_states.py` — ALIGNED: VO state machine (service-level, dormant Box); chase loop operator-facing, no vendor email
+- `solden/core/workflow_spec.py` — ALIGNED: declarative Box-type spec + validator; hooks inert until sandbox, honestly flagged
 
 ## solden/core/effects  (2)
 - `solden/core/effects/__init__.py` — MECHANICAL: package docstring for effect boundary
@@ -251,7 +251,7 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/integrations/erp_sap_s4hana.py` — ALIGNED: real OData read/PATCH/action; honest errors; wired
 - `solden/integrations/erp_sap_s4hana_intake.py` — ALIGNED: best-effort read enrichment, no fake success
 - `solden/integrations/erp_sap_s4hana_intake_adapter.py` — ALIGNED: registered adapter, defers 'paid' to dispatcher
-- `solden/integrations/erp_xero.py` — PENDING
+- `solden/integrations/erp_xero.py` — ALIGNED: real httpx Xero connector, fail-closed, quantized money, idempotency-key
 - `solden/integrations/erp_xero_intake_adapter.py` — ALIGNED: registered adapter, filters ACCREC vs ACCPAY, honest skip
 - `solden/integrations/field_mapping_catalog.py` — MECHANICAL: static catalog + validation/diff helpers
 - `solden/integrations/oauth.py` — DRIFT:in-memory _erp_connections; get_erp_connection_record/ensure_valid_token read only the dict (lost on restart/multi-worker)
@@ -1041,3 +1041,27 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - [ ] DRIFT `solden/cli/health.py` — docstring promises an M19 source-scan check the code never performs (doc-only).
 - [ ] DEAD `solden/models/patterns.py` + `solden/services/pattern_store.py` — orphaned cluster (pattern_store reachable only via a lazy export shim, zero real callers, no tests).
 - [ ] FOLLOWUP `solden/integrations/erp_xero.py` — skipped by the Wave-1 subagent; still PENDING, re-review next wave.
+
+### Wave 2 (2026-05-25) — core (52) + api (90) + erp_xero
+HIGH (real bug / security):
+- [ ] DRIFT `solden/api/pipelines.py` — `delete_saved_view` keyed by view_id only, NO org filter in handler or SQL → an ops user can delete another tenant's saved view. CROSS-TENANT WRITE.
+- [ ] DRIFT `solden/api/ap_items_read_routes.py` — `/consolidated` calls undefined `verify_org_access` → NameError 500 for any caller past the FC check.
+HIGH/systemic (member-writable governance — same class as the workspace_rules/sample_data fixes):
+- [ ] DRIFT `solden/api/ap_policies.py` — PUT AP business policy guarded only by get_current_user (no admin gate).
+- [ ] DRIFT `solden/api/dual_approval.py` — PUT /policy/dual-approval (second-signature threshold) member-writable.
+- [ ] DRIFT `solden/api/escalation_policies.py` — full CRUD member-writable.
+- [ ] DRIFT `solden/api/erp_connections.py` — connect/disconnect/gl-map member-writable (defines unused _ADMIN_ROLES).
+- [ ] DRIFT `solden/api/erp_connection_ops.py` — rotate-credentials/test member-writable.
+- [ ] DRIFT `solden/api/policies.py` — create-version/rollback of governance policies member-writable.
+- [ ] DRIFT `solden/api/vendor_status.py` — verify-registration POST not admin-gated + auto-creates vendor stub.
+- [ ] DRIFT `solden/api/org_config.py` — governance PUT/PATCH lack admin gate (LOWER: router disabled in strict prod).
+MED (strict-profile prod-404 — the match-config failure mode):
+- [ ] DRIFT `solden/api/ap_items_read_routes.py` — `/api/ap/items/audit/export` not allowlisted (two-segment path misses the single-segment pattern).
+- [ ] DRIFT `solden/api/netsuite_panel.py` — POST approve/reject/request-info action paths not allowlisted.
+- [ ] DRIFT `solden/api/ops.py` — `/api/ops/box-health` mounted but not allowlisted.
+LOW (brand/doc/dead):
+- [ ] DRIFT `solden/api/ap_item_detail.py` — stale "mint-green" brand + "Sonnet path" LLM-vendor tell in docstrings.
+- [ ] DRIFT `solden/api/gmail_webhooks.py` — OAuth success page stale Streak-era cream/green serif theme.
+- [ ] DRIFT `solden/api/box_export.py` — docstring frames already-implemented bank-match/generic export as "future".
+- [ ] DRIFT `solden/api/payment_confirmations.py` — remittance-config docstring claims active vendor auto-send (deleted).
+- [ ] DEAD `solden/core/error_codes.py` — zero importers; live ErrorCode enum is services/errors.py.
