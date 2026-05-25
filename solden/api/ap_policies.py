@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from solden.core.auth import TokenData, get_current_user
+from solden.core.auth import TokenData, get_current_user, require_workspace_admin
 from solden.core.database import get_db
 from solden.services.policy_compliance import (
     AP_POLICY_NAME,
@@ -92,7 +92,7 @@ def get_named_ap_policy(
 def upsert_ap_policy(
     policy_name: str,
     request: UpsertAPPolicyRequest,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ):
     org_id = _resolve_org_id(user, request.organization_id)
     db = get_db()

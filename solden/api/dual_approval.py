@@ -25,7 +25,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from solden.core.auth import TokenData, get_current_user
+from solden.core.auth import TokenData, get_current_user, require_workspace_admin
 from solden.core.database import get_db
 from solden.services.dual_approval import (
     DualApprovalNotPendingError,
@@ -181,7 +181,7 @@ def get_policy(
 )
 def put_policy(
     body: DualApprovalPolicyBody,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ):
     db = get_db()
     set_dual_approval_threshold(

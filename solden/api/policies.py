@@ -29,7 +29,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from solden.core.auth import get_current_user
+from solden.core.auth import get_current_user, require_workspace_admin
 from solden.core.org_utils import require_org
 from solden.services.policy_service import (
     PolicyKindError,
@@ -127,7 +127,7 @@ def create_policy_version(
     kind: str,
     body: PolicyVersionCreateRequest,
     organization_id: Optional[str] = Query(default=None),
-    user=Depends(get_current_user),
+    user=Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
     service = _service(organization_id, user)
     actor = _actor_from_user(user)
@@ -152,7 +152,7 @@ def rollback_policy(
     version_id: str,
     body: PolicyRollbackRequest,
     organization_id: Optional[str] = Query(default=None),
-    user=Depends(get_current_user),
+    user=Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
     service = _service(organization_id, user)
     actor = _actor_from_user(user)

@@ -67,9 +67,10 @@ def db():
 
 
 def _user(uid: str = "user-1", org: str = "orgA") -> SimpleNamespace:
+    # workspace admin: the dual-approval POLICY PUT is admin-gated governance.
     return SimpleNamespace(
         user_id=uid, email=f"{uid}@orgA.com",
-        organization_id=org, role="user",
+        organization_id=org, role="user", workspace_role="admin",
     )
 
 

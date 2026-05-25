@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr, Field
 
-from solden.core.auth import TokenData, get_current_user
+from solden.core.auth import TokenData, get_current_user, require_workspace_admin
 from solden.core.database import get_db
 from solden.core.stores.escalation_policy_store import VALID_ACTIONS
 
@@ -53,7 +53,7 @@ class PolicyPatchRequest(BaseModel):
 @router.post("")
 def create_policy(
     body: PolicyCreateRequest,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
     if body.action not in VALID_ACTIONS:
         raise HTTPException(
@@ -123,7 +123,7 @@ def get_policy(
 def patch_policy(
     policy_id: str,
     body: PolicyPatchRequest,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
     db = get_db()
     existing = db.get_escalation_policy(policy_id)
@@ -163,7 +163,7 @@ def patch_policy(
 @router.delete("/{policy_id}")
 def delete_policy(
     policy_id: str,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
     db = get_db()
     deleted = db.delete_escalation_policy(policy_id, user.organization_id)

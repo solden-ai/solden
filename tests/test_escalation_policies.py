@@ -55,11 +55,13 @@ def db():
 
 
 def _user(org: str = "orgA") -> SimpleNamespace:
+    # workspace admin: escalation-policy CRUD is admin-gated governance.
     return SimpleNamespace(
         user_id=f"leader@{org}.com",
         email=f"leader@{org}.com",
         organization_id=org,
         role="user",
+        workspace_role="admin",
     )
 
 
