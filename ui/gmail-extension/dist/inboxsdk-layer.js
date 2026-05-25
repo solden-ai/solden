@@ -1,4 +1,4 @@
-/* clearledgr-source-fingerprint:c7269dcb54ba41606ee29c90385c1be35949fcbf6eed139c5c6ef5f87c9343e8 */
+/* clearledgr-source-fingerprint:d2a932c211b69281699192800c833ac3cf332a57c0f652bdc11384d7d0ed40f2 */
 (() => {
   var __create = Object.create;
   var __getProtoOf = Object.getPrototypeOf;
@@ -53368,6 +53368,10 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       return url.replace(/\/+$/, "");
     }
   }
+  var TRUSTED_PRODUCTION_API_HOSTS = new Set([
+    "api.soldenai.com",
+    "api.clearledgr.com"
+  ]);
   function selectBackendUrl(storedUrl, configuredUrl) {
     const configured = normalizeBackendUrl(configuredUrl);
     const stored = normalizeBackendUrl(storedUrl);
@@ -53382,7 +53386,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       const storedHost = storedParsed.hostname.toLowerCase();
       const configuredSecure = configuredParsed.protocol === "https:";
       const looksEphemeralStoredHost = storedHost === "127.0.0.1" || storedHost === "localhost" || storedHost.endsWith(".trycloudflare.com") || storedHost.endsWith(".up.railway.app");
-      if (configuredSecure && configuredHost === "api.clearledgr.com" && looksEphemeralStoredHost) {
+      if (configuredSecure && TRUSTED_PRODUCTION_API_HOSTS.has(configuredHost) && looksEphemeralStoredHost) {
         return configured;
       }
     } catch (_2) {
@@ -53400,7 +53404,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       const storedParsed = new URL(stored);
       const configuredHost = configuredParsed.hostname.toLowerCase();
       const storedHost = storedParsed.hostname.toLowerCase();
-      return configuredParsed.protocol === "https:" && configuredHost === "api.clearledgr.com" && (storedHost === "127.0.0.1" || storedHost === "localhost" || storedHost.endsWith(".trycloudflare.com") || storedHost.endsWith(".up.railway.app"));
+      return configuredParsed.protocol === "https:" && TRUSTED_PRODUCTION_API_HOSTS.has(configuredHost) && (storedHost === "127.0.0.1" || storedHost === "localhost" || storedHost.endsWith(".trycloudflare.com") || storedHost.endsWith(".up.railway.app"));
     } catch (_2) {
       return false;
     }
@@ -53752,13 +53756,26 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     }
     async loadBackendAuthFromStorage() {
       const stored = await chrome.storage.local.get([
+        "solden_backend_access_token",
+        "solden_backend_token_expiry",
+        "solden_backend_org_id",
         "clearledgr_backend_access_token",
         "clearledgr_backend_token_expiry",
         "clearledgr_backend_org_id"
       ]);
-      this.backendAuthToken = String(stored.clearledgr_backend_access_token || "").trim() || null;
-      this.backendAuthTokenExpiry = Number(stored.clearledgr_backend_token_expiry || 0) || 0;
-      this.backendAuthOrgId = String(stored.clearledgr_backend_org_id || "").trim() || null;
+      const hadLegacy = stored.clearledgr_backend_access_token !== undefined || stored.clearledgr_backend_token_expiry !== undefined || stored.clearledgr_backend_org_id !== undefined;
+      this.backendAuthToken = String(stored.solden_backend_access_token ?? stored.clearledgr_backend_access_token ?? "").trim() || null;
+      this.backendAuthTokenExpiry = Number(stored.solden_backend_token_expiry ?? stored.clearledgr_backend_token_expiry ?? 0) || 0;
+      this.backendAuthOrgId = String(stored.solden_backend_org_id ?? stored.clearledgr_backend_org_id ?? "").trim() || null;
+      if (hadLegacy) {
+        await chrome.storage.local.remove([
+          "clearledgr_backend_access_token",
+          "clearledgr_backend_token_expiry",
+          "clearledgr_backend_org_id"
+        ]);
+        if (this.backendAuthToken)
+          await this.persistBackendAuthToken();
+      }
       if (!this.isBackendAuthTokenValid()) {
         this.clearBackendAuthToken();
       }
@@ -53766,16 +53783,16 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     async persistBackendAuthToken() {
       if (!this.backendAuthToken) {
         await chrome.storage.local.remove([
-          "clearledgr_backend_access_token",
-          "clearledgr_backend_token_expiry",
-          "clearledgr_backend_org_id"
+          "solden_backend_access_token",
+          "solden_backend_token_expiry",
+          "solden_backend_org_id"
         ]);
         return;
       }
       await chrome.storage.local.set({
-        clearledgr_backend_access_token: this.backendAuthToken,
-        clearledgr_backend_token_expiry: this.backendAuthTokenExpiry || 0,
-        clearledgr_backend_org_id: this.backendAuthOrgId || (this.runtimeConfig?.organizationId || "default")
+        solden_backend_access_token: this.backendAuthToken,
+        solden_backend_token_expiry: this.backendAuthTokenExpiry || 0,
+        solden_backend_org_id: this.backendAuthOrgId || (this.runtimeConfig?.organizationId || "default")
       });
     }
     clearBackendAuthToken() {
@@ -53783,6 +53800,9 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       this.backendAuthTokenExpiry = 0;
       this.backendAuthOrgId = null;
       chrome.storage.local.remove([
+        "solden_backend_access_token",
+        "solden_backend_token_expiry",
+        "solden_backend_org_id",
         "clearledgr_backend_access_token",
         "clearledgr_backend_token_expiry",
         "clearledgr_backend_org_id"
@@ -53869,12 +53889,19 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       this.emitQueueUpdated();
     }
     async loadProcessedIds() {
-      const stored = await chrome.storage.local.get(["clearledgr_processed_ids"]);
-      const ids = stored.clearledgr_processed_ids || [];
+      const stored = await chrome.storage.local.get([
+        "solden_processed_ids",
+        "clearledgr_processed_ids"
+      ]);
+      const ids = stored.solden_processed_ids || stored.clearledgr_processed_ids || [];
       ids.forEach((id) => this.processedIds.add(id));
+      if (stored.clearledgr_processed_ids !== undefined) {
+        await chrome.storage.local.remove(["clearledgr_processed_ids"]);
+        await this.saveProcessedIds();
+      }
     }
     async saveProcessedIds() {
-      await chrome.storage.local.set({ clearledgr_processed_ids: Array.from(this.processedIds).slice(-2000) });
+      await chrome.storage.local.set({ solden_processed_ids: Array.from(this.processedIds).slice(-2000) });
     }
     startPeriodicScan() {
       if (this.scanTimer)
@@ -55526,11 +55553,11 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
         --cl-primary: #0F172A;
         --cl-secondary: #475569;
         --cl-muted: #94A3B8;
-        --cl-accent: #00D67E;
-        --cl-accent-hover: #00BC6E;
-        --cl-accent-soft: #ECFDF5;
-        --cl-brand-muted: #10B981;
-        --cl-navy: #0A1628;
+        --cl-accent: #18BFB0;
+        --cl-accent-hover: #12B3A6;
+        --cl-accent-soft: #DDF7F3;
+        --cl-brand-muted: #12B3A6;
+        --cl-navy: #001137;
         --cl-navy-light: #1E293B;
         --cl-green: #16A34A;
         --cl-green-soft: #F0FDF4;
@@ -55613,14 +55640,14 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
         font-size: 11px;
         font-weight: 600;
         color: var(--cl-brand-muted, #10B981);
-        background: var(--cl-accent-soft, #ECFDF5);
+        background: var(--cl-accent-soft, #DDF7F3);
         padding: 2px 8px;
         border-radius: 999px;
       }
       .cl-header-count {
         appearance: none;
         border: 0;
-        background: var(--cl-accent-soft, #ECFDF5);
+        background: var(--cl-accent-soft, #DDF7F3);
         color: var(--cl-brand-muted, #10B981);
         font-size: 11px;
         font-weight: 700;
@@ -56420,7 +56447,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
         border-radius: var(--cl-radius-sm);
         border: none;
         background: var(--cl-accent);
-        color: var(--cl-navy, #0A1628);
+        color: var(--cl-navy, #001137);
         font: inherit;
         font-size: 13px;
         font-weight: 600;
@@ -57828,7 +57855,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
         height: 36px;
         border-radius: 50%;
         border: none;
-        background: var(--cl-accent, #00D67E);
+        background: var(--cl-accent, #18BFB0);
         color: #fff;
         font-size: 20px;
         font-weight: 300;
@@ -57842,7 +57869,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       }
       .cl-fab-btn:hover {
         transform: scale(1.1);
-        background: #00BC6E;
+        background: #12B3A6;
       }
       .cl-fab-menu {
         position: absolute;
@@ -58027,7 +58054,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
         color: var(--cl-secondary);
       }
       .cl-onboarding-step.done .cl-step-icon {
-        background: #ECFDF5;
+        background: #F0FDF4;
         color: #059669;
       }
       .cl-step-status {
@@ -58051,13 +58078,13 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   .cl-pill-needs-info::before { background: #d97706; }
   .cl-pill-needs-approval { color: #92400e; background: #fff7ed; border: 1px solid #fed7aa; }
   .cl-pill-needs-approval::before { background: #ea580c; }
-  .cl-pill-approved { color: #059669; background: #ECFDF5; }
+  .cl-pill-approved { color: #059669; background: #F0FDF4; }
   .cl-pill-approved::before { background: #10B981; }
-  .cl-pill-ready-to-post { color: #059669; background: #ECFDF5; }
+  .cl-pill-ready-to-post { color: #059669; background: #F0FDF4; }
   .cl-pill-ready-to-post::before { background: #10B981; }
   .cl-pill-posted-to-erp { color: #5b21b6; background: #ede9fe; }
   .cl-pill-posted-to-erp::before { background: #7c3aed; }
-  .cl-pill-closed { color: #059669; background: #ECFDF5; }
+  .cl-pill-closed { color: #059669; background: #F0FDF4; }
   .cl-pill-closed::before { background: #10B981; }
   .cl-pill-rejected { color: #991b1b; background: #fef2f2; border: 1px solid #fecaca; }
   .cl-pill-rejected::before { background: #dc2626; }
@@ -58128,10 +58155,10 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     needs_info: "#D97706",
     needs_approval: "#D97706",
     pending_approval: "#D97706",
-    approved: "#00D67E",
+    approved: "#16A34A",
     ready_to_post: "#1A73E8",
-    posted_to_erp: "#00D67E",
-    closed: "#00D67E",
+    posted_to_erp: "#16A34A",
+    closed: "#16A34A",
     rejected: "#DC2626",
     failed_post: "#DC2626",
     reversed: "#DC2626",
@@ -58362,7 +58389,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   box-shadow: 0 20px 48px rgba(10, 22, 40, 0.28);
   padding: 24px 24px 20px; font-family: inherit;
 }
-.cl-invm-title { font-size: 17px; font-weight: 700; color: #0A1628; margin: 0 0 4px; }
+.cl-invm-title { font-size: 17px; font-weight: 700; color: #001137; margin: 0 0 4px; }
 .cl-invm-subtitle { font-size: 12px; color: #5C6B7A; margin: 0 0 16px; line-height: 1.4; }
 .cl-invm-field { margin-bottom: 12px; }
 .cl-invm-label {
@@ -58371,9 +58398,9 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 }
 .cl-invm-input {
   width: 100%; padding: 8px 10px; border: 1px solid #E2E8F0; border-radius: 6px;
-  font-size: 13px; color: #0A1628; background: #fff; box-sizing: border-box;
+  font-size: 13px; color: #001137; background: #fff; box-sizing: border-box;
 }
-.cl-invm-input:focus { outline: none; border-color: #00D67E; }
+.cl-invm-input:focus { outline: none; border-color: #18BFB0; }
 .cl-invm-input[disabled] { background: #F7F9FB; color: #5C6B7A; }
 .cl-invm-hint { font-size: 11px; color: #94A3B8; margin-top: 4px; }
 .cl-invm-error {
@@ -58381,7 +58408,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   padding: 8px 10px; border-radius: 6px; margin: 4px 0 12px;
 }
 .cl-invm-success {
-  font-size: 12px; color: #065F46; background: #ECFDF5;
+  font-size: 12px; color: #065F46; background: #F0FDF4;
   padding: 10px 12px; border-radius: 6px; margin: 4px 0 12px; line-height: 1.5;
 }
 .cl-invm-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
@@ -58389,12 +58416,12 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 600;
   cursor: pointer; border: 1px solid transparent;
 }
-.cl-invm-btn.primary { background: #00D67E; color: #0A1628; border-color: #00D67E; }
+.cl-invm-btn.primary { background: #18BFB0; color: #001137; border-color: #18BFB0; }
 .cl-invm-btn.primary:disabled { background: #9FE6C1; cursor: not-allowed; }
 .cl-invm-btn.ghost { background: #fff; color: #5C6B7A; border-color: #E2E8F0; }
 .cl-invm-link {
   font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px;
-  word-break: break-all; color: #0A1628; display: block;
+  word-break: break-all; color: #001137; display: block;
   background: #F7F9FB; padding: 6px 8px; border-radius: 4px; margin-top: 4px;
 }
 `;
@@ -58564,8 +58591,8 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   function formatUsd(value) {
     const n3 = Number(value);
     if (!Number.isFinite(n3))
-      return "$0";
-    return n3 >= 100 ? `$${n3.toFixed(0)}` : `$${n3.toFixed(2)}`;
+      return "USD 0";
+    return n3 >= 100 ? `USD ${n3.toFixed(0)}` : `USD ${n3.toFixed(2)}`;
   }
   function formatPeriodEnd(iso) {
     if (!iso)
@@ -58680,7 +58707,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 }
 .cl-ts-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
 .cl-ts-label { font-size: 12px; color: #5C6B7A; }
-.cl-ts-value { font-size: 13px; color: #0A1628; font-weight: 500; text-align: right; max-width: 60%; }
+.cl-ts-value { font-size: 13px; color: #001137; font-weight: 500; text-align: right; max-width: 60%; }
 .cl-ts-value.mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
 .cl-ts-match-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .cl-ts-match-icon { width: 16px; text-align: center; font-size: 14px; }
@@ -58688,10 +58715,10 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 .cl-ts-match-icon.warn { color: #CA8A04; }
 .cl-ts-match-icon.fail { color: #DC2626; }
 .cl-ts-match-icon.na { color: #94A3B8; }
-.cl-ts-match-label { font-size: 12px; color: #0A1628; flex: 1; }
+.cl-ts-match-label { font-size: 12px; color: #001137; flex: 1; }
 .cl-ts-match-detail { font-size: 11px; color: #5C6B7A; }
 .cl-ts-match-tolerance {
-  font-size: 11px; color: #16A34A; background: #ECFDF5;
+  font-size: 11px; color: #16A34A; background: #F0FDF4;
   padding: 2px 8px; border-radius: 10px; margin-top: 6px; display: inline-block;
 }
 .cl-ts-match-tolerance.warn { color: #92400E; background: #FEFCE8; }
@@ -58704,7 +58731,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   display: inline-block; padding: 2px 8px; border-radius: 10px;
   font-size: 11px; font-weight: 600;
 }
-.cl-ts-risk-low { background: #ECFDF5; color: #16A34A; }
+.cl-ts-risk-low { background: #F0FDF4; color: #16A34A; }
 .cl-ts-risk-medium { background: #FEFCE8; color: #92400E; }
 .cl-ts-risk-high { background: #FEF2F2; color: #991B1B; }
 .cl-ts-timeline { list-style: none; margin: 0; padding: 0; }
@@ -58714,7 +58741,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 }
 .cl-ts-timeline li::before {
   content: ''; width: 6px; height: 6px; border-radius: 50%;
-  background: #00D67E; position: absolute; left: 0; top: 5px;
+  background: #18BFB0; position: absolute; left: 0; top: 5px;
 }
 .cl-ts-timeline-time { font-size: 10px; color: #94A3B8; display: block; }
 .cl-ts-agent-icon { width: 10px; height: 10px; vertical-align: -1px; margin-right: 3px; opacity: 0.6; }
@@ -58723,11 +58750,11 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   display: inline-block; padding: 1px 8px; border-radius: 10px;
   font-size: 11px; font-weight: 600;
 }
-.cl-ts-iban-verified { background: #ECFDF5; color: #16A34A; }
+.cl-ts-iban-verified { background: #F0FDF4; color: #16A34A; }
 .cl-ts-iban-unverified { background: #FEF2F2; color: #991B1B; }
 .cl-ts-iban-pending { background: #FEFCE8; color: #92400E; }
 .cl-ts-expand-btn {
-  background: none; border: none; color: #00D67E; font-size: 12px;
+  background: none; border: none; color: #18BFB0; font-size: 12px;
   font-weight: 600; cursor: pointer; padding: 4px 0; font-family: inherit;
 }
 .cl-ts-timeline-why { font-weight: 400; color: #5C6B7A; }
@@ -58739,13 +58766,13 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 }
 .cl-ts-linked-box-icon { font-size: 14px; width: 20px; text-align: center; }
 .cl-ts-linked-box-info { flex: 1; min-width: 0; }
-.cl-ts-linked-box-title { font-size: 12px; color: #0A1628; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cl-ts-linked-box-title { font-size: 12px; color: #001137; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cl-ts-linked-box-meta { font-size: 11px; color: #5C6B7A; }
 .cl-ts-linked-box-status {
   display: inline-block; padding: 1px 6px; border-radius: 8px;
   font-size: 10px; font-weight: 600; text-transform: uppercase;
 }
-.cl-ts-linked-box-status.active { background: #ECFDF5; color: #16A34A; }
+.cl-ts-linked-box-status.active { background: #F0FDF4; color: #16A34A; }
 .cl-ts-linked-box-status.pending { background: #FEFCE8; color: #92400E; }
 .cl-ts-linked-box-status.completed { background: #EFF6FF; color: #1D4ED8; }
 .cl-ts-actions-bar { padding: 12px 16px; border-top: 1px solid #E2E8F0; }
@@ -58794,9 +58821,9 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 }
 .cl-ts-query-input {
   width: 100%; padding: 10px 12px; border: 1px solid #E2E8F0; border-radius: 8px;
-  font-size: 13px; color: #0A1628; background: #FBFCFD; font-family: inherit;
+  font-size: 13px; color: #001137; background: #FBFCFD; font-family: inherit;
 }
-.cl-ts-query-input:focus { outline: none; border-color: #00D67E; box-shadow: 0 0 0 3px rgba(0, 214, 126, 0.15); }
+.cl-ts-query-input:focus { outline: none; border-color: #18BFB0; box-shadow: 0 0 0 3px rgba(0, 214, 126, 0.15); }
 .cl-ts-query-input::placeholder { color: #94A3B8; }
 .cl-ts-query-input:disabled { background: #F1F5F9; color: #94A3B8; cursor: not-allowed; }
 
@@ -58810,14 +58837,14 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 .cl-ts-qa-row { display: flex; flex-direction: column; gap: 4px; }
 .cl-ts-qa-q {
   align-self: flex-end; max-width: 92%;
-  background: #0A1628; color: #fff; padding: 7px 11px;
+  background: #001137; color: #fff; padding: 7px 11px;
   border-radius: 12px 12px 2px 12px;
   font: 500 12px/1.4 'DM Sans', sans-serif;
   word-wrap: break-word;
 }
 .cl-ts-qa-a {
   align-self: flex-start; max-width: 96%;
-  background: #F1F5F9; color: #0A1628; padding: 7px 11px;
+  background: #F1F5F9; color: #001137; padding: 7px 11px;
   border-radius: 12px 12px 12px 2px;
   font: 400 12px/1.45 'DM Sans', sans-serif;
   white-space: pre-wrap; word-wrap: break-word;
@@ -58828,11 +58855,11 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 .cl-ts-qa-a.error {
   background: #FEF2F2; color: #B91C1C;
 }
-.cl-ts-qa-a strong { font-weight: 700; color: #0A1628; }
-.cl-ts-qa-a em { font-style: italic; color: #0A1628; }
+.cl-ts-qa-a strong { font-weight: 700; color: #001137; }
+.cl-ts-qa-a em { font-style: italic; color: #001137; }
 .cl-ts-qa-a code {
   font: 600 11px/1.3 'Geist Mono', ui-monospace, monospace;
-  background: #E2E8F0; color: #0A1628;
+  background: #E2E8F0; color: #001137;
   padding: 1px 5px; border-radius: 4px;
 }
 .cl-ts-qa-a ul {
@@ -58851,7 +58878,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 /* Streaming caret — blinks while Claude is still writing */
 .cl-ts-qa-a .cl-ts-caret {
   display: inline-block; width: 7px; height: 13px; vertical-align: text-bottom;
-  background: #00D67E; margin-left: 2px; animation: cl-ts-blink 0.9s steps(2) infinite;
+  background: #18BFB0; margin-left: 2px; animation: cl-ts-blink 0.9s steps(2) infinite;
 }
 @keyframes cl-ts-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
@@ -58879,12 +58906,12 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 }
 .cl-ts-suggestion-chip {
   text-align: left; padding: 7px 10px; border-radius: 8px;
-  border: 1px solid #E2E8F0; background: #FBFCFD; color: #0A1628;
+  border: 1px solid #E2E8F0; background: #FBFCFD; color: #001137;
   font: 500 12px/1.35 'DM Sans', sans-serif; cursor: pointer;
   transition: background 0.12s, border-color 0.12s;
 }
 .cl-ts-suggestion-chip:hover {
-  background: #fff; border-color: #00D67E; color: #059669;
+  background: #fff; border-color: #18BFB0; color: #059669;
 }
 
 /* Feedback link + dialog at the bottom of the sidebar */
@@ -58897,7 +58924,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   color: #94A3B8; cursor: pointer; background: transparent; border: 0;
   padding: 0; font: inherit; text-decoration: none;
 }
-.cl-ts-footer-link:hover { color: #00D67E; }
+.cl-ts-footer-link:hover { color: #18BFB0; }
 
 .cl-ts-feedback-overlay {
   position: fixed; inset: 0; background: rgba(10, 22, 40, 0.4); z-index: 99999;
@@ -58909,7 +58936,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 }
 .cl-ts-feedback-modal h3 {
   margin: 0 0 4px; font: 700 16px/1.3 'Instrument Sans','DM Sans',sans-serif;
-  color: #0A1628;
+  color: #001137;
 }
 .cl-ts-feedback-modal .muted {
   margin: 0 0 14px; font-size: 12px; color: #64748B;
@@ -58923,15 +58950,15 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   cursor: pointer;
 }
 .cl-ts-feedback-kind.active {
-  background: #0A1628; color: #fff; border-color: #0A1628;
+  background: #001137; color: #fff; border-color: #001137;
 }
 .cl-ts-feedback-textarea {
   width: 100%; box-sizing: border-box; min-height: 96px; padding: 10px 12px;
   border: 1px solid #E2E8F0; border-radius: 8px; font: 400 13px/1.45 'DM Sans', sans-serif;
-  color: #0A1628; resize: vertical;
+  color: #001137; resize: vertical;
 }
 .cl-ts-feedback-textarea:focus {
-  outline: none; border-color: #00D67E; box-shadow: 0 0 0 3px rgba(0, 214, 126, 0.15);
+  outline: none; border-color: #18BFB0; box-shadow: 0 0 0 3px rgba(0, 214, 126, 0.15);
 }
 .cl-ts-feedback-actions {
   display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;
@@ -58944,7 +58971,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   background: transparent; color: #64748B;
 }
 .cl-ts-feedback-btn.primary {
-  background: #00D67E; color: #0A1628;
+  background: #18BFB0; color: #001137;
 }
 .cl-ts-feedback-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .cl-ts-feedback-thanks {
@@ -58963,10 +58990,10 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   font-size: 14px;
 }
 .cl-ts-banner-body { flex: 1; min-width: 0; }
-.cl-ts-banner-title { font-size: 12px; font-weight: 700; color: #0A1628; line-height: 1.2; }
+.cl-ts-banner-title { font-size: 12px; font-weight: 700; color: #001137; line-height: 1.2; }
 .cl-ts-banner-detail { font-size: 11px; color: #5C6B7A; margin-top: 2px; line-height: 1.3; }
-.cl-ts-banner.override { background: #ECFDF5; }
-.cl-ts-banner.override .cl-ts-banner-icon { background: #00D67E; color: #0A1628; }
+.cl-ts-banner.override { background: #DDF7F3; }
+.cl-ts-banner.override .cl-ts-banner-icon { background: #18BFB0; color: #001137; }
 .cl-ts-banner.waiting { background: #FEFCE8; }
 .cl-ts-banner.waiting .cl-ts-banner-icon { background: #CA8A04; color: #FEFCE8; }
 .cl-ts-banner.fraud { background: #FEF2F2; }
@@ -58987,11 +59014,11 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 }
 .cl-ts-banner-btn-onboard:hover { background: #A16207; }
 .cl-ts-banner-action {
-  padding: 6px 12px; border: 1px solid #0A1628; border-radius: 6px;
-  background: #fff; color: #0A1628; font: 600 12px/1 'DM Sans', sans-serif;
+  padding: 6px 12px; border: 1px solid #001137; border-radius: 6px;
+  background: #fff; color: #001137; font: 600 12px/1 'DM Sans', sans-serif;
   cursor: pointer; flex-shrink: 0;
 }
-.cl-ts-banner-action:hover { background: #0A1628; color: #fff; }
+.cl-ts-banner-action:hover { background: #001137; color: #fff; }
 .cl-ts-banner-action:disabled { opacity: 0.5; cursor: not-allowed; }
 .cl-ts-fraud-flag {
   display: flex; align-items: center; gap: 6px;
@@ -60298,7 +60325,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     const gmail = s3.gmailIntegration || {};
     const canOpenConnections = hasAdminAccessRole(s3.currentUserRole);
     const goConnections = q2(() => {
-      if (!navigateInboxRoute("clearledgr/connections", store_default.sdk)) {
+      if (!navigateInboxRoute("solden/connections", store_default.sdk)) {
         showToast("Unable to open Connections", "error");
       }
     }, []);
@@ -60347,12 +60374,12 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     const [recovering, setRecovering] = d2(false);
     const [linkingId, setLinkingId] = d2("");
     const openPipeline = q2(() => {
-      if (!navigateInboxRoute("clearledgr/invoices", store_default.sdk)) {
+      if (!navigateInboxRoute("solden/invoices", store_default.sdk)) {
         showToast("Unable to open invoices", "error");
       }
     }, []);
     const openHome = q2(() => {
-      if (!navigateInboxRoute("clearledgr/home", store_default.sdk)) {
+      if (!navigateInboxRoute("solden/home", store_default.sdk)) {
         showToast("Unable to open Home", "error");
       }
     }, []);
@@ -60542,7 +60569,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       orgId: queueManager?.runtimeConfig?.organizationId || "default",
       userEmail: queueManager?.runtimeConfig?.userEmail || ""
     };
-    const openPipeline = q2(() => navigateInboxRoute("clearledgr/invoices", store_default.sdk, pipelineScope), [pipelineScope.orgId, pipelineScope.userEmail]);
+    const openPipeline = q2(() => navigateInboxRoute("solden/invoices", store_default.sdk, pipelineScope), [pipelineScope.orgId, pipelineScope.userEmail]);
     y2(() => {
       let cancelled = false;
       (async () => {
@@ -60972,8 +60999,8 @@ Reason (required — logged to the audit trail):`);
   var html6 = htm_module_default.bind(_);
 
   // src/settings-tab.js
-  var SETTINGS_TAB_ID = "clearledgr-settings-tab";
-  var SETTINGS_CONTENT_ID = "clearledgr-settings-content";
+  var SETTINGS_TAB_ID = "solden-settings-tab";
+  var SETTINGS_CONTENT_ID = "solden-settings-content";
   var settingsObserver = null;
   var injected = false;
   function watchForSettingsPage(queueManager) {
@@ -61231,7 +61258,7 @@ Reason (required — logged to the audit trail):`);
   // src/inboxsdk-layer.js
   var html7 = htm_module_default.bind(_);
   var APP_ID = "sdk_Solden2026_dc12c60472";
-  var INIT_KEY = "__clearledgr_ap_v1_inboxsdk_initialized";
+  var INIT_KEY = "__solden_ap_v1_inboxsdk_initialized";
   var LOGO_PATH2 = "icons/icon48.png";
   var STORAGE_ACTIVE_AP_ITEM_ID = "solden_active_ap_item_id";
   var sdk = null;
@@ -61241,13 +61268,13 @@ Reason (required — logged to the audit trail):`);
   var sidebarPanelViewPromise = null;
   var _cachedExceptionCount = 0;
   var APPMENU_PRIMARY_ROUTE_IDS = new Set([
-    "clearledgr/home",
-    "clearledgr/invoices",
-    "clearledgr/vendor-onboarding",
-    "clearledgr/activity"
+    "solden/home",
+    "solden/invoices",
+    "solden/vendor-onboarding",
+    "solden/activity"
   ]);
   var APPMENU_SETTINGS_ROUTE_IDS = new Set([
-    "clearledgr/settings"
+    "solden/settings"
   ]);
   function injectFonts() {
     if (document.getElementById("cl-fonts-loaded"))
@@ -61390,7 +61417,7 @@ Reason (required — logged to the audit trail):`);
       "gap:12px",
       "padding:7px 14px",
       "font-size:12px",
-      "background:#ecfdf5",
+      "background:#F0FDF4",
       "color:#166534",
       "border-bottom:1px solid #d1fae5",
       "font-family:inherit"
@@ -61419,7 +61446,7 @@ Reason (required — logged to the audit trail):`);
         "flex-shrink:0"
       ].join(";");
       button.addEventListener("click", () => {
-        navigateInboxRoute("clearledgr/invoice/:id", sdk, { id: recordContext.apItemId });
+        navigateInboxRoute("solden/invoice/:id", sdk, { id: recordContext.apItemId });
       });
       bar.appendChild(button);
     }
@@ -61463,7 +61490,7 @@ Reason (required — logged to the audit trail):`);
     openButton.textContent = "Open invoices";
     openButton.style.cssText = createButton.style.cssText;
     openButton.addEventListener("click", () => {
-      navigateInboxRoute("clearledgr/invoices", sdk);
+      navigateInboxRoute("solden/invoices", sdk);
     });
     actions.appendChild(createButton);
     actions.appendChild(openButton);
@@ -61693,9 +61720,9 @@ Reason (required — logged to the audit trail):`);
     const stateConfig = {
       needs_approval: { bg: "#fef9ee", border: "#d97706", text: "#92400e", label: "Needs approval" },
       pending_approval: { bg: "#fef9ee", border: "#d97706", text: "#92400e", label: "Pending approval" },
-      approved: { bg: "#ECFDF5", border: "#10B981", text: "#16A34A", label: "Approved" },
-      ready_to_post: { bg: "#ECFDF5", border: "#10B981", text: "#16A34A", label: "Ready to post" },
-      posted_to_erp: { bg: "#ECFDF5", border: "#10B981", text: "#16A34A", label: "Posted to ERP" },
+      approved: { bg: "#F0FDF4", border: "#10B981", text: "#16A34A", label: "Approved" },
+      ready_to_post: { bg: "#F0FDF4", border: "#10B981", text: "#16A34A", label: "Ready to post" },
+      posted_to_erp: { bg: "#F0FDF4", border: "#10B981", text: "#16A34A", label: "Posted to ERP" },
       rejected: { bg: "#fef2f2", border: "#dc2626", text: "#991b1b", label: "Rejected" },
       failed_post: { bg: "#fef2f2", border: "#dc2626", text: "#991b1b", label: "ERP post failed" },
       needs_info: { bg: "#fef9ee", border: "#d97706", text: "#92400e", label: "Info requested" }
@@ -61987,7 +62014,7 @@ Reason (required — logged to the audit trail):`);
       return;
     const headsUpEl = document.createElement("div");
     headsUpEl.id = "cl-inbox-headsup";
-    headsUpEl.style.cssText = 'display:none;padding:8px 16px;background:#0A1628;color:#fff;font-size:12px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;align-items:center;gap:12px;cursor:pointer;';
+    headsUpEl.style.cssText = 'display:none;padding:8px 16px;background:#001137;color:#fff;font-size:12px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;align-items:center;gap:12px;cursor:pointer;';
     const updateHeadsUp = () => {
       const items = store_default.queue || [];
       const needsApproval = items.filter((i3) => i3.state === "needs_approval").length;
@@ -62022,14 +62049,14 @@ Reason (required — logged to the audit trail):`);
       }
       headsUpEl.style.display = "flex";
       headsUpEl.innerHTML = `
-      <span style="width:8px;height:8px;border-radius:50%;background:#00D67E;flex-shrink:0"></span>
+      <span style="width:8px;height:8px;border-radius:50%;background:#18BFB0;flex-shrink:0"></span>
       <span><strong>Solden</strong> · ${parts.join(" · ")}</span>
       <span style="margin-left:auto;opacity:0.6;font-size:11px">Open invoices ›</span>
     `;
     };
     headsUpEl.addEventListener("click", () => {
       if (sdk?.Router)
-        sdk.Router.goto("clearledgr/invoices");
+        sdk.Router.goto("solden/invoices");
     });
     try {
       const target = document.querySelector('[role="main"]') || document.body;
@@ -62239,11 +62266,11 @@ Reason (required — logged to the audit trail):`);
           suggestions.push({
             name: `${vendor}${amountStr}`,
             description: `Invoice — ${getStateLabel(item.state || "received")}`,
-            routeID: "clearledgr/activity",
+            routeID: "solden/activity",
             iconUrl: getAssetUrl(LOGO_PATH2) || undefined
           });
         }
-        if ("clearledgr".includes(q3) || "invoice".includes(q3) || "ap".includes(q3)) {
+        if ("solden".includes(q3) || "invoice".includes(q3) || "ap".includes(q3)) {
           suggestions.push({
             name: "Solden workspace",
             description: "Open the AP control plane",
@@ -62434,7 +62461,7 @@ Reason (required — logged to the audit trail):`);
             body: `${item.currency || ""} ${Number(item.amount || 0).toLocaleString()} — ${(item.exception_reason || item.exception_code || item.state || "").replace(/_/g, " ")}`,
             shortDetailText: item.invoice_number || "",
             isRead: false,
-            routeID: "clearledgr/invoices"
+            routeID: "solden/invoices"
           }))
         });
       }
@@ -62451,7 +62478,7 @@ Reason (required — logged to the audit trail):`);
             body: `${item.currency || ""} ${Number(item.amount || 0).toLocaleString()}`,
             shortDetailText: item.invoice_number || "",
             isRead: false,
-            routeID: "clearledgr/invoices"
+            routeID: "solden/invoices"
           }))
         });
       }
@@ -62479,7 +62506,7 @@ Reason (required — logged to the audit trail):`);
             body: `${item.currency || ""} ${Number(item.amount || 0).toLocaleString()} — due ${item.due_date?.slice(0, 10) || ""}`,
             shortDetailText: item.invoice_number || "",
             isRead: true,
-            routeID: "clearledgr/invoices"
+            routeID: "solden/invoices"
           }))
         });
       }
@@ -62497,7 +62524,5 @@ That means you care how things work.
 So do we.
 
 %chttps://soldenai.com
-`, "font-size:28px;font-weight:800;color:#00D67E;line-height:1.2;", "font-size:18px;font-weight:600;color:#0A1628;line-height:1.3;", "font-size:14px;color:#6B7280;line-height:1.5;", "font-size:13px;color:#00D67E;font-weight:600;");
+`, "font-size:28px;font-weight:800;color:#18BFB0;line-height:1.2;", "font-size:18px;font-weight:600;color:#001137;line-height:1.3;", "font-size:14px;color:#6B7280;line-height:1.5;", "font-size:13px;color:#18BFB0;font-weight:600;");
 })();
-
-//# debugId=2786B88A6B85661164756E2164756E21
