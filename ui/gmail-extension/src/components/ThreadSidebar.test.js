@@ -204,7 +204,7 @@ describe('ThreadSidebar contract', () => {
 
   it('carries the canonical intent vocabulary in lockstep with the backend', () => {
     // INTENT_LABELS must include every intent the backend exposes
-    // (clearledgr/services/finance_skills/ap_skill.py). If the backend
+    // (solden/services/finance_skills/ap_skill.py). If the backend
     // ships a new intent, the corresponding label must land here too
     // or the button will render as the bare intent slug.
     const labels = [

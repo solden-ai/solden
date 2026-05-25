@@ -1489,7 +1489,7 @@ class TestGmailWebhooks:
                         id="msg-school-1",
                         thread_id="thread-school-1",
                         subject="Fwd: School fee invoice",
-                        sender="mo@clearledgr.com",
+                        sender="mo@soldenai.com",
                     )
                 ]
 
@@ -1504,7 +1504,7 @@ class TestGmailWebhooks:
                 "amount": 250.0,
                 "currency": "USD",
                 "subject": "Fwd: School fee invoice",
-                "sender": "mo@clearledgr.com",
+                "sender": "mo@soldenai.com",
                 "confidence": 0.91,
                 "metadata": {
                     "primary_source": {
@@ -2288,7 +2288,7 @@ class TestExtensionEndpoints:
 
             async def get(self, url, headers=None):
                 if "gmail.googleapis.com/gmail/v1/users/me/profile" in url:
-                    return _Resp(200, {"emailAddress": "mo@clearledgr.com"})
+                    return _Resp(200, {"emailAddress": "mo@soldenai.com"})
                 return _Resp(404, {})
 
         def _store(token):
@@ -2314,7 +2314,7 @@ class TestExtensionEndpoints:
             "get_user_by_email",
             lambda _email: SimpleNamespace(
                 id="user-123",
-                email="mo@clearledgr.com",
+                email="mo@soldenai.com",
                 organization_id="org-test",
                 role="user",
             ),
@@ -2325,17 +2325,17 @@ class TestExtensionEndpoints:
             json={
                 "access_token": "test-access-token",
                 "expires_in": 3600,
-                "email": "mo@clearledgr.com",
+                "email": "mo@soldenai.com",
             },
         )
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert data["email"] == "mo@clearledgr.com"
+        assert data["email"] == "mo@soldenai.com"
         assert data["backend_expires_in"] == gmail_extension_module.EXTENSION_BACKEND_TOKEN_TTL_SECONDS
-        assert stored["token"].email == "mo@clearledgr.com"
+        assert stored["token"].email == "mo@soldenai.com"
         assert stored["token"].access_token == "test-access-token"
-        assert state_calls and state_calls[0]["email"] == "mo@clearledgr.com"
+        assert state_calls and state_calls[0]["email"] == "mo@soldenai.com"
 
     def test_extension_register_gmail_token_rejects_invalid_token(self, monkeypatch):
         class _Resp:
@@ -2369,7 +2369,7 @@ class TestExtensionEndpoints:
             "get_user_by_email",
             lambda _email: SimpleNamespace(
                 id="user-123",
-                email="mo@clearledgr.com",
+                email="mo@soldenai.com",
                 organization_id="org-test",
                 role="user",
             ),
@@ -2380,7 +2380,7 @@ class TestExtensionEndpoints:
             json={
                 "access_token": "bad-token",
                 "expires_in": 3600,
-                "email": "mo@clearledgr.com",
+                "email": "mo@soldenai.com",
             },
         )
         assert response.status_code == 400
@@ -2407,7 +2407,7 @@ class TestExtensionEndpoints:
 
             async def get(self, url, headers=None):
                 if "gmail.googleapis.com/gmail/v1/users/me/profile" in url:
-                    return _Resp(200, {"emailAddress": "mo@clearledgr.com"})
+                    return _Resp(200, {"emailAddress": "mo@soldenai.com"})
                 return _Resp(404, {})
 
         monkeypatch.setattr(gmail_extension_module, "get_http_client", _FakeAsyncClient)
@@ -2416,7 +2416,7 @@ class TestExtensionEndpoints:
             "get_user_by_email",
             lambda _email: SimpleNamespace(
                 id="user-123",
-                email="mo@clearledgr.com",
+                email="mo@soldenai.com",
                 organization_id="org-test",
                 role="user",
             ),
@@ -2427,7 +2427,7 @@ class TestExtensionEndpoints:
             json={
                 "access_token": "test-access-token",
                 "expires_in": 3600,
-                "email": "mo@clearledgr.com",
+                "email": "mo@soldenai.com",
                 "organization_id": "other-org",
             },
         )
@@ -2455,7 +2455,7 @@ class TestExtensionEndpoints:
 
             async def get(self, url, headers=None):
                 if "gmail.googleapis.com/gmail/v1/users/me/profile" in url:
-                    return _Resp(200, {"emailAddress": "new-user@clearledgr.com"})
+                    return _Resp(200, {"emailAddress": "new-user@soldenai.com"})
                 return _Resp(404, {})
 
         monkeypatch.setattr(gmail_extension_module, "get_http_client", _FakeAsyncClient)
@@ -2466,7 +2466,7 @@ class TestExtensionEndpoints:
             json={
                 "access_token": "test-access-token",
                 "expires_in": 3600,
-                "email": "new-user@clearledgr.com",
+                "email": "new-user@soldenai.com",
             },
         )
         # Post unprovisioned-email guard: unknown users on unmapped

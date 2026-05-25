@@ -10,7 +10,7 @@
  *   Inbox labels — render before user finishes reading the subject line (~500ms)
  *
  * These are the budgets that govern whether a surface ships. Backend SLAs
- * are tracked separately in clearledgr/core/sla_tracker.py. This file owns
+ * are tracked separately in solden/core/sla_tracker.py. This file owns
  * the frontend half — the budgets were drift before: the thesis called
  * them "pass/fail criteria" but nothing measured them in the bundle.
  *

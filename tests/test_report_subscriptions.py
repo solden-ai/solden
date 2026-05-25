@@ -314,7 +314,7 @@ class TestDeliveryService:
             "cadence": "daily",
         })
         monkeypatch.setenv("CLEARLEDGR_SMTP_HOST", "smtp.test")
-        monkeypatch.setenv("CLEARLEDGR_SMTP_FROM", "reports@clearledgr.com")
+        monkeypatch.setenv("CLEARLEDGR_SMTP_FROM", "reports@soldenai.com")
         monkeypatch.setattr(
             report_delivery, "send_transactional_email",
             lambda **kw: transactional_email.EmailDeliveryResult(
@@ -340,7 +340,7 @@ class TestDeliveryService:
         })
         original_next_due = sub["next_due_at"]
         monkeypatch.setenv("CLEARLEDGR_SMTP_HOST", "smtp.test")
-        monkeypatch.setenv("CLEARLEDGR_SMTP_FROM", "reports@clearledgr.com")
+        monkeypatch.setenv("CLEARLEDGR_SMTP_FROM", "reports@soldenai.com")
         monkeypatch.setattr(
             report_delivery, "send_transactional_email",
             lambda **kw: transactional_email.EmailDeliveryResult(ok=True),

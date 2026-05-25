@@ -59,7 +59,7 @@ def db(tmp_path, monkeypatch):
                 state="needs_approval",
                 metadata={
                     "approval_requested_at": "2026-03-18T08:00:00+00:00",
-                    "approval_sent_to": ["approver@clearledgr.com"],
+                    "approval_sent_to": ["approver@soldenai.com"],
                     "approval_escalation_count": 1,
                     "entity_candidates": [
                         {"entity_code": "US-01", "entity_name": "Acme US"},

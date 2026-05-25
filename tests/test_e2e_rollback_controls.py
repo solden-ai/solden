@@ -1,13 +1,13 @@
 """Rollback control enforcement tests.
 
-Proves that ``clearledgr/core/launch_controls.py`` correctly gates ERP posting
+Proves that ``solden/core/launch_controls.py`` correctly gates ERP posting
 and channel actions — the production code paths that check these controls before
 executing side-effects.
 
 Wiring verified in production code:
-  - clearledgr/services/erp_api_first.py       — get_erp_posting_block_reason()
-  - clearledgr/api/slack_invoices.py            — get_channel_action_block_reason("slack")
-  - clearledgr/api/teams_invoices.py            — get_channel_action_block_reason("teams")
+  - solden/services/erp_api_first.py       — get_erp_posting_block_reason()
+  - solden/api/slack_invoices.py            — get_channel_action_block_reason("slack")
+  - solden/api/teams_invoices.py            — get_channel_action_block_reason("teams")
 
 No HTTP, no external calls — all tests use a temp-file SQLite DB.
 """

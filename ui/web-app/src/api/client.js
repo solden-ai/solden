@@ -5,7 +5,7 @@
  *
  * The backend already issues HttpOnly + CSRF cookie pairs from the
  * `/auth/google/exchange` and `/auth/google/callback` flows
- * (see clearledgr/api/auth.py:60-90). We forward the CSRF token as
+ * (see solden/api/auth.py:60-90). We forward the CSRF token as
  * a header on state-changing requests.
  */
 

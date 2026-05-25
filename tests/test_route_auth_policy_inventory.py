@@ -32,12 +32,12 @@ EXPECTED_UNAUTHENTICATED_SENSITIVE_ROUTES = {
     ("GET", "/extension/health"),
     ("GET", "/api/workspace/integrations/slack/install/callback"),
     # SAP Fiori extension — XSUAA JWT exchange + per-tenant lookup.
-    # See clearledgr/api/sap_extension.py — auth is XSUAA JWKS verify
+    # See solden/api/sap_extension.py — auth is XSUAA JWKS verify
     # against the JWT's ``iss`` claim, resolved per-tenant.
     ("POST", "/extension/sap/exchange"),
     ("GET", "/extension/ap-items/by-sap-invoice"),
     # NetSuite SuiteApp panel — Suitelet-minted HMAC JWT verified by
-    # the handler (_verify_panel_jwt). See clearledgr/api/netsuite_panel.py.
+    # the handler (_verify_panel_jwt). See solden/api/netsuite_panel.py.
     # The GET lookup and the three POST action routes all authenticate via
     # the same in-handler HMAC check, not get_current_user.
     ("GET", "/extension/ap-items/by-netsuite-bill/{ns_internal_id}"),

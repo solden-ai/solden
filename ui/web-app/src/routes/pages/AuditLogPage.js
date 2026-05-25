@@ -9,7 +9,7 @@
  *   GET /api/workspace/webhooks/{id}/deliveries (per-webhook attempt log)
  *
  * Append-only at the database level (Postgres triggers in
- * clearledgr/core/database.py:374). The dashboard is a pure read
+ * solden/core/database.py:374). The dashboard is a pure read
  * surface — no mutations of audit events themselves.
  *
  * Pass 1 ships search + filter + pagination + detail panel.

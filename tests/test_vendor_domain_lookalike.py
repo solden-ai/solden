@@ -1,4 +1,4 @@
-"""Tests for clearledgr/services/vendor_domain_lookalike.py.
+"""Tests for solden/services/vendor_domain_lookalike.py.
 
 Coverage against DESIGN_THESIS §8 attack vectors:
   - Homoglyph (digit-for-letter): str1pe.com vs stripe.com

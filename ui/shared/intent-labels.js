@@ -1,8 +1,8 @@
 /**
  * Canonical intent vocabulary — shared between workspace SPA and the
  * Gmail extension. The backend's intent contract lives at
- * clearledgr/api/ap_item_detail.py (available_intents / primary_intent)
- * and clearledgr/services/finance_skills/ap_skill.py (the executor).
+ * solden/api/ap_item_detail.py (available_intents / primary_intent)
+ * and solden/services/finance_skills/ap_skill.py (the executor).
  * This map only carries the operator-facing label per intent so both
  * surfaces render the same button text.
  *

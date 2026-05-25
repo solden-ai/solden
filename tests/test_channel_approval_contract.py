@@ -1175,7 +1175,7 @@ def test_slack_interactive_forwards_resolved_actor_identity(monkeypatch, client,
         assert slack_user_id == "U_MO"
         assert organization_id == "org-test"
         return {
-            "email": "mo@clearledgr.com",
+            "email": "mo@soldenai.com",
             "display_name": "Mo Mbalam",
             "slack_user_id": "U_MO",
         }
@@ -1206,17 +1206,17 @@ def test_slack_interactive_forwards_resolved_actor_identity(monkeypatch, client,
     dispatched = runtime.calls[0][1]["payload"]
     assert dispatched["actor_id"] == "U_MO"
     assert dispatched["actor_display"] == "Mo Mbalam"
-    assert dispatched["actor_email"] == "mo@clearledgr.com"
+    assert dispatched["actor_email"] == "mo@soldenai.com"
     assert dispatched["actor_identity"]["platform"] == "slack"
     assert dispatched["actor_identity"]["platform_user_id"] == "U_MO"
     assert dispatched["actor_identity"]["display_name"] == "Mo Mbalam"
-    assert dispatched["actor_identity"]["email"] == "mo@clearledgr.com"
+    assert dispatched["actor_identity"]["email"] == "mo@soldenai.com"
 
     events = db.list_ap_audit_events(item["id"])
     received = next(event for event in events if event.get("event_type") == "channel_action_received")
     payload_json = received.get("payload_json") or {}
     action = payload_json.get("action") or {}
-    assert action["actor_email"] == "mo@clearledgr.com"
+    assert action["actor_email"] == "mo@soldenai.com"
     assert action["actor_display"] == "Mo Mbalam"
 
 
@@ -1478,7 +1478,7 @@ def test_teams_interactive_common_contract_request_info_duplicate_invalid_and_st
         "action": "request_info",
         "email_id": "thread-teams-1",
         "organization_id": "org-test",
-        "actor": "approver@clearledgr.com",
+        "actor": "approver@soldenai.com",
         "conversation_id": "19:finance",
         "message_id": "msg-001",
         "request_ts": str(int(time.time())),
@@ -1544,7 +1544,7 @@ def test_teams_interactive_marks_superseded_approval_cards_as_stale(monkeypatch,
         "action": "approve",
         "email_id": "thread-teams-superseded",
         "organization_id": "org-test",
-        "actor": "approver@clearledgr.com",
+        "actor": "approver@soldenai.com",
         "conversation_id": "19:finance",
         "message_id": "msg-superseded",
         "request_ts": str(int(time.time())),
@@ -1644,7 +1644,7 @@ def test_teams_interactive_blocks_actions_when_rollout_control_disables_teams(mo
             "action": "approve_invoice",
             "email_id": "thread-teams-blocked",
             "organization_id": "org-test",
-            "actor": "approver@clearledgr.com",
+            "actor": "approver@soldenai.com",
             "conversation_id": "19:finance",
             "message_id": "msg-blocked",
             "request_ts": str(int(time.time())),

@@ -45,7 +45,7 @@ def test_record_correction_persists_normalized_event_stats_and_reviewed_case(
                 "email_type": "invoice",
             },
         },
-        user_id="mo@clearledgr.com",
+        user_id="mo@soldenai.com",
         invoice_id="thread-123",
         feedback="Attachment has the correct invoice number.",
     )
@@ -103,7 +103,7 @@ def test_record_correction_auto_exports_reviewed_cases(
                 "email_type": "invoice",
             },
         },
-        user_id="mo@clearledgr.com",
+        user_id="mo@soldenai.com",
         invoice_id="thread-456",
     )
 
@@ -145,7 +145,7 @@ def test_review_history_tightening_returns_threshold_overrides(
                     "email_type": "invoice",
                 },
             },
-            user_id="mo@clearledgr.com",
+            user_id="mo@soldenai.com",
             invoice_id=f"thread-tighten-{idx}",
         )
 
@@ -176,7 +176,7 @@ def test_record_review_outcome_builds_confirmation_snapshot(
             "confidence_profile_id": "known_billing_attachment_invoice",
             "attachment_names": ["5449235811.pdf"],
         },
-        user_id="mo@clearledgr.com",
+        user_id="mo@soldenai.com",
         selected_source="attachment",
         outcome_tags=["confirmed_correct", "resolved_with_attachment"],
     )

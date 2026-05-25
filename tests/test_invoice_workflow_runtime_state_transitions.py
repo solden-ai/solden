@@ -526,12 +526,12 @@ def test_approve_invoice_persists_actor_identity_and_label(service, db, monkeypa
             gmail_id="gmail-approve-actor-identity",
             approved_by="U0AD3P193V4",
             actor_display="Mo Mbalam",
-            actor_email="mo@clearledgr.com",
+            actor_email="mo@soldenai.com",
             actor_platform_id="U0AD3P193V4",
             actor_identity={
                 "platform": "slack",
                 "platform_user_id": "U0AD3P193V4",
-                "email": "mo@clearledgr.com",
+                "email": "mo@soldenai.com",
                 "display_name": "Mo Mbalam",
             },
             source_channel="slack",
@@ -542,18 +542,18 @@ def test_approve_invoice_persists_actor_identity_and_label(service, db, monkeypa
     )
 
     assert result["status"] == "approved"
-    assert result["approved_by"] == "mo@clearledgr.com"
-    assert result["approved_by_label"] == "Mo Mbalam (mo@clearledgr.com)"
+    assert result["approved_by"] == "mo@soldenai.com"
+    assert result["approved_by_label"] == "Mo Mbalam (mo@soldenai.com)"
     assert result["approver_identity"]["platform_user_id"] == "U0AD3P193V4"
 
     approval = db.get_approval_by_decision_key(item["id"], "decision-actor-1")
     assert approval is not None
-    assert approval["approved_by"] == "mo@clearledgr.com"
+    assert approval["approved_by"] == "mo@soldenai.com"
     payload = approval["decision_payload"]
     if isinstance(payload, str):
         payload = json.loads(payload)
-    assert payload["actor_label"] == "Mo Mbalam (mo@clearledgr.com)"
-    assert payload["actor_email"] == "mo@clearledgr.com"
+    assert payload["actor_label"] == "Mo Mbalam (mo@soldenai.com)"
+    assert payload["actor_email"] == "mo@soldenai.com"
     assert payload["actor_platform_id"] == "U0AD3P193V4"
     assert payload["actor_identity"]["display_name"] == "Mo Mbalam"
     assert payload["actor_identity"]["platform"] == "slack"

@@ -235,7 +235,7 @@ def _run_worklist_test(monkeypatch, client, db):
             "action": "approve_budget_override",
             "email_id": item["thread_id"],
             "organization_id": "org-test",
-            "actor": "approver@clearledgr.com",
+            "actor": "approver@soldenai.com",
             "conversation_id": "19:finance",
             "message_id": "msg-001",
             "justification": "Critical month-end payment",

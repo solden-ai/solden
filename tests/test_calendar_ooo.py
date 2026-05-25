@@ -1,4 +1,4 @@
-"""Tests for clearledgr/services/calendar_ooo.py — DESIGN_THESIS §6.8.
+"""Tests for solden/services/calendar_ooo.py — DESIGN_THESIS §6.8.
 
 Behaviours covered:
   - Cache hit avoids a second API call (5-min TTL).

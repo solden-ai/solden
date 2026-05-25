@@ -41,15 +41,15 @@ SOURCE_ROOT = REPO_ROOT / "clearledgr"
 ALLOWED_FILES = frozenset(
     {
         # update_ap_item itself + metadata-merge helper (metadata only)
-        "clearledgr/core/stores/ap_store.py",
+        "solden/core/stores/ap_store.py",
         # one-time DDL / data-shape backfills that run pre-state
-        "clearledgr/core/migrations.py",
+        "solden/core/migrations.py",
         # SOX archive hash backfill — does not touch state
-        "clearledgr/services/invoice_archive.py",
+        "solden/services/invoice_archive.py",
         # vendor master de-dup — only mutates vendor_name
-        "clearledgr/services/vendor_dedup.py",
+        "solden/services/vendor_dedup.py",
         # synthetic sample-data seeder (dev/demo, not prod)
-        "clearledgr/services/sample_data.py",
+        "solden/services/sample_data.py",
     }
 )
 

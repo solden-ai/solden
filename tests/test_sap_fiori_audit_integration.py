@@ -90,7 +90,7 @@ def _seed_ap_item_at_needs_approval(
     reads from.
 
     The composite key is ``{CompanyCode}/{SupplierInvoice}/{FiscalYear}``
-    per ``clearledgr/services/sap_webhook_dispatch.py``'s intake.
+    per ``solden/services/sap_webhook_dispatch.py``'s intake.
     """
     composite_key = f"{_TEST_COMPANY_CODE}/{supplier_invoice}/{_TEST_FISCAL_YEAR}"
     metadata = {

@@ -2,7 +2,7 @@
  *
  * When an organization crosses its monthly LLM cost hard cap, the
  * backend's LLM gateway refuses further calls (see
- * `clearledgr/core/llm_gateway.py::_enforce_budget_cap`). Without an
+ * `solden/core/llm_gateway.py::_enforce_budget_cap`). Without an
  * in-product banner the AP clerk / controller would just see the
  * agent stop working with no explanation. This component is the
  * explanation + (if the caller's role is CFO or OWNER) the path to

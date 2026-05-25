@@ -78,7 +78,7 @@ async def test_exchange_code_surfaces_google_error_description(monkeypatch, capl
         body={"error": "invalid_grant", "error_description": "Bad Request"},
     )
     client = _FakeHttpClient(fake_response)
-    # ``clearledgr/services/logging.py`` sets ``propagate=False`` on the
+    # ``solden/services/logging.py`` sets ``propagate=False`` on the
     # ``clearledgr`` logger when imported, which means warnings from
     # child loggers (``solden.services.gmail_api``) never reach the
     # root logger. pytest's ``caplog`` captures via root, so the assertion

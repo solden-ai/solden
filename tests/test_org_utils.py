@@ -1,4 +1,4 @@
-"""Unit tests for ``clearledgr/core/org_utils.py`` — the canonical
+"""Unit tests for ``solden/core/org_utils.py`` — the canonical
 replacement for M4 ``or "org-test"`` coercion.
 """
 from __future__ import annotations

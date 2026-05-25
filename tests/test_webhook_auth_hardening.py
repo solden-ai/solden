@@ -139,7 +139,7 @@ _M19_OR_DEFAULT_ALLOWLIST: frozenset[str] = frozenset({
     # "default")`` (or syntactic equivalent) coercion fails that test
     # at CI time. The canonical replacement is
     # ``assert_org_id(value, context=...)`` from
-    # ``clearledgr/core/org_utils.py`` — raises ``OrgIdMissing`` on
+    # ``solden/core/org_utils.py`` — raises ``OrgIdMissing`` on
     # empty / None / 'default' / '_unprovisioned' instead of binding
     # rows to a legacy / sentinel bucket.
     #

@@ -68,7 +68,7 @@ def test_request_approval_black_box_route_drives_runtime_workflow_and_audit(tmp_
             item["id"],
             {
                 "approval_requested_at": "2026-03-27T00:00:00+00:00",
-                "approval_sent_to": ["approver@clearledgr.com"],
+                "approval_sent_to": ["approver@soldenai.com"],
                 "approval_channel": "cl-finance-ap",
                 "extra_context": extra_context or {},
             },
@@ -109,7 +109,7 @@ def test_request_approval_black_box_route_drives_runtime_workflow_and_audit(tmp_
     metadata_raw = stored.get("metadata")
     metadata = metadata_raw if isinstance(metadata_raw, dict) else json.loads(metadata_raw or "{}")
     assert metadata["approval_requested_at"] == "2026-03-27T00:00:00+00:00"
-    assert metadata["approval_sent_to"] == ["approver@clearledgr.com"]
+    assert metadata["approval_sent_to"] == ["approver@soldenai.com"]
 
     audit_rows = db.list_ap_audit_events(item["id"])
     event_types = [row.get("event_type") for row in audit_rows]

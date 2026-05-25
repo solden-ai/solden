@@ -1179,7 +1179,7 @@ def test_build_worklist_item_surfaces_entity_routing_and_approval_followup(db):
             state="needs_approval",
             metadata={
                 "approval_requested_at": "2026-03-18T08:00:00+00:00",
-                "approval_sent_to": ["approver@clearledgr.com"],
+                "approval_sent_to": ["approver@soldenai.com"],
                 "approval_escalation_count": 1,
                 "entity_candidates": [
                     {"entity_code": "US-01", "entity_name": "Acme US"},
@@ -1196,7 +1196,7 @@ def test_build_worklist_item_surfaces_entity_routing_and_approval_followup(db):
     assert normalized["approval_followup"]["escalation_due"] is True
     assert normalized["approval_followup"]["sla_minutes"] == 240
     assert normalized["approval_followup"]["escalation_minutes"] == 1440
-    assert normalized["approval_pending_assignees"] == ["approver@clearledgr.com"]
+    assert normalized["approval_pending_assignees"] == ["approver@soldenai.com"]
     assert normalized["next_action"] == "resolve_entity_route"
     assert "entity" in {blocker["kind"] for blocker in normalized["pipeline_blockers"]}
 
