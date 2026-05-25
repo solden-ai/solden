@@ -268,120 +268,120 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/models/transactions.py` — MECHANICAL: Money/transaction DTOs; amount ge=0
 
 ## solden/services  (203)
-- `solden/services/__init__.py` — PENDING
-- `solden/services/accrual_journal_entry.py` — PENDING
-- `solden/services/accrual_journal_entry_post.py` — PENDING
-- `solden/services/adaptive_thresholds.py` — PENDING
-- `solden/services/africa_einvoice.py` — PENDING
-- `solden/services/africa_einvoice_submission.py` — PENDING
-- `solden/services/agent_anomaly_detection.py` — PENDING
-- `solden/services/agent_background.py` — PENDING
-- `solden/services/agent_command_dispatch.py` — PENDING
-- `solden/services/agent_credit_pool.py` — PENDING
-- `solden/services/agent_memory.py` — PENDING
-- `solden/services/agent_monitoring.py` — PENDING
-- `solden/services/agent_reasoning.py` — PENDING
-- `solden/services/agent_reflection.py` — PENDING
-- `solden/services/agent_retry_jobs.py` — PENDING
-- `solden/services/ap_agent_sync.py` — PENDING
-- `solden/services/ap_aging_report.py` — PENDING
-- `solden/services/ap_classifier.py` — PENDING
-- `solden/services/ap_context_connectors.py` — PENDING
-- `solden/services/ap_decision.py` — PENDING
-- `solden/services/ap_field_review.py` — PENDING
-- `solden/services/ap_item_service.py` — PENDING
-- `solden/services/ap_operator_audit.py` — PENDING
-- `solden/services/ap_projection.py` — PENDING
-- `solden/services/ap_vendor_analysis.py` — PENDING
-- `solden/services/app_startup.py` — PENDING
-- `solden/services/approval_card_builder.py` — PENDING
-- `solden/services/approval_delegation.py` — PENDING
-- `solden/services/approval_revert.py` — PENDING
-- `solden/services/approver_workload.py` — PENDING
-- `solden/services/ask_the_agent.py` — PENDING
-- `solden/services/audit.py` — PENDING
-- `solden/services/audit_chain_verify.py` — PENDING
-- `solden/services/audit_entity_scope.py` — PENDING
-- `solden/services/audit_trail.py` — PENDING
-- `solden/services/bank_reconciliation_matcher.py` — PENDING
-- `solden/services/bank_statement_parsers.py` — PENDING
-- `solden/services/box_cas.py` — PENDING
-- `solden/services/box_extraction.py` — PENDING
-- `solden/services/box_owner.py` — PENDING
-- `solden/services/box_projection.py` — PENDING
-- `solden/services/box_seed.py` — PENDING
-- `solden/services/budget_awareness.py` — PENDING
-- `solden/services/calendar_ooo.py` — PENDING
-- `solden/services/celery_app.py` — PENDING
-- `solden/services/celery_tasks.py` — PENDING
-- `solden/services/circuit_breaker.py` — PENDING
-- `solden/services/compounding_learning.py` — PENDING
-- `solden/services/confidence_calibration.py` — PENDING
-- `solden/services/connection_health.py` — PENDING
-- `solden/services/conversational_agent.py` — PENDING
-- `solden/services/correction_learning.py` — PENDING
-- `solden/services/cross_invoice_analysis.py` — PENDING
-- `solden/services/cycle_time_metrics.py` — PENDING
-- `solden/services/data_subject_request.py` — PENDING
-- `solden/services/discount_optimizer.py` — PENDING
-- `solden/services/dispute_reopen.py` — PENDING
-- `solden/services/dispute_service.py` — PENDING
-- `solden/services/document_routing.py` — PENDING
-- `solden/services/dual_approval.py` — PENDING
-- `solden/services/email_parser.py` — PENDING
-- `solden/services/email_sharing.py` — PENDING
-- `solden/services/email_tasks.py` — PENDING
-- `solden/services/erp_api_first.py` — PENDING
-- `solden/services/erp_connector_strategy.py` — PENDING
-- `solden/services/erp_follow_on_reconciliation.py` — PENDING
-- `solden/services/erp_follow_on_result.py` — PENDING
-- `solden/services/erp_intake_po_sync.py` — PENDING
-- `solden/services/erp_native_approval.py` — PENDING
-- `solden/services/erp_payment_dispatcher.py` — PENDING
-- `solden/services/erp_readiness.py` — PENDING
-- `solden/services/erp_test_probe.py` — PENDING
-- `solden/services/error_messages.py` — PENDING
-- `solden/services/errors.py` — PENDING
-- `solden/services/escalation_runner.py` — PENDING
-- `solden/services/exception_graph.py` — PENDING
-- `solden/services/exception_resolver.py` — PENDING
-- `solden/services/exception_routing.py` — PENDING
-- `solden/services/extraction_provenance.py` — PENDING
-- `solden/services/finance_agent_governance.py` — PENDING
-- `solden/services/finance_agent_loop.py` — PENDING
-- `solden/services/finance_agent_runtime.py` — PENDING
-- `solden/services/finance_learning.py` — PENDING
-- `solden/services/finance_runtime_actions.py` — PENDING
-- `solden/services/finance_runtime_autonomy.py` — PENDING
-- `solden/services/finance_runtime_invoice_processing.py` — PENDING
-- `solden/services/finance_runtime_readiness.py` — PENDING
-- `solden/services/fuzzy_matching.py` — PENDING
-- `solden/services/fx_conversion.py` — PENDING
-- `solden/services/fx_erp_sync.py` — PENDING
-- `solden/services/gdpr_retention.py` — PENDING
-- `solden/services/gl_correction.py` — PENDING
-- `solden/services/gmail_api.py` — PENDING
-- `solden/services/gmail_autopilot.py` — PENDING
-- `solden/services/gmail_extension_support.py` — PENDING
-- `solden/services/gmail_labels.py` — PENDING
-- `solden/services/gmail_mailbox_defaults.py` — PENDING
-- `solden/services/gmail_triage_service.py` — PENDING
-- `solden/services/iban_change_freeze.py` — PENDING
-- `solden/services/implementation_service.py` — PENDING
-- `solden/services/intake_adapter.py` — PENDING
-- `solden/services/invoice_archive.py` — PENDING
-- `solden/services/invoice_models.py` — PENDING
-- `solden/services/invoice_posting.py` — PENDING
-- `solden/services/invoice_validation.py` — PENDING
-- `solden/services/invoice_workflow.py` — PENDING
-- `solden/services/journal_entry_preview.py` — PENDING
-- `solden/services/learning.py` — PENDING
-- `solden/services/learning_calibration.py` — PENDING
-- `solden/services/llm_email_parser.py` — PENDING
-- `solden/services/llm_multimodal.py` — PENDING
-- `solden/services/logging.py` — PENDING
-- `solden/services/match_engine.py` — PENDING
-- `solden/services/metrics.py` — PENDING
+- `solden/services/__init__.py` — MECHANICAL: lazy __getattr__ re-export shim
+- `solden/services/accrual_journal_entry.py` — ALIGNED: deterministic accrual JE proposals, org-scoped, operator-reviewed
+- `solden/services/accrual_journal_entry_post.py` — ALIGNED: posts JE to ERP (ERP writes), idempotent, audited, org-scoped
+- `solden/services/adaptive_thresholds.py` — ALIGNED: deterministic threshold learning from overrides, DB-backed, org-scoped
+- `solden/services/africa_einvoice.py` — ALIGNED: deterministic FIRS/eTIMS/SARS payload generators, no LLM
+- `solden/services/africa_einvoice_submission.py` — ALIGNED: submit-to-ASP orchestrator, DB-ledgered, audited, org-scoped, idempotent
+- `solden/services/agent_anomaly_detection.py` — ALIGNED: z-score rules decide; LLM only refines operator explanation
+- `solden/services/agent_background.py` — ALIGNED: per-org background tick (confirmed)
+- `solden/services/agent_command_dispatch.py` — ALIGNED: runtime construction + org-isolation guard, no silent default
+- `solden/services/agent_credit_pool.py` — ALIGNED: DB-ledger credit pool, SQL balance invariant, org-scoped, no money movement
+- `solden/services/agent_memory.py` — ALIGNED: Postgres-backed agent memory, org+skill scoped
+- `solden/services/agent_monitoring.py` — MECHANICAL: pure date/hash/threshold utilities
+- `solden/services/agent_reasoning.py` — DRIFT:LLM-derived confidence drives _make_decision auto_approve label; gmail_extension bumps/clamps the auto-approve gate (LLM influences routing)
+- `solden/services/agent_reflection.py` — ALIGNED: deterministic field self-check; LLM refines extraction only, not routing
+- `solden/services/agent_retry_jobs.py` — ALIGNED: durable retry drain, org-asserted, dead-letters + audited
+- `solden/services/ap_agent_sync.py` — ALIGNED: syncs events to memory+learning, org-scoped, best-effort
+- `solden/services/ap_aging_report.py` — ALIGNED: read-only aging, org-filtered, Decimal math, never raises
+- `solden/services/ap_classifier.py` — ALIGNED: LLM classifies unstructured email (allowed) with deterministic fallback
+- `solden/services/ap_context_connectors.py` — ALIGNED: best-effort context aggregation, org-asserted, fail-open read-only
+- `solden/services/ap_decision.py` — ALIGNED: deterministic policy cascade; rules decide, no LLM (confirmed)
+- `solden/services/ap_field_review.py` — ALIGNED: deterministic field-review builders + mutable-field whitelist, no LLM
+- `solden/services/ap_item_service.py` — ALIGNED: org-scoped AP helpers (verify_org_access, allowed-columns filter)
+- `solden/services/ap_operator_audit.py` — MECHANICAL: operator-facing label/copy normalization over audit rows
+- `solden/services/ap_projection.py` — MECHANICAL: bulk read-model projection helper
+- `solden/services/ap_vendor_analysis.py` — ALIGNED: deterministic vendor summary/risk builders, org-asserted, read-only
+- `solden/services/app_startup.py` — ALIGNED: deferred startup launcher, feature-flag gated (confirmed)
+- `solden/services/approval_card_builder.py` — ALIGNED: stateless Slack/Teams block presentation, no DB/network/LLM
+- `solden/services/approval_delegation.py` — ALIGNED: org-scoped OOO delegation + auto-reassign, SQL org-filtered
+- `solden/services/approval_revert.py` — ALIGNED: bounded reversible revert, state-validated, audited, org-checked
+- `solden/services/approver_workload.py` — ALIGNED: read-only per-approver workload aggregation, org-filtered
+- `solden/services/ask_the_agent.py` — ALIGNED: bounded read-only Q&A; LLM writes operator prose only, org-scoped
+- `solden/services/audit.py` — MECHANICAL: thin wrapper to audit_trail.record_audit_event
+- `solden/services/audit_chain_verify.py` — ALIGNED: org-scoped SHA-256 hash-chain verification, read-only
+- `solden/services/audit_entity_scope.py` — ALIGNED: query-time per-entity audit scoping, fail-closed for anonymous
+- `solden/services/audit_trail.py` — ALIGNED: append-only audit/timeline with DID-WHY-NEXT, org-scoped
+- `solden/services/bank_reconciliation_matcher.py` — ALIGNED: deterministic amount/date/currency matcher, org-scoped, ambiguous->manual
+- `solden/services/bank_statement_parsers.py` — MECHANICAL: pure CAMT.053/OFX parsers, stdlib only
+- `solden/services/box_cas.py` — ALIGNED: compare-and-swap with column whitelist + tenancy fail-close + audit
+- `solden/services/box_extraction.py` — ALIGNED: LLM reads unstructured text into spec fields only; org-scoped, makes no decision
+- `solden/services/box_owner.py` — ALIGNED: deterministic owner/delegation resolver, atomic persist, audited, org-scoped
+- `solden/services/box_projection.py` — ALIGNED: durable outbox-driven read projections, org-scoped, idempotent
+- `solden/services/box_seed.py` — ALIGNED: box-type-agnostic seed registry; mechanical, no LLM/money
+- `solden/services/budget_awareness.py` — DRIFT:in-memory _spending accumulator lost on restart/2nd worker
+- `solden/services/calendar_ooo.py` — DRIFT:in-process TTL cache for OOO availability; workers disagree
+- `solden/services/celery_app.py` — ALIGNED: task_acks_late + prefetch=1 + visibility timeout give durability; pure config
+- `solden/services/celery_tasks.py` — ALIGNED: durable event drain/retry; deterministic plan->coordinate; cross-tenant guard; payments recorded not initiated
+- `solden/services/circuit_breaker.py` — ALIGNED: deterministic override-rate safety net, audited, org-scoped; moves no money
+- `solden/services/compounding_learning.py` — ALIGNED: Postgres-backed per-org cache; learning hints only, never moves money
+- `solden/services/confidence_calibration.py` — ALIGNED: tighten-only calibration persisted to vendor profile; describes, no routing
+- `solden/services/connection_health.py` — ALIGNED: thin org-scoped derivation over store aggregates; pure read
+- `solden/services/conversational_agent.py` — DRIFT:_conversations in-memory dict holds question state; lost on restart/2nd worker
+- `solden/services/correction_learning.py` — DRIFT:get_recent_corrections reads self._rules which doesn't exist (only _learned_rules) -> AttributeError path
+- `solden/services/cross_invoice_analysis.py` — ALIGNED: deterministic dup/anomaly; model relaxes only weak matches (downgrade-only floor)
+- `solden/services/cycle_time_metrics.py` — ALIGNED: org-scoped audit_events reads for cycle-time/touchless KPIs; no decisions
+- `solden/services/data_subject_request.py` — ALIGNED: GDPR access/erasure/portability, org-scoped; anonymizes not deletes SOX records
+- `solden/services/discount_optimizer.py` — ALIGNED: deterministic discount-terms math; recommends, decides nothing
+- `solden/services/dispute_reopen.py` — ALIGNED: reopen spawns correction AP item, original immutable, idempotent, dual audit
+- `solden/services/dispute_service.py` — ALIGNED: org-scoped dispute lifecycle, cross-tenant read guard, no vendor email
+- `solden/services/document_routing.py` — ALIGNED: deterministic doc-type->workflow routing table with alias normalize
+- `solden/services/dual_approval.py` — ALIGNED: deterministic two-person rule, self/requester blocked + audited, org threshold
+- `solden/services/email_parser.py` — ALIGNED: deterministic regex/OCR/fuzzy extraction + provenance + conflict flags; no LLM
+- `solden/services/email_sharing.py` — ALIGNED: posts timeline + AP Slack notice for individual-inbox emails; no vendor-facing text
+- `solden/services/email_tasks.py` — DRIFT:module-level db=get_db() at import binds one instance (breaks test singleton reset / per-worker rebind)
+- `solden/services/erp_api_first.py` — ALIGNED: API-first posting, pre-post validation, audited, no browser fallback; ERP writes
+- `solden/services/erp_connector_strategy.py` — MECHANICAL: declarative per-ERP capability table + route planner; fails safe
+- `solden/services/erp_follow_on_reconciliation.py` — ALIGNED: org-scoped split-brain status repair, audited; mechanical metadata sync
+- `solden/services/erp_follow_on_result.py` — ALIGNED: deterministic finance-effect summary + blockers, column-whitelisted, dual audit
+- `solden/services/erp_intake_po_sync.py` — ALIGNED: idempotent PO/GR upsert from structured ERP intake, org-scoped, no LLM
+- `solden/services/erp_native_approval.py` — ALIGNED: Slack approve releases ERP-side hold + walks state machine, audited, org-guarded
+- `solden/services/erp_payment_dispatcher.py` — ALIGNED: parses ERP payment webhooks/polls, records confirmations idempotently; never initiates payment
+- `solden/services/erp_readiness.py` — ALIGNED: org-scoped readiness evaluator over capability+checklist+rollback; pure read
+- `solden/services/erp_test_probe.py` — ALIGNED: per-ERP read-only ping probe, org-scoped creds; no writes
+- `solden/services/error_messages.py` — MECHANICAL: DID-WHY-NEXT error templating (some templates reference dormant VO)
+- `solden/services/errors.py` — MECHANICAL: structured exception types + HTTP mapping; leaky decorator removed
+- `solden/services/escalation_runner.py` — ALIGNED: deterministic threshold sweep emailing operators, idempotent UNIQUE event, SMTP-skip safe
+- `solden/services/exception_graph.py` — ALIGNED: pure org-scoped node/edge builder over exceptions; deterministic clustering
+- `solden/services/exception_resolver.py` — ALIGNED: vendor-not-in-ERP surfaces (no auto-create); AI suggests prose; idempotent re-post
+- `solden/services/exception_routing.py` — ALIGNED: maps exception code->priority/handler/channel + creates task; no money/vendor text
+- `solden/services/extraction_provenance.py` — MECHANICAL: provenance/evidence DTO builder for structured intakes
+- `solden/services/finance_agent_governance.py` — ALIGNED: runtime spine deep-reviewed (rules decide; bounded)
+- `solden/services/finance_agent_loop.py` — ALIGNED: observe->deliberate->act loop deep-reviewed (bounded)
+- `solden/services/finance_agent_runtime.py` — ALIGNED: runtime facade deep-reviewed (bounded)
+- `solden/services/finance_learning.py` — ALIGNED: Postgres-backed org-scoped; empty org raises; records outcomes only
+- `solden/services/finance_runtime_actions.py` — ALIGNED: builds operator summaries + finance-lead drafts (not vendor); audited; org-asserted
+- `solden/services/finance_runtime_autonomy.py` — ALIGNED: per-vendor earned-autonomy gates (rules decide); org-scoped; no money
+- `solden/services/finance_runtime_invoice_processing.py` — ALIGNED: seeds AP item, deterministic workflow, blocks on field review, cross-tenant guarded
+- `solden/services/finance_runtime_readiness.py` — ALIGNED: deterministic gate evaluation for skill readiness; no money path
+- `solden/services/fuzzy_matching.py` — MECHANICAL: string/amount similarity utils; documents pairwise fusion non-production
+- `solden/services/fx_conversion.py` — ALIGNED: ECB + fallback FX lookups, read-only rate math, cached, no posting
+- `solden/services/fx_erp_sync.py` — ALIGNED: pulls FX from ERP and upserts; honest scope; no money movement
+- `solden/services/gdpr_retention.py` — ALIGNED: anonymizes vendor/AP PII (never audit_events), advisory retention, audited, org-scoped
+- `solden/services/gl_correction.py` — ALIGNED: DB-backed org-scoped GL-correction persistence + history/stats (just wired)
+- `solden/services/gmail_api.py` — ALIGNED: OAuth/read/label client; gmail.send removed, draft/send deleted; encrypted tokens (LOW: EXCHANGE_DIAG_* logs dump OAuth payload, remove pre-GA)
+- `solden/services/gmail_autopilot.py` — ALIGNED: watch/poll intake; unbound users skipped not bucketed to default; sub-limit gated; DB-backed
+- `solden/services/gmail_extension_support.py` — ALIGNED: extension enrichment payloads; LLM writes operator prose only; vendor draft removed
+- `solden/services/gmail_labels.py` — ALIGNED: label taxonomy + state<->label sync (narrow decision verbs); display layer
+- `solden/services/gmail_mailbox_defaults.py` — MECHANICAL: mailbox settings + approval-target resolution helpers
+- `solden/services/gmail_triage_service.py` — ALIGNED: orchestrates extraction/classification; single-pass hints advisory (APDecisionService owns routing); fails closed
+- `solden/services/iban_change_freeze.py` — ALIGNED: three-factor IBAN freeze, payment-hold on change, audits factor names only
+- `solden/services/implementation_service.py` — ALIGNED: onboarding checklist + step validation in settings; audited; no money
+- `solden/services/intake_adapter.py` — ALIGNED: channel-agnostic intake dispatch, signature-verified, validate_transition gated, audited
+- `solden/services/invoice_archive.py` — ALIGNED: SOX content-addressed immutable store, org-scoped PK, audited; retention advisory (honest)
+- `solden/services/invoice_models.py` — MECHANICAL: channel-agnostic InvoiceData dataclass; pure DTO
+- `solden/services/invoice_posting.py` — ALIGNED: posts AP bill, fails vendor_not_in_erp (no auto-create), SOD+chain fail-closed, payment record informational
+- `solden/services/invoice_validation.py` — ALIGNED: deterministic gate cascade (shape/range/3-way/preflight/dup/sanctions); LLM no vote; audited
+- `solden/services/invoice_workflow.py` — ALIGNED: routing via deterministic APDecisionService cascade; observer fan-out audit/labels/projections
+- `solden/services/journal_entry_preview.py` — ALIGNED: deterministic Dr/Cr preview (no LLM), VAT, balance check; used verbatim for card+post
+- `solden/services/learning.py` — ALIGNED: Postgres-backed org-scoped vendor->GL learning, write-through cache+TTL, org-asserted
+- `solden/services/learning_calibration.py` — ALIGNED: calibration snapshots from feedback, org-scoped; auto-apply hard-bounded [0.70,0.99], audited
+- `solden/services/llm_email_parser.py` — ALIGNED: LLM reads unstructured email for extraction + operator prose only; never routes; regex fallback
+- `solden/services/llm_multimodal.py` — ALIGNED: vision/text extraction via bounded llm_gateway (EXTRACT_INVOICE_FIELDS); no Mistral bypass
+- `solden/services/logging.py` — MECHANICAL: structured JSON/console logging helpers
+- `solden/services/match_engine.py` — DEAD:generic match-engine registry never imported in prod (empty registry, run_match test-only); self-documented dormant
+- `solden/services/metrics.py` — MECHANICAL: HTTP/recon metrics with durable DB + in-memory fallback; observability
 - `solden/services/monitoring.py` — PENDING
 - `solden/services/multi_invoice_intake.py` — PENDING
 - `solden/services/multi_invoice_splitter.py` — PENDING
@@ -1075,3 +1075,13 @@ STILL OPEN:
 - [ ] org_config governance PUT/PATCH admin gate (LOWER: router disabled in strict prod).
 - [ ] MED prod-404s: ap_items_read /audit/export, netsuite_panel POST actions, ops/box-health (strict-profile allowlist).
 - [ ] LOW brand/doc/dead: ap_item_detail, gmail_webhooks, box_export, payment_confirmations, error_codes(DEAD), vendor_store remittance comment, oauth in-memory, bank_reconciliation date-col, cli/health docstring, models/patterns(DEAD).
+
+### Wave 3a (2026-05-25) — services aa/ab/ac (114 files)
+- [ ] DRIFT `solden/services/agent_reasoning.py` — LLM-derived confidence drives `_make_decision`'s auto_approve label, which `gmail_extension.py:1606-1611` uses to bump/clamp the auto-approve gate. Bounded-agent: the LLM must not move the routing gate (canonical path is deterministic ap_decision). VERIFY + fix.
+- [ ] DRIFT `solden/services/correction_learning.py` — `get_recent_corrections` reads `self._rules` which doesn't exist (class has `_learned_rules`) → AttributeError path. VERIFY + fix.
+- [ ] DRIFT `solden/services/budget_awareness.py` — in-memory `_spending` accumulator lost on restart/2nd worker.
+- [ ] DRIFT `solden/services/calendar_ooo.py` — in-process TTL OOO-availability cache; workers disagree.
+- [ ] DRIFT `solden/services/conversational_agent.py` — `_conversations` in-memory dict holds question state; lost on restart.
+- [ ] DRIFT `solden/services/email_tasks.py` — module-level `db = get_db()` at import (breaks test singleton reset / per-worker rebind).
+- [ ] DEAD `solden/services/match_engine.py` — generic match registry never imported in prod (self-documented dormant; LOW).
+- [ ] LOW `solden/services/gmail_api.py` — EXCHANGE_DIAG_* warn logs dump OAuth payload (client_id/secret-len/code-prefix) + Google body; remove pre-GA.
