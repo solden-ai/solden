@@ -35,7 +35,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
 
-from solden.core.auth import TokenData, get_current_user
+from solden.core.auth import TokenData, get_current_user, require_workspace_admin
 from solden.core.database import get_db
 
 logger = logging.getLogger(__name__)
@@ -212,7 +212,7 @@ _TEST_DISPATCH = {
 )
 async def test_erp_connection(
     erp_type: str,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ):
     """Run a cheap, idempotent read against the configured ERP and
     report success + latency. Operators use this after rotating
@@ -313,7 +313,7 @@ class RotateResult(BaseModel):
 def rotate_erp_credentials(
     erp_type: str,
     body: _RotateBody = Body(...),
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ):
     """Replace one or more secrets on the existing ERPConnection.
 

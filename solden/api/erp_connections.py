@@ -27,7 +27,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from solden.core.auth import TokenData, get_current_user
+from solden.core.auth import TokenData, get_current_user, require_workspace_admin
 from solden.core.database import get_db
 from solden.core.org_utils import require_org
 from solden.integrations.erp_router import ERPConnection, set_erp_connection, get_erp_connection
@@ -461,7 +461,7 @@ async def get_connection_status(
 @router.post("/quickbooks/connect")
 async def quickbooks_connect(
     request: ConnectRequest,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ):
     """
     Start QuickBooks OAuth flow.
@@ -603,7 +603,7 @@ async def quickbooks_callback(
 @router.post("/quickbooks/disconnect")
 async def quickbooks_disconnect(
     request: DisconnectRequest,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ):
     """Disconnect QuickBooks from organization."""
     from solden.integrations.erp_router import delete_erp_connection
@@ -622,7 +622,7 @@ async def quickbooks_disconnect(
 @router.post("/xero/connect")
 async def xero_connect(
     request: ConnectRequest,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ):
     """
     Start Xero OAuth flow.
@@ -750,7 +750,7 @@ async def xero_callback(
 @router.post("/xero/disconnect")
 async def xero_disconnect(
     request: DisconnectRequest,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ):
     """Disconnect Xero from organization."""
     from solden.integrations.erp_router import delete_erp_connection
@@ -769,7 +769,7 @@ async def xero_disconnect(
 @router.post("/netsuite/connect")
 async def netsuite_connect(
     credentials: NetSuiteCredentials,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ):
     """
     Connect NetSuite using Token-Based Authentication.
@@ -826,7 +826,7 @@ async def netsuite_connect(
 @router.post("/netsuite/disconnect")
 async def netsuite_disconnect(
     request: DisconnectRequest,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ):
     """Disconnect NetSuite from organization."""
     from solden.integrations.erp_router import delete_erp_connection
@@ -846,7 +846,7 @@ async def netsuite_disconnect(
 async def refresh_tokens(
     organization_id: str,
     erp_type: str,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ):
     """
     Manually refresh tokens for an ERP connection.
@@ -1028,7 +1028,7 @@ async def get_gl_account_map(
 async def update_gl_account_map(
     body: GLAccountMapRequest,
     organization_id: Optional[str] = Query(default=None),
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_workspace_admin),
 ):
     """Store a per-tenant GL account code mapping in org settings.
 

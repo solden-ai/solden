@@ -335,6 +335,7 @@ def verify_vendor_registration(
     state without re-querying.
     """
     from solden.services.opencorporates_verifier import verify_vendor_registration as _verify
+    _require_admin(user)  # registry verification + profile stamping is admin governance (matches sibling mutations)
     org_id = require_org(user, requested=organization_id)
 
     db = get_db()
