@@ -102,7 +102,7 @@ function createQueueManager(overrides = {}) {
     recoverCurrentThread: mock.fn(async () => ({ found: false, recovered: false, item: null })),
     searchRecordCandidates: mock.fn(async () => []),
     linkCurrentThreadToItem: mock.fn(async () => ({ status: 'linked' })),
-    runtimeConfig: { organizationId: 'org-123', userEmail: 'ops@clearledgr.com' },
+    runtimeConfig: { organizationId: 'org-123', userEmail: 'ops@soldenai.com' },
     currentUserRole: 'operator',
     ...overrides,
   };
@@ -124,7 +124,7 @@ function buildItem(overrides = {}) {
     attachment_names: ['invoice.pdf'],
     entity_code: 'US-01',
     approval_followup: {
-      pending_assignees: ['ap-approver@clearledgr.com'],
+      pending_assignees: ['ap-approver@soldenai.com'],
       wait_minutes: 42,
     },
     ...overrides,
@@ -315,7 +315,7 @@ describe('SidebarApp', () => {
       fetchItemContext,
       runtimeConfig: {
         organizationId: 'org-123',
-        userEmail: 'ops@clearledgr.com',
+        userEmail: 'ops@soldenai.com',
         backendUrl: 'https://api.test',
       },
     });
@@ -376,7 +376,7 @@ describe('SidebarApp', () => {
       backendFetch,
       runtimeConfig: {
         organizationId: 'org-123',
-        userEmail: 'ops@clearledgr.com',
+        userEmail: 'ops@soldenai.com',
         backendUrl: 'https://api.test',
       },
     });

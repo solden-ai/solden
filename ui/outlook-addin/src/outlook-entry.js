@@ -23,7 +23,7 @@ const API_BASE = (() => {
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:8010';
   }
-  return 'https://api.clearledgr.com';
+  return 'https://api.soldenai.com';
 })();
 
 // ---------------------------------------------------------------------------

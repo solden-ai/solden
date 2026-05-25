@@ -28,7 +28,7 @@ async function _consumePostOAuthAuthCode() {
   // carries ?post_oauth=1&auth_code=XXX&org=YYY. The api expects the
   // SPA to POST that one-time auth_code to /auth/google/exchange,
   // which sets the HttpOnly session cookie + CSRF cookie on
-  // .clearledgr.com. Without this step /auth/me returns 401 and the
+  // .soldenai.com. Without this step /auth/me returns 401 and the
   // user bounces back to /login even though the OAuth handshake
   // succeeded — which is exactly the loop Mo reported.
   if (typeof window === 'undefined') return false;

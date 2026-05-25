@@ -1,18 +1,18 @@
 /**
- * Production server for workspace.clearledgr.com.
+ * Production server for workspace.soldenai.com.
  *
  * Two responsibilities:
  *   1. Serve the static SPA build from `dist/`.
  *   2. Reverse-proxy API paths to the Solden api service running
  *      on the same Railway project, so the browser sees a single
  *      origin (no CORS, no cookie-domain headaches — the workspace
- *      session cookie is scoped to workspace.clearledgr.com which is also
+ *      session cookie is scoped to workspace.soldenai.com which is also
  *      what the browser hits for /api, /auth, /v1, etc.).
  *
  * Required env:
  *   PORT          — Railway-supplied bind port (defaults to 8080 locally)
  *   API_TARGET    — internal URL of the api service, e.g.
- *                   https://api.clearledgr.com or
+ *                   https://api.soldenai.com or
  *                   http://api.railway.internal:8000 (Railway private net)
  *
  * Optional env:
@@ -172,7 +172,7 @@ const proxy = createProxyMiddleware({
   logLevel: PROXY_LOG ? 'debug' : 'warn',
   pathFilter: (path) => PROXY_PATHS.some((p) => path === p || path.startsWith(`${p}/`)),
   // Preserve cookies on responses (the SPA needs the workspace session
-  // Set-Cookie to land on workspace.clearledgr.com, not the upstream host).
+  // Set-Cookie to land on workspace.soldenai.com, not the upstream host).
   cookieDomainRewrite: '',
 });
 
