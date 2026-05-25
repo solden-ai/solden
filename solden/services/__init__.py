@@ -12,9 +12,6 @@ def __getattr__(name):
     elif name == "MultiModalLLMService":
         from solden.services.llm_multimodal import MultiModalLLMService
         return MultiModalLLMService
-    elif name == "PatternStore":
-        from solden.services.pattern_store import PatternStore
-        return PatternStore
     raise AttributeError(f"module 'solden.services' has no attribute '{name}'")
 
 __all__ = [
@@ -22,5 +19,4 @@ __all__ = [
     "ExceptionRoutingService",
     "LearningService",
     "MultiModalLLMService",
-    "PatternStore",
 ]
