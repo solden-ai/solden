@@ -1065,3 +1065,13 @@ LOW (brand/doc/dead):
 - [ ] DRIFT `solden/api/box_export.py` — docstring frames already-implemented bank-match/generic export as "future".
 - [ ] DRIFT `solden/api/payment_confirmations.py` — remittance-config docstring claims active vendor auto-send (deleted).
 - [ ] DEAD `solden/core/error_codes.py` — zero importers; live ErrorCode enum is services/errors.py.
+
+### RESOLVED (2026-05-25) — reds + governance cluster
+- [x] pipelines.delete_saved_view cross-tenant write → org-scoped (commit + test).
+- [x] /consolidated: route-shadowing (moved above /{ap_item_id}) + always-403 FC-arg bug (3 sites incl settings.py migration parallel/cutover, now require_financial_controller) + NameError (verify_org_access imported). Test added.
+- [x] Governance cluster A: ap_policies PUT, dual_approval PUT, escalation create/patch/delete, policies versions+rollback → require_workspace_admin.
+- [x] Governance cluster B: erp_connections (8 mutations), erp_connection_ops (test+rotate), vendor_status verify-registration → admin-gated.
+STILL OPEN:
+- [ ] org_config governance PUT/PATCH admin gate (LOWER: router disabled in strict prod).
+- [ ] MED prod-404s: ap_items_read /audit/export, netsuite_panel POST actions, ops/box-health (strict-profile allowlist).
+- [ ] LOW brand/doc/dead: ap_item_detail, gmail_webhooks, box_export, payment_confirmations, error_codes(DEAD), vendor_store remittance comment, oauth in-memory, bank_reconciliation date-col, cli/health docstring, models/patterns(DEAD).
