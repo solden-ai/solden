@@ -197,8 +197,6 @@ class FinanceAgentRuntime:
         self.register_skill(VendorComplianceSkill())
         self.register_skill(WorkflowHealthSkill())
         # Lazy import to avoid circular dependency
-        from solden.services.finance_skills.recon_skill import ReconciliationFinanceSkill
-        self.register_skill(ReconciliationFinanceSkill())
         from solden.services.finance_skills.procurement_skill import (
             ProcurementFinanceSkill,
         )
