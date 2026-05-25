@@ -12,7 +12,8 @@ from fastapi.responses import StreamingResponse
 
 from fastapi import HTTPException
 
-from solden.core.auth import get_current_user
+from solden.api.deps import verify_org_access
+from solden.core.auth import get_current_user, require_financial_controller
 from solden.core.database import get_db
 from solden.core.money import money_sum, money_to_float
 from solden.services.ap_operator_audit import normalize_operator_audit_events
@@ -292,6 +293,90 @@ def export_audit_trail(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=audit_trail.csv"},
     )
+
+
+# ==================== §3 MULTI-ENTITY: CONSOLIDATED & DRILL-DOWN ====================
+# NOTE: must be declared BEFORE the "/{ap_item_id}" catch-all below, or
+# GET /consolidated matches {ap_item_id}="consolidated" and 404s.
+
+
+@router.get("/consolidated")
+def get_consolidated_pipeline(
+    parent_org_id: str = Query(...),
+    limit: int = Query(default=500, ge=1, le=2000),
+    _user=Depends(require_financial_controller),
+):
+    """§3 Multi-entity: consolidated pipeline across all child entities.
+
+    Returns items grouped by entity with per-entity totals.
+    Auth: requires Financial Controller or higher.
+    """
+    verify_org_access(parent_org_id, _user)
+    db = get_db()
+
+    # Get all child org IDs
+    child_orgs = db.get_child_organizations(parent_org_id) if hasattr(db, "get_child_organizations") else []
+    all_org_ids = [parent_org_id] + [c["id"] for c in child_orgs]
+
+    # Get all entities across the hierarchy
+    all_entities = []
+    for oid in all_org_ids:
+        try:
+            entities = db.list_entities(oid, include_inactive=False) if hasattr(db, "list_entities") else []
+            all_entities.extend(entities)
+        except Exception:
+            pass
+
+    # Gather AP items per entity
+    by_entity = {}
+    for entity in all_entities:
+        eid = entity.get("id", "")
+        oid = entity.get("organization_id", parent_org_id)
+        items = db.list_ap_items(oid, entity_id=eid, limit=limit)
+        by_entity[eid] = {
+            "entity": {
+                "id": eid,
+                "name": entity.get("name", ""),
+                "code": entity.get("code", ""),
+                "organization_id": oid,
+            },
+            "items": items,
+            "totals": {
+                "count": len(items),
+                "in_flight": sum(1 for i in items if i.get("state") not in ("closed", "rejected")),
+                "exceptions": sum(1 for i in items if i.get("state") in ("needs_info", "failed_post")),
+                "total_amount": money_to_float(money_sum(i.get("amount") for i in items)),
+            },
+        }
+
+    # Also include items with no entity (org-level)
+    unassigned = db.list_ap_items(parent_org_id, limit=limit)
+    unassigned_items = [i for i in unassigned if not i.get("entity_id")]
+    if unassigned_items:
+        by_entity["_unassigned"] = {
+            "entity": {"id": "_unassigned", "name": "Unassigned", "code": "", "organization_id": parent_org_id},
+            "items": unassigned_items,
+            "totals": {
+                "count": len(unassigned_items),
+                "in_flight": sum(1 for i in unassigned_items if i.get("state") not in ("closed", "rejected")),
+                "exceptions": sum(1 for i in unassigned_items if i.get("state") in ("needs_info", "failed_post")),
+                "total_amount": money_to_float(money_sum(i.get("amount") for i in unassigned_items)),
+            },
+        }
+
+    grand_total = {
+        "entities": len(by_entity),
+        "total_items": sum(e["totals"]["count"] for e in by_entity.values()),
+        "total_in_flight": sum(e["totals"]["in_flight"] for e in by_entity.values()),
+        "total_exceptions": sum(e["totals"]["exceptions"] for e in by_entity.values()),
+        "total_amount": money_to_float(money_sum(e["totals"]["total_amount"] for e in by_entity.values())),
+    }
+
+    return {
+        "parent_org_id": parent_org_id,
+        "by_entity": by_entity,
+        "grand_total": grand_total,
+    }
 
 
 @router.get("/{ap_item_id}")
@@ -577,89 +662,3 @@ def get_ap_item_context(
     return context
 
 
-# ==================== §3 MULTI-ENTITY: CONSOLIDATED & DRILL-DOWN ====================
-
-
-@router.get("/consolidated")
-def get_consolidated_pipeline(
-    parent_org_id: str = Query(...),
-    limit: int = Query(default=500, ge=1, le=2000),
-    _user=Depends(get_current_user),
-):
-    """§3 Multi-entity: consolidated pipeline across all child entities.
-
-    Returns items grouped by entity with per-entity totals.
-    Auth: requires Financial Controller or higher.
-    """
-    from solden.core.auth import has_financial_controller
-
-    if not has_financial_controller(_user):
-        from fastapi import HTTPException
-        raise HTTPException(status_code=403, detail="financial_controller_required")
-
-    verify_org_access(parent_org_id, _user)
-    db = get_db()
-
-    # Get all child org IDs
-    child_orgs = db.get_child_organizations(parent_org_id) if hasattr(db, "get_child_organizations") else []
-    all_org_ids = [parent_org_id] + [c["id"] for c in child_orgs]
-
-    # Get all entities across the hierarchy
-    all_entities = []
-    for oid in all_org_ids:
-        try:
-            entities = db.list_entities(oid, include_inactive=False) if hasattr(db, "list_entities") else []
-            all_entities.extend(entities)
-        except Exception:
-            pass
-
-    # Gather AP items per entity
-    by_entity = {}
-    for entity in all_entities:
-        eid = entity.get("id", "")
-        oid = entity.get("organization_id", parent_org_id)
-        items = db.list_ap_items(oid, entity_id=eid, limit=limit)
-        by_entity[eid] = {
-            "entity": {
-                "id": eid,
-                "name": entity.get("name", ""),
-                "code": entity.get("code", ""),
-                "organization_id": oid,
-            },
-            "items": items,
-            "totals": {
-                "count": len(items),
-                "in_flight": sum(1 for i in items if i.get("state") not in ("closed", "rejected")),
-                "exceptions": sum(1 for i in items if i.get("state") in ("needs_info", "failed_post")),
-                "total_amount": money_to_float(money_sum(i.get("amount") for i in items)),
-            },
-        }
-
-    # Also include items with no entity (org-level)
-    unassigned = db.list_ap_items(parent_org_id, limit=limit)
-    unassigned_items = [i for i in unassigned if not i.get("entity_id")]
-    if unassigned_items:
-        by_entity["_unassigned"] = {
-            "entity": {"id": "_unassigned", "name": "Unassigned", "code": "", "organization_id": parent_org_id},
-            "items": unassigned_items,
-            "totals": {
-                "count": len(unassigned_items),
-                "in_flight": sum(1 for i in unassigned_items if i.get("state") not in ("closed", "rejected")),
-                "exceptions": sum(1 for i in unassigned_items if i.get("state") in ("needs_info", "failed_post")),
-                "total_amount": money_to_float(money_sum(i.get("amount") for i in unassigned_items)),
-            },
-        }
-
-    grand_total = {
-        "entities": len(by_entity),
-        "total_items": sum(e["totals"]["count"] for e in by_entity.values()),
-        "total_in_flight": sum(e["totals"]["in_flight"] for e in by_entity.values()),
-        "total_exceptions": sum(e["totals"]["exceptions"] for e in by_entity.values()),
-        "total_amount": money_to_float(money_sum(e["totals"]["total_amount"] for e in by_entity.values())),
-    }
-
-    return {
-        "parent_org_id": parent_org_id,
-        "by_entity": by_entity,
-        "grand_total": grand_total,
-    }

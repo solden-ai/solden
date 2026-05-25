@@ -18,7 +18,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from solden.core.database import get_db
-from solden.core.auth import get_current_user, TokenData
+from solden.core.auth import get_current_user, require_financial_controller, TokenData
 
 logger = logging.getLogger(__name__)
 
@@ -612,7 +612,7 @@ def get_gl_account_for_vendor(organization_id: str, vendor: str, category: str =
 @router.post("/{organization_id}/migration/start-parallel")
 async def start_parallel_mode(
     organization_id: str,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_financial_controller),
 ):
     """§3 Migration: Start parallel running mode.
 
@@ -620,10 +620,6 @@ async def start_parallel_mode(
     are suppressed — the agent provides suggestions only. The AP Manager
     compares results for a minimum of 2 weeks before deciding to go live.
     """
-    from solden.core.auth import has_financial_controller
-    if not has_financial_controller(user):
-        raise HTTPException(status_code=403, detail="financial_controller_required")
-
     db = get_db()
     now = datetime.now(timezone.utc).isoformat()
     actor_id = getattr(user, "email", None) or getattr(user, "user_id", "system")
@@ -653,17 +649,13 @@ async def start_parallel_mode(
 @router.post("/{organization_id}/migration/cutover")
 async def migration_cutover(
     organization_id: str,
-    user: TokenData = Depends(get_current_user),
+    user: TokenData = Depends(require_financial_controller),
 ):
     """§3 Migration: Go live — Solden becomes the primary AP workflow.
 
     "The cutover decision is logged in Settings. It is timestamped,
     attributed to the AP Manager who made it, and recorded in the audit trail."
     """
-    from solden.core.auth import has_financial_controller
-    if not has_financial_controller(user):
-        raise HTTPException(status_code=403, detail="financial_controller_required")
-
     db = get_db()
     now = datetime.now(timezone.utc).isoformat()
     actor_id = getattr(user, "email", None) or getattr(user, "user_id", "system")
