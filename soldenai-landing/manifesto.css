@@ -4,7 +4,7 @@
 
 body.theme-manifesto-light {
   /* Warm off-white, like a book page, not pure white */
-  background: #F9F5EC;
+  background: #fbf6ea;
   color: #1F1B16;
   font-family: var(--font);
   font-weight: 400;
@@ -12,29 +12,9 @@ body.theme-manifesto-light {
   text-rendering: optimizeLegibility;
 }
 
-/* Light topbar override */
-.topbar--light {
-  background: #F9F5EC;
-  border-bottom: 1px solid rgba(31, 27, 22, 0.1);
-}
-body.theme-manifesto-light .nav__link {
-  color: rgba(31, 27, 22, 0.6);
-  font-size: 13px;
-  letter-spacing: 0.02em;
-}
-body.theme-manifesto-light .nav__link:hover { color: #1F1B16; }
-body.theme-manifesto-light .nav__link--manifesto {
-  color: #1F1B16;
-  font-weight: 600;
-}
-body.theme-manifesto-light .nav__link--manifesto::after {
-  background: #1F1B16;
-  opacity: 1;
-  transform: scaleX(1);
-}
 body.theme-manifesto-light .btn--primary {
   background: #1F1B16;
-  color: #F9F5EC;
+  color: #fbf6ea;
   border-color: #1F1B16;
 }
 body.theme-manifesto-light .btn--primary:hover {
@@ -103,7 +83,7 @@ body.theme-manifesto-light .btn--primary:hover {
   width: 100%;
   height: auto;
   border: 1px solid rgba(31, 27, 22, 0.18);
-  background: #F2ECDE;
+  background: #fbf6ea;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.6),
     0 24px 60px -20px rgba(31, 27, 22, 0.28),
@@ -332,7 +312,7 @@ body.theme-manifesto-light .btn--primary:hover {
   font-weight: 400;
 }
 
-/* Definition list, what the runtime holds */
+/* Definition list, what the work-record holds */
 .essay__defs {
   display: flex;
   flex-direction: column;
@@ -399,7 +379,7 @@ body.theme-manifesto-light .btn--primary:hover {
   aspect-ratio: 1 / 1;
   object-fit: cover;
   border: 1px solid rgba(31, 27, 22, 0.18);
-  background: #F2ECDE;
+  background: #fbf6ea;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.6),
     0 12px 28px -16px rgba(31, 27, 22, 0.22),
@@ -504,7 +484,7 @@ body.theme-manifesto-light .btn--primary:hover {
 /* Buttons, dark on light */
 .btn--dark {
   background: #1F1B16;
-  color: #F9F5EC;
+  color: #fbf6ea;
   border: 1px solid #1F1B16;
   font-weight: 500;
   letter-spacing: -0.005em;
@@ -526,29 +506,30 @@ body.theme-manifesto-light .btn--primary:hover {
 .btn--text:hover { color: #4a3f30; }
 
 /* ═════════════════════════════════════════════════════════════
-   SUBPAGE LIGHT THEME, about / contact / security
+   SUBPAGE LIGHT THEME, contact / legal
    Reuses .page-* classes from styles.css but overrides their
    dark treatment with the same editorial palette + serif type
    as the manifesto page.
    ───────────────────────────────────────────────────────────── */
 
 body.theme-manifesto-light.theme-subpage-light {
-  background: #F9F5EC;
+  background: #fbf6ea;
   color: #1F1B16;
 }
 
 /* Cover */
 body.theme-subpage-light .page-cover {
   position: relative;
-  padding: 80px 0 56px;
+  padding: 112px 0 92px;
   overflow: hidden;
   background: transparent;
 }
 body.theme-subpage-light .page-cover__glow { display: none; }
 body.theme-subpage-light .page-cover__inner {
-  max-width: 720px;
+  width: min(1320px, calc(100vw - 64px));
+  max-width: none;
   margin: 0 auto;
-  padding: 0 32px;
+  padding: 0;
   position: relative;
   text-align: left;
 }
@@ -564,11 +545,12 @@ body.theme-subpage-light .page-cover__eyebrow {
 
 body.theme-subpage-light .page-cover__title {
   font-family: "Iowan Old Style", "Georgia", serif;
-  font-size: clamp(38px, 5.6vw, 64px);
-  line-height: 1.04;
-  letter-spacing: -0.022em;
+  font-size: clamp(64px, 8vw, 120px);
+  line-height: 0.94;
+  letter-spacing: 0;
   font-weight: 500;
-  margin: 0 0 32px;
+  max-width: 1120px;
+  margin: 0 0 34px;
   color: #1F1B16;
 }
 body.theme-subpage-light .page-cover__title-accent {
@@ -581,9 +563,10 @@ body.theme-subpage-light .page-cover__title-accent {
 
 body.theme-subpage-light .page-cover__sub {
   font-family: "Iowan Old Style", "Georgia", serif;
-  font-size: 22px;
-  line-height: 1.4;
-  letter-spacing: -0.012em;
+  font-size: clamp(26px, 3vw, 42px);
+  line-height: 1.24;
+  letter-spacing: 0;
+  max-width: 960px;
   color: rgba(31, 27, 22, 0.78);
   font-weight: 400;
 }
@@ -596,18 +579,20 @@ body.theme-subpage-light .page-cover__sub--stanza span:last-child {
   color: #1F1B16;
 }
 body.theme-subpage-light .page-cover__hint {
-  font-size: 14px;
+  max-width: 900px;
+  font-size: clamp(18px, 1.7vw, 23px);
+  line-height: 1.48;
   font-style: italic;
   color: rgba(31, 27, 22, 0.55);
 }
 
 /* Sections */
 body.theme-subpage-light .page-section {
-  padding: 56px 0;
+  padding: 92px 0;
   position: relative;
 }
 body.theme-subpage-light .page-section--alt {
-  background: rgba(31, 27, 22, 0.025);
+  background: #fbf6ea;
 }
 body.theme-subpage-light .page-section + .page-section {
   border-top: 1px solid rgba(31, 27, 22, 0.1);
@@ -663,7 +648,7 @@ body.theme-subpage-light .page-def dd {
 
 /* Founders cards, light museum-card treatment */
 body.theme-subpage-light .founder-card {
-  background: rgba(255, 255, 255, 0.5);
+  background: #fbf6ea;
   border: 1px solid rgba(31, 27, 22, 0.14);
   box-shadow: 0 1px 0 rgba(255,255,255,0.6), 0 12px 28px -16px rgba(31,27,22,0.18);
 }
@@ -693,7 +678,7 @@ body.theme-subpage-light .founder-card__bio strong {
 
 /* Contact: aside + form */
 body.theme-subpage-light .contact-aside {
-  background: rgba(255, 255, 255, 0.5);
+  background: #fbf6ea;
   border: 1px solid rgba(31, 27, 22, 0.14);
   box-shadow: 0 1px 0 rgba(255,255,255,0.6), 0 12px 28px -16px rgba(31,27,22,0.18);
 }
@@ -717,24 +702,26 @@ body.theme-subpage-light .contact-channel__value {
 
 /* Light form */
 body.theme-subpage-light .form {
-  background: rgba(255, 255, 255, 0.55);
+  padding: 42px;
+  background: #fbf6ea;
   border: 1px solid rgba(31, 27, 22, 0.14);
   box-shadow: 0 1px 0 rgba(255,255,255,0.6);
 }
 body.theme-subpage-light .form__label {
   color: rgba(31, 27, 22, 0.65);
-  font-size: 12.5px;
+  font-size: 13.5px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 body.theme-subpage-light .form__input,
 body.theme-subpage-light .form__select,
 body.theme-subpage-light .form__textarea {
-  background: rgba(255, 255, 255, 0.7);
+  background: #fbf6ea;
   color: #1F1B16;
   border-color: rgba(31, 27, 22, 0.2);
   font-family: "Iowan Old Style", "Georgia", serif;
-  font-size: 16px;
+  font-size: 18px;
+  min-height: 48px;
 }
 body.theme-subpage-light .form__input:focus,
 body.theme-subpage-light .form__select:focus,
@@ -751,85 +738,18 @@ body.theme-subpage-light .form__hint a {
 }
 body.theme-subpage-light .btn--primary {
   background: #1F1B16;
-  color: #F9F5EC;
+  color: #fbf6ea;
   border-color: #1F1B16;
 }
 body.theme-subpage-light .btn--primary:hover {
   background: #0a0907;
 }
 
-/* Security: controls grid + sub-processor table */
-body.theme-subpage-light .controls {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px;
-}
-body.theme-subpage-light .control {
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(31, 27, 22, 0.14);
-  border-radius: 12px;
-  padding: 20px 22px;
-}
-body.theme-subpage-light .control__name {
-  font-family: "Iowan Old Style", "Georgia", serif;
-  font-style: italic;
-  font-weight: 600;
-  color: #1F1B16;
-  font-size: 17px;
-  margin: 0 0 8px;
-}
-body.theme-subpage-light .control__body {
-  color: rgba(31, 27, 22, 0.78);
-  font-size: 14.5px;
-  line-height: 1.55;
-  margin: 0;
-}
-
-body.theme-subpage-light .subprocs {
-  width: 100%;
-  border-collapse: collapse;
-  background: rgba(255, 255, 255, 0.4);
-  border: 1px solid rgba(31, 27, 22, 0.14);
-  border-radius: 8px;
-  overflow: hidden;
-}
-body.theme-subpage-light .subprocs th,
-body.theme-subpage-light .subprocs td {
-  padding: 12px 14px;
-  text-align: left;
-  font-size: 14px;
-  line-height: 1.45;
-  border-bottom: 1px solid rgba(31, 27, 22, 0.08);
-}
-body.theme-subpage-light .subprocs th {
-  background: rgba(31, 27, 22, 0.04);
-  color: rgba(31, 27, 22, 0.55);
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-weight: 500;
-}
-body.theme-subpage-light .subprocs td { color: rgba(31, 27, 22, 0.78); }
-body.theme-subpage-light .subprocs td:first-child {
-  color: #1F1B16;
-  font-weight: 600;
-}
-body.theme-subpage-light .subprocs__group {
-  background: rgba(31, 27, 22, 0.06) !important;
-  color: #1F1B16 !important;
-  font-family: var(--font-mono);
-  font-size: 11.5px !important;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-style: normal;
-  font-weight: 600;
-}
 body.theme-subpage-light .muted {
   color: rgba(31, 27, 22, 0.55) !important;
 }
 
-/* Prose (security page main body) */
+/* Prose (subpage main body) */
 body.theme-subpage-light .prose h2 {
   font-family: "Iowan Old Style", "Georgia", serif;
   font-weight: 500;
@@ -881,7 +801,7 @@ body.theme-subpage-light .footer-cta__sub {
 }
 body.theme-subpage-light .btn--teal {
   background: #1F1B16;
-  color: #F9F5EC;
+  color: #fbf6ea;
   border-color: #1F1B16;
 }
 body.theme-subpage-light .btn--teal:hover { background: #0a0907; }
@@ -894,13 +814,6 @@ body.theme-subpage-light .btn--ghost:hover {
   border-color: #1F1B16;
 }
 
-/* Subpage topbar + footer, inherit the light editorial palette
-   without requiring per-page class changes on those elements. */
-body.theme-subpage-light .topbar {
-  background: #F9F5EC;
-  border-bottom: 1px solid rgba(31, 27, 22, 0.1);
-}
-
 /* ═════════════════════════════════════════════════════════════
    LANDING LIGHT THEME, index.html overrides
    Reuses all existing landing markup (hero, ribbon, flow, rules,
@@ -910,28 +823,11 @@ body.theme-subpage-light .topbar {
    ───────────────────────────────────────────────────────────── */
 
 body.theme-light-landing {
-  background: #F9F5EC;
+  background: #fbf6ea;
   color: #1F1B16;
-}
-body.theme-light-landing .topbar {
-  background: #F9F5EC;
-  border-bottom: 1px solid rgba(31, 27, 22, 0.1);
-}
-body.theme-light-landing .nav__link {
-  color: rgba(31, 27, 22, 0.6);
-  font-size: 13px;
-  letter-spacing: 0.02em;
-}
-body.theme-light-landing .nav__link:hover { color: #1F1B16; }
-body.theme-light-landing .nav__link--manifesto {
-  color: #1F1B16;
-  font-weight: 600;
-}
-body.theme-light-landing .nav__link--manifesto::after {
-  background: #1F1B16; opacity: 1; transform: scaleX(1);
 }
 body.theme-light-landing .btn--primary {
-  background: #1F1B16; color: #F9F5EC; border-color: #1F1B16;
+  background: #1F1B16; color: #fbf6ea; border-color: #1F1B16;
 }
 body.theme-light-landing .btn--primary:hover { background: #0a0907; }
 body.theme-light-landing .btn--secondary {
@@ -939,7 +835,7 @@ body.theme-light-landing .btn--secondary {
 }
 body.theme-light-landing .btn--secondary:hover { border-color: #1F1B16; }
 body.theme-light-landing .btn--teal {
-  background: #1F1B16; color: #F9F5EC; border-color: #1F1B16;
+  background: #1F1B16; color: #fbf6ea; border-color: #1F1B16;
 }
 body.theme-light-landing .btn--teal:hover { background: #0a0907; }
 body.theme-light-landing .btn--ghost {
@@ -1023,7 +919,7 @@ body.theme-light-landing .section-sub {
   color: rgba(31, 27, 22, 0.75);
 }
 body.theme-light-landing .section--alt {
-  background: rgba(31, 27, 22, 0.025);
+  background: #fbf6ea;
 }
 
 /* PROBLEM / WHY */
@@ -1114,7 +1010,7 @@ body.theme-light-landing .spotlight__close-em { color: #1F1B16; font-style: ital
 body.theme-light-landing .flow { background: transparent; }
 body.theme-light-landing .flow__intro p { color: rgba(31, 27, 22, 0.75); }
 body.theme-light-landing .stage-card {
-  background: rgba(255, 255, 255, 0.55);
+  background: #fbf6ea;
 }
 body.theme-light-landing .stage-card__num {
   color: rgba(31, 27, 22, 0.4);
@@ -1218,15 +1114,15 @@ body.theme-light-landing strong { color: #1F1B16; }
    needing per-section selectors. --bg-dark-deeper stays dark because
    it backs the code blocks we deliberately keep dark (specimens). */
 body.theme-light-landing {
-  --bg-dark: #F9F5EC;
-  --bg-dark-elev: rgba(255, 255, 255, 0.55);
-  --bg-dark-panel: rgba(255, 255, 255, 0.5);
+  --bg-dark: #fbf6ea;
+  --bg-dark-elev: #fbf6ea;
+  --bg-dark-panel: #fbf6ea;
   /* --bg-dark-deeper: stays #030714 → code blocks stay dark */
   --text-on-dark: #1F1B16;
   --text-on-dark-soft: rgba(31, 27, 22, 0.78);
   --text-on-dark-muted: rgba(31, 27, 22, 0.55);
   --text-on-dark-dim: rgba(31, 27, 22, 0.35);
-  --surface-card-bg: rgba(255, 255, 255, 0.55);
+  --surface-card-bg: #fbf6ea;
   --surface-border: rgba(31, 27, 22, 0.14);
   --border-on-dark-mid: rgba(31, 27, 22, 0.14);
   --border-on-dark-faint: rgba(31, 27, 22, 0.08);
@@ -1249,7 +1145,7 @@ body.theme-light-landing .footer-cta,
 body.theme-light-landing .category-pair,
 body.theme-light-landing .spotlight,
 body.theme-light-landing .ttv {
-  background-color: #F9F5EC;
+  background-color: #fbf6ea;
 }
 
 /* Code specimens stay dark with their own palette */
@@ -1357,7 +1253,7 @@ body.theme-light-landing .section-eyebrow::before {
   isolation: isolate;
   overflow: hidden;
   padding: 96px 0 0;
-  /* Fill the viewport minus the topbar (~105px including its top
+  /* Fill the viewport minus the navbar (~105px including its top
      gap). Trust band anchored to the bottom stays above the fold. */
   min-height: calc(100vh - 105px);
   display: flex;
@@ -1494,7 +1390,7 @@ body.theme-light-landing .section-eyebrow::before {
 
 .problem {
   padding: 96px 0 72px;
-  background: #F9F5EC;
+  background: #fbf6ea;
   border-top: 1px solid rgba(31, 27, 22, 0.08);
 }
 
@@ -1563,36 +1459,36 @@ body.theme-light-landing .section-eyebrow::before {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   HOW SOLDEN WORKS, runtime concept timeline (Basis-style)
+   HOW SOLDEN WORKS, work-record concept timeline (Basis-style)
    Four concept bullets on a vertical timeline rail. As the reader
    scrolls, IntersectionObserver in site.js advances the active
    bullet (data-state: future → active → past). Active bullet shows
    full body in heavy color; past bullets show muted body; future
    bullets show title only. One anchor visual (the typed-record
    card) sits sticky-pinned on the right at desktop, keeping the
-   primitive in view while the runtime claims scroll past.
+   building block in view while the work-record claims scroll past.
    ───────────────────────────────────────────────────────────── */
 
-.runtime {
+.work-record {
   padding: 96px 0 112px;
-  background: #F9F5EC;
+  background: #fbf6ea;
 }
 
-.runtime__inner {
+.work-record__inner {
   max-width: 1080px;
   margin: 0 auto;
   padding: 0 32px;
 }
 @media (max-width: 600px) {
-  .runtime__inner { padding: 0 24px; }
+  .work-record__inner { padding: 0 24px; }
 }
 
-.runtime__head {
+.work-record__head {
   margin: 0;
   max-width: 720px;
 }
 
-.runtime__title {
+.work-record__title {
   font-family: "Iowan Old Style", "Georgia", serif;
   font-size: clamp(34px, 5vw, 56px);
   line-height: 1.06;
@@ -1602,7 +1498,7 @@ body.theme-light-landing .section-eyebrow::before {
   margin: 0 0 28px;
 }
 
-.runtime__lead {
+.work-record__lead {
   font-family: "Iowan Old Style", "Georgia", serif;
   font-size: 19px;
   line-height: 1.62;
@@ -1613,7 +1509,7 @@ body.theme-light-landing .section-eyebrow::before {
 /* Pull-quote for the lead's punchline. Italic serif, left rule,
    so 'Your tools render it. Solden holds it.' lands as the thesis
    instead of getting buried at the end of the lead paragraph. */
-.runtime__pull {
+.work-record__pull {
   font-family: "Iowan Old Style", "Georgia", serif;
   font-size: clamp(20px, 2vw, 24px);
   line-height: 1.4;
@@ -1631,7 +1527,7 @@ body.theme-light-landing .section-eyebrow::before {
    to be active, so transitions happen at reading pace, not scroll
    pace. Single coherent motion through the section rather than a
    flurry of state changes flying past. */
-.runtime__scroll-track {
+.work-record__scroll-track {
   position: relative;
   /* (count + 1) × viewport-height. 4 bullets → 5 viewports of
      scroll-distance. Matches Basis's spacing so each bullet gets
@@ -1639,19 +1535,19 @@ body.theme-light-landing .section-eyebrow::before {
   height: 500vh;
 }
 
-.runtime__sticky-frame {
+.work-record__sticky-frame {
   position: sticky;
   top: 105px;
   /* Sized to content (bullets + anchor + padding) so there's no
      empty container space below the bullets when sticky-pinned.
      The scroll-track parent is much taller, so sticky still has
      plenty of room to pin. Padding-top gives breathing room from
-     the topbar once the frame engages. */
+     the navbar once the frame engages. */
   padding-top: 40px;
   overflow: visible;
 }
 
-.runtime__layout {
+.work-record__layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 440px;
   gap: 72px;
@@ -1659,14 +1555,14 @@ body.theme-light-landing .section-eyebrow::before {
   width: 100%;
 }
 @media (max-width: 900px) {
-  .runtime__scroll-track { height: auto; }
-  .runtime__sticky-frame {
+  .work-record__scroll-track { height: auto; }
+  .work-record__sticky-frame {
     position: static;
     height: auto;
     overflow: visible;
     display: block;
   }
-  .runtime__layout {
+  .work-record__layout {
     grid-template-columns: 1fr;
     gap: 48px;
   }
@@ -1674,18 +1570,18 @@ body.theme-light-landing .section-eyebrow::before {
 
 /* ── Bullet column ──────────────────────────────────────────── */
 
-.runtime__bullets {
+.work-record__bullets {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.runtime__bullet {
+.work-record__bullet {
   position: relative;
   padding-left: 44px;
   padding-bottom: 24px;
 }
-.runtime__bullet:last-child {
+.work-record__bullet:last-child {
   padding-bottom: 0;
 }
 
@@ -1693,7 +1589,7 @@ body.theme-light-landing .section-eyebrow::before {
    via absolute positioning so it reaches the next dot regardless
    of body height. The state readout is carried by the dot (hollow
    vs filled) + heading size + body collapse. No fill animation. */
-.runtime__bullet::before {
+.work-record__bullet::before {
   content: '';
   position: absolute;
   left: 8px;
@@ -1702,14 +1598,14 @@ body.theme-light-landing .section-eyebrow::before {
   width: 1px;
   background: #1F1B16;
 }
-.runtime__bullet:last-child::before {
+.work-record__bullet:last-child::before {
   display: none;
 }
 
 /* Basis-style dot: 18px hollow circle default, fills solid black
    on active. Same size in every state, visual hierarchy comes
    from the heading size and the body collapse, not the dot. */
-.runtime__dot {
+.work-record__dot {
   position: absolute;
   left: 0;
   top: 12px;
@@ -1722,7 +1618,7 @@ body.theme-light-landing .section-eyebrow::before {
   box-sizing: border-box;
   transition: background 0.3s ease;
 }
-.runtime__bullet[data-state="active"] .runtime__dot {
+.work-record__bullet[data-state="active"] .work-record__dot {
   background: #1F1B16;
 }
 
@@ -1731,7 +1627,7 @@ body.theme-light-landing .section-eyebrow::before {
    full opacity. The size change is the visual cue, heading
    grows into focus, shrinks back out. Transitions size, opacity,
    and bottom margin together so the layout settles smoothly. */
-.runtime__bullet-title {
+.work-record__bullet-title {
   font-family: "Iowan Old Style", "Georgia", serif;
   font-size: clamp(18px, 2vw, 22px);
   line-height: 1.18;
@@ -1742,7 +1638,7 @@ body.theme-light-landing .section-eyebrow::before {
   margin: 0 0 10px;
   transition: font-size 0.4s ease, opacity 0.4s ease, margin-bottom 0.4s ease;
 }
-.runtime__bullet[data-state="active"] .runtime__bullet-title {
+.work-record__bullet[data-state="active"] .work-record__bullet-title {
   font-size: clamp(26px, 3vw, 34px);
   opacity: 1;
   margin: 0 0 18px;
@@ -1753,7 +1649,7 @@ body.theme-light-landing .section-eyebrow::before {
    full height + opacity 1. Past (done) = full height + opacity
    0.5 + transform scale(0.8) so the body 'shrinks back' visually
    as it becomes done. */
-.runtime__bullet-body {
+.work-record__bullet-body {
   overflow: hidden;
   max-height: 0;
   opacity: 0;
@@ -1761,17 +1657,17 @@ body.theme-light-landing .section-eyebrow::before {
   transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1),
               opacity 0.35s ease;
 }
-.runtime__bullet[data-state="active"] .runtime__bullet-body,
-.runtime__bullet[data-state="past"] .runtime__bullet-body {
+.work-record__bullet[data-state="active"] .work-record__bullet-body,
+.work-record__bullet[data-state="past"] .work-record__bullet-body {
   max-height: 500px;
 }
-.runtime__bullet[data-state="active"] .runtime__bullet-body {
+.work-record__bullet[data-state="active"] .work-record__bullet-body {
   opacity: 1;
 }
-.runtime__bullet[data-state="past"] .runtime__bullet-body {
+.work-record__bullet[data-state="past"] .work-record__bullet-body {
   opacity: 0.5;
 }
-.runtime__bullet-body p {
+.work-record__bullet-body p {
   font-family: "Iowan Old Style", "Georgia", serif;
   font-size: 17px;
   line-height: 1.6;
@@ -1780,10 +1676,10 @@ body.theme-light-landing .section-eyebrow::before {
   transform-origin: top left;
   transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.runtime__bullet[data-state="active"] .runtime__bullet-body p {
+.work-record__bullet[data-state="active"] .work-record__bullet-body p {
   transform: scale(1);
 }
-.runtime__bullet[data-state="past"] .runtime__bullet-body p {
+.work-record__bullet[data-state="past"] .work-record__bullet-body p {
   transform: scale(0.85);
 }
 
@@ -1792,25 +1688,25 @@ body.theme-light-landing .section-eyebrow::before {
        only the one matching the active bullet renders. JS toggles
        a .is-active class on the glyph whose data-glyph matches
        the active bullet index. */
-.runtime__anchor {
+.work-record__anchor {
   align-self: start;
 }
 @media (max-width: 900px) {
-  .runtime__anchor {
+  .work-record__anchor {
     justify-self: center;
     width: 100%;
     max-width: 440px;
   }
 }
 
-.runtime__glyph-stack {
+.work-record__glyph-stack {
   position: relative;
   width: 100%;
   max-width: 440px;
   aspect-ratio: 360 / 460;
 }
 
-.runtime__glyph {
+.work-record__glyph {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1819,11 +1715,11 @@ body.theme-light-landing .section-eyebrow::before {
   transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
 }
-.runtime__glyph.is-active {
+.work-record__glyph.is-active {
   opacity: 1;
 }
 
-.runtime__glyph * {
+.work-record__glyph * {
   fill: none;
   stroke: #1F1B16;
   stroke-opacity: 0.78;
@@ -1832,31 +1728,31 @@ body.theme-light-landing .section-eyebrow::before {
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
 }
-.runtime__glyph text {
+.work-record__glyph text {
   stroke: none;
   fill: #1F1B16;
 }
-.runtime__glyph .runtime__glyph-detail,
-.runtime__glyph .runtime__glyph-detail * {
+.work-record__glyph .work-record__glyph-detail,
+.work-record__glyph .work-record__glyph-detail * {
   stroke-width: 0.9;
   stroke-opacity: 0.5;
 }
-.runtime__glyph .runtime__glyph-ghost,
-.runtime__glyph .runtime__glyph-ghost * {
+.work-record__glyph .work-record__glyph-ghost,
+.work-record__glyph .work-record__glyph-ghost * {
   stroke-width: 1;
   stroke-opacity: 0.3;
 }
-.runtime__glyph .runtime__glyph-ghost text {
+.work-record__glyph .work-record__glyph-ghost text {
   fill: rgba(31, 27, 22, 0.32);
 }
-.runtime__glyph .runtime__glyph-cap {
+.work-record__glyph .work-record__glyph-cap {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 9.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   fill: rgba(31, 27, 22, 0.55);
 }
-.runtime__glyph .runtime__glyph-cap-tiny {
+.work-record__glyph .work-record__glyph-cap-tiny {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 8px;
   letter-spacing: 0.04em;
@@ -1866,12 +1762,12 @@ body.theme-light-landing .section-eyebrow::before {
 /* Pill: filled accent chip (status / format / signer). The rect
    gets a subtle fill so the chip reads as a tag, not just an
    outline. Text inside is mono caps. */
-.runtime__glyph .runtime__glyph-pill {
+.work-record__glyph .work-record__glyph-pill {
   fill: rgba(31, 27, 22, 0.06);
   stroke: rgba(31, 27, 22, 0.35);
   stroke-width: 0.8;
 }
-.runtime__glyph .runtime__glyph-pill-text {
+.work-record__glyph .work-record__glyph-pill-text {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 7px;
   letter-spacing: 0.08em;
@@ -1882,7 +1778,7 @@ body.theme-light-landing .section-eyebrow::before {
 
 /* Mono inline string (hash, ref). Smaller than caps, monospaced,
    typeset in place. */
-.runtime__glyph .runtime__glyph-mono {
+.work-record__glyph .work-record__glyph-mono {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 7.5px;
   letter-spacing: 0.02em;
@@ -1893,11 +1789,11 @@ body.theme-light-landing .section-eyebrow::before {
 /* Arrow tip, short filled triangle used where a connector ends
    at a surface card. The fill makes it read as direction. Used
    either as a standalone polygon or inside a <marker>. */
-.runtime__glyph .runtime__glyph-tip {
+.work-record__glyph .work-record__glyph-tip {
   fill: rgba(31, 27, 22, 0.78);
   stroke: none;
 }
-.runtime__glyph .runtime__glyph-arrow {
+.work-record__glyph .work-record__glyph-arrow {
   fill: rgba(31, 27, 22, 0.78);
   stroke: none;
 }
@@ -1969,17 +1865,17 @@ body.theme-light-landing .section-eyebrow::before {
 
 
 /* ═════════════════════════════════════════════════════════════
-   SCOPE, five back-office functions the runtime covers.
+   SCOPE, five back-office functions the work-record covers.
    Header on top (left-aligned editorial), then a 5-column grid
    below with vertical dividers between cells. Each cell carries
    its function name (serif H3) plus a one-line description of
-   the concrete workflows inside it, so the substrate-reach claim
+   the concrete workflows inside it, so the record layer-reach claim
    lands with evidence rather than a word-list.
    ───────────────────────────────────────────────────────────── */
 
 .scope {
   padding: 112px 0 128px;
-  background: #F2ECDE;
+  background: #fbf6ea;
   border-top: 1px solid rgba(31, 27, 22, 0.1);
   border-bottom: 1px solid rgba(31, 27, 22, 0.1);
 }
@@ -2092,14 +1988,14 @@ body.theme-light-landing .section-eyebrow::before {
 
 
 /* ═════════════════════════════════════════════════════════════
-   SOVEREIGNTY, text-only runtime contract beat
+   SOVEREIGNTY, text-only work-record contract beat
    Replaces the bronze-plate aside. The belief stays as a serif H2
    with em-italic accent; gloss paragraph reads as editorial body.
    ───────────────────────────────────────────────────────────── */
 
 .sovereignty {
   padding: 96px 0 96px;
-  background: #F9F5EC;
+  background: #fbf6ea;
   border-top: 1px solid rgba(31, 27, 22, 0.08);
 }
 
@@ -2141,7 +2037,7 @@ body.theme-light-landing .section-eyebrow::before {
 
 .for-whom {
   padding: 96px 0 96px;
-  background: #F3EDDF;
+  background: #fbf6ea;
   border-top: 1px solid rgba(31, 27, 22, 0.06);
   border-bottom: 1px solid rgba(31, 27, 22, 0.06);
 }
@@ -2199,7 +2095,7 @@ body.theme-light-landing .section-eyebrow::before {
 
 .thesis {
   padding: 112px 0 112px;
-  background: #F9F5EC;
+  background: #fbf6ea;
 }
 
 .thesis__inner {
@@ -2261,31 +2157,33 @@ body.theme-light-landing .section-eyebrow::before {
    ───────────────────────────────────────────────────────────── */
 
 .privacy {
-  max-width: 720px;
+  width: min(1120px, 100%);
+  max-width: none;
   margin: 0 auto;
   padding: 8px 0 32px;
 }
 .privacy__section {
-  margin: 0 0 32px;
+  margin: 0 0 54px;
 }
 .privacy__section:last-child {
   margin-bottom: 0;
 }
 .privacy__h {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 11px;
+  font-family: "Iowan Old Style", "Georgia", serif;
+  font-size: clamp(34px, 3.8vw, 54px);
+  line-height: 1.12;
   font-weight: 500;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(31, 27, 22, 0.55);
-  margin: 0 0 10px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #1F1B16;
+  margin: 0 0 18px;
 }
 .privacy p {
   font-family: "Iowan Old Style", "Georgia", serif;
-  font-size: 16px;
-  line-height: 1.65;
+  font-size: clamp(20px, 1.45vw, 23px);
+  line-height: 1.58;
   color: rgba(31, 27, 22, 0.85);
-  margin: 0 0 10px;
+  margin: 0 0 18px;
 }
 .privacy p:last-child { margin-bottom: 0; }
 .privacy ul {
@@ -2294,10 +2192,10 @@ body.theme-light-landing .section-eyebrow::before {
 }
 .privacy li {
   font-family: "Iowan Old Style", "Georgia", serif;
-  font-size: 16px;
-  line-height: 1.65;
+  font-size: clamp(20px, 1.45vw, 23px);
+  line-height: 1.58;
   color: rgba(31, 27, 22, 0.85);
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 .privacy li:last-child { margin-bottom: 0; }
 .privacy a {

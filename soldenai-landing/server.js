@@ -20,6 +20,8 @@
  *   SLACK_WEBHOOK_URL, if set, fire a non-blocking Slack notification
  *                       when a lead lands. DB write is the source of
  *                       truth; Slack is human-visibility only.
+ *   RESEND_API_KEY    , if set, send internal lead notifications and
+ *                       prospect confirmation emails.
  *   DB_SSL           , "true" to force TLS on the PG connection. Most
  *                       Railway internal connections don't need it; set
  *                       this only when pointing at an external PG that
@@ -28,6 +30,7 @@
 import express from 'express';
 import path from 'node:path';
 import fs from 'node:fs';
+import os from 'node:os';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
@@ -38,6 +41,16 @@ const PORT = Number(process.env.PORT || 8080);
 const STATIC_DIR = path.resolve(__dirname);
 const DATABASE_URL = process.env.DATABASE_URL || '';
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL || '';
+const IS_PRODUCTION_LIKE =
+  process.env.NODE_ENV === 'production' ||
+  Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_SERVICE_ID);
+const DEV_CONTACT_FALLBACK =
+  !DATABASE_URL &&
+  !IS_PRODUCTION_LIKE &&
+  process.env.DEV_CONTACT_FALLBACK !== 'false';
+const DEV_LEADS_PATH =
+  process.env.DEV_LEADS_PATH ||
+  path.join(os.tmpdir(), 'soldenai-landing-leads.jsonl');
 // Resend HTTP API for emailing new leads. The API key is the same
 // Resend key used as the SMTP password for transactional email. From
 // must be a Resend-verified sender on soldenai.com; To is where leads
@@ -73,9 +86,15 @@ if (DATABASE_URL) {
     console.error('[pg] idle client error', err.message);
   });
 } else {
-  console.warn(
-    '[startup] DATABASE_URL not set, contact submissions will be rejected with 503'
-  );
+  if (DEV_CONTACT_FALLBACK) {
+    console.warn(
+      `[startup] DATABASE_URL not set, contact submissions will be written to ${DEV_LEADS_PATH}`
+    );
+  } else {
+    console.warn(
+      '[startup] DATABASE_URL not set, contact submissions will be rejected with 503'
+    );
+  }
 }
 
 async function ensureSchema() {
@@ -172,7 +191,11 @@ app.get('/healthz', async (_req, res) => {
   // REPORTS db reachability for visibility. Gating the healthcheck on
   // the DB previously took the whole site down whenever the leads
   // Postgres was down.
-  const out = { ok: true, service: 'soldenai-landing', db: 'unconfigured' };
+  const out = {
+    ok: true,
+    service: 'soldenai-landing',
+    db: DEV_CONTACT_FALLBACK ? 'dev-file' : 'unconfigured',
+  };
   if (pool) {
     try {
       await pool.query('SELECT 1');
@@ -210,11 +233,6 @@ app.post('/api/contact', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'invalid_email' });
     }
 
-    if (!pool) {
-      console.warn('[contact] DATABASE_URL missing, dropping submission');
-      return res.status(503).json({ ok: false, error: 'no_storage' });
-    }
-
     // Hash the IP so we have an abuse signal without retaining PII
     // directly. Sixteen bytes is plenty to spot the same source.
     const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
@@ -227,6 +245,31 @@ app.post('/api/contact', async (req, res) => {
       const s = String(v || '').trim();
       return s ? s.slice(0, max) : null;
     };
+
+    if (!pool) {
+      if (!DEV_CONTACT_FALLBACK) {
+        console.warn('[contact] DATABASE_URL missing, dropping submission');
+        return res.status(503).json({ ok: false, error: 'no_storage' });
+      }
+
+      const lead = {
+        created_at: new Date().toISOString(),
+        name: name.slice(0, 200),
+        email: email.slice(0, 254),
+        company: trimOrNull(body.company, 200),
+        role: trimOrNull(body.role, 200),
+        erp: trimOrNull(body.erp, 60),
+        topic: trimOrNull(body.topic, 60),
+        message: trimOrNull(body.message, 5000),
+        source: 'soldenai.com',
+        ip_hash: ipHash,
+        user_agent: trimOrNull(req.headers['user-agent'], 500),
+      };
+      await fs.promises.mkdir(path.dirname(DEV_LEADS_PATH), { recursive: true });
+      await fs.promises.appendFile(DEV_LEADS_PATH, JSON.stringify(lead) + '\n', 'utf8');
+      console.log(`[contact] dev lead stored (${email}) -> ${DEV_LEADS_PATH}`);
+      return res.json({ ok: true, dev: true });
+    }
 
     const result = await pool.query(
       `INSERT INTO leads (
@@ -249,8 +292,8 @@ app.post('/api/contact', async (req, res) => {
     const row = result.rows[0];
     console.log(`[contact] lead #${row.id} stored (${email})`);
 
-    // Non-blocking Slack notify. DB insert above is the source of
-    // truth; if Slack fails the lead is still safe.
+    // Non-blocking notifications. DB insert above is the source of
+    // truth; if Slack or email fails the lead is still safe.
     const lead = {
       id: row.id,
       name,
@@ -266,6 +309,9 @@ app.post('/api/contact', async (req, res) => {
     );
     notifyEmail(lead).catch((err) =>
       console.warn('[contact] email notify failed:', err.message)
+    );
+    notifyProspectEmail(lead).catch((err) =>
+      console.warn('[contact] prospect email failed:', err.message)
     );
 
     return res.json({ ok: true });
@@ -328,6 +374,36 @@ async function notifyEmail(lead) {
       to: [LEAD_NOTIFY_TO],
       reply_to: lead.email,
       subject: `New lead: ${lead.name}${lead.company ? ` (${lead.company})` : ''}`,
+      html,
+    }),
+  });
+  if (!resp.ok) {
+    throw new Error(`resend ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
+  }
+}
+
+async function notifyProspectEmail(lead) {
+  if (!RESEND_API_KEY || !lead.email) return;
+  const esc = (v) =>
+    String(v || '').replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+  const firstName = String(lead.name || '').trim().split(/\s+/)[0] || 'there';
+  const html = `<div style="font-family:-apple-system,system-ui,sans-serif;color:#0a1628;line-height:1.55">
+  <p style="margin:0 0 14px">Hi ${esc(firstName)},</p>
+  <p style="margin:0 0 14px">Thanks for reaching out to Solden. We received your note and someone from our team will reply.</p>
+  <p style="margin:0 0 14px">We usually respond within one business day. If there is anything else we should know, you can reply directly to this email.</p>
+  <p style="margin:20px 0 0">Solden</p>
+</div>`;
+  const resp = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: `Solden <${LEAD_NOTIFY_FROM}>`,
+      to: [lead.email],
+      reply_to: LEAD_NOTIFY_TO || LEAD_NOTIFY_FROM,
+      subject: 'We got your note to Solden',
       html,
     }),
   });

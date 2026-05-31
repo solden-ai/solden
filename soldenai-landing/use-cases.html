@@ -4,213 +4,219 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
-
     <title>Use cases · Solden</title>
-    <meta name="description" content="What you can run on Solden. One runtime for the back office: declare a workflow's states, approvals, and owners, and Solden runs it with the same audit trail, exception handling, and portable record, whatever the domain." />
-    <meta name="theme-color" content="#F9F5EC" />
-
-    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png?v=7" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png?v=7" />
-    <link rel="icon" type="image/png" sizes="128x128" href="/assets/favicon.png?v=7" />
+    <meta name="description" content="Work Solden can hold together: AP first, then procurement, contracts, vendor onboarding, access requests, expenses, reconciliation, and more." />
+    <meta name="theme-color" content="#fbf6ea" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="128x128" href="/assets/favicon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
-
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/Geist-Variable.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/GeistMono-Variable.woff2" crossorigin />
-    <link rel="stylesheet" href="/styles.css?v=50" />
-    <link rel="stylesheet" href="/manifesto.css?v=76" />
-    <link rel="stylesheet" href="/pages.css" />
+    <link rel="stylesheet" href="/styles.css?v=74" />
+    <link rel="stylesheet" href="/pages.css?v=site-sweep-3" />
   </head>
   <body class="theme-manifesto-light theme-subpage-light">
-    <header class="topbar">
-      <div class="shell topbar__row">
-        <a class="brand" href="/" aria-label="Solden home">
-          <img class="brand__lockup" src="/assets/solden-lockup-dark.png" alt="Solden" />
-          <img class="brand__mark" src="/assets/solden-mark.png" alt="" aria-hidden="true" />
-        </a>
-        <nav class="topbar__cta" aria-label="Primary">
-          <a class="nav__link nav__link--usecases" href="/use-cases.html" aria-current="page">Use cases</a>
-          <a class="nav__link" href="/manifesto.html">Manifesto</a>
-          <a class="btn btn--primary" href="/contact.html">Talk to us</a>
-        </nav>
-      </div>
-    </header>
+    <div data-site-header></div>
 
-    <!-- Cover ───────────────────────────────────────────────── -->
-    <section class="page-cover">
-      <div class="page-cover__glow" aria-hidden="true"></div>
-      <div class="shell shell--narrow page-cover__inner">
-        <p class="page-cover__eyebrow">Use cases</p>
-        <h1 class="page-cover__title">
-          What you can run on <span class="page-cover__title-accent">Solden</span>.
-        </h1>
-        <p class="page-cover__sub page-cover__sub--stanza">
-          <span>Declare a workflow.</span>
-          <span>Its states, its approvals, who owns each step.</span>
-          <span>Solden runs it.</span>
-        </p>
-        <p class="page-cover__hint">Same runtime, every domain. Every step on the record, every exception surfaced.</p>
-      </div>
-    </section>
-
-    <!-- Featured use cases ──────────────────────────────────── -->
-    <section class="page-section">
-      <div class="shell">
-        <p class="section-eyebrow">Workflows, end to end</p>
-        <div class="usecases">
-
-          <article class="usecase">
-            <h3 class="usecase__title">Accounts payable</h3>
-            <p class="usecase__body">Every vendor invoice handled to the ledger, nothing approved without the match behind it.</p>
-            <div class="usecase__flow">
-              <span class="usecase__step">received</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">matched</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">approved</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">posted</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">closed</span>
-            </div>
-          </article>
-
-          <article class="usecase">
-            <h3 class="usecase__title">Procurement &amp; purchase orders</h3>
-            <p class="usecase__body">Purchase requests to received goods, with the approval ladder enforced by amount.</p>
-            <div class="usecase__flow">
-              <span class="usecase__step">draft</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">pending approval</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">approved</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">received</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">closed</span>
-            </div>
-          </article>
-
-          <article class="usecase">
-            <h3 class="usecase__title">Contract review</h3>
-            <p class="usecase__body">Drafts to legal sign-off, every redline and decision kept in order.</p>
-            <div class="usecase__flow">
-              <span class="usecase__step">draft</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">in review</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">approved</span>
-              <span class="usecase__arrow">/</span>
-              <span class="usecase__step">changes requested</span>
-            </div>
-          </article>
-
-          <article class="usecase">
-            <h3 class="usecase__title">Vendor onboarding</h3>
-            <p class="usecase__body">New suppliers cleared through the right checks before anyone transacts with them.</p>
-            <div class="usecase__flow">
-              <span class="usecase__step">submitted</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">in checks</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">approved</span>
-              <span class="usecase__arrow">/</span>
-              <span class="usecase__step">rejected</span>
-            </div>
-          </article>
-
-          <article class="usecase">
-            <h3 class="usecase__title">Access &amp; provisioning requests</h3>
-            <p class="usecase__body">Access granted only after the approvals that should gate it, then provisioned.</p>
-            <div class="usecase__flow">
-              <span class="usecase__step">requested</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">manager approval</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">IT approval</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">granted</span>
-            </div>
-          </article>
-
-          <article class="usecase">
-            <h3 class="usecase__title">Expense &amp; reimbursement approvals</h3>
-            <p class="usecase__body">Claims checked against policy and paid, exceptions surfaced instead of buried.</p>
-            <div class="usecase__flow">
-              <span class="usecase__step">submitted</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">in review</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">approved</span><span class="usecase__arrow">→</span>
-              <span class="usecase__step">reimbursed</span>
-            </div>
-          </article>
-
+    <main>
+      <section class="page-cover">
+        <div class="shell shell--narrow page-cover__inner">
+          <p class="page-cover__eyebrow">Use cases</p>
+          <h1 class="page-cover__title">What you can run on <span class="page-cover__title-accent">Solden</span>.</h1>
+          <p class="page-cover__sub page-cover__sub--stanza">
+            <span>Bring the work with owners, waits, approvals, and proof.</span>
+            <span>Show us where it lands and where it breaks.</span>
+            <span>Solden keeps it moving.</span>
+          </p>
+          <p class="page-cover__hint">AP is the first shipped proof. The pattern is the same: owner, next step, approval, exception, writeback, and audit across back-office work.</p>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- More workflows ──────────────────────────────────────── -->
-    <section class="page-section page-section--alt">
-      <div class="shell">
-        <p class="section-eyebrow">And more back office</p>
-        <h2 class="more-head">If it has steps, approvals, and an audit trail, the runtime can run it.</h2>
-        <div class="more-grid">
-          <div class="more-cell"><h3>Period &amp; month-end close</h3><p>Close tasks tracked, reviewed, and locked.</p></div>
-          <div class="more-cell"><h3>Bank reconciliation review</h3><p>Proposed matches accepted or rejected, one at a time.</p></div>
-          <div class="more-cell"><h3>Capital expenditure approvals</h3><p>Capex up the approval ladder by threshold.</p></div>
-          <div class="more-cell"><h3>Budget &amp; spend requests</h3><p>Spend routed, approved, and booked against budget.</p></div>
-          <div class="more-cell"><h3>Refunds &amp; credit approvals</h3><p>Refunds and credits reviewed and signed off.</p></div>
-          <div class="more-cell"><h3>Disputes &amp; chargebacks</h3><p>Cases triaged, worked, and resolved with a full history.</p></div>
-          <div class="more-cell"><h3>Customer / KYC onboarding</h3><p>New customers through intake, checks, and approval.</p></div>
-          <div class="more-cell"><h3>Employee onboarding &amp; offboarding</h3><p>Joiner and leaver checklists, the right owner on each step.</p></div>
-          <div class="more-cell"><h3>Compliance attestations</h3><p>Policy sign-offs and audit walkthroughs to completion.</p></div>
-          <div class="more-cell"><h3>Data access (DSAR) requests</h3><p>Subject requests taken in, fulfilled, and closed.</p></div>
-          <div class="more-cell"><h3>Renewals &amp; contract tracking</h3><p>Renewals surfaced before they lapse, routed for the call.</p></div>
-          <div class="more-cell"><h3>Change &amp; release approvals</h3><p>Changes reviewed and approved before they ship.</p></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- CTA ─────────────────────────────────────────────────── -->
-    <section class="page-section">
-      <div class="shell">
-        <div class="usecase-cta">
-          <h2>Don&rsquo;t see yours?</h2>
-          <p>Bring it. Tell us the process that lands, waits, and breaks, and we&rsquo;ll run it through your stack.</p>
-          <a class="btn btn--primary" href="/contact.html">Talk to us</a>
-        </div>
-      </div>
-    </section>
-
-    <footer class="footer footer--mr">
-      <div class="shell footer__inner">
-        <div class="footer__top">
-          <p class="footer__tagline">The workflow runtime for the back office.</p>
-          <nav class="footer__cols" aria-label="Footer">
-            <div class="footer__col">
-              <p class="footer__col-title">Product</p>
-              <ul>
-                <li><a href="/#how-solden-works">How it works</a></li>
-                <li><a href="/use-cases.html">Use cases</a></li>
-                <li><a href="/#scope">Scope</a></li>
-              </ul>
+      <section class="page-section">
+        <div class="shell">
+          <p class="section-eyebrow">First shipped proof</p>
+          <div class="usecase-proof">
+            <div class="usecase-proof__copy">
+              <h2 class="usecase-proof__title">Accounts payable shows the shape.</h2>
+              <p class="usecase-proof__body">An invoice lands in email or the ERP. Solden identifies the record, checks the match, routes the approval where the approver already works, writes back when policy allows it, and keeps the trail attached.</p>
             </div>
-            <div class="footer__col">
-              <p class="footer__col-title">Company</p>
-              <ul>
-                <li><a href="/manifesto.html">Manifesto</a></li>
-                <li><a href="/contact.html">Contact</a></li>
-              </ul>
-            </div>
-            <div class="footer__col">
-              <p class="footer__col-title">Legal</p>
-              <ul>
-                <li><a href="/privacy.html">Privacy posture</a></li>
-                <li><a href="/terms.html">Operating terms</a></li>
-              </ul>
-            </div>
-          </nav>
-        </div>
-
-        <div class="footer__wordmark" aria-hidden="true">solden</div>
-
-        <div class="footer__legal">
-          <div class="footer__social">
-            <a href="https://www.linkedin.com/company/solden-technologies" target="_blank" rel="noopener noreferrer" aria-label="Solden on LinkedIn">
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.36V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.61 0 4.27 2.38 4.27 5.47v6.27zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z"/></svg>
-            </a>
-            <a href="https://x.com/soldenai" target="_blank" rel="noopener noreferrer" aria-label="Solden on X">
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644z"/></svg>
-            </a>
+            <dl class="proof-points" aria-label="Accounts payable proof points">
+              <div>
+                <dt>Lands</dt>
+                <dd>Gmail, Slack, Teams, NetSuite, SAP, and the workspace control center.</dd>
+              </div>
+              <div>
+                <dt>Waits</dt>
+                <dd>Owner, approval age, blocker, policy gate, and next action stay visible.</dd>
+              </div>
+              <div>
+                <dt>Breaks</dt>
+                <dd>Missing match, duplicate vendor, policy exception, failed post, or stale approval escalates with evidence.</dd>
+              </div>
+            </dl>
           </div>
-          <span class="footer__copyright">© <span data-year>2026</span> Solden. All rights reserved.</span>
         </div>
-      </div>
-    </footer>
+      </section>
 
-    <script src="/site.js?v=10" defer></script>
+      <section class="page-section page-section--alt">
+        <div class="shell">
+          <p class="section-eyebrow">Same operating parts</p>
+          <h2 class="work-parts-head">Every piece of work needs the same things.</h2>
+          <div class="work-parts">
+            <article class="work-part">
+              <span>01</span>
+              <h3>Intake</h3>
+              <p>Turn email, form, ERP, or chat activity into a tracked record.</p>
+            </article>
+            <article class="work-part">
+              <span>02</span>
+              <h3>State</h3>
+              <p>Know exactly where the work sits and what must happen next.</p>
+            </article>
+            <article class="work-part">
+              <span>03</span>
+              <h3>Owner</h3>
+              <p>Keep responsibility attached even when work moves across teams.</p>
+            </article>
+            <article class="work-part">
+              <span>04</span>
+              <h3>Approval</h3>
+              <p>Route decisions into the surfaces where approvers already respond.</p>
+            </article>
+            <article class="work-part">
+              <span>05</span>
+              <h3>Recovery</h3>
+              <p>Escalate stuck work with the evidence needed to unblock it.</p>
+            </article>
+            <article class="work-part">
+              <span>06</span>
+              <h3>Audit</h3>
+              <p>Preserve each transition, decision, and writeback on the record.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="page-section">
+        <div class="shell">
+          <p class="section-eyebrow">Other places Solden helps</p>
+          <div class="usecases usecases--peer">
+            <article class="usecase">
+              <h3 class="usecase__title">Procurement &amp; purchase orders</h3>
+              <p class="usecase__body">Requests become controlled spend, with amount thresholds, owners, receipts, and ERP follow-through enforced.</p>
+              <dl class="usecase__signals">
+                <div><dt>Waits on</dt><dd>budget owner or approver</dd></div>
+                <div><dt>Recovers</dt><dd>missing receipt, stale approval, over-threshold request</dd></div>
+              </dl>
+              <div class="usecase__flow"><span class="usecase__step">draft</span><span class="usecase__arrow">→</span><span class="usecase__step">pending approval</span><span class="usecase__arrow">→</span><span class="usecase__step">approved</span><span class="usecase__arrow">→</span><span class="usecase__step">received</span><span class="usecase__arrow">→</span><span class="usecase__step">closed</span></div>
+            </article>
+            <article class="usecase">
+              <h3 class="usecase__title">Contract review</h3>
+              <p class="usecase__body">Drafts, redlines, business approvals, and legal sign-off stay attached to one review path.</p>
+              <dl class="usecase__signals">
+                <div><dt>Waits on</dt><dd>legal, finance, or business owner</dd></div>
+                <div><dt>Recovers</dt><dd>redline drift, missing clause, expired review</dd></div>
+              </dl>
+              <div class="usecase__flow"><span class="usecase__step">draft</span><span class="usecase__arrow">→</span><span class="usecase__step">in review</span><span class="usecase__arrow">→</span><span class="usecase__step">approved</span><span class="usecase__arrow">/</span><span class="usecase__step">changes requested</span></div>
+            </article>
+            <article class="usecase">
+              <h3 class="usecase__title">Vendor onboarding</h3>
+              <p class="usecase__body">Supplier requests move through tax, bank, policy, and approval checks before anyone transacts.</p>
+              <dl class="usecase__signals">
+                <div><dt>Waits on</dt><dd>vendor data, approver, or risk check</dd></div>
+                <div><dt>Recovers</dt><dd>duplicate vendor, bad bank detail, missing W-9</dd></div>
+              </dl>
+              <div class="usecase__flow"><span class="usecase__step">submitted</span><span class="usecase__arrow">→</span><span class="usecase__step">in checks</span><span class="usecase__arrow">→</span><span class="usecase__step">approved</span><span class="usecase__arrow">/</span><span class="usecase__step">rejected</span></div>
+            </article>
+            <article class="usecase">
+              <h3 class="usecase__title">Access &amp; provisioning requests</h3>
+              <p class="usecase__body">Access is granted only after the right approvals, with exceptions visible before provisioning happens.</p>
+              <dl class="usecase__signals">
+                <div><dt>Waits on</dt><dd>manager, app owner, or IT admin</dd></div>
+                <div><dt>Recovers</dt><dd>wrong role, missing manager, delayed revoke</dd></div>
+              </dl>
+              <div class="usecase__flow"><span class="usecase__step">requested</span><span class="usecase__arrow">→</span><span class="usecase__step">manager approval</span><span class="usecase__arrow">→</span><span class="usecase__step">IT approval</span><span class="usecase__arrow">→</span><span class="usecase__step">granted</span></div>
+            </article>
+            <article class="usecase">
+              <h3 class="usecase__title">Expense &amp; reimbursement approvals</h3>
+              <p class="usecase__body">Claims are checked against policy, routed to the right owner, paid, and preserved for audit.</p>
+              <dl class="usecase__signals">
+                <div><dt>Waits on</dt><dd>manager approval or policy review</dd></div>
+                <div><dt>Recovers</dt><dd>missing receipt, duplicate claim, out-of-policy spend</dd></div>
+              </dl>
+              <div class="usecase__flow"><span class="usecase__step">submitted</span><span class="usecase__arrow">→</span><span class="usecase__step">in review</span><span class="usecase__arrow">→</span><span class="usecase__step">approved</span><span class="usecase__arrow">→</span><span class="usecase__step">reimbursed</span></div>
+            </article>
+            <article class="usecase">
+              <h3 class="usecase__title">Bank reconciliation review</h3>
+              <p class="usecase__body">Proposed matches move through review, exception handling, and lock with every decision tied to the ledger.</p>
+              <dl class="usecase__signals">
+                <div><dt>Waits on</dt><dd>accounting reviewer or evidence</dd></div>
+                <div><dt>Recovers</dt><dd>unmatched transaction, duplicate match, stale review</dd></div>
+              </dl>
+              <div class="usecase__flow"><span class="usecase__step">imported</span><span class="usecase__arrow">→</span><span class="usecase__step">proposed match</span><span class="usecase__arrow">→</span><span class="usecase__step">reviewed</span><span class="usecase__arrow">→</span><span class="usecase__step">locked</span></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="page-section page-section--alt">
+        <div class="shell">
+          <p class="section-eyebrow">And more back office</p>
+          <h2 class="more-head">If it has steps, approvals, and proof, Solden can keep it moving.</h2>
+          <div class="workflow-groups">
+            <article class="workflow-group">
+              <h3>Finance controls</h3>
+              <ul>
+                <li>Period and month-end close</li>
+                <li>Journal entry approvals</li>
+                <li>Capital expenditure approvals</li>
+                <li>Budget and spend requests</li>
+              </ul>
+            </article>
+            <article class="workflow-group">
+              <h3>Revenue and customer operations</h3>
+              <ul>
+                <li>Refund and credit approvals</li>
+                <li>Disputes and chargebacks</li>
+                <li>Customer and KYC onboarding</li>
+                <li>Renewals and contract tracking</li>
+              </ul>
+            </article>
+            <article class="workflow-group">
+              <h3>People and access</h3>
+              <ul>
+                <li>Employee onboarding</li>
+                <li>Employee offboarding</li>
+                <li>Data access requests</li>
+                <li>Access recertification</li>
+              </ul>
+            </article>
+            <article class="workflow-group">
+              <h3>Governance</h3>
+              <ul>
+                <li>Compliance attestations</li>
+                <li>Policy acknowledgements</li>
+                <li>Change approvals</li>
+                <li>Release approvals</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="page-section">
+        <div class="shell">
+          <div class="usecase-cta">
+            <h2>Bring the work that keeps getting stuck.</h2>
+            <p>We will map where it lands, who owns it, what it waits on, how it breaks, and what proof needs to stay attached.</p>
+            <a class="ix-btn ix-btn--primary" href="/contact.html">Talk to us</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div data-site-footer></div>
+    <script src="/site.js?v=shared-chrome-2" defer></script>
   </body>
 </html>

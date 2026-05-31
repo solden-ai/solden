@@ -7,7 +7,8 @@ Express server that:
   asset caching.
 - Receives contact-form submissions on `POST /api/contact` and writes
   them to a dedicated Postgres database.
-- Optionally fires a Slack notification when a lead lands.
+- Optionally sends Slack/internal email notifications when a lead lands.
+- Optionally sends the prospect a short confirmation email.
 
 The product (workspace SPA + API) lives elsewhere, this directory is
 marketing only, with its own dedicated database. The product DB is
@@ -17,12 +18,12 @@ intentionally isolated from this service.
 
 ```
 soldenai-landing/
-├── index.html        # hero, how it works, scope, runtime walkthrough, CTA
-├── manifesto.html    # The Back Office Runtime Manifesto
+├── index.html        # hero, how it works, scope, work record walkthrough, CTA
+├── manifesto.html    # The Back Office Work Manifesto
 ├── contact.html      # demo / sales form
 ├── privacy.html      # privacy posture
 ├── styles.css        # design tokens + homepage layout
-├── pages.css         # sub-page primitives (subpage hero, prose, founders, form)
+├── pages.css         # sub-page building blocks (subpage hero, prose, founders, form)
 ├── site.js           # year stamp + contact-form fetch
 ├── server.js         # Express static server + /api/contact + CSP / HSTS / health
 ├── scripts/
@@ -44,9 +45,11 @@ export DATABASE_URL="postgresql://you@localhost:5432/soldenai_landing"
 npm start                                    # http://localhost:8080
 ```
 
-The static site serves cleanly even if `DATABASE_URL` is missing ,
-form submissions return `503 no_storage` in that case, with a logged
-warning, so a misconfigured deploy is loud rather than silent.
+The static site serves cleanly even if `DATABASE_URL` is missing.
+Locally, valid form submissions are written to a JSONL dev file so QA
+does not produce a false `503`. In production/Railway, missing storage
+still returns `503 no_storage` with a logged warning, so a misconfigured
+deploy is loud rather than silent.
 
 To watch leads land:
 
@@ -76,6 +79,10 @@ Clearledgr services. Steps:
    webhook URL. Each lead fires a non-blocking Slack notification; the
    DB write is the source of truth, so Slack delivery isn't load-
    bearing.
+6. **Optional email alerts**: set `RESEND_API_KEY`, `LEAD_NOTIFY_TO`,
+   and `LEAD_NOTIFY_FROM`. Each lead sends an internal email to the
+   team and a short confirmation email to the prospect. Email delivery
+   is non-blocking; the DB write remains the source of truth.
 
 That's it. Schema bootstrap (`CREATE TABLE IF NOT EXISTS leads ...`)
 runs on every boot, so the first deploy creates the table without a
@@ -93,7 +100,12 @@ migration step.
 | Var                  | Purpose                                                    |
 |----------------------|------------------------------------------------------------|
 | `SLACK_WEBHOOK_URL`  | Per-lead notification target. Omit to disable.             |
+| `RESEND_API_KEY`     | Enables internal lead emails and prospect confirmations through Resend. |
+| `LEAD_NOTIFY_TO`     | Internal recipient for lead emails and reply-to address for prospect confirmations. |
+| `LEAD_NOTIFY_FROM`   | Verified sender address. Defaults to `leads@soldenai.com`. |
 | `DB_SSL`             | Set to `true` only when pointing at an external PG that requires TLS. Railway's internal network does not. |
+| `DEV_CONTACT_FALLBACK` | Local only. Set to `false` to force `503 no_storage` when `DATABASE_URL` is missing. |
+| `DEV_LEADS_PATH`       | Local JSONL path for contact submissions when the dev fallback is active. |
 
 ## Schema
 
