@@ -3106,6 +3106,13 @@ body:not(.theme-dark) .footer-cta {
               backdrop-filter 0.3s var(--ease-out);
 }
 
+[data-site-header] {
+  min-height: 72px;
+  display: block;
+  background: #fbf6ea;
+  border-bottom: 1px solid rgba(31, 27, 22, 0.1);
+}
+
 .ix-nav.is-scrolled {
   background: #fbf6ea;
   backdrop-filter: saturate(180%) blur(14px);
@@ -3299,7 +3306,7 @@ body:not(.theme-dark) .footer-cta {
 }
 
 .ix-hero__copy {
-  max-width: 990px;
+  max-width: 920px;
   padding-top: clamp(6px, 2vh, 24px);
 }
 
@@ -3309,11 +3316,11 @@ body:not(.theme-dark) .footer-cta {
 }
 
 .ix-hero__inner h1 {
-  max-width: 990px;
+  max-width: 920px;
   margin: 0;
   color: var(--ix-ink);
-  font-size: clamp(62px, 4.65vw, 90px);
-  line-height: 0.95;
+  font-size: clamp(56px, 4vw, 82px);
+  line-height: 0.98;
   font-weight: 760;
   text-wrap: balance;
 }
@@ -3328,7 +3335,7 @@ body:not(.theme-dark) .footer-cta {
 }
 
 .ix-hero .ix-hero__copy > p {
-  max-width: 740px;
+  max-width: 700px;
   margin: 28px 0 0;
   color: var(--ix-muted);
   font-size: clamp(18px, 1.35vw, 22px);
@@ -3441,8 +3448,8 @@ body:not(.theme-dark) .footer-cta {
 .ix-final h2 {
   margin: 0;
   color: var(--ix-ink);
-  font-size: clamp(40px, 4vw, 68px);
-  line-height: 1;
+  font-size: clamp(36px, 3.35vw, 56px);
+  line-height: 1.04;
   font-weight: 760;
   text-align: center;
 }
@@ -3531,8 +3538,8 @@ body:not(.theme-dark) .footer-cta {
 .ix-trust__grid h3 {
   margin: 0;
   color: var(--ix-ink);
-  font-size: clamp(24px, 2vw, 32px);
-  line-height: 1.08;
+  font-size: clamp(22px, 1.65vw, 28px);
+  line-height: 1.12;
 }
 
 .ix-principles p,
@@ -3575,8 +3582,8 @@ body:not(.theme-dark) .footer-cta {
 .ix-record-system h2 {
   margin: 0;
   color: var(--ix-ink);
-  font-size: clamp(38px, 3.4vw, 58px);
-  line-height: 1;
+  font-size: clamp(34px, 3vw, 50px);
+  line-height: 1.04;
   font-weight: 760;
 }
 
@@ -3649,7 +3656,7 @@ body:not(.theme-dark) .footer-cta {
 .ix-work-record__identity h3 {
   margin: 0;
   color: var(--ix-ink);
-  font-size: clamp(32px, 2.8vw, 40px);
+  font-size: clamp(30px, 2.4vw, 36px);
   line-height: 1.02;
 }
 
@@ -3991,7 +3998,7 @@ body:not(.theme-dark) .footer-cta {
 .ix-workflow-panel__subject h3 {
   margin: 0;
   color: var(--ix-ink);
-  font-size: clamp(32px, 2.8vw, 40px);
+  font-size: clamp(30px, 2.4vw, 36px);
   line-height: 1.04;
 }
 
@@ -4165,7 +4172,7 @@ body:not(.theme-dark) .footer-cta {
 .ix-sdk__after h3 {
   margin: 0;
   color: var(--ix-ink);
-  font-size: clamp(27px, 2.35vw, 34px);
+  font-size: clamp(25px, 2vw, 30px);
   line-height: 1.05;
 }
 
@@ -4466,8 +4473,8 @@ body:not(.theme-dark) .footer-cta {
 .ix-install h3 {
   margin: 0;
   color: var(--ix-ink);
-  font-size: clamp(26px, 2.4vw, 34px);
-  line-height: 1.08;
+  font-size: clamp(24px, 2vw, 30px);
+  line-height: 1.12;
 }
 
 .ix-install p {
@@ -4518,7 +4525,7 @@ body:not(.theme-dark) .footer-cta {
 .ix-anywhere h2 {
   max-width: 620px;
   color: var(--ix-ink);
-  font-size: clamp(32px, 2.6vw, 40px);
+  font-size: clamp(30px, 2.2vw, 36px);
   line-height: 1.08;
   font-weight: 720;
   text-align: left;
@@ -5202,6 +5209,10 @@ body:not(.theme-dark) .footer-cta {
 }
 
 @media (max-width: 720px) {
+  [data-site-header] {
+    min-height: 68px;
+  }
+
   .ix-banner {
     align-items: center;
     min-height: 48px;

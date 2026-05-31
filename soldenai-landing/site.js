@@ -92,7 +92,7 @@
       '  <div class="shell footer__inner">',
       '    <div class="footer__top">',
       '      <div class="footer__lead">',
-      '        <p class="footer__tagline">Where work lands. Where it waits. Where it breaks.</p>',
+      '        <p class="footer__tagline">The workflow runtime for the back office.</p>',
       '        <a class="footer__cta" href="/contact.html">Talk to us <span>→</span></a>',
       '      </div>',
       '      <nav class="footer__cols" aria-label="Footer">',
