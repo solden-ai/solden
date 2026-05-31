@@ -1,12 +1,12 @@
-# Solden Agent Architecture (AP-First Runtime)
+# Solden Agent Architecture (Operational Memory, AP Wedge)
 
 ## Status
 
 - **Role:** Architecture reference for the production agent runtime model
-- **Scope:** AP v1 runtime and skill architecture
+- **Scope:** Shared technical runtime behind Solden's operational-memory model, with AP v1 as the first shipped skill domain
 - **Canonical doctrine:** `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
 
-This document describes how Solden is implemented as one finance execution agent runtime, with AP as the first production skill domain.
+This document describes the technical runtime behind Solden's operational memory for back-office work in progress. Finance is the entry point, and AP is the first shipped domain.
 
 ## Core Model
 
@@ -30,7 +30,7 @@ Gmail surface (operator context)
    + ERP connectors (system-of-record write-back)
                  |
                  v
-      Finance Agent Runtime (single execution core)
+      Back Office Workflow Runtime (single execution core)
                  |
           Skill Registry + Dispatch
                  |
@@ -96,7 +96,7 @@ Gmail surface (operator context)
 
 1. `read_ap_workflow_health`
 
-These intents are intentionally AP-scoped for v1. Expansion to additional finance workflows should add skills to the same runtime, not new parallel runtimes.
+These intents are intentionally AP-scoped for v1. Expansion to additional finance or back-office workflows should add skills to the same runtime, not new parallel runtimes.
 
 ## Execution Guarantees (Required)
 
@@ -117,11 +117,13 @@ No surface should duplicate core execution logic outside the runtime.
 
 ## Expansion Pattern (Post-AP)
 
-Future domains should be added as new skills on the same runtime, for example:
+Future domains should be added as new skills on the same runtime. Finance remains the entry point, but the runtime shape is broader. Examples:
 
 1. disputes/vendor issue resolution
 2. collections/cash-application support
 3. close-task orchestration support
+4. procurement approval coordination
+5. compliance attestation workflows
 
 Each new skill must inherit the same policy, HITL, audit, and idempotency controls as AP.
 

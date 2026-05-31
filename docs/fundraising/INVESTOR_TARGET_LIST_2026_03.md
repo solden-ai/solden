@@ -8,7 +8,7 @@ This is a best-fit outreach list for Solden's current round:
 - instrument: post-money SAFE
 - target cap: $15M
 - stage: pre-seed with real product, 3 design partners, and 1 committed pilot starting in May
-- story: finance execution layer for finance teams; first skill is Gmail-native AP
+- story: operational memory for finance work in progress; first workflow is Gmail-native AP
 
 This is not a random VC list. It is filtered for investors that are plausibly active now for:
 
@@ -35,7 +35,7 @@ Important:
 ### Europe
 
 1. `Seedcamp` — Europe — Best Europe-first fit; strong seed brand, real fintech pattern-matching, and founder-first reputation. Site: [seedcamp.com](https://seedcamp.com/)
-2. `QED Investors (Europe)` — Europe — Best specialist fit if Solden is framed as finance infrastructure / finance execution, not just AP automation. Site: [qedinvestors.com](https://www.qedinvestors.com/)
+2. `QED Investors (Europe)` — Europe — Best specialist fit if Solden is framed as finance infrastructure / work-in-progress memory, not just AP automation. Site: [qedinvestors.com](https://www.qedinvestors.com/)
 3. `Speedinvest` — Europe — Strong fit for fintech plus cross-border operator workflows; especially useful if the Africa / Europe angle stays in the story. Site: [speedinvest.com](https://www.speedinvest.com/)
 4. `firstminute capital` — Europe — Good fit for an AI-native European software company with ambition to become a category leader. Site: [firstminute.capital](https://www.firstminute.capital/)
 5. `Point Nine` — Europe — Strong fit for AI-native workflow software and vertical software; less fintech-specialist, but excellent software judgment. Site: [pointnine.com](https://www.pointnine.com/)
@@ -72,7 +72,7 @@ Important:
 25. `Precursor Ventures` — US — Good if the story is still early but the insight is strong and the market pain is obvious. Site: [precursorventures.com](https://www.precursorventures.com/)
 26. `Uncork Capital` — US — Good seed-stage software investor with long early-stage track record. Site: [uncork.com](https://uncork.com/)
 27. `Susa Ventures` — US — Strong fit for pre-seed / seed software and ambitious systems plays. Site: [susaventures.com](https://www.susaventures.com/)
-28. `2048 Ventures` — US — Strong fit if you lean harder into vertical AI and "system of record for finance execution" language. Site: [2048.vc](https://www.2048.vc/)
+28. `2048 Ventures` — US — Strong fit if you lean harder into vertical AI and "system of record for finance work in progress" language. Site: [2048.vc](https://www.2048.vc/)
 29. `Worklife Ventures` — US — Strong fit for workflow software sold into modern teams. Site: [worklifefund.com](https://www.worklifefund.com/)
 30. `Homebrew` — US — Good fit for software that changes how teams work; especially if the AI workflow story is strong. Site: [homebrew.co](https://homebrew.co/)
 31. `Conviction` — US — Good fit for AI-native application software with strong founder conviction. Site: [conviction.com](https://www.conviction.com/)
@@ -144,13 +144,13 @@ Lead with this version of the story:
 - not "AI accounting"
 - not "AP automation"
 - not "generic agent platform"
-- yes: "AI execution layer for finance teams"
-- yes: "first skill is Gmail-native AP"
+- yes: "operational memory for finance work in progress"
+- yes: "first workflow is Gmail-native AP"
 - yes: "removes approval chasing and duplicate ERP entry"
 
 Best angles by investor type:
 
-- fintech specialists: finance execution infrastructure, control layer between inbox, approvals, and ERP
+- fintech specialists: finance work-in-progress memory between inbox, approvals, and ERP
 - software / SaaS funds: AI-native workflow software for finance operators
 - AI-native funds: narrow, high-frequency vertical workflow with clear human-in-the-loop guardrails
 - Europe-to-US funds: European / cross-border software wedge with obvious US expansion path

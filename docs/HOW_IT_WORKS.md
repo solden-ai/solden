@@ -2,19 +2,19 @@
 
 ## Overview
 
-Solden AP v1 is an **inbox-native, agentic AP workflow** for finance teams.
+Solden AP v1 is **operational memory for AP work in progress**.
 
-It starts in Gmail, runs queue control in `Pipeline`, routes approvals in Slack and Teams, and writes approved invoices into ERP systems with policy checks, deterministic workflow orchestration, and an auditable execution trail.
+It starts in Gmail, runs queue control in `Pipeline`, routes approvals in Slack and Teams, and writes approved invoices into ERP systems with policy checks and an auditable trail.
 
-Solden is not a standalone AP dashboard for daily work. The day-to-day operator workflow lives across Gmail, `Pipeline`, chat approvals, and ERP writeback.
+Solden is not a standalone AP dashboard for daily work. The day-to-day operator workflow lives across Gmail, `Pipeline`, chat approvals, and ERP writeback. Solden keeps the current owner, next step, context, blocker, proof, and audit together while that work moves.
 
 ## Product Shape (AP v1)
 
 - **Gmail** = intake, context, active-record review, next action
 - **Pipeline** = queue control, prioritization, saved views, cross-entity work management
 - **Slack / Teams** = approval and escalation decisions
-- **ERP** = system of record
-- **Solden** = policy + orchestration + execution + audit
+- **ERP** = system of record for posted transactions
+- **Solden** = system of record for work in progress
 
 ## Step-by-Step (AP v1)
 
@@ -137,7 +137,7 @@ Those are separate product decisions and are not part of the AP v1 doctrine.
 
 ## Why This Matters
 
-Solden’s AP v1 value is not just "UI inside Gmail."
+Solden's AP v1 value is not just "UI inside Gmail."
 
 The differentiator is the combination of:
 
@@ -145,9 +145,9 @@ The differentiator is the combination of:
 - chat-native approvals
 - ERP write-back
 - deterministic policy enforcement
-- auditable execution
+- auditable work memory
 
-That is what makes it an embedded finance execution layer rather than a lightweight automation plugin.
+That is what makes Solden operational memory for live back-office work entering through finance, rather than a lightweight automation plugin.
 
 ## Canonical Reference
 

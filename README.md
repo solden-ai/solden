@@ -1,9 +1,9 @@
-# Solden — Finance Execution Layer
+# Solden — Operational Memory for Back Office Work
 
-Solden is the execution layer for finance operations, embedding AI agents into the tools finance teams already use.
+Solden is operational memory for back-office work in progress. Your ERP remembers what happened; Solden remembers what's happening.
 
-AP v1 is the first production skill domain: Gmail-first intake, Slack/Teams approvals, ERP write-back, and full audit traceability.
-It is the current wedge, not the full product boundary.
+Finance is the entry point, and AP v1 is the first production workflow domain: Gmail-first intake, Slack/Teams approvals, ERP write-back, and full audit traceability.
+AP is the current wedge, not the full product boundary.
 
 ## Canonical Doctrine
 
@@ -37,13 +37,13 @@ For pilot hardening and wedge-truth evaluation, use `/Users/mombalam/Desktop/Sol
 
 ## Product Direction (Locked)
 
-1. One Solden finance execution agent runtime.
-2. AP is the first production skill domain, not the terminal product scope.
+1. One Solden operational-memory system for back-office work in progress.
+2. Finance is the entry point; AP is the first production workflow domain, not the terminal product scope.
 3. `Pipeline` is the AP control plane and default landing route for queue work.
 4. Gmail is the first inbox adapter and the primary current-record surface in the current wedge, not the entire product.
 5. Gmail default pinned navigation stays intentionally small: `Pipeline`, `Home`.
 6. Slack and Teams are approval/decision surfaces.
-7. ERP is the system of record.
+7. ERP is the system of record for posted transactions; Solden is the system of record for work in progress.
 8. Human-in-the-loop is intentional for risky actions.
 9. Policy, audit, idempotency, and durability are mandatory.
 10. Current AP connector scope is NetSuite, QuickBooks, Xero, and SAP, each enabled by readiness gates.
@@ -52,7 +52,7 @@ For pilot hardening and wedge-truth evaluation, use `/Users/mombalam/Desktop/Sol
 13. Initial rollout is Europe and Africa first (before any broader regional expansion).
 14. Operator-facing timestamps are standardized to `Europe/London`; backend storage/audit timestamps remain UTC.
 
-Solden is not a generic automation builder and not a dashboard-first AP tool.
+Solden is not a generic company brain, a knowledge base, a generic automation builder, or a dashboard-first AP tool. It starts with one painful finance workflow, then expands across back-office work where owner, next step, context, blocker, proof, and audit otherwise live in human memory.
 
 ## AP v1 Workflow
 

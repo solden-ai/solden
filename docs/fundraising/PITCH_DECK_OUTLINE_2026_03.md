@@ -16,11 +16,11 @@ This deck should stay concise. Aim for 12-14 slides.
 
 Solden
 
-AI execution layer for finance teams
+Operational memory for finance work in progress
 
-First skill: run AP from Gmail
+First workflow: AP from Gmail
 
-No approval chasing. No duplicate ERP entry.
+Your ERP remembers what happened. Solden remembers what's happening.
 
 Footer:
 
@@ -39,16 +39,17 @@ Points:
 - approvers get pulled into Slack or Teams
 - exceptions spill into spreadsheets and inbox threads
 - ERP only records the result
+- owner, next step, and proof live in people's heads
 
 Close with:
 
-The workflow already exists. It is just fragmented and manual.
+The work already exists. Its memory is fragmented and manual.
 
 ## Slide 3 — Real Pain
 
 Title:
 
-The pain is coordination, not capture
+The pain is memory, not capture
 
 Points:
 
@@ -59,13 +60,13 @@ Points:
 
 Close with:
 
-Finance teams do not need another dashboard. They need the workflow to run.
+Finance teams do not need another dashboard. They need the owner, next step, context, and proof to stay together.
 
 ## Slide 4 — Market Gap
 
 Title:
 
-Everyone acknowledges email. No one owns the workflow.
+Everyone acknowledges email. No one owns the work in progress.
 
 Points:
 
@@ -73,6 +74,7 @@ Points:
 - Tipalti uses email as an approval side channel
 - Stampli says email-thread coordination is broken and moves it into Stampli
 - no one treats Gmail as the AP operating surface
+- no one treats live AP work as the record to own
 
 This slide should make the competitive opening obvious.
 
@@ -80,7 +82,7 @@ This slide should make the competitive opening obvious.
 
 Title:
 
-First skill: AP from Gmail
+First workflow: AP from Gmail
 
 Message:
 
@@ -92,7 +94,7 @@ Message:
 
 Close with:
 
-Gmail = operator surface. Slack / Teams = action surfaces. ERP = system of record.
+Gmail = where work starts. Slack / Teams = where decisions happen. ERP = where outcomes land. Solden = where the work in progress lives.
 
 ## Slide 6 — Product
 
@@ -176,12 +178,12 @@ Points:
 
 Title:
 
-Solden is the execution layer. AP is the first skill.
+Solden is operational memory. AP is the first workflow.
 
 Message:
 
 - AP is frequent, painful, inbox-native, and tied directly to ERP outcomes
-- the same coordination pattern exists in vendor issues, finance exceptions, reconciliation, and close
+- the same memory gap exists in vendor issues, finance exceptions, reconciliation, and close
 - win one workflow deeply, then expand
 
 ## Slide 12 — GTM
@@ -211,7 +213,7 @@ Include:
 
 - founder backgrounds
 - relevant domain or product insight
-- why this team is suited to build finance execution software
+- why this team is suited to build finance work-in-progress software
 
 ## Slide 14 — Raise
 
@@ -253,7 +255,7 @@ Use these deck rules:
 4. Do not present AP as the full company.
 5. Make the wedge-to-platform transition obvious.
 6. Do not let the deck become a single-customer story; use Cowrywise as the best proof anchor, not the whole company.
-7. Do not let the deck describe Solden as just an AP product; the company is the finance execution layer and AP is the first skill.
+7. Do not let the deck describe Solden as just an AP product; the company is operational memory for finance work in progress and AP is the first workflow.
 
 ## Required Founder Inputs
 

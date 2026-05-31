@@ -244,7 +244,7 @@ export default function WorkflowsPage({ api, orgId, toast }) {
     <div class="secondary-banner">
       <div class="secondary-banner-copy">
         <h3>Workflows</h3>
-        <p class="muted">Define custom workflow types — states, transitions, and actions — with no code. Activate one, then run boxes through it on the same runtime as AP and Procurement.</p>
+        <p class="muted">Define custom workflow types — states, transitions, and actions — with no code. Activate one, then track the owner, next step, context, proof, and audit just like AP and Procurement.</p>
       </div>
     </div>
 

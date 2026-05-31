@@ -10,10 +10,10 @@ import { formatAmount, formatRelative, displayOrgName } from '../../utils/format
 import { AgentActivityRibbon } from '../../components/AgentActivityRibbon.js';
 
 /**
- * Workspace Home — coordination-layer control center.
+ * Workspace Home — work-in-progress control center.
  *
  * DESIGN.md §Workspace Surface Pattern: this is the leader's daily
- * landing page. It shows the live state of the coordination layer —
+ * landing page. It shows live work in progress —
  * what the agent is doing across surfaces right now, what needs
  * judgment, what just shipped to ERP. Reference hierarchy: Linear
  * (real-time activity, dense lists), Vercel deployments (live stream
@@ -152,7 +152,7 @@ export function HomePage() {
         <div class="cl-home-headline">
           <div class="cl-home-eyebrow">${today}</div>
           <h1 class="cl-home-title">Welcome back, ${userName}.</h1>
-          <p class="cl-home-sub">${orgName} · coordination layer</p>
+          <p class="cl-home-sub">${orgName} · work in progress</p>
         </div>
         <div class="cl-home-actions">
           <button class="cl-home-btn cl-home-btn-secondary" onClick=${() => navigate('/activity')}>
@@ -185,7 +185,7 @@ export function HomePage() {
         live=${!!liveActivity}
         navigate=${navigate} />
 
-      <section class="cl-home-stat-strip" aria-label="Coordination layer at a glance">
+      <section class="cl-home-stat-strip" aria-label="Work in progress at a glance">
         <${StatTile}
           label="In flight"
           value=${inFlight}

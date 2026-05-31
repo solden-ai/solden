@@ -1,19 +1,21 @@
-# Solden Embedded Ecosystem (AP-First)
+# Solden Embedded Ecosystem (Operational Memory, AP Wedge)
 
 ## Status
 
 - **Role:** Product-surface and ecosystem reference
 - **Canonical doctrine:** `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
-- **Scope here:** AP v1 embedded ecosystem and runtime expansion model
+- **Scope here:** AP v1 embedded ecosystem and the broader back-office operational-memory expansion model
 
 ## Ecosystem Summary
 
-Solden is an embedded finance execution agent:
+Solden is embedded operational memory for back-office work in progress:
 
-1. Gmail is the primary AP operator surface.
-2. Slack/Teams are approval decision surfaces.
-3. ERP is the system of record.
-4. Solden runtime executes policy-governed AP actions with auditability.
+1. Finance is the entry point.
+2. AP is the first production wedge.
+3. Gmail is the primary AP operator surface.
+4. Slack/Teams are approval decision surfaces.
+5. ERP is the system of record for posted transactions.
+6. Solden keeps the owner, next step, context, blocker, proof, and audit together until the work is done.
 
 The product is designed to execute work in-place, not move operators into a new daily dashboard.
 
@@ -51,17 +53,17 @@ Primary responsibilities:
 2. policy and routing configuration
 3. rollout controls and evidence operations
 
-## Runtime Ecosystem Model
+## Operational Memory Model
 
 ```text
 Embedded surfaces (Gmail + Slack/Teams)
       |
       v
-Finance Agent Runtime (single execution core)
+Solden work-in-progress memory (single execution core)
       |
       +-> AP skill (production)
       +-> health/read-only skill(s)
-      +-> future finance skills (post-AP)
+      +-> future finance/back-office skills (post-AP)
       |
       v
 ERP and external system adapters
@@ -70,15 +72,15 @@ ERP and external system adapters
 ## AP v1 Lifecycle Across Surfaces
 
 1. AP email arrives in Gmail.
-2. Runtime classifies/extracts and validates.
+2. Solden classifies/extracts and validates.
 3. Gmail shows operator summary and next action.
 4. If required, approval is routed to Slack/Teams.
-5. On approval + eligibility, runtime posts to ERP.
+5. On approval + eligibility, Solden posts to ERP.
 6. All transitions and outcomes are audited.
 
 ## Expansion Doctrine (Post AP)
 
-Future workflow expansion should happen by adding new skills to the same runtime, not by introducing disconnected execution stacks.
+Future workflow expansion should happen by adding new skills to the same operational-memory system, not by introducing disconnected execution stacks.
 
 Examples:
 

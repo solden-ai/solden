@@ -245,10 +245,8 @@ the workspace login. Pricing, ICP messaging, "Request a demo" all
 live here.
 
 **What's shipped:** the static site lives at [`landing-page/`](../landing-page/)
-with five pages — `index.html` (hero/features), `pricing.html` (three
-tiers + FAQ), `security.html` (controls overview + packet link),
-`about.html` (mission + team), `contact.html` (Netlify-Forms-wired
-demo request). Privacy + Terms point at the workspace SPA.
+with pages for the homepage, pricing/ICP messaging, about, contact, privacy,
+and terms. Sales security packets live under [`docs/security/`](security/).
 
 **Steps to deploy:**
 

@@ -84,8 +84,8 @@ export function TermsPage() {
       <section class="cl-legal-body">
         <h2>Service</h2>
         <p>
-          Solden provides an AP coordination layer for finance
-          teams: invoice intake, validation, approval routing, ERP
+          Solden provides operational memory for finance work in
+          progress: invoice intake, validation, approval routing, ERP
           posting, and vendor management. Service is provided on a
           subscription basis with terms agreed in your order form.
         </p>

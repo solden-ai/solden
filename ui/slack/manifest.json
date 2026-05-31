@@ -1,9 +1,9 @@
 {
   "display_information": {
     "name": "Solden",
-    "description": "Finance execution agents — approvals, exceptions, and workflow actions",
+    "description": "Finance work memory — approvals, exceptions, and next actions",
     "background_color": "#0a1628",
-    "long_description": "Solden is an embedded finance execution agent. In Slack, teams review AP exceptions, approve/reject invoices, and track AP execution outcomes without leaving chat."
+    "long_description": "Solden keeps finance work in progress together across Gmail, Slack, Teams, and ERP. In Slack, teams review AP exceptions, approve or reject invoices, and keep proof attached without leaving chat."
   },
   "features": {
     "app_home": {

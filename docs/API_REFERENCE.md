@@ -200,7 +200,7 @@ These are core AP v1 APIs for embedded surfaces and operator tooling.
 `GET /api/ap/items/{ap_item_id}`
 
 Purpose:
-- retrieve AP item summary and workflow state
+- retrieve AP item summary and current work position
 
 ### Get AP Item Context
 

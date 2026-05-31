@@ -6,9 +6,9 @@ Use this file for live meetings. It keeps one narrative backbone while changing 
 
 ## Shared Backbone
 
-Solden is the AI execution layer for finance teams. The first production skill runs AP from Gmail.
+Solden is operational memory for finance work in progress. The first production workflow runs AP from Gmail.
 
-Invoices already arrive in Gmail, but finance teams still have to triage them manually, chase approvals in Slack, and then re-enter approved work into ERP. Solden handles that workflow from the inbox: process invoices, route approvals, validate against ERP, and write approved invoices back.
+Invoices already arrive in Gmail, but finance teams still have to triage them manually, chase approvals in Slack, and then re-enter approved work into ERP. Solden keeps the owner, next step, context, proof, and audit together from the inbox through approval and ERP writeback.
 
 The immediate win is simple:
 
@@ -19,13 +19,13 @@ The broader opportunity is that the same pattern exists in other finance workflo
 
 ## Investor-First Opening
 
-Solden is the AI execution layer for finance teams. The first production skill runs AP from Gmail. That sounds narrow, but it solves a big coordination problem that finance teams still handle manually across Gmail, Slack, spreadsheets, and ERP.
+Solden is operational memory for finance work in progress. The first production workflow runs AP from Gmail. That sounds narrow, but it solves a big memory problem finance teams still handle manually across Gmail, Slack, spreadsheets, and ERP.
 
 The market already acknowledges that email is part of AP. The difference is that most products treat email as intake, notification, or something to route around. We think Gmail should be the operating surface.
 
 The wedge is AP because it is frequent, painful, inbox-native, and tied directly to ERP outcomes. If we win that workflow, we can expand into adjacent finance workflows like vendor issues, finance exceptions, reconciliation, and close coordination.
 
-The short version is: everyone acknowledges the workflow exists, but nobody really owns it from Gmail. That is the opening.
+The short version is: ERP remembers what happened, but nobody really remembers the live work from Gmail through approval. That is the opening.
 
 ## Operator-First Opening
 
@@ -45,7 +45,7 @@ Open the Solden surface.
 
 Show the invoice record or pipeline.
 
-"Now we have the invoice data, the current state, any blockers, and the next action in one place."
+"Now we have the invoice data, the owner, any blockers, the proof, and the next action in one place."
 
 Show approval routing.
 

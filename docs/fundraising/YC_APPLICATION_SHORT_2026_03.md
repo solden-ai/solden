@@ -6,15 +6,15 @@ Use this version for short YC form fields and interview prep. Answers are intent
 
 ## 50-character description
 
-Finance execution layer, starting with AP
+Memory for finance work in progress
 
 ## 1-line description
 
-Solden is an AI execution layer for finance teams; the first skill runs AP from Gmail.
+Solden is operational memory for finance work in progress; the first workflow runs AP from Gmail.
 
 ## What are you building?
 
-We are building an AI execution layer for finance teams. The first production skill runs AP from Gmail. Solden reads invoice emails, triages them into the right workflow or entity, routes approvals, checks invoices against ERP, and writes approved invoices back. The goal is to remove approval chasing and duplicate ERP entry.
+We are building operational memory for finance work in progress. The first production workflow runs AP from Gmail. Solden reads invoice emails, triages them into the right workflow or entity, routes approvals, checks invoices against ERP, and writes approved invoices back. It keeps the owner, next step, context, proof, and audit together while work is still live.
 
 ## What problem are you solving?
 
@@ -30,7 +30,7 @@ Mo Mbalam has worked with finance teams for 10 years and spent 4 years as an Acc
 
 ## How far along are you?
 
-We have a real product and the current wedge is already working in software. Solden already supports Gmail-native AP intake, invoice processing, review surfaces, approval routing, ERP validation and writeback, and audit trail / workflow state control. The current work is pilot hardening and turning design-partner interest into repeatable proof.
+We have a real product and the current wedge is already working in software. Solden already supports Gmail-native AP intake, invoice processing, review surfaces, approval routing, ERP validation and writeback, and owner / next-step / context / proof / audit memory. The current work is pilot hardening and turning design-partner interest into repeatable proof.
 
 ## Do people want it?
 
@@ -62,7 +62,7 @@ We are discussing pricing with Cowrywise now. Our first committed pilot starts i
 
 ## Interview soundbites
 
-- Business: first skill is AP from Gmail
-- Company: finance execution layer, starting with AP
+- Business: first workflow is AP from Gmail
+- Company: operational memory for finance work in progress
 - Real pain: approval chasing and duplicate ERP entry
 - Best proof: Cowrywise spends roughly 3 days a week on reconciliation and AP

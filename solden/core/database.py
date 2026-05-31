@@ -1678,6 +1678,13 @@ class _SoldenDBBase:
             run_migrations(self)
         except Exception as exc:
             logger.error("Database migrations failed: %s", exc)
+            # Fail fast in production: a swallowed migration error leaves the
+            # process up on a partial/stale schema, and AP writes then fail at
+            # runtime against missing columns. In dev we log-and-continue so a
+            # transient local issue doesn't block the inner loop.
+            from solden.core.secrets import _is_production
+            if _is_production():
+                raise
 
 
 # ARCHITECTURE NOTE: SoldenDB uses mixin inheritance for store methods.

@@ -32,7 +32,7 @@ This tracker is for launch execution and evidence collection after implementatio
 It does not replace the archived implementation trackers.
 
 Non-negotiable product/doctrine guardrails:
-- Preserve Solden AP v1 as an embedded, agentic finance execution layer.
+- Preserve Solden AP v1 as embedded operational memory for finance work in progress.
 - Gmail remains the primary operator surface.
 - Slack and Teams remain approval/decision surfaces.
 - ERP remains the system of record.

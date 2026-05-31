@@ -185,4 +185,4 @@ The Workspace Shell is **not** the daily AP operator workflow UI for AP v1.
 3. Slack and Teams approval cards support equivalent actions and outcomes.
 4. Exceptions are clearly reason-coded and actionable.
 5. Audit breadcrumbs are visible in-context with deeper detail on demand.
-6. The product feels like an embedded execution layer, not a generic automation panel.
+6. The product feels like embedded operational memory, not a generic automation panel.

@@ -3,16 +3,16 @@ import { html } from '../utils/htm.js';
 import { BrandMark } from './BrandMark.js';
 
 /**
- * Sidebar nav for the coordination-layer control center.
+ * Sidebar nav for the work-in-progress control center.
  *
  * Four groups, ordered by what the operator does here:
- *   primary   — live state of the coordination layer (Home, Activity, Exceptions)
+ *   primary   — live work in progress (Home, Activity, Exceptions)
  *   workflows — the box types the operator works in (Records, Procurement, Builder)
  *   data      — reference + read-only surfaces (Vendors, Reports, Audit log)
  *   admin     — policy + identity + render-target config (Rules, Connections, API keys, Settings)
  *
  * Records / Procurement / Builder are the workflow surfaces (box types the
- * runtime runs), so they group under WORKFLOWS, not DATA. DATA is for the
+ * system tracks), so they group under WORKFLOWS, not DATA. DATA is for the
  * reference surfaces: the vendor directory, reporting, and the audit log.
  * (The /workflows page is the no-code builder, labeled "Builder" here so the
  * group heading and the item don't read as "Workflows > Workflows".)

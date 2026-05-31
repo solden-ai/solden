@@ -2291,7 +2291,12 @@ def _require_item(
     if expected_organization_id is not None:
         actual = str(item.get("organization_id") or "").strip()
         expected = str(expected_organization_id or "").strip()
-        if expected and actual and actual != expected:
+        # Fire whenever the caller passes an org and the item's org doesn't
+        # match — INCLUDING an item whose stored org is empty/null. The prior
+        # ``actual and`` clause skipped the check for empty-org items, leaving
+        # any null-org AP item readable/writable by any tenant through every
+        # route that uses this guard. Mirrors dual_approval.py's strict form.
+        if expected and actual != expected:
             raise HTTPException(status_code=404, detail="ap_item_not_found")
     return item
 

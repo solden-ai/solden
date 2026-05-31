@@ -438,6 +438,18 @@ class LLMGateway:
 
     def __init__(self, api_key: Optional[str] = None, db: Any = None):
         self._api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+        # Fail loud in production if the model key is missing. Without this,
+        # a missing key passes startup and every invoice extraction silently
+        # fails with a 401 after retry exhaustion on the first real invoice —
+        # a green health check hiding a fully broken intake path. In dev the
+        # key may be absent (tests mock the gateway), so we only guard prod.
+        if not self._api_key:
+            from solden.core.secrets import _is_production
+            if _is_production():
+                raise RuntimeError(
+                    "Required secret 'ANTHROPIC_API_KEY' is not set. "
+                    "Set it as an environment variable before starting in production."
+                )
         self._db = db
 
     def _resolve_model(self, config: ActionConfig) -> str:

@@ -24,11 +24,11 @@ This file is the slide-ready presentation draft. It is tighter than the copy doc
 
 Solden
 
-AI execution layer for finance teams
+Operational memory for finance work in progress
 
-First skill: run AP from Gmail
+First workflow: AP from Gmail
 
-No approval chasing. No duplicate ERP entry.
+Your ERP remembers what happened. Solden remembers what's happening.
 
 ### Visual
 
@@ -37,7 +37,7 @@ No approval chasing. No duplicate ERP entry.
 
 ### Speaker note
 
-Solden is the execution layer for finance teams. The first production skill is AP from Gmail. If we win that workflow, we can expand into adjacent finance workflows later.
+Solden is operational memory for finance work in progress. The first production workflow is AP from Gmail. If we win that workflow, we can expand into adjacent finance workflows later.
 
 ## Slide 2
 
@@ -49,8 +49,9 @@ AP already runs through email
 - approvers get pulled into Slack or Teams
 - exceptions spill into spreadsheets and inbox threads
 - ERP only records the result
+- owner, next step, and proof live in people's heads
 
-The workflow already exists. It is just fragmented and manual.
+The work already exists. Its memory is fragmented and manual.
 
 ### Visual
 
@@ -65,14 +66,14 @@ This is the right opening. We are not inventing a workflow. We are naming the wo
 
 ### On-slide
 
-The pain is coordination, not capture
+The pain is memory, not capture
 
 - chase approvers
 - triage the right entity and workflow
 - resolve exceptions across inbox, chat, and spreadsheets
 - re-enter approved invoices into ERP
 
-Finance teams do not need another dashboard. They need the workflow to run.
+Finance teams do not need another dashboard. They need the owner, next step, context, and proof to stay together.
 
 ### Visual
 
@@ -86,11 +87,12 @@ This is the key insight. The buyer pain is not "please OCR invoices faster." The
 
 ### On-slide
 
-Everyone acknowledges email. No one owns the workflow.
+Everyone acknowledges email. No one owns the work in progress.
 
 - Ramp and BILL pull invoices out of email into their own systems
 - Tipalti uses email as an approval side channel
 - Stampli says email-thread coordination is broken and moves it into Stampli
+- no one treats live AP work as the record to own
 
 No one treats Gmail as the AP operating surface.
 
@@ -106,7 +108,7 @@ This is the strategic opening. The market acknowledges the workflow reality, but
 
 ### On-slide
 
-First skill: AP from Gmail
+First workflow: AP from Gmail
 
 - triage invoices from the inbox
 - route by entity and workflow
@@ -114,7 +116,7 @@ First skill: AP from Gmail
 - validate against ERP
 - write approved invoices back
 
-Gmail = operator surface. Slack/Teams = action surfaces. ERP = system of record.
+Gmail = where work starts. Slack/Teams = where decisions happen. ERP = where outcomes land. Solden = where the work in progress lives.
 
 ### Visual
 
@@ -122,7 +124,7 @@ Gmail = operator surface. Slack/Teams = action surfaces. ERP = system of record.
 
 ### Speaker note
 
-This is the product promise in one slide. It includes invoice processing, but it sells as workflow execution.
+This is the product promise in one slide. It includes invoice processing, but it sells as operational memory.
 
 ## Slide 6
 
@@ -135,7 +137,7 @@ The product is real today
 - confidence-gated review and exception handling
 - Slack and Teams actions
 - ERP validation and writeback
-- audit trail and workflow state control
+- owner, next step, context, proof, and audit trail
 
 ### Visual
 
@@ -163,7 +165,7 @@ How one invoice moves through Solden
 
 ### Speaker note
 
-Finance stays in Gmail while Solden handles the coordination work across the system.
+Finance stays where the work happens while Solden remembers what is waiting.
 
 ## Slide 8
 
@@ -232,10 +234,10 @@ The workflow has existed for years. The enabling technology and buyer urgency ar
 
 ### On-slide
 
-Solden is the execution layer. AP is the first skill.
+Solden is operational memory. AP is the first workflow.
 
 - AP is frequent, painful, inbox-native, and tied directly to ERP outcomes
-- the same coordination pattern exists in vendor issues, finance exceptions, reconciliation, and close
+- the same memory gap exists in vendor issues, finance exceptions, reconciliation, and close
 - win one workflow deeply, then expand
 
 ### Visual
@@ -244,7 +246,7 @@ Solden is the execution layer. AP is the first skill.
 
 ### Speaker note
 
-Today: first skill is AP from Gmail. Company over time: finance execution.
+Today: AP from Gmail. Company over time: the system of record for finance work in progress.
 
 ## Slide 12
 

@@ -20,8 +20,8 @@
     "full": "Solden — Finance Agent"
   },
   "description": {
-    "short": "Coordination layer for finance teams. Approve, escalate, and resolve AP exceptions in Teams.",
-    "full": "Solden is the embedded coordination layer for finance teams. The Solden bot brings AP approvals, exception triage, and workflow actions into Microsoft Teams as Adaptive Cards — review the bill, see the agent's reasoning + validation gate verdict + vendor history, and approve/reject/escalate without leaving the channel. Solden coordinates across Gmail, Slack, Teams, and the ERP, so the audit chain is complete: who decided what, where, with what evidence."
+    "short": "Operational memory for finance work. Approve, escalate, and resolve AP exceptions in Teams.",
+    "full": "Solden keeps finance work in progress together across Gmail, Teams, Slack, and ERP. The Solden bot brings AP approvals, exception triage, and workflow actions into Microsoft Teams as Adaptive Cards — review the bill, see the agent's reasoning, validation verdict, vendor history, and proof, then approve, reject, or escalate without leaving the channel. The audit chain stays complete: who decided what, where, with what evidence."
   },
   "accentColor": "#0A1F44",
   "bots": [

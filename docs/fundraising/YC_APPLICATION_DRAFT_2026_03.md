@@ -19,15 +19,15 @@ Solden
 
 ## One-line description
 
-Solden is an AI execution layer for finance teams. The first production skill runs AP from Gmail.
+Solden is operational memory for finance work in progress. The first production workflow runs AP from Gmail.
 
 ## What are you building?
 
-We are building an AI execution layer for finance teams. The first production skill runs AP from Gmail.
+We are building operational memory for finance work in progress. The first production workflow runs AP from Gmail.
 
 Today, invoices arrive in Gmail, approvals happen in Slack, exceptions get tracked in spreadsheets, and ERP only gets updated at the end. Finance teams still have to coordinate all of that manually.
 
-Solden reads invoice emails, triages them into the right workflow or entity, routes approvals, checks invoices against ERP, and writes approved invoices back. The immediate wedge is AP from Gmail, but the company is broader than AP.
+Solden reads invoice emails, triages them into the right workflow or entity, routes approvals, checks invoices against ERP, and writes approved invoices back. It keeps the owner, next step, context, proof, and audit together while the work is still live. The immediate wedge is AP from Gmail, but the company is broader than AP.
 
 ## What is the problem and why is it important?
 
@@ -58,14 +58,14 @@ The founding team is also balanced across domain, sales, and product execution:
 
 We have a real product and the current wedge is already working in software.
 
-The first production skill already supports:
+The first production workflow already supports:
 
 - Gmail-native AP intake and work surfaces
 - invoice processing and extraction
 - review surfaces for uncertain fields and exceptions
 - approval routing in Slack and Teams
 - ERP validation and writeback
-- audit trail and workflow state control
+- owner, next step, context, proof, and audit trail
 
 This is not a concept or prototype. The current stage is turning design-partner signal into paid pilot proof and tightening the wedge into something repeatable.
 
@@ -164,11 +164,11 @@ The sharpest way to understand Solden right now is:
 
 ### 50-character version
 
-Finance execution layer, starting with AP
+Memory for finance work in progress
 
 ### 1-sentence version
 
-Solden is an AI execution layer for finance teams whose first production skill runs AP from Gmail by processing invoices, routing approvals, validating against ERP, and writing approved work back without manual chasing or duplicate entry.
+Solden is operational memory for finance work in progress, starting with AP from Gmail: process invoices, route approvals, validate against ERP, and write approved work back without manual chasing or duplicate entry.
 
 ### Why now in one sentence
 

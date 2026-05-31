@@ -4,8 +4,14 @@ from solden.services.invoice_workflow import InvoiceData, InvoiceWorkflowService
 
 
 class _FakeDB:
-    def __init__(self) -> None:
+    def __init__(self, auto_post_enabled: bool = False) -> None:
         self._rows = {}
+        self._auto_post_enabled = auto_post_enabled
+
+    def get_organization(self, organization_id: str):
+        # Mirror the prod org shape so InvoiceWorkflowService._auto_post_enabled
+        # can read the opt-in flag. Auto-post is OFF unless the test opts in.
+        return {"settings": {"ap_auto_post_enabled": self._auto_post_enabled}}
 
     def get_invoice_status(self, gmail_id: str):
         return self._rows.get(gmail_id)
@@ -25,9 +31,9 @@ class _FakeDB:
         return None
 
 
-def _setup_service(monkeypatch):
+def _setup_service(monkeypatch, auto_post_enabled: bool = False):
     service = InvoiceWorkflowService(organization_id="org-test", auto_approve_threshold=0.95)
-    service.db = _FakeDB()
+    service.db = _FakeDB(auto_post_enabled=auto_post_enabled)
 
     calls = {"auto": 0, "send": 0, "send_context": None}
 
@@ -161,7 +167,10 @@ def test_budget_exceeded_forces_manual_approval(monkeypatch):
 
 
 def test_healthy_invoice_can_auto_approve(monkeypatch):
-    service, calls = _setup_service(monkeypatch)
+    # Auto-post is opt-in (default OFF): a tenant must explicitly enable it
+    # before a clean "approve" posts automatically. This test verifies the
+    # auto-post path itself, so it opts in.
+    service, calls = _setup_service(monkeypatch, auto_post_enabled=True)
     async def _fake_validation(_invoice):
         return {
             "passed": True,
@@ -202,6 +211,46 @@ def test_healthy_invoice_can_auto_approve(monkeypatch):
     assert result["status"] == "auto_approved"
     assert calls["auto"] == 1
     assert calls["send"] == 0
+
+
+def test_healthy_invoice_routes_to_human_when_auto_post_disabled(monkeypatch):
+    # Earned-autonomy default: with auto-post OFF (the launch default), a clean
+    # high-confidence "approve" must route to a human, NOT post automatically.
+    service, calls = _setup_service(monkeypatch, auto_post_enabled=False)
+
+    async def _fake_validation(_invoice):
+        return {
+            "passed": True,
+            "checked_at": "2026-02-25T00:00:00+00:00",
+            "reason_codes": [],
+            "reasons": [],
+            "policy_compliance": {},
+            "po_match_result": None,
+            "budget_impact": [],
+            "budget": {"status": "healthy"},
+        }
+
+    monkeypatch.setattr(service, "_evaluate_deterministic_validation", _fake_validation)
+
+    invoice = InvoiceData(
+        gmail_id="gmail-noauto",
+        subject="Invoice 2004",
+        sender="billing@vendor.com",
+        vendor_name="Vendor Inc",
+        amount=250.0,
+        confidence=0.99,
+        policy_compliance={"compliant": True, "violations": []},
+        budget_impact=[
+            {"budget_name": "Software", "after_approval_status": "healthy", "after_approval_percent": 44.0}
+        ],
+    )
+
+    result = asyncio.run(service.process_new_invoice(invoice))
+
+    assert result["status"] == "pending_approval"
+    assert calls["auto"] == 0
+    assert calls["send"] == 1
+    assert (calls["send_context"] or {}).get("auto_post_disabled") is True
 
 
 def test_approve_invoice_blocks_when_budget_requires_decision(monkeypatch):

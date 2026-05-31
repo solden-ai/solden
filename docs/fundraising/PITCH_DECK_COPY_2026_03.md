@@ -15,13 +15,13 @@ For the slide-ready version, use [`PITCH_DECK_PRESENTATION_DRAFT_2026_03.md`](/U
 
 Solden
 
-AI execution layer for finance teams
+Operational memory for finance work in progress
 
-First skill: run AP from Gmail
+First workflow: AP from Gmail
 
 Subhead:
 
-No approval chasing. No duplicate ERP entry.
+Your ERP remembers what happened. Solden remembers what's happening.
 
 ## Slide 2 - Workflow Reality
 
@@ -35,16 +35,17 @@ Body:
 - approvers get pulled into Slack or Teams
 - exceptions spill into spreadsheets and inbox threads
 - ERP only records the result
+- the owner, next step, and proof live in people's heads
 
 Close:
 
-The workflow already exists. It is just fragmented and manual.
+The work already exists. Its memory is fragmented and manual.
 
 ## Slide 3 - Real Pain
 
 Title:
 
-The pain is coordination, not capture
+The pain is memory, not capture
 
 Body:
 
@@ -55,13 +56,13 @@ Body:
 
 Close:
 
-Finance teams do not need another dashboard. They need the workflow to run.
+Finance teams do not need another dashboard. They need the owner, next step, context, and proof to stay together.
 
 ## Slide 4 - Market Gap
 
 Title:
 
-Everyone acknowledges email. No one owns the workflow.
+Everyone acknowledges email. No one owns the work in progress.
 
 Body:
 
@@ -69,6 +70,7 @@ Body:
 - Tipalti uses email as an approval side channel
 - Stampli says email-thread coordination is broken and moves it into Stampli
 - no one treats Gmail as the AP operating surface
+- no one treats live AP work as the record to own
 
 Visual note:
 
@@ -78,7 +80,7 @@ Show the competitor map, not just a broken workflow chain.
 
 Title:
 
-First skill: AP from Gmail
+First workflow: AP from Gmail
 
 Body:
 
@@ -90,7 +92,7 @@ Body:
 
 Close:
 
-Gmail = operator surface. Slack/Teams = action surfaces. ERP = system of record.
+Gmail = where work starts. Slack/Teams = where decisions happen. ERP = where outcomes land. Solden = where the work in progress lives.
 
 ## Slide 6 - Product
 
@@ -105,7 +107,7 @@ Body:
 - confidence-gated review and exception handling
 - Slack and Teams actions
 - ERP validation and writeback
-- audit trail and workflow state control
+- owner, next step, context, proof, and audit trail
 
 Visual note:
 
@@ -127,7 +129,7 @@ Body:
 
 Close:
 
-Finance stays in Gmail while Solden runs the workflow.
+Finance stays where the work happens while Solden remembers what is waiting.
 
 ## Slide 8 - Customer
 
@@ -190,17 +192,17 @@ Inbox-native finance workflow software is now viable.
 
 Title:
 
-Solden is the execution layer. AP is the first skill.
+Solden is operational memory. AP is the first workflow.
 
 Body:
 
 - AP is frequent, painful, inbox-native, and tied directly to ERP outcomes
-- the same coordination pattern exists in vendor issues, finance exceptions, reconciliation, and close
+- the same memory gap exists in vendor issues, finance exceptions, reconciliation, and close
 - win one workflow deeply, then expand
 
 Close:
 
-Today: first skill is AP from Gmail. Company over time: finance execution.
+Today: AP from Gmail. Company over time: the system of record for finance work in progress.
 
 ## Slide 12 - GTM
 
@@ -281,5 +283,5 @@ The product wins if finance can stay in Gmail while Solden handles the workflow.
 - Use product screenshots over abstract diagrams wherever possible.
 - Do not pitch Solden as "AI accounting."
 - Do not over-claim full autonomy.
-- Keep AP as the buying wedge and finance execution as the broader category.
+- Keep AP as the buying wedge and work-in-progress memory as the broader category.
 - Do not make the deck feel like it is about one customer logo; use Cowrywise as the strongest proof anchor, not the whole story.

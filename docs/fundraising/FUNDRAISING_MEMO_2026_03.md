@@ -13,7 +13,7 @@ Date: 2026-03-25
 
 ## One-Line Pitch
 
-Solden is the AI execution layer for finance teams. Its first production skill runs AP from Gmail: triage invoices, route approvals, validate against ERP, and write approved invoices back without manual approval chasing or duplicate data entry.
+Solden is operational memory for finance work in progress. Its first production workflow runs AP from Gmail: keep the owner, next step, context, proof, and audit together while invoices move through approvals and ERP writeback.
 
 Longer term, Solden will expand into adjacent finance workflows with the same manual coordination problem.
 
@@ -26,17 +26,18 @@ That creates three persistent problems:
 1. AP work starts in the inbox, but finance teams still have to recreate the work somewhere else.
 2. The most painful operational bottleneck is chasing approvals, not just parsing invoices.
 3. Approved work still has to be keyed into ERP manually, which wastes time and creates errors.
+4. The owner, next step, blocker, and proof live in people's heads until someone asks.
 
-This is why finance teams do not need another dashboard. They need a system that runs the workflow where the work already starts.
+This is why finance teams do not need another dashboard. They need a system that remembers live work where the work already starts.
 
 ## The Product Thesis
 
-Solden is not an AP suite. It is the execution layer for finance work.
+Solden is not an AP suite. It is operational memory for finance work in progress.
 
 The right hierarchy is:
 
-- The company: an AI execution layer for finance teams
-- The first production skill: accounts payable
+- The company: operational memory for finance work in progress
+- The first production workflow: accounts payable
 - The current wedge: run AP from Gmail without manual approval chasing or duplicate ERP entry
 - The expansion path: adjacent finance workflows like vendor issues, finance exceptions, reconciliation, and close coordination
 
@@ -51,6 +52,7 @@ They buy a much more specific outcome:
 - no manual approval chasing
 - no duplicate ERP entry
 - AP handled from Gmail instead of across 4-20 tools
+- the owner, next step, context, and proof visible without another status meeting
 
 Invoice processing is part of the wedge. It is not the whole wedge.
 
@@ -74,7 +76,7 @@ The more important point is that the market already admits this workflow exists.
 
 So the wedge is not based on an invented workflow. AP already runs through email in practice. The difference is that incumbents treat email as intake, notification, or something to escape from. Solden treats Gmail as the operating surface.
 
-Solden is not forcing finance into a new place. It is putting the workflow into the place they already work from and making that workflow actually run end to end.
+Solden is not forcing finance into a new place. It is putting the work record into the place they already work from and keeping that work alive end to end.
 
 ## What Solden Is Not
 
@@ -83,6 +85,8 @@ Solden is not:
 - a generic OCR tool
 - another AP dashboard
 - a replacement for ERP
+- a generic company brain
+- a knowledge base
 - an "AI accounting" product
 
 The product wins if finance can stay in email while Solden handles triage, approval routing, ERP checks, and writeback.
@@ -91,7 +95,7 @@ The product wins if finance can stay in email while Solden handles triage, appro
 
 The product is real.
 
-Current shipped capabilities for the first production skill include:
+Current shipped capabilities for the first production workflow include:
 
 - Gmail-native AP intake and work surfaces
 - invoice processing and extraction
@@ -99,13 +103,13 @@ Current shipped capabilities for the first production skill include:
 - confidence-gated human review
 - Slack and Teams approval routing
 - ERP validation and writeback
-- audit trail and canonical AP state transitions
+- owner, next step, context, proof, and canonical AP audit transitions
 
 This is not a prototype. The product risk is no longer "can this exist?" The next risk is turning a real wedge into repeatable customer proof.
 
 ## Why This Wedge
 
-AP is the right first skill because it is:
+AP is the right first workflow because it is:
 
 - frequent
 - painful
@@ -121,7 +125,7 @@ Most importantly, AP exposes the real bottlenecks clearly:
 
 This is also why the positioning is clean. Everyone in AP acknowledges that email is part of the workflow. No one really chooses it as the control surface.
 
-Winning AP from Gmail is the fastest path to proving the broader finance execution thesis.
+Winning AP from Gmail is the fastest path to proving the broader operational-memory thesis.
 
 ## Demand Evidence
 
@@ -177,7 +181,7 @@ Three things are true at once:
 2. Finance teams are leaner and cannot keep adding headcount to manual coordination work.
 3. ERP systems are still necessary but still not where the work actually gets executed.
 
-The next useful finance software layer is the one that runs the workflow where the work already starts.
+The next useful finance software layer is the one that remembers live work where the work already starts.
 
 ## Go-To-Market
 
@@ -290,8 +294,8 @@ It is large enough to matter and small enough to preserve discipline.
 
 Solden should be pitched now as:
 
-- the company: the AI execution layer for finance teams
-- today: the first production skill is Gmail-native AP
-- over time: adjacent finance workflows with the same manual coordination problem
+- the company: operational memory for finance work in progress
+- today: the first production workflow is Gmail-native AP
+- over time: adjacent finance workflows with the same manual memory gap
 
 That is sharp enough to sell, broad enough to matter, and consistent with the strongest evidence in hand.

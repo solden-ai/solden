@@ -192,6 +192,37 @@ async def post_bill_to_quickbooks(
     if not connection.access_token or not connection.realm_id:
         return {"status": "error", "erp": "quickbooks", "reason": "QuickBooks not properly configured"}
 
+    # Duplicate-post pre-check (mirrors NetSuite/SAP). Intuit's requestid
+    # dedupe only spans posts that share the same key — a manual resume
+    # after a timeout-that-actually-succeeded posts with a different key
+    # (resume:<ap> vs auto:<ap>) and QB has no other native guard, so a
+    # silent-success timeout could otherwise create a duplicate Bill on
+    # resume. Look the bill up by invoice number first and short-circuit
+    # with already_posted if it's there. Failure of this lookup is
+    # non-fatal; we proceed and rely on the router H10 audit-key check.
+    if idempotency_key and getattr(bill, "invoice_number", None):
+        try:
+            existing_bill = await find_bill_quickbooks(
+                connection, str(bill.invoice_number),
+            )
+        except Exception as find_exc:
+            logger.debug(
+                "[QB] find_bill pre-check failed (proceeding) "
+                "vendor=%s invoice=%s: %s",
+                getattr(bill, "vendor_name", None),
+                bill.invoice_number, find_exc,
+            )
+            existing_bill = None
+        if existing_bill and existing_bill.get("bill_id"):
+            return {
+                "status": "already_posted",
+                "erp": "quickbooks",
+                "bill_id": existing_bill.get("bill_id"),
+                "doc_number": existing_bill.get("doc_number"),
+                "amount": existing_bill.get("amount"),
+                "idempotency_key": idempotency_key,
+            }
+
     expense_account = get_account_code("quickbooks", "expenses", gl_map)
 
     # Build QuickBooks Bill format

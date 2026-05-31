@@ -1,12 +1,12 @@
 """
 Solden v1 - FastAPI Backend
 
-Solden is the embedded coordination layer for finance operations.
+Solden is the embedded coordination layer for back office operations.
 Each workflow instance gets a Box (one persistent home with state
 machine + timeline + outcome + exception queue) rendered into
-whichever tool the user is already in. AP is the wedge — the only
-workflow shipped in v1 — but the runtime, intent contract, and Box
-primitive are not AP-specific.
+whichever tool the user is already in. Finance is the entry point and
+AP is the wedge shipped in v1, but the runtime, intent contract, and
+Box primitive are not finance- or AP-specific.
 
 Run Instructions:
 -----------------
@@ -301,13 +301,13 @@ async def app_lifespan(app: FastAPI):
 app = FastAPI(
     title="Solden API",
     description="""
-    Solden API v1 — embedded coordination layer for finance operations.
+    Solden API v1 — embedded coordination layer for back office operations.
 
-    **Each workflow instance gets a Box: one persistent home (state machine + append-only timeline + outcome + exception queue) rendered into whichever tool the user is already in.** AP is the wedge in v1; the runtime + intent contract + Box primitive are not AP-specific.
+    **Each workflow instance gets a Box: one persistent home (state machine + append-only timeline + outcome + exception queue) rendered into whichever tool the user is already in.** Finance is the entry point and AP is the wedge in v1; the runtime + intent contract + Box primitive are not finance- or AP-specific.
 
     ## Agent Runtime
     - Canonical intent contract: `/api/agent/intents/preview` and `/api/agent/intents/execute`
-    - Skill-packaged execution (AP skills shipped today; the runtime is workflow-agnostic and expands to adjacent finance workflows)
+    - Skill-packaged execution (AP skills shipped today; the runtime is workflow-agnostic and expands across back office workflows)
     - Deterministic policy prechecks before execution
     - Idempotency-aware execution and auditable outcomes
 

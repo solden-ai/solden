@@ -134,6 +134,14 @@ class APStore:
         now = datetime.now(timezone.utc).isoformat()
         item_id = payload.get("id") or f"AP-{uuid.uuid4().hex}"
 
+        # Every AP item MUST carry a tenant. A null/empty organization_id is a
+        # cross-tenant hazard: the per-item access guard (_require_item) keys
+        # isolation off this column, and a blank value would make the row
+        # reachable by any tenant. Refuse to create an unscoped item rather
+        # than persist a row that defeats tenant isolation downstream.
+        if not str(payload.get("organization_id") or "").strip():
+            raise ValueError("create_ap_item requires a non-empty organization_id")
+
         # Validate amount: flag invalid amounts rather than persisting silently
         raw_amount = payload.get("amount")
         if raw_amount is not None:

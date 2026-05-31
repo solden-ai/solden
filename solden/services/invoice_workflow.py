@@ -133,7 +133,7 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
         """Load organization settings if not already loaded."""
         if self._settings_loaded:
             return
-        
+
         try:
             org = self.db.get_organization(self.organization_id)
             if org:
@@ -144,8 +144,24 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
         except Exception as e:
             logger.warning("Failed to load org settings for %s: %s", self.organization_id, e)
             self._settings = {}
-        
+
         self._settings_loaded = True
+
+    def _auto_post_enabled(self) -> bool:
+        """Has the tenant explicitly turned on autonomous auto-post?
+
+        Default OFF. A launching tenant routes EVERY agent-recommended
+        approval to a human until they opt in, so the agent earns trust
+        before it acts unattended on their ERP. The deterministic
+        validation gate and the AP decision cascade still run and still
+        pre-vet the invoice; this flag only governs whether a clean
+        ``approve`` recommendation posts automatically or waits for a
+        human click. Flip on per-tenant via
+        ``settings_json['ap_auto_post_enabled'] = true``.
+        """
+        self._load_settings()
+        settings = self._settings or {}
+        return bool(settings.get("ap_auto_post_enabled", False))
 
     # ------------------------------------------------------------------
     # §6 Box State Management (Agent Design Specification)
@@ -1425,6 +1441,27 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
         
         # Route based on the AP decision's recommendation (gate already passed above).
         if ap_decision.recommendation == "approve":
+            # Earned-autonomy guard: a clean "approve" only posts automatically
+            # when the tenant has explicitly opted into auto-post. Default OFF,
+            # so a launching tenant routes every agent-recommended approval to a
+            # human until they turn autonomy on. This makes the product behave
+            # like the promise — the agent earns trust before acting unattended.
+            if not self._auto_post_enabled():
+                logger.info(
+                    "AP decision approve for %s but auto-post disabled "
+                    "(confidence=%.2f model=%s) — routing to human approval",
+                    invoice.gmail_id, ap_decision.confidence, ap_decision.model,
+                )
+                return await self._send_for_approval(
+                    invoice,
+                    extra_context={
+                        "ap_decision": "approve",
+                        "ap_reasoning": ap_decision.reasoning,
+                        "risk_flags": ap_decision.risk_flags,
+                        "auto_post_disabled": True,
+                        "erp_preflight": validation_gate.get("erp_preflight") if isinstance(validation_gate, dict) else None,
+                    },
+                )
             logger.info(
                 "AP decision approve for %s (confidence=%.2f model=%s)",
                 invoice.gmail_id, ap_decision.confidence, ap_decision.model,

@@ -1,12 +1,13 @@
 # Solden /v1 API
 
-The public API your agents call to interact with the Box.
+The public API your agents call to interact with Solden records.
 
 ## Mental model
 
-Solden is a workflow runtime. Each workflow type (today: `ap_item`) lives
-as a **Box** — a persistent state machine with its own gates, audit
-chain, and render targets (Gmail, Slack, Teams, NetSuite, SAP).
+Solden is operational memory for work in progress. Each workflow type
+(today: `ap_item`) lives as a **Box** — a persistent state machine with
+its own gates, audit chain, and render targets (Gmail, Slack, Teams,
+NetSuite, SAP).
 
 Your agent has three ways to interact with a Box:
 
