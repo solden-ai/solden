@@ -319,12 +319,12 @@
 body.theme-manifesto-light,
 body.theme-manifesto-light.theme-subpage-light {
   --page-rail: min(1200px, calc(100vw - 64px));
-  background: #fbf6ea;
+  background: #F4F8F7;
   color: #1f1b16;
 }
 
 body.theme-manifesto-light .ix-nav {
-  background: #fbf6ea;
+  background: #F4F8F7;
   border-bottom: 1px solid rgba(31, 27, 22, 0.1);
 }
 
@@ -445,7 +445,7 @@ body.theme-manifesto-light .ix-nav__links a[aria-current="page"] {
 }
 
 .page-section--alt {
-  background: #fbf6ea;
+  background: #F4F8F7;
 }
 
 .contact-shell {
@@ -543,7 +543,7 @@ body.theme-manifesto-light .ix-nav__links a[aria-current="page"] {
 .work-part {
   min-height: 220px;
   padding: 24px 20px 22px;
-  background: #fbf6ea;
+  background: #F4F8F7;
 }
 
 .work-part span {
@@ -578,7 +578,7 @@ body.theme-manifesto-light .ix-nav__links a[aria-current="page"] {
 }
 
 .usecase {
-  background: #fbf6ea;
+  background: #F4F8F7;
   border: 1px solid rgba(31, 27, 22, 0.14);
   border-radius: 0;
   padding: 34px;
@@ -618,7 +618,7 @@ body.theme-manifesto-light .ix-nav__links a[aria-current="page"] {
 
 .usecase__signals div {
   padding: 14px 16px;
-  background: #fbf6ea;
+  background: #F4F8F7;
 }
 
 .usecase__signals dt {
@@ -648,7 +648,7 @@ body.theme-manifesto-light .ix-nav__links a[aria-current="page"] {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--navy-deep);
-  background: #fbf6ea;
+  background: #F4F8F7;
   border: 1px solid rgba(31, 27, 22, 0.14);
   padding: 4px 8px;
 }
@@ -679,7 +679,7 @@ body.theme-manifesto-light .ix-nav__links a[aria-current="page"] {
 }
 
 .workflow-group {
-  background: #fbf6ea;
+  background: #F4F8F7;
   padding: 28px 26px 30px;
 }
 
@@ -828,7 +828,7 @@ body.theme-manifesto-light .ix-nav__links a[aria-current="page"] {
   background:
     linear-gradient(rgba(31, 27, 22, 0.06) 1px, transparent 1px),
     linear-gradient(90deg, rgba(31, 27, 22, 0.06) 1px, transparent 1px),
-    #fbf6ea;
+    #F4F8F7;
   background-size: 80px 80px;
   box-shadow: 0 28px 90px rgba(31, 27, 22, 0.09);
   overflow: hidden;
@@ -863,7 +863,7 @@ body.theme-manifesto-light .ix-nav__links a[aria-current="page"] {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   border: 1px solid rgba(31, 27, 22, 0.16);
-  background: #fbf6ea;
+  background: #F4F8F7;
 }
 
 .essay__visual-grid span {
@@ -888,7 +888,7 @@ body.theme-manifesto-light .ix-nav__links a[aria-current="page"] {
   width: min(430px, 58%);
   padding: 26px 30px;
   border: 1px solid rgba(31, 27, 22, 0.16);
-  background: #fbf6ea;
+  background: #F4F8F7;
   box-shadow: 0 24px 60px rgba(31, 27, 22, 0.12);
 }
 
