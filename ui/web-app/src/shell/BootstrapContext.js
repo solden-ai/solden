@@ -61,7 +61,8 @@ export function BootstrapProvider({ children }) {
   // see solden/api/workspace_shell.py L1113. Setting count=0
   // restores the unbadged Solden mark.
   useEffect(() => {
-    const count = Number(state.data?.dashboard_stats?.pending_approval || 0);
+    const dashboard = state.data?.dashboard_stats || state.data?.dashboard || {};
+    const count = Number(dashboard.pending_approval || 0);
     void setFaviconBadge(count);
   }, [state.data]);
 

@@ -2,6 +2,7 @@ import { h } from 'preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import htm from 'htm';
 import { formatAmount } from '../../utils/formatters.js';
+import { hasBoxCapability } from '../../utils/capabilities.js';
 
 const html = htm.bind(h);
 
@@ -48,7 +49,7 @@ function rowHeadline(row) {
   return `Record · ${idLabel}`;
 }
 
-export default function ExceptionsPage({ api }) {
+export default function ExceptionsPage({ api, navigate, bootstrap }) {
   const [items, setItems] = useState(null);
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
@@ -63,8 +64,8 @@ export default function ExceptionsPage({ api }) {
       if (severityFilter) params.set('severity', severityFilter);
       const query = params.toString();
       const [listRes, statsRes] = await Promise.all([
-        api(`/api/admin/box/exceptions${query ? `?${query}` : ''}`),
-        api('/api/admin/box/exceptions/stats'),
+        api(`/api/workspace/exceptions${query ? `?${query}` : ''}`),
+        api('/api/workspace/exceptions/stats'),
       ]);
       setItems(listRes?.items || []);
       setStats(statsRes || null);
@@ -89,7 +90,7 @@ export default function ExceptionsPage({ api }) {
     setResolveDialog(null);
     setResolvingId(exceptionId);
     try {
-      await api(`/api/admin/box/exceptions/${exceptionId}/resolve`, {
+      await api(`/api/workspace/exceptions/${exceptionId}/resolve`, {
         method: 'POST',
         body: JSON.stringify({ resolution_note: note }),
         headers: { 'Content-Type': 'application/json' },
@@ -102,12 +103,25 @@ export default function ExceptionsPage({ api }) {
     }
   };
 
+  const openVendor = (vendorName) => {
+    if (!vendorName || !navigate) return;
+    const target = `/vendors/${encodeURIComponent(vendorName)}`;
+    navigate(target);
+  };
+
+  const openRecord = (boxType, boxId) => {
+    if (boxType !== 'ap_item' || !boxId || !navigate) return;
+    const target = `/records/${encodeURIComponent(boxId)}`;
+    navigate(target);
+  };
+
   const sorted = (items || []).slice().sort((a, b) => {
     const sa = SEVERITY_ORDER[a.severity] ?? 99;
     const sb = SEVERITY_ORDER[b.severity] ?? 99;
     if (sa !== sb) return sa - sb;
     return String(a.raised_at || '').localeCompare(String(b.raised_at || ''));
   });
+  const canResolve = hasBoxCapability(bootstrap, 'ap_item', 'approve_invoice');
 
   return html`
     <div class="secondary-banner ${(stats?.total_unresolved || 0) > 0 ? 'warning' : ''}">
@@ -151,19 +165,12 @@ export default function ExceptionsPage({ api }) {
                       ? formatAmount(summary.amount, summary.currency)
                       : '';
                     const ageLabel = formatTimeAgo(row.raised_at);
-                    const openRecord = () => {
-                      if (row.synthetic) {
-                        const v = row.metadata?.vendor_name;
-                        if (v) window.location.hash = `#/vendors/${encodeURIComponent(v)}`;
-                        return;
-                      }
-                      if (row.box_type === 'ap_item' && row.box_id) {
-                        window.location.hash = `#/records/${encodeURIComponent(row.box_id)}`;
-                      }
-                    };
                     return html`
                     <div key=${row.id} class="secondary-row" style="flex-direction:column;align-items:stretch;gap:6px;border-left:3px solid ${SEVERITY_COLORS[row.severity] || '#6B7280'};padding:10px 12px;cursor:pointer"
-                      onClick=${openRecord}>
+                      onClick=${() => {
+                        if (row.synthetic) openVendor(row.metadata?.vendor_name);
+                        else openRecord(row.box_type, row.box_id);
+                      }}>
                       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
                         <div style="min-width:0">
                           <strong style="font-size:14px">${headline}</strong>
@@ -173,20 +180,17 @@ export default function ExceptionsPage({ api }) {
                           <span class="status-badge" style="color:${SEVERITY_COLORS[row.severity] || '#6B7280'};font-weight:700">${row.severity}</span>
                           ${row.synthetic
                             ? html`<button
-                                onClick=${() => {
-                                  const v = row.metadata?.vendor_name;
-                                  if (v) window.location.hash = `#/vendors/${encodeURIComponent(v)}`;
-                                }}
+                                onClick=${() => openVendor(row.metadata?.vendor_name)}
                                 class="btn-secondary btn-sm"
                                 title="Resolve this signal by advancing the underlying onboarding session.">
                                 View vendor
                               </button>`
-                            : html`<button
+                            : canResolve ? html`<button
                                 disabled=${resolvingId === row.id}
                                 onClick=${() => openResolveDialog(row.id)}
                                 class="btn-primary btn-sm">
                                 ${resolvingId === row.id ? 'Resolving…' : 'Resolve'}
-                              </button>`}
+                              </button>` : null}
                         </div>
                       </div>
                       ${showReason ? html`<div style="font-size:12px;line-height:1.4">${reason}</div>` : null}

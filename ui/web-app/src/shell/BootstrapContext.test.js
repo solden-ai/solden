@@ -3,6 +3,7 @@ import { h } from 'preact';
 import { cleanup, render, screen, waitFor } from '@testing-library/preact';
 import { api } from '../api/client.js';
 import { BootstrapProvider, useBootstrap } from './BootstrapContext.js';
+import { setFaviconBadge } from '../lib/faviconBadge.js';
 
 vi.mock('../api/client.js', () => ({
   api: vi.fn(),
@@ -36,6 +37,23 @@ describe('BootstrapProvider', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Loaded org-test')).toBeTruthy();
+    });
+  });
+
+  it('badges the favicon from the canonical dashboard payload', async () => {
+    api.mockResolvedValue({
+      organization: { id: 'org-test', name: 'Solden Test' },
+      current_user: { email: 'ops@soldenai.com', organization_id: 'org-test' },
+      dashboard: { pending_approval: 7 },
+    });
+
+    render(h(BootstrapProvider, {}, h(Probe, {})));
+
+    await waitFor(() => {
+      expect(screen.getByText('Loaded org-test')).toBeTruthy();
+    });
+    await waitFor(() => {
+      expect(setFaviconBadge).toHaveBeenLastCalledWith(7);
     });
   });
 

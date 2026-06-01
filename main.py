@@ -188,6 +188,7 @@ from solden.api.report_subscriptions import (
 from solden.api.workspace_reports import (
     router as workspace_reports_router,
 )
+from solden.api.workspace_records import router as workspace_records_router
 from solden.api.threshold_policy import (
     router as threshold_policy_router,
 )
@@ -675,6 +676,8 @@ STRICT_PROFILE_ALLOWED_WORKSPACE_PATHS = {
     "/api/workspace/bootstrap",
     "/api/workspace/connections/health",
     "/api/workspace/dashboard",
+    "/api/workspace/exceptions",
+    "/api/workspace/exceptions/stats",
     "/api/workspace/entities",
     "/api/workspace/erp/field-mappings",
     "/api/workspace/permissions/catalog",
@@ -741,6 +744,7 @@ STRICT_PROFILE_ALLOWED_WORKSPACE_PATHS = {
     "/api/workspace/tax-compliance/summary",
     "/api/workspace/tax-compliance/validate-tax-id",
     "/api/workspace/reports/export-to-sheets",
+    "/api/workspace/records",
 }
 
 STRICT_PROFILE_ALLOWED_AUTH_PATHS = {
@@ -813,6 +817,7 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
     for pattern in (
         r"^/extension/ap-items/by-netsuite-bill/[^/]+/(approve|reject|request-info)$",
         r"^/api/workspace/team/invites/[^/]+/revoke$",
+        r"^/api/workspace/exceptions/[^/]+/resolve$",
         # Module 6 — team offboarding (deactivate / reactivate).
         r"^/api/workspace/team/users/[^/]+/(deactivate|reactivate)$",
         # Module 2 — consolidated AP item detail page.
@@ -1918,6 +1923,7 @@ app.include_router(sample_data_router)
 # Module 1 — Live Operations dashboard reads.
 # Approver workload aggregation; logistics, not scoring per §74.
 app.include_router(dashboard_router)
+app.include_router(workspace_records_router)
 
 # Wave 5 / G2: multi-attribute vendor match
 app.include_router(vendor_match_router)

@@ -75,7 +75,7 @@ export function HomePage() {
   const metrics = useEndpoint(`/api/ap/items/metrics/aggregation?${orgQuery}&vendor_limit=5`, [orgId]);
   const upcoming = useEndpoint(`/api/ap/items/upcoming?${orgQuery}&limit=10`, [orgId]);
   const workload = useEndpoint('/api/workspace/dashboard/approver-workload', [orgId]);
-  const exceptions = useEndpoint('/api/admin/box/exceptions?box_type=ap_item&limit=10', [orgId]);
+  const exceptions = useEndpoint('/api/workspace/exceptions?box_type=ap_item&limit=10', [orgId]);
   const activity = useEndpoint('/api/workspace/dashboard/recent-activity?limit=20', [orgId]);
 
   // SSE-pushed live updates: stats, workload, activity. Keeps the

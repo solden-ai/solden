@@ -464,6 +464,24 @@ def test_strict_profile_allows_workspace_user_preferences_route(monkeypatch):
         assert response.json().get("detail") != "endpoint_disabled_in_ap_v1_profile"
 
 
+def test_strict_profile_allows_workspace_records_and_exceptions(monkeypatch):
+    monkeypatch.setenv("ENV", "production")
+    monkeypatch.delenv("AP_V1_STRICT_SURFACES", raising=False)
+    monkeypatch.delenv("CLEARLEDGR_ENABLE_LEGACY_SURFACES", raising=False)
+    monkeypatch.delenv("AP_V1_ALLOW_LEGACY_SURFACES_IN_PRODUCTION", raising=False)
+
+    with TestClient(_app()) as client:
+        for method, path in (
+            ("GET", "/api/workspace/records"),
+            ("GET", "/api/workspace/exceptions"),
+            ("GET", "/api/workspace/exceptions/stats"),
+            ("POST", "/api/workspace/exceptions/probe/resolve"),
+        ):
+            response = client.request(method, path)
+            assert response.status_code in {401, 403, 404, 422}
+            assert response.json().get("detail") != "endpoint_disabled_in_ap_v1_profile"
+
+
 def test_ap_runtime_registers_sidebar_core_intents():
     runtime = FinanceAgentRuntime(
         organization_id="org-test",

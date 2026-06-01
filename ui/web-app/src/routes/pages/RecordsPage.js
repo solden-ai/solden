@@ -86,6 +86,14 @@ const BLOCKER_LABELS = {
   processing: 'Processing issue',
 };
 
+function recordsEndpoint(orgId, limit = 500) {
+  const params = new URLSearchParams({
+    organization_id: orgId,
+    limit: String(limit),
+  });
+  return `/api/workspace/records?${params.toString()}`;
+}
+
 function formatDurationMinutes(value) {
   const minutes = Number(value || 0);
   if (!Number.isFinite(minutes) || minutes <= 0) return '0m';
@@ -227,7 +235,7 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
 
   useEffect(() => {
     setLoading(true);
-    api(`/extension/worklist?organization_id=${encodeURIComponent(orgId)}&limit=500`)
+    api(recordsEndpoint(orgId, 500))
       .then((data) => setItems(Array.isArray(data?.items) ? data.items : []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
@@ -253,7 +261,7 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
   const [doRefresh, refreshing] = useAction(async () => {
     setLoading(true);
     try {
-      const data = await api(`/extension/worklist?organization_id=${encodeURIComponent(orgId)}&limit=500`);
+      const data = await api(recordsEndpoint(orgId, 500));
       setItems(Array.isArray(data?.items) ? data.items : []);
       setNavState(readPipelineNavigation(pipelineScope));
       toast('Records refreshed.', 'success');
