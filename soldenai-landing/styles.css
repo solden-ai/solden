@@ -4268,10 +4268,10 @@ body:not(.theme-dark) .footer-cta {
   content: "";
   position: absolute;
   left: calc(-1 * var(--ix-intake-route));
-  top: -72px;
+  top: -84px;
   z-index: 0;
   width: var(--ix-intake-route);
-  height: calc(50% + 72px);
+  height: calc(50% + 84px);
   pointer-events: none;
   background:
     linear-gradient(var(--ix-route-line), var(--ix-route-line)) 0 0 / 1px 100% no-repeat,
