@@ -73,29 +73,174 @@ class GenericBoxStore:
              created_at, updated_at)
             VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s, %s)
         """
+        event_id: Optional[str] = None
         with self.connect() as conn:
-            cur = conn.cursor()
-            cur.execute(sql, (
-                box_id, organization_id, box_type, state, spec_version,
-                json.dumps(data), now, now,
-            ))
-            conn.commit()
+            try:
+                cur = conn.cursor()
+                cur.execute(sql, (
+                    box_id, organization_id, box_type, state, spec_version,
+                    json.dumps(data), now, now,
+                ))
+                event_id = self._insert_generic_audit_event_txn(conn, {
+                    "box_id": box_id,
+                    "box_type": box_type,
+                    "event_type": f"{box_type}_created",
+                    "to_state": state,
+                    "actor_type": "system",
+                    "actor_id": payload.get("created_by") or "system",
+                    "organization_id": organization_id,
+                    "policy_version": spec.policy_version,
+                    "payload_json": {"spec_version": spec_version},
+                    "idempotency_key": f"box-created:{box_id}",
+                })
+                conn.commit()
+            except Exception:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                raise
 
-        if hasattr(self, "append_audit_event"):
-            self.append_audit_event({
-                "box_id": box_id,
-                "box_type": box_type,
-                "event_type": f"{box_type}_created",
-                "to_state": state,
-                "actor_type": "system",
-                "actor_id": payload.get("created_by") or "system",
-                "organization_id": organization_id,
-                "policy_version": spec.policy_version,
-                "payload_json": {"spec_version": spec_version},
-                "idempotency_key": f"box-created:{box_id}",
-            })
+        self._enqueue_generic_audit_webhook(event_id)
 
         return self.get_generic_box(box_type, box_id)  # type: ignore[return-value]
+
+    def _insert_generic_audit_event_txn(
+        self,
+        conn: Any,
+        payload: Dict[str, Any],
+    ) -> str:
+        """Insert one audit row on the caller's open transaction.
+
+        Generic Boxes do not get to move state without the timeline row that
+        proves the move. ``append_audit_event`` owns the public audit funnel,
+        but it opens and commits its own connection. Declarative workflows need
+        the stricter AP invariant here: row mutation and audit insert share one
+        transaction, and the caller commits only after both statements land.
+        """
+        event_id = str(payload.get("id") or f"EVT-{uuid.uuid4().hex}")
+        now = payload.get("ts") or datetime.now(timezone.utc).isoformat()
+        raw_idempotency_key = payload.get("idempotency_key")
+        idempotency_key: Optional[str] = (
+            str(raw_idempotency_key).strip()
+            if raw_idempotency_key is not None
+            else ""
+        ) or None
+
+        payload_json = payload.get("payload_json")
+        if payload_json is None:
+            payload_json = {}
+            reason = payload.get("reason")
+            if reason:
+                payload_json["reason"] = reason
+            metadata = payload.get("metadata") or {}
+            if isinstance(metadata, dict):
+                payload_json.update(metadata)
+        external_refs = payload.get("external_refs") or {}
+
+        box_id = payload.get("box_id")
+        box_type = payload.get("box_type")
+        if box_id is None or box_type is None:
+            raise ValueError(
+                "_insert_generic_audit_event_txn requires box_id and box_type"
+            )
+
+        governance_verdict = payload.get("governance_verdict")
+        agent_confidence = payload.get("agent_confidence")
+        if isinstance(payload_json, dict):
+            if governance_verdict is None:
+                verdict_block = payload_json.get("governance_verdict")
+                if isinstance(verdict_block, dict):
+                    if verdict_block.get("should_execute") is False:
+                        governance_verdict = "vetoed"
+                    elif "should_execute" in verdict_block:
+                        governance_verdict = "should_execute"
+            if agent_confidence is None:
+                for key in ("agent_confidence", "confidence_score", "confidence"):
+                    value = payload_json.get(key)
+                    if value is None:
+                        continue
+                    try:
+                        agent_confidence = float(value)
+                        break
+                    except (TypeError, ValueError):
+                        continue
+
+        policy_version = payload.get("policy_version")
+        if policy_version is None and isinstance(payload_json, dict):
+            nested = payload_json.get("policy_version")
+            if nested:
+                policy_version = str(nested)
+
+        capability_id = payload.get("capability_id")
+        capability_version = payload.get("capability_version")
+        tool_scope = payload.get("tool_scope")
+        if isinstance(payload_json, dict):
+            if capability_id is None:
+                capability_id = payload_json.get("capability_id")
+            if capability_version is None:
+                capability_version = payload_json.get("capability_version")
+            if tool_scope is None:
+                tool_scope = payload_json.get("tool_scope")
+        if tool_scope is None:
+            tool_scope_json = None
+        elif isinstance(tool_scope, str):
+            tool_scope_json = tool_scope
+        else:
+            tool_scope_json = json.dumps(tool_scope)
+
+        sql = """
+            INSERT INTO audit_events
+            (id, box_id, box_type, event_type, prev_state, new_state,
+             actor_type, actor_id, payload_json, external_refs,
+             idempotency_key, source, correlation_id, workflow_id, run_id,
+             decision_reason, governance_verdict, agent_confidence,
+             organization_id, entity_id, policy_version, agent_version,
+             capability_id, capability_version, tool_scope, ts)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        cur = conn.cursor()
+        cur.execute(sql, (
+            event_id,
+            box_id,
+            box_type,
+            payload.get("event_type"),
+            payload.get("from_state"),
+            payload.get("to_state"),
+            payload.get("actor_type"),
+            payload.get("actor_id"),
+            json.dumps(payload_json or {}),
+            json.dumps(external_refs or {}),
+            idempotency_key,
+            payload.get("source"),
+            payload.get("correlation_id"),
+            payload.get("workflow_id"),
+            payload.get("run_id"),
+            payload.get("decision_reason") or payload.get("reason"),
+            governance_verdict,
+            agent_confidence,
+            payload.get("organization_id"),
+            payload.get("entity_id"),
+            policy_version,
+            payload.get("agent_version"),
+            capability_id,
+            capability_version,
+            tool_scope_json,
+            now,
+        ))
+        return event_id
+
+    def _enqueue_generic_audit_webhook(self, event_id: Optional[str]) -> None:
+        if not event_id:
+            return
+        try:
+            from solden.services.celery_tasks import dispatch_audit_webhooks
+            dispatch_audit_webhooks.delay(event_id)
+        except Exception as fanout_exc:
+            logger.warning(
+                "[GenericBoxStore] webhook fan-out enqueue failed for %s: %s",
+                event_id, fanout_exc,
+            )
 
     def get_generic_box(
         self,
@@ -195,36 +340,44 @@ class GenericBoxStore:
         }
 
         now = datetime.now(timezone.utc).isoformat()
+        event_id: Optional[str] = None
         with self.connect() as conn:
-            cur = conn.cursor()
-            if patch:
-                merged = {**(existing.get("data") or {}), **patch}
-                cur.execute(
-                    "UPDATE boxes SET state = %s, data = %s::jsonb, updated_at = %s "
-                    "WHERE id = %s",
-                    (target_state, json.dumps(merged), now, box_id),
-                )
-            else:
-                cur.execute(
-                    "UPDATE boxes SET state = %s, updated_at = %s WHERE id = %s",
-                    (target_state, now, box_id),
-                )
-            conn.commit()
+            try:
+                cur = conn.cursor()
+                if patch:
+                    merged = {**(existing.get("data") or {}), **patch}
+                    cur.execute(
+                        "UPDATE boxes SET state = %s, data = %s::jsonb, updated_at = %s "
+                        "WHERE id = %s",
+                        (target_state, json.dumps(merged), now, box_id),
+                    )
+                else:
+                    cur.execute(
+                        "UPDATE boxes SET state = %s, updated_at = %s WHERE id = %s",
+                        (target_state, now, box_id),
+                    )
+                event_id = self._insert_generic_audit_event_txn(conn, {
+                    "box_id": box_id,
+                    "box_type": box_type,
+                    "event_type": f"{box_type}_{target_state}",
+                    "from_state": current_state,
+                    "to_state": target_state,
+                    "actor_type": "user",
+                    "actor_id": actor_id,
+                    "organization_id": organization_id,
+                    "policy_version": spec.policy_version,
+                    "decision_reason": reason or None,
+                    "idempotency_key": f"box-{target_state}:{box_id}:{now}",
+                })
+                conn.commit()
+            except Exception:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                raise
 
-        if hasattr(self, "append_audit_event"):
-            self.append_audit_event({
-                "box_id": box_id,
-                "box_type": box_type,
-                "event_type": f"{box_type}_{target_state}",
-                "from_state": current_state,
-                "to_state": target_state,
-                "actor_type": "user",
-                "actor_id": actor_id,
-                "organization_id": organization_id,
-                "policy_version": spec.policy_version,
-                "decision_reason": reason or None,
-                "idempotency_key": f"box-{target_state}:{box_id}:{now}",
-            })
+        self._enqueue_generic_audit_webhook(event_id)
 
         # §8 lifecycle parity: entering the spec's declared exception_state
         # raises a first-class box_exception, mirroring how AP raises one when

@@ -335,6 +335,11 @@ def _workspace_capabilities(
         normalize_ap_role,
         normalize_workspace_role,
     )
+    from solden.core.feature_flags import (
+        is_bank_match_surface_enabled,
+        is_procurement_surface_enabled,
+        is_workflow_builder_enabled,
+    )
 
     resolved_workspace = (
         normalize_workspace_role(workspace_role)
@@ -369,6 +374,9 @@ def _workspace_capabilities(
         "view_company": has_any,
         "view_plan": has_any,
         "view_reconciliation": has_any,
+        "view_bank_match": has_any and is_bank_match_surface_enabled(),
+        "view_procurement": has_any and is_procurement_surface_enabled(),
+        "view_workflow_builder": has_any and is_workflow_builder_enabled(),
         "view_system_status": has_any,
         "view_reports": has_any,
         # Workspace-axis ops + manage gates. ``view_ops_workspace`` /
@@ -419,6 +427,11 @@ def _workspace_capabilities_tree(
         has_workspace_owner,
         has_workspace_read_only,
     )
+    from solden.core.feature_flags import (
+        is_bank_match_surface_enabled,
+        is_procurement_surface_enabled,
+        is_workflow_builder_enabled,
+    )
 
     is_owner = has_workspace_owner(workspace_role)
     is_admin = has_workspace_admin(workspace_role)
@@ -435,6 +448,9 @@ def _workspace_capabilities_tree(
             "view_activity": has_any,
             "view_exceptions": has_any,
             "view_plan": has_any,
+            "view_bank_match": has_any and is_bank_match_surface_enabled(),
+            "view_procurement": has_any and is_procurement_surface_enabled(),
+            "view_workflow_builder": has_any and is_workflow_builder_enabled(),
             "view_settings": is_member,
             "view_connections": is_member,
             "view_rules": is_member,

@@ -1,13 +1,15 @@
 import { Link, useLocation } from 'wouter-preact';
 import { html } from '../utils/htm.js';
 import { BrandMark } from './BrandMark.js';
+import { useBootstrap } from './BootstrapContext.js';
+import { hasCapability } from '../utils/capabilities.js';
 
 /**
  * Sidebar nav for the work-in-progress control center.
  *
  * Four groups, ordered by what the operator does here:
  *   primary   — live work in progress (Home, Activity, Exceptions)
- *   workflows — the box types the operator works in (Records, Procurement, Builder)
+ *   workflows — the box types the operator works in (Records; later gated surfaces)
  *   data      — reference + read-only surfaces (Vendors, Reports, Audit log)
  *   admin     — policy + identity + render-target config (Rules, Connections, API keys, Settings)
  *
@@ -22,8 +24,8 @@ export const NAV_ITEMS = [
   { path: '/activity', label: 'Activity', group: 'primary', icon: 'activity' },
   { path: '/exceptions', label: 'Exceptions', group: 'primary', icon: 'alert' },
   { path: '/records', label: 'Records', group: 'workflows', icon: 'file' },
-  { path: '/procurement', label: 'Procurement', group: 'workflows', icon: 'cart' },
-  { path: '/workflows', label: 'Builder', group: 'workflows', icon: 'workflow' },
+  { path: '/procurement', label: 'Procurement', group: 'workflows', icon: 'cart', capability: 'view_procurement' },
+  { path: '/workflows', label: 'Builder', group: 'workflows', icon: 'workflow', capability: 'view_workflow_builder' },
   { path: '/vendors', label: 'Vendors', group: 'data', icon: 'users' },
   { path: '/reports', label: 'Reports', group: 'data', icon: 'chart' },
   { path: '/audit', label: 'Audit log', group: 'data', icon: 'shield' },
@@ -61,8 +63,12 @@ const ICONS = {
 
 export function SidebarNav() {
   const [pathname] = useLocation();
+  const bootstrap = useBootstrap();
 
   const groups = ['primary', 'workflows', 'data', 'admin'];
+  const visibleItems = NAV_ITEMS.filter((item) => (
+    !item.capability || hasCapability(bootstrap, item.capability)
+  ));
 
   return html`
     <nav class="cl-sidebar-nav" aria-label="Primary">
@@ -76,7 +82,7 @@ export function SidebarNav() {
               ? html`<div class="cl-sidebar-group-label">${GROUP_LABELS[group]}</div>`
               : null}
             <ul class="cl-sidebar-list">
-              ${NAV_ITEMS.filter((i) => i.group === group).map((item) => {
+              ${visibleItems.filter((i) => i.group === group).map((item) => {
                 const active =
                   item.path === '/'
                     ? pathname === '/'

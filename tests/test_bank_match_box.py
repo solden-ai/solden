@@ -46,6 +46,11 @@ from solden.core.stores.bank_match_store import (  # noqa: E402
 )
 
 
+@pytest.fixture(autouse=True)
+def _enable_bank_match_surface(monkeypatch):
+    monkeypatch.setenv("FEATURE_BANK_MATCH_SURFACE", "true")
+
+
 @pytest.fixture()
 def db():
     inst = db_module.get_db()
@@ -80,6 +85,17 @@ def client_b(db):
     app.include_router(box_export.router)
     app.dependency_overrides[get_current_user] = lambda: _user("orgBM2")
     return TestClient(app)
+
+
+def test_bank_match_surface_disabled_by_default(monkeypatch):
+    monkeypatch.delenv("FEATURE_BANK_MATCH_SURFACE", raising=False)
+    app_local = FastAPI()
+    app_local.include_router(bank_match_routes.router)
+    app_local.dependency_overrides[get_current_user] = lambda: _user("orgBM")
+    client = TestClient(app_local)
+    r = client.get("/api/workspace/bank-matches/BM-any")
+    assert r.status_code == 404
+    assert r.json()["detail"]["detail"] == "bank_match_surface_disabled"
 
 
 def _make_parent_ap(db, *, item_id: str, org: str = "orgBM") -> dict:

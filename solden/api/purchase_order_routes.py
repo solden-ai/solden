@@ -1,11 +1,9 @@
-"""Purchase-order BoxType endpoints — the third Box surface.
+"""Purchase-order BoxType endpoints — post-AP expansion surface.
 
-Procurement is the first AP-*peer* workflow (bank_match was
-AP-subordinate). These endpoints follow the same shape as the AP and
-bank_match surfaces — read / list / create / typed action — on top of
-the same audit + state-machine primitives, via the generic box-aware
-store writers (``create_purchase_order_box`` /
-``update_purchase_order_state``).
+Procurement remains in the repo as an intentional expansion path, not as part
+of the currently shipped product. These endpoints are mounted so the code stays
+testable, but every handler returns 404 unless
+``FEATURE_PROCUREMENT_SURFACE=true``.
 
 Endpoints:
 
@@ -29,6 +27,10 @@ from pydantic import BaseModel, Field
 
 from solden.core.auth import get_current_user
 from solden.core.database import get_db
+from solden.core.feature_flags import (
+    is_procurement_surface_enabled,
+    procurement_disabled_payload,
+)
 from solden.core.purchase_order_states import (
     IllegalPurchaseOrderTransitionError,
 )
@@ -56,6 +58,11 @@ def _session_org(user: Any) -> str:
     if not org:
         raise HTTPException(status_code=403, detail="user_missing_organization_id")
     return org
+
+
+def _require_procurement_surface() -> None:
+    if not is_procurement_surface_enabled():
+        raise HTTPException(status_code=404, detail=procurement_disabled_payload())
 
 
 def _actor_id(user: Any) -> str:
@@ -91,6 +98,7 @@ class POCreateRequest(BaseModel):
 
 @router.get("/purchase-orders")
 def list_purchase_orders(_user=Depends(get_current_user)) -> Dict[str, Any]:
+    _require_procurement_surface()
     organization_id = _session_org(_user)
     db = get_db()
     rows = db.list_purchase_orders(organization_id) if hasattr(db, "list_purchase_orders") else []
@@ -99,6 +107,7 @@ def list_purchase_orders(_user=Depends(get_current_user)) -> Dict[str, Any]:
 
 @router.get("/purchase-orders/{po_id}")
 def get_purchase_order(po_id: str, _user=Depends(get_current_user)) -> Dict[str, Any]:
+    _require_procurement_surface()
     organization_id = _session_org(_user)
     db = get_db()
     return _require_po(db, po_id, organization_id)
@@ -110,6 +119,7 @@ def create_purchase_order(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     """Create a PO Box in DRAFT, attributed to the requesting user."""
+    _require_procurement_surface()
     organization_id = _session_org(_user)
     actor_id = _actor_id(_user)
     db = get_db()
@@ -146,6 +156,7 @@ def _advance(po_id: str, action: str, body: DecisionRequest, user: Any) -> Dict[
     matches route *templates* — a ``/{action}`` template would not match
     the per-action regex and would be dropped in production.
     """
+    _require_procurement_surface()
     organization_id = _session_org(user)
     target = _PO_ACTIONS[action]
     actor_id = _actor_id(user)
@@ -205,6 +216,7 @@ class AmendRequest(BaseModel):
 
 
 async def _skill_action(po_id: str, intent: str, payload: Dict[str, Any], user: Any) -> Dict[str, Any]:
+    _require_procurement_surface()
     organization_id = _session_org(user)
     actor_id = _actor_id(user)
     db = get_db()

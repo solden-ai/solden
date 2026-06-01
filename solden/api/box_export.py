@@ -158,6 +158,10 @@ def _bank_match_export_links(db: Any, ap_item_id: str, organization_id: str) -> 
     when the underlying store mixin is available and reports at
     least one match Box for the parent.
     """
+    from solden.core.feature_flags import is_bank_match_surface_enabled
+    if not is_bank_match_surface_enabled():
+        return {"parent_box": None, "child_boxes": []}
+
     children = []
     if hasattr(db, "list_bank_matches_for_ap"):
         try:
@@ -349,6 +353,13 @@ def get_bank_match_export(
     ``box.type='bank_match'`` and ``links.parent_box`` pointing back
     to the AP item this match reconciles.
     """
+    from solden.core.feature_flags import (
+        bank_match_disabled_payload,
+        is_bank_match_surface_enabled,
+    )
+    if not is_bank_match_surface_enabled():
+        raise HTTPException(status_code=404, detail=bank_match_disabled_payload())
+
     organization_id = _session_org(_user)
     actor = str(getattr(_user, "email", "") or getattr(_user, "user_id", "") or "")
     db = get_db()

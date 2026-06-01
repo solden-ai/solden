@@ -76,6 +76,17 @@ def is_procurement_chat_enabled() -> bool:
     return _env_flag("FEATURE_PROCUREMENT_CHAT", default=False)
 
 
+def is_procurement_surface_enabled() -> bool:
+    """Customer-facing purchase-order/procurement surface.
+
+    Off by default. PO code remains in the repo as a post-AP expansion path,
+    but the product we are shipping now is AP. Flip
+    ``FEATURE_PROCUREMENT_SURFACE=true`` only when the PO workflow has the same
+    state+audit guarantees and live-customer validation as AP.
+    """
+    return _env_flag("FEATURE_PROCUREMENT_SURFACE", default=False)
+
+
 def is_procurement_erp_write_enabled() -> bool:
     """Procurement PO write-back to the ERP (create a PO in QB/Xero/etc).
 
@@ -85,6 +96,25 @@ def is_procurement_erp_write_enabled() -> bool:
     per-ERP live validation.
     """
     return _env_flag("FEATURE_PROCUREMENT_ERP_WRITE", default=False)
+
+
+def is_bank_match_surface_enabled() -> bool:
+    """Customer-facing bank-match/reconciliation surface.
+
+    Off by default. Bank-match code is useful proof of the Box architecture,
+    but it is not part of the current shipped product surface.
+    """
+    return _env_flag("FEATURE_BANK_MATCH_SURFACE", default=False)
+
+
+def is_workflow_builder_enabled() -> bool:
+    """No-code declarative workflow builder surface.
+
+    Off by default. The generic Box runtime is a foundation; the customer
+    builder should ship only after product, security, and support boundaries
+    are explicit.
+    """
+    return _env_flag("FEATURE_WORKFLOW_BUILDER", default=False)
 
 
 def is_erp_settlement_write_enabled() -> bool:
@@ -149,6 +179,21 @@ _TEAMS_DISABLED_PAYLOAD = {
     "reason": "DESIGN_THESIS §12 — Teams is scoped post-launch; Slack is the V1 approval surface.",
 }
 
+_PROCUREMENT_DISABLED_PAYLOAD = {
+    "detail": "procurement_surface_disabled",
+    "reason": "Purchase orders are not part of the current shipped Solden surface.",
+}
+
+_BANK_MATCH_DISABLED_PAYLOAD = {
+    "detail": "bank_match_surface_disabled",
+    "reason": "Bank match is not part of the current shipped Solden surface.",
+}
+
+_WORKFLOW_BUILDER_DISABLED_PAYLOAD = {
+    "detail": "workflow_builder_disabled",
+    "reason": "The workflow builder is not part of the current shipped Solden surface.",
+}
+
 
 def outlook_disabled_payload() -> dict:
     """Canonical 404 body for Outlook routes when the flag is off."""
@@ -158,3 +203,18 @@ def outlook_disabled_payload() -> dict:
 def teams_disabled_payload() -> dict:
     """Canonical 404 body for Teams routes when the flag is off."""
     return dict(_TEAMS_DISABLED_PAYLOAD)
+
+
+def procurement_disabled_payload() -> dict:
+    """Canonical 404 body for PO routes when the flag is off."""
+    return dict(_PROCUREMENT_DISABLED_PAYLOAD)
+
+
+def bank_match_disabled_payload() -> dict:
+    """Canonical 404 body for bank-match routes when the flag is off."""
+    return dict(_BANK_MATCH_DISABLED_PAYLOAD)
+
+
+def workflow_builder_disabled_payload() -> dict:
+    """Canonical 404 body for workflow-builder routes when the flag is off."""
+    return dict(_WORKFLOW_BUILDER_DISABLED_PAYLOAD)

@@ -13,10 +13,9 @@ describe('SidebarNav grouping', () => {
     mount();
     expect(screen.getByText('WORKFLOWS')).toBeTruthy();
     expect(screen.getByText('DATA')).toBeTruthy();
-    // Work surfaces.
-    for (const label of ['Records', 'Procurement', 'Builder']) {
-      expect(screen.getByText(label)).toBeTruthy();
-    }
+    expect(screen.getByText('Records')).toBeTruthy();
+    expect(screen.queryByText('Procurement')).toBeNull();
+    expect(screen.queryByText('Builder')).toBeNull();
     // Reference surfaces.
     for (const label of ['Vendors', 'Reports', 'Audit log']) {
       expect(screen.getByText(label)).toBeTruthy();

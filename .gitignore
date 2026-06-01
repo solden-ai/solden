@@ -25,6 +25,7 @@ keys/
 *.pem
 *.key
 .claude/
+.agents/
 Screenshot *.png
 Claude rules.jpeg
 

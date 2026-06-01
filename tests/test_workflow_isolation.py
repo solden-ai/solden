@@ -61,7 +61,8 @@ SPEC_B = _spec(
 
 
 @pytest.fixture()
-def client():
+def client(monkeypatch):
+    monkeypatch.setenv("FEATURE_WORKFLOW_BUILDER", "true")
     db = db_module.get_db()
     db.initialize()
     db.ensure_organization(ORG_A, organization_name=ORG_A)

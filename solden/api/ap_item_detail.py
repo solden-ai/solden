@@ -470,6 +470,13 @@ def get_ap_item_bank_match(
                              or ``unmatched`` despite being linked to
                              a confirmation. Needs human review.
     """
+    from solden.core.feature_flags import (
+        bank_match_disabled_payload,
+        is_bank_match_surface_enabled,
+    )
+    if not is_bank_match_surface_enabled():
+        raise HTTPException(status_code=404, detail=bank_match_disabled_payload())
+
     organization_id = require_org(user)
     db = get_db()
 

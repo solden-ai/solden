@@ -1,29 +1,30 @@
 # Solden — Product Capabilities
 
-Last verified against codebase: 2026-04-01
+Last verified against codebase: 2026-06-01
 
-This document describes what the product can do today, based on shipped code. Every capability listed here has a working implementation, tests, or both. Nothing here is roadmap.
+This document describes the current shipped product surface. The repo contains post-AP expansion code for purchase orders, bank match, and generic workflow specs; those surfaces are feature-gated off by default and are not listed here as live product.
 
 ---
 
 ## What Solden Is
 
-Solden is an agentic AI execution layer for finance teams. It is not a rule-based automation tool. The system observes invoice context, reasons about what action to take, executes across Gmail, Slack, and ERP, and learns from every human correction.
+Solden is operational memory for finance teams: one durable work record for each AP item, kept current across Gmail, Slack, ERP, and the workspace recovery surface. The system observes invoice context, validates it deterministically, advances safe work, and escalates exceptions with the owner, next step, context, and proof intact.
 
 The first production skill runs accounts payable from Gmail: triage invoices, route approvals, validate against ERP, and write approved invoices back without manual approval chasing or duplicate data entry.
 
-**Agentic, not just automated:**
-- A deterministic validation layer (PO matching, duplicate detection, policy checks) acts as the guardrail
-- An AI reasoning layer (Claude Sonnet with full vendor context) makes judgment calls above the guardrail
-- The agent decides: approve, escalate, request info, or reject — with reasoning and risk flags
-- Autonomy scoring determines when to act independently vs defer to a human
-- The system reflects on its own extractions and improves from corrections over time
+**Rules decide, model describes:**
+- A deterministic validation layer handles PO matching, duplicate detection, policy checks, routing, and ERP write eligibility
+- The model classifies, extracts, summarizes, and drafts operator-facing explanations
+- Autonomy scoring determines when Solden can advance work and when it must defer to a human
+- Every state change and external action is tied back to the AP work record and audit trail
+- Corrections feed back into vendor context and extraction quality without letting the model decide financial writes
 
 **Surfaces:**
 - Gmail (operator surface — where finance works)
-- Slack and Teams (action surfaces — where approvers act)
+- Slack (approval surface — where approvers act)
 - ERP (system of record — where invoices post)
-- Workspace console (ops surface — where finance handles exceptions)
+- Workspace console (setup, exception recovery, audit, and admin surface)
+- Teams, purchase orders, bank match, and the workflow builder are code-backed expansion surfaces, gated off by default
 
 ---
 
@@ -37,13 +38,13 @@ The first production skill runs accounts payable from Gmail: triage invoices, ro
 - Multi-mailbox support (multiple Gmail accounts per organization)
 - Gmail labels auto-applied: Invoices, Needs Approval, Approved, Posted, Exceptions, Rejected
 
-### AI Decision Engine
-- Claude Sonnet evaluates each invoice with full vendor context
-- Decisions: approve, needs_info, escalate, reject
-- Each decision includes reasoning summary and risk flags
+### Decision Engine
+- Deterministic rules evaluate each invoice with full vendor context
+- Outcomes: approve path, needs_info, escalate, reject, or wait
+- Each outcome includes reasoning summary and risk flags
 - Confidence-gated routing: below threshold routes to human
 - Vendor profile context: payment history, reliability score, past corrections, anomaly flags
-- Falls back to rule-based routing if API key missing or Claude unavailable
+- LLM unavailability degrades extraction/explanation, not the financial decision boundary
 
 ### Validation
 - Deterministic validation gate (PO matching, budget checks, field completeness)
@@ -82,10 +83,8 @@ State transitions are atomic with audit events. Invalid transitions are blocked 
 - OAuth installation flow for workspace-level bot
 
 ### Microsoft Teams Integration
-- Approval cards via webhook
-- Approve, Reject, Request Info actions
-- Webhook signature verification
-- Configurable webhook URL per organization
+- Built as a post-launch surface
+- Gated off by default through `FEATURE_TEAMS_ENABLED`
 
 ### Approval Chains
 - Hierarchical multi-step approval workflows
@@ -173,7 +172,7 @@ Four ERPs fully integrated with posting, vendor management, and GL discovery:
 ## Agent Runtime
 
 ### Planning Engine
-- Claude tool-use planning loop with durable execution
+- Deterministic planning loop with durable execution
 - Skills registry (register skills, dispatch by task type)
 - Max 10 steps per task, 600-second timeout (configurable)
 - Checkpointing before and after each step (crash-resumable)
@@ -183,8 +182,8 @@ Four ERPs fully integrated with posting, vendor management, and GL discovery:
 
 ### Finance Skills
 - **AP Skill** — 5 tools: enrich_with_context (now includes cross-invoice analysis), run_validation_gate, get_ap_decision, execute_routing, request_vendor_info (creates Gmail draft for missing info)
-- **Compound Skill** — Cross-skill orchestration: merges AP tools + vendor compliance snapshot + optional reconciliation tools in a single planning session. Claude decides which tools to call based on context.
-- **Reconciliation Skill** — 4 tools: import_transactions (Google Sheets), match_transactions, flag_exceptions, write_results
+- **Compound Skill** — Cross-skill execution wrapper for AP tools + vendor compliance context under deterministic policy gates.
+- **Reconciliation Skill** — post-AP expansion code; not part of the current shipped surface.
 - **Vendor Compliance Skill** — vendor compliance checks (exposed as planning tool via CompoundSkill adapter)
 - **Workflow Health Skill** — workflow health monitoring
 
@@ -192,7 +191,7 @@ Four ERPs fully integrated with posting, vendor management, and GL discovery:
 - Duplicate detection results fed into the AP planning prompt
 - Anomaly warnings (amount deviation, frequency spikes) visible to Claude during decision-making
 - Vendor stats (invoice count, average amount, current vs average) included in enrichment
-- Claude can see "DUPLICATE RISK: score 85%" and decide to escalate
+- Solden surfaces signals such as "duplicate risk: score 85%" and deterministic policy decides whether to escalate
 
 ### Vendor Outreach
 - Agent creates Gmail draft requesting missing information from vendors (PO number, amount clarification, due date)
@@ -212,8 +211,8 @@ Four ERPs fully integrated with posting, vendor management, and GL discovery:
 ### Autonomy Levels
 - **Level 1 (manual)**: Agent extracts and enriches, human does everything else
 - **Level 2 (assisted)**: Agent routes low-risk invoices for approval, human approves
-- **Level 3 (directed)**: Agent decides approve/escalate/reject, human confirms
-- **Level 4 (autonomous with guardrails)**: Agent auto-approves trusted vendors, human reviews exceptions
+- **Level 3 (directed)**: Rules decide approve/escalate/reject, human confirms when required
+- **Level 4 (autonomous with guardrails)**: Solden advances trusted, policy-cleared work; humans review exceptions
 - Autonomy earned per-vendor based on drift scoring, shadow decision accuracy, and post-verification rate
 - Thresholds configurable per organization via `settings_json.autonomy_thresholds`
 

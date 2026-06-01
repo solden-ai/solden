@@ -6,16 +6,15 @@ registers the shape its Boxes take so shared primitives (audit trail,
 health observability, reconstructability checks) can dispatch by
 ``box_type`` instead of hardcoding AP.
 
-Three BoxTypes are registered today:
+Three BoxTypes are registered in code today, but only one is in the current
+customer-facing product surface:
 
 - ``ap_item`` — the production wedge; the operator-facing record.
-- ``purchase_order`` — an AP-*peer* (stands alone, no parent FK). This
-  is the real proof the manifesto's "the architecture that runs AP runs
-  procurement / compliance / vendor onboarding" generalizes beyond a
-  single domain.
+- ``purchase_order`` — an AP-*peer* (stands alone, no parent FK). Kept as
+  a post-AP expansion path behind feature gates, not shipped by default.
 - ``bank_match`` — AP-*subordinate*: every Box carries a
   ``parent_ap_item_id`` back to its AP item; the typed sub-workflow for
-  the closing leg, not an independent domain.
+  the closing leg, not an independent domain. Also gated off by default.
 
 Tenant-declared ``WorkflowSpec`` types ride this same registry via the
 dynamic resolver (see :func:`set_dynamic_resolver` / :func:`resolve`),

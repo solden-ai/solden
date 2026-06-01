@@ -819,7 +819,7 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         r"^/api/workspace/ap-items/[^/]+/detail$",
         # Module 2 — Ask the agent Q&A surface.
         r"^/api/workspace/ap-items/[^/]+/ask$",
-        # Bank-match status for one AP item (closing leg of AP).
+        # Bank-match status for one AP item (post-AP expansion, route-gated off by default).
         r"^/api/workspace/ap-items/[^/]+/bank-match$",
         # Sovereignty primitive: portable per-Box export (manifesto §"The substrate is yours").
         r"^/api/workspace/ap-items/[^/]+/export$",
@@ -827,13 +827,13 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         r"^/api/workspace/ap-items/[^/]+/reassign$",
         # Reversibility primitive: bounded approval revert (manifesto §"History").
         r"^/api/workspace/ap-items/[^/]+/revert-approval$",
-        # bank_match BoxType — Solden's second BoxType (manifesto §"The pattern generalizes").
+        # bank_match BoxType — post-AP expansion path, route-gated off by default.
         r"^/api/workspace/ap-items/[^/]+/bank-match-boxes$",
         r"^/api/workspace/bank-matches/[^/]+$",
         r"^/api/workspace/bank-matches/[^/]+/accept$",
         r"^/api/workspace/bank-matches/[^/]+/reject$",
         r"^/api/workspace/bank-matches/[^/]+/export$",
-        # purchase_order BoxType — Solden's third BoxType (first AP-peer).
+        # purchase_order BoxType — post-AP expansion path, route-gated off by default.
         r"^/api/workspace/purchase-orders$",
         r"^/api/workspace/purchase-orders/[^/]+$",
         r"^/api/workspace/purchase-orders/[^/]+/(submit|approve|reject|cancel|close|receive|issue|amend)$",
@@ -972,10 +972,10 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         r"^/api/workspace/period-close/unlock/[^/]+$",
     )
 ) + tuple(
-    # Declarative workflow platform — control plane + data plane. Fixed
-    # templates (box_type / box_id / action are path params) so these cover
-    # every tenant-declared type. Folded in at construction so BOTH the
-    # startup route prune and the per-request LegacySurfaceGuard honor them.
+    # Declarative workflow platform — post-AP expansion control/data plane.
+    # Fixed templates (box_type / box_id / action are path params) so these
+    # cover every tenant-declared type. Kept allowlisted to avoid silent
+    # strict-profile pruning; handlers feature-gate it off by default.
     re.compile(pattern) for pattern in workflow_allowlist_patterns()
 )
 
@@ -1819,16 +1819,14 @@ app.include_router(box_owner_router)
 # that hasn't yet posted to the ERP).
 app.include_router(box_revert_router)
 
-# bank_match — Solden's second BoxType. Same audit + state-machine
-# + export primitives as ap_item, applied to bank-reconciliation
-# proposals. The architectural test for the manifesto's "the
-# pattern generalizes" claim.
+# bank_match + purchase_order are post-AP expansion paths. They remain mounted
+# so the code stays tested, but route handlers feature-gate them off by default.
 app.include_router(bank_match_router)
 app.include_router(purchase_order_router)
 
-# Declarative workflow platform — built-in declarative types + tenant-authored
-# specs. One generic data-plane router + the spec authoring control plane,
-# both mounted here so they precede the import-time strict-profile prune.
+# Declarative workflow platform — post-AP expansion builder/runtime. Mounted so
+# tests can intentionally exercise it, but handlers 404 unless
+# FEATURE_WORKFLOW_BUILDER=true.
 mount_workflow_routers(app)
 
 # Wave 2 / C4: manual payment confirmation surface

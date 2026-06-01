@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,6 +18,11 @@ from solden.core import database as db_module  # noqa: E402
 from solden.core.auth import TokenData, get_current_user  # noqa: E402
 
 ORG = "orgPORoutes"
+
+
+@pytest.fixture(autouse=True)
+def _enable_procurement_surface(monkeypatch):
+    monkeypatch.setenv("FEATURE_PROCUREMENT_SURFACE", "true")
 
 
 def _user():
@@ -42,6 +48,18 @@ def _create(client, **kw):
     r = client.post("/api/workspace/purchase-orders", json=body)
     assert r.status_code == 200, r.text
     return r.json()
+
+
+def test_procurement_surface_disabled_by_default(monkeypatch):
+    monkeypatch.delenv("FEATURE_PROCUREMENT_SURFACE", raising=False)
+    from solden.api import purchase_order_routes
+    app_local = FastAPI()
+    app_local.include_router(purchase_order_routes.router)
+    app_local.dependency_overrides[get_current_user] = _user
+    client = TestClient(app_local)
+    r = client.get("/api/workspace/purchase-orders")
+    assert r.status_code == 404
+    assert r.json()["detail"]["detail"] == "procurement_surface_disabled"
 
 
 def test_create_list_get(client):

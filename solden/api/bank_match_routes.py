@@ -1,9 +1,9 @@
-"""Bank match BoxType endpoints — the second Box surface.
+"""Bank match BoxType endpoints — post-AP expansion surface.
 
-Phase 4 of the manifesto-truthing pass. Proves the generalization
-claim: bank_match endpoints follow the same shape as ap_item
-endpoints (read / list-children / typed action / export) on top of
-the same audit + state-machine + export primitives.
+Bank match remains in the repo as an intentional expansion path, not as part
+of the currently shipped product. These endpoints are mounted so the code stays
+testable, but every handler returns 404 unless
+``FEATURE_BANK_MATCH_SURFACE=true``.
 
 Endpoints:
 
@@ -27,6 +27,10 @@ from pydantic import BaseModel, Field
 from solden.core.auth import get_current_user
 from solden.core.bank_match_states import BankMatchState
 from solden.core.database import get_db
+from solden.core.feature_flags import (
+    bank_match_disabled_payload,
+    is_bank_match_surface_enabled,
+)
 from solden.core.stores.bank_match_store import (
     IllegalBankMatchTransitionError,
 )
@@ -46,6 +50,11 @@ def _session_org(user: Any) -> str:
     return org
 
 
+def _require_bank_match_surface() -> None:
+    if not is_bank_match_surface_enabled():
+        raise HTTPException(status_code=404, detail=bank_match_disabled_payload())
+
+
 def _require_bank_match(db: Any, box_id: str, organization_id: str) -> Dict[str, Any]:
     item = db.get_bank_match(box_id) if hasattr(db, "get_bank_match") else None
     if not item or str(item.get("organization_id") or "") != organization_id:
@@ -62,6 +71,7 @@ def get_bank_match(
     box_id: str,
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
+    _require_bank_match_surface()
     organization_id = _session_org(_user)
     db = get_db()
     return _require_bank_match(db, box_id, organization_id)
@@ -74,6 +84,7 @@ def accept_bank_match(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     """Advance a proposed bank_match Box to ACCEPTED. Terminal."""
+    _require_bank_match_surface()
     organization_id = _session_org(_user)
     actor_id = str(getattr(_user, "email", "") or getattr(_user, "user_id", "") or "")
     db = get_db()
@@ -96,6 +107,7 @@ def reject_bank_match(
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
     """Advance a proposed bank_match Box to REJECTED. Terminal."""
+    _require_bank_match_surface()
     organization_id = _session_org(_user)
     actor_id = str(getattr(_user, "email", "") or getattr(_user, "user_id", "") or "")
     db = get_db()
@@ -124,6 +136,7 @@ def list_bank_match_boxes_for_ap(
     themselves — each one independently auditable, exportable, and
     advance-able to a terminal state.
     """
+    _require_bank_match_surface()
     organization_id = _session_org(_user)
     db = get_db()
     # Tenant gate on the parent AP item first — 404 if cross-tenant

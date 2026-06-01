@@ -25,6 +25,10 @@ from pydantic import BaseModel, Field
 
 from solden.core.auth import get_current_user
 from solden.core.database import get_db
+from solden.core.feature_flags import (
+    is_workflow_builder_enabled,
+    workflow_builder_disabled_payload,
+)
 from solden.core.workflow_spec import (
     IllegalWorkflowTransitionError,
     resolve_spec,
@@ -44,6 +48,11 @@ def _session_org(user: Any) -> str:
 
 def _actor_id(user: Any) -> str:
     return str(getattr(user, "email", "") or getattr(user, "user_id", "") or "")
+
+
+def _require_workflow_builder_surface() -> None:
+    if not is_workflow_builder_enabled():
+        raise HTTPException(status_code=404, detail=workflow_builder_disabled_payload())
 
 
 def _require_spec(box_type: str, organization_id: str):
@@ -79,6 +88,7 @@ class ActionBody(BaseModel):
 
 @router.get("/workflows/{box_type}")
 def list_boxes(box_type: str, _user=Depends(get_current_user)) -> Dict[str, Any]:
+    _require_workflow_builder_surface()
     organization_id = _session_org(_user)
     _require_spec(box_type, organization_id)
     db = get_db()
@@ -88,6 +98,7 @@ def list_boxes(box_type: str, _user=Depends(get_current_user)) -> Dict[str, Any]
 
 @router.post("/workflows/{box_type}")
 def create_box(box_type: str, body: BoxCreate, _user=Depends(get_current_user)) -> Dict[str, Any]:
+    _require_workflow_builder_surface()
     organization_id = _session_org(_user)
     spec = _require_spec(box_type, organization_id)
 
@@ -115,6 +126,7 @@ def create_box(box_type: str, body: BoxCreate, _user=Depends(get_current_user)) 
 
 @router.get("/workflows/{box_type}/{box_id}")
 def get_box(box_type: str, box_id: str, _user=Depends(get_current_user)) -> Dict[str, Any]:
+    _require_workflow_builder_surface()
     organization_id = _session_org(_user)
     db = get_db()
     return _require_box(db, box_type, box_id, organization_id)
@@ -128,6 +140,7 @@ def act_on_box(
     body: ActionBody,
     _user=Depends(get_current_user),
 ) -> Dict[str, Any]:
+    _require_workflow_builder_surface()
     organization_id = _session_org(_user)
     db = get_db()
     box = _require_box(db, box_type, box_id, organization_id)

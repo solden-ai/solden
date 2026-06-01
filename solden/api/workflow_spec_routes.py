@@ -27,6 +27,10 @@ from pydantic import BaseModel, Field
 
 from solden.core.auth import get_current_user, require_workspace_admin
 from solden.core.database import get_db
+from solden.core.feature_flags import (
+    is_workflow_builder_enabled,
+    workflow_builder_disabled_payload,
+)
 from solden.core.workflow_spec import from_json, validate_spec
 
 logger = logging.getLogger(__name__)
@@ -43,6 +47,11 @@ def _session_org(user: Any) -> str:
 
 def _actor_id(user: Any) -> str:
     return str(getattr(user, "email", "") or getattr(user, "user_id", "") or "")
+
+
+def _require_workflow_builder_surface() -> None:
+    if not is_workflow_builder_enabled():
+        raise HTTPException(status_code=404, detail=workflow_builder_disabled_payload())
 
 
 class SpecBody(BaseModel):
@@ -71,6 +80,7 @@ def validate_workflow_spec(
     _user=Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
     """Validate a spec without saving it. Returns {valid, errors}."""
+    _require_workflow_builder_surface()
     errors = validate_spec(from_json(body.model_dump()))
     return {"valid": not errors, "errors": errors}
 
@@ -81,6 +91,7 @@ def create_workflow_spec(
     _user=Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
     """Create the next draft version of a Box type for this org."""
+    _require_workflow_builder_surface()
     organization_id = _session_org(_user)
     db = get_db()
     try:
@@ -93,6 +104,7 @@ def create_workflow_spec(
 
 @router.get("/workflow-specs")
 def list_workflow_specs(_user=Depends(get_current_user)) -> Dict[str, Any]:
+    _require_workflow_builder_surface()
     organization_id = _session_org(_user)
     db = get_db()
     rows = db.list_workflow_specs(organization_id)
@@ -101,6 +113,7 @@ def list_workflow_specs(_user=Depends(get_current_user)) -> Dict[str, Any]:
 
 @router.get("/workflow-specs/{box_type}")
 def get_workflow_spec(box_type: str, _user=Depends(get_current_user)) -> Dict[str, Any]:
+    _require_workflow_builder_surface()
     organization_id = _session_org(_user)
     db = get_db()
     row = db.get_workflow_spec_row(organization_id, box_type)
@@ -115,6 +128,7 @@ def activate_workflow_spec(
     version: int,
     _user=Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
+    _require_workflow_builder_surface()
     organization_id = _session_org(_user)
     db = get_db()
     try:
@@ -131,6 +145,7 @@ def archive_workflow_spec(
     version: int,
     _user=Depends(require_workspace_admin),
 ) -> Dict[str, Any]:
+    _require_workflow_builder_surface()
     organization_id = _session_org(_user)
     db = get_db()
     return db.archive_workflow_spec(

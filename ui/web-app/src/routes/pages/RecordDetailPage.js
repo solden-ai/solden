@@ -34,6 +34,7 @@ import {
   formatAmount,
   getStateLabel,
 } from '../../utils/formatters.js';
+import { hasCapability } from '../../utils/capabilities.js';
 
 const html = htm.bind(h);
 
@@ -179,7 +180,7 @@ function formatErpName(erpType) {
 // ─── Top-level page ─────────────────────────────────────────────────
 
 export default function RecordDetailPage({
-  api, orgId, navigate, toast, recordId,
+  api, orgId, navigate, toast, recordId, bootstrap,
 }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -290,7 +291,9 @@ export default function RecordDetailPage({
         <${ThreeWayMatchPanel} match=${match} />
       </div>
 
-      <${BankMatchPanel} api=${api} recordId=${recordId} item=${item} />
+      ${hasCapability(bootstrap, 'view_bank_match')
+        ? html`<${BankMatchPanel} api=${api} recordId=${recordId} item=${item} />`
+        : null}
 
       <${WorkflowTimeline} events=${timeline} />
     </div>

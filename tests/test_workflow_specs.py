@@ -58,7 +58,8 @@ SPEC_V2 = {
 
 
 @pytest.fixture()
-def client():
+def client(monkeypatch):
+    monkeypatch.setenv("FEATURE_WORKFLOW_BUILDER", "true")
     db = db_module.get_db()
     db.initialize()
     db.ensure_organization(ORG, organization_name=ORG)
@@ -75,6 +76,22 @@ def _author_and_activate(client, spec):
     a = client.post(f"/api/workspace/workflow-specs/{box_type}/versions/{version}/activate", json={})
     assert a.status_code == 200, a.text
     return version
+
+
+def test_workflow_builder_routes_disabled_by_default(monkeypatch):
+    monkeypatch.delenv("FEATURE_WORKFLOW_BUILDER", raising=False)
+    app.dependency_overrides[get_current_user] = lambda: _user("admin")
+    try:
+        client = TestClient(app)
+        for method, path in (
+            ("get", "/api/workspace/workflow-specs"),
+            ("get", "/api/workspace/workflows/vendor_coi"),
+        ):
+            response = getattr(client, method)(path)
+            assert response.status_code == 404
+            assert response.json()["detail"]["detail"] == "workflow_builder_disabled"
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 def test_validate_endpoint_flags_bad_spec(client):
