@@ -256,11 +256,34 @@ def test_resolve_attributes_current_user_and_removes_from_queue(client, db):
 def test_resolve_idempotent_on_already_resolved(client, db):
     _seed_ap_box(db, "AP-EXC-IDEM")
     excp = _seed_exception(db, "AP-EXC-IDEM", "amount_anomaly", severity="medium")
-    client.post(f"/api/admin/box/exceptions/{excp['id']}/resolve", json={})
+    client.post(
+        f"/api/admin/box/exceptions/{excp['id']}/resolve",
+        json={"resolution_note": "cleared after manual review"},
+    )
 
+    # Already-resolved short-circuits before the rationale gate, so an
+    # empty re-resolve is still an idempotent no-op (not a 400).
     resp2 = client.post(f"/api/admin/box/exceptions/{excp['id']}/resolve", json={})
     assert resp2.status_code == 200
     assert resp2.json()["status"] == "already_resolved"
+
+
+def test_resolve_requires_rationale_for_human_clear(client, db):
+    _seed_ap_box(db, "AP-EXC-WHY")
+    excp = _seed_exception(db, "AP-EXC-WHY", "amount_anomaly", severity="medium")
+
+    # A human clearing an exception must record why; an empty note is
+    # rejected so the operational decision never lands as a bare click.
+    resp = client.post(
+        f"/api/admin/box/exceptions/{excp['id']}/resolve",
+        json={"resolution_note": "   "},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["detail"]["reason"] == "resolution_rationale_required"
+
+    # The exception is untouched and still unresolved in the queue.
+    q = client.get("/api/admin/box/exceptions").json()
+    assert any(row["id"] == excp["id"] for row in q["items"])
 
 
 def test_resolve_unknown_returns_404(client):

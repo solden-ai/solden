@@ -243,11 +243,12 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
         >
           <h3 id="cl-resolve-title" class="cl-modal-title">Resolve exception</h3>
           <div class="cl-modal-body">
-            Add an optional note explaining how this was resolved. The note is
-            written to the audit log and visible to other admins.
+            Explain how this was resolved. The note is written to the audit
+            log, visible to other admins, and becomes part of the record's
+            operational history.
           </div>
           <div class="field-row">
-            <label for="cl-resolve-note">Resolution note (optional)</label>
+            <label for="cl-resolve-note">Resolution note</label>
             <textarea
               id="cl-resolve-note"
               autofocus
@@ -258,7 +259,11 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
           </div>
           <div class="cl-modal-actions">
             <button class="btn-secondary btn-sm" onClick=${cancelResolveDialog}>Cancel</button>
-            <button class="btn-primary btn-sm" onClick=${submitResolveDialog}>Resolve</button>
+            <button
+              class="btn-primary btn-sm"
+              disabled=${!String(resolveDialog.note || '').trim()}
+              onClick=${submitResolveDialog}
+            >Resolve</button>
           </div>
         </div>
       </div>

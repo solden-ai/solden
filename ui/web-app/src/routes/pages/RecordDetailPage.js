@@ -1326,7 +1326,7 @@ function WorkflowTimeline({ events }) {
             <div class="cl-record-timeline-body">
               <div class="cl-record-timeline-line">
                 <span class="cl-record-timeline-summary">
-                  ${event.summary || event.event_type || 'event'}
+                  ${event.summary || event.operator_title || event.event_type || 'event'}
                 </span>
                 ${event.governance_verdict ? html`
                   <span class=${`cl-record-chip cl-record-chip-${VERDICT_TONE[String(event.governance_verdict).toLowerCase()] || 'info'}`}>
@@ -1343,6 +1343,11 @@ function WorkflowTimeline({ events }) {
                 ${event.prev_state || event.new_state ? html`
                   <span>· ${event.prev_state || '—'} → ${event.new_state || '—'}</span>` : null}
               </div>
+              ${event.operator_human_rationale ? html`
+                <div class="cl-record-timeline-rationale" title="The operator's recorded reason for this decision">
+                  <span class="cl-record-timeline-rationale-key">why</span>
+                  <span class="cl-record-timeline-rationale-val">${event.operator_human_rationale}</span>
+                </div>` : null}
               ${event.hash ? html`
                 <div class="cl-record-timeline-chain" title="Append-only hash chain. The audit trail proves its own integrity.">
                   <span class="cl-record-timeline-chain-key">hash</span>

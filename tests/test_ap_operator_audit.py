@@ -71,6 +71,53 @@ def test_normalize_operator_audit_events_adds_operator_contract_fields():
     assert "posting workflow state change" in str(row["operator_evidence_detail"]).lower()
 
 
+def test_normalize_operator_audit_event_surfaces_human_rationale_from_payload():
+    # Approve / reject / request-info handlers write the operator's own
+    # words to payload_json.human_rationale (merged up from the audit
+    # metadata). The normalizer must surface it so the timeline shows
+    # the human "why", not just the machine reason token.
+    row = normalize_operator_audit_event(
+        {
+            "id": "evt-why-1",
+            "event_type": "invoice_approved",
+            "decision_reason": "runtime_approve_invoice",
+            "payload_json": {
+                "human_rationale": "Vendor confirmed the PO out-of-band; safe to pay.",
+            },
+        }
+    )
+    assert row["operator_human_rationale"] == "Vendor confirmed the PO out-of-band; safe to pay."
+    assert row["operator"]["human_rationale"] == "Vendor confirmed the PO out-of-band; safe to pay."
+
+
+def test_normalize_operator_audit_event_surfaces_exception_resolution_note():
+    # Exception-clear stores the human "why" as resolution_note. The
+    # same rationale field should carry it through.
+    row = normalize_operator_audit_event(
+        {
+            "id": "evt-why-2",
+            "event_type": "box_exception_resolved",
+            "decision_reason": "Corrected IBAN, resubmitted.",
+            "payload_json": {
+                "resolution_note": "Corrected IBAN, resubmitted.",
+            },
+        }
+    )
+    assert row["operator_human_rationale"] == "Corrected IBAN, resubmitted."
+
+
+def test_normalize_operator_audit_event_omits_rationale_when_absent():
+    row = normalize_operator_audit_event(
+        {
+            "id": "evt-why-3",
+            "event_type": "state_transition",
+            "to_state": "ready_to_post",
+        }
+    )
+    assert row["operator_human_rationale"] is None
+    assert "human_rationale" not in row["operator"]
+
+
 def test_normalize_operator_audit_event_maps_nudge_sent_alias_and_auto_reason():
     row = normalize_operator_audit_event(
         {

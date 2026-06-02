@@ -84,12 +84,23 @@ describe('ExceptionsPage', () => {
     await waitFor(() => screen.getByText('Resolve'));
     fireEvent.click(screen.getByText('Resolve'));
     const dialog = await waitFor(() => screen.getByRole('dialog'));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Resolve' }));
+
+    // The resolve button is gated until a rationale is entered; the
+    // human "why" is required before an exception can be cleared.
+    const resolveBtn = within(dialog).getByRole('button', { name: 'Resolve' });
+    expect(resolveBtn.disabled).toBe(true);
+
+    fireEvent.input(within(dialog).getByLabelText('Resolution note'), {
+      target: { value: 'Vendor confirmed corrected IBAN' },
+    });
+    expect(resolveBtn.disabled).toBe(false);
+    fireEvent.click(resolveBtn);
 
     await waitFor(() => {
       expect(api.mock.calls.some(([path, opts]) => (
         path === '/api/workspace/exceptions/exc-1/resolve'
         && (opts.method || '').toUpperCase() === 'POST'
+        && JSON.parse(opts.body || '{}').resolution_note === 'Vendor confirmed corrected IBAN'
       ))).toBe(true);
     });
   });

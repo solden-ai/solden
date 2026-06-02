@@ -226,6 +226,17 @@ def _extract_event_context(event: Dict[str, Any]) -> Dict[str, Any]:
             event.get("source"),
         )
     )
+    # The human "why" behind an operational decision. Captured on
+    # approve / reject / request-info (payload.human_rationale, merged
+    # up from the handler audit metadata) and on exception-clear
+    # (payload.resolution_note). This is the operator's own prose, kept
+    # separate from the machine reason token so the timeline can show
+    # both "what" and "why".
+    human_rationale = _first_text(
+        payload.get("human_rationale"),
+        metadata.get("human_rationale"),
+        payload.get("resolution_note"),
+    )
     return {
         "payload": payload,
         "response": response,
@@ -240,6 +251,7 @@ def _extract_event_context(event: Dict[str, Any]) -> Dict[str, Any]:
         "reason": _reason_message(reason_raw),
         "reason_codes": reason_codes,
         "channel": channel,
+        "human_rationale": human_rationale,
     }
 
 
@@ -393,6 +405,12 @@ def _finalize_operator_view(event: Dict[str, Any], operator: Dict[str, Any]) -> 
     if not evidence:
         evidence = _operator_evidence(event, context)
     enriched["evidence"] = evidence
+    # Surface the operator's own rationale alongside the machine view,
+    # so a reviewer scanning the timeline sees why a human decided as
+    # they did, not just that a decision happened.
+    human_rationale = context.get("human_rationale")
+    if human_rationale:
+        enriched["human_rationale"] = human_rationale
     return enriched
 
 
@@ -1134,6 +1152,7 @@ def normalize_operator_audit_event(event: Dict[str, Any]) -> Dict[str, Any]:
     row["operator_action_hint"] = operator.get("next_action")
     row["operator_importance"] = operator.get("importance")
     row["operator_category"] = operator.get("category")
+    row["operator_human_rationale"] = operator.get("human_rationale")
     row["operator_evidence_label"] = _first_text(
         _dict_value(operator.get("evidence")).get("label"),
         operator.get("evidence_label"),

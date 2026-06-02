@@ -322,7 +322,20 @@ def resolve_exception(
     if existing.get("resolved_at"):
         return {"status": "already_resolved", "exception": existing}
 
+    # Human clears are operational decisions. Capture the rationale so the
+    # hash-chained box_exception_resolved event is not a bare click.
     note = str(body.get("resolution_note") or "").strip()
+    if not note:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "reason": "resolution_rationale_required",
+                "message": (
+                    "Add a short note explaining how this exception was "
+                    "resolved before clearing it."
+                ),
+            },
+        )
     resolved = db.resolve_box_exception(
         exception_id,
         resolved_by=str(user.email or user.user_id or "admin"),

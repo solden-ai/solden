@@ -2701,6 +2701,31 @@
   font-family: var(--cl-font-mono);
 }
 
+/* Operator rationale line beneath a timeline event. */
+.cl-record-timeline-rationale {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border-left: 2px solid var(--cl-teal-500);
+  background: var(--cl-teal-soft);
+  font-size: 12.5px;
+}
+.cl-record-timeline-rationale-key {
+  font-family: var(--cl-font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--cl-teal-600);
+  flex-shrink: 0;
+}
+.cl-record-timeline-rationale-val {
+  color: var(--cl-ink-primary);
+  line-height: 1.4;
+}
+
 /* Policy-version chip on each timeline event. v83 stamps a policy
    version on every state-changing audit_event; surfacing it makes the
    "policy that authorized this transition" visible to the operator. */

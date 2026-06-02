@@ -300,6 +300,28 @@ class ApproveInvoiceHandler(APIntentHandler):
             or payload.get("override_justification")
             or ""
         ).strip() or None
+        # Budget overrides require a rationale before any state transition.
+        if approve_override and not justification:
+            response = {
+                "skill_id": skill.skill_id,
+                "intent": self.intent,
+                "status": "blocked",
+                "reason": "approval_rationale_required",
+                "email_id": email_id,
+                "ap_item_id": ap_item_id,
+                "policy_precheck": precheck,
+                "audit_contract": skill.audit_contract(self.intent),
+            }
+            audit_row = runtime.append_runtime_audit(
+                ap_item_id=ap_item_id,
+                event_type="invoice_approval_blocked",
+                reason="approval_rationale_required",
+                metadata={"intent": self.intent, "response": response},
+                correlation_id=correlation_id,
+                idempotency_key=idempotency_key,
+            )
+            response["audit_event_id"] = (audit_row or {}).get("id")
+            return response
         result = await workflow.approve_invoice(
             gmail_id=email_id,
             approved_by=actor["canonical_actor"],
@@ -348,6 +370,8 @@ class ApproveInvoiceHandler(APIntentHandler):
                 "policy_precheck": precheck,
                 "result": result,
                 "response": response,
+                # Keep the stable reason token separate from human prose.
+                "human_rationale": justification,
             },
             correlation_id=correlation_id,
             idempotency_key=idempotency_key,
@@ -451,6 +475,8 @@ class RequestInfoHandler(APIntentHandler):
                 "policy_precheck": precheck,
                 "result": result,
                 "response": response,
+                # Preserve an operator rationale only when one was supplied.
+                "human_rationale": str(payload.get("reason") or "").strip() or None,
             },
             correlation_id=correlation_id,
             idempotency_key=idempotency_key,
@@ -1008,6 +1034,9 @@ class RejectInvoiceHandler(APIntentHandler):
                 "policy_precheck": precheck,
                 "result": result,
                 "response": response,
+                # Rejection already requires a reason; keep it visible in audit
+                # metadata instead of only inside the workflow result.
+                "human_rationale": str(payload.get("reason") or "").strip() or None,
             },
             correlation_id=correlation_id,
             idempotency_key=idempotency_key,
