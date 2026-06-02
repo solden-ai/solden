@@ -56,6 +56,15 @@ class APDecision:
 
 _VALID_WHEN_GATE_FAILED = frozenset({"escalate", "needs_info", "reject"})
 
+# Soft-anomaly dampening: once a reviewer has approved this vendor's
+# agent-escalated invoices at least this many times, the cascade stops
+# re-escalating the *soft* statistical amount anomaly (Step 7) and routes
+# to a lighter needs_info review instead. Bounded to the soft signal only
+# — the hard gates (validation gate, bank change, composite vendor risk,
+# duplicate) return earlier in the cascade and are never dampened. Never
+# auto-approves; the human stays in the loop.
+_SOFT_ANOMALY_DAMPEN_MIN_APPROVALS = 3
+
 
 def _days_since(iso: Optional[str]) -> Optional[int]:
     if not iso:
@@ -877,12 +886,41 @@ class APDecisionService:
                 model="rules",
             )
 
-        # Step 7: Amount >2σ from vendor historical average → escalate
+        # Step 7: Amount >2σ from vendor historical average → escalate.
+        # Soft-dampen: this is a statistical anomaly, not a hard control.
+        # If a reviewer has repeatedly approved this vendor's escalated
+        # invoices, the agent is over-escalating it — stop re-escalating the
+        # anomaly and route to a lighter needs_info review instead. The hard
+        # gates (Steps 2/3/5/6: validation gate, bank change, composite vendor
+        # risk, duplicate) already returned above, so this can only soften the
+        # soft signal and never relaxes a control. Never auto-approves.
         avg = safe_float_or_none(vendor_profile.get("avg_invoice_amount"))
         stddev = safe_float_or_none(vendor_profile.get("amount_stddev"))
         current_amount = safe_float_or_none(getattr(invoice, "amount", None)) or 0.0
         if avg is not None and stddev is not None and stddev > 0:
             if abs(current_amount - avg) > 2 * stddev:
+                approve_after_escalate = int(
+                    (decision_feedback or {}).get("approve_after_escalate_count") or 0
+                )
+                if approve_after_escalate >= _SOFT_ANOMALY_DAMPEN_MIN_APPROVALS:
+                    return APDecision(
+                        recommendation="needs_info",
+                        reasoning=(
+                            f"Invoice amount ${current_amount:.2f} for {invoice.vendor_name} "
+                            f"is more than 2 standard deviations from the historical average "
+                            f"(avg=${avg:.2f}, σ=${stddev:.2f}), but a reviewer has approved "
+                            f"this vendor's escalated invoices {approve_after_escalate} times. "
+                            "Softening to a lighter review instead of full escalation."
+                        ),
+                        confidence=min(1.0, max(0.65, confidence - 0.1)),
+                        info_needed=(
+                            "Confirm this larger-than-usual amount is expected for "
+                            f"{invoice.vendor_name}."
+                        ),
+                        risk_flags=["amount_anomaly_2sigma", "anomaly_dampened_by_history"],
+                        vendor_context_used=vendor_context_used or {},
+                        model="rules",
+                    )
                 return APDecision(
                     recommendation="escalate",
                     reasoning=(

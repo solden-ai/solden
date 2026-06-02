@@ -1334,6 +1334,7 @@ class VendorStore:
                 "strictness_bias": "neutral",
                 "reject_after_approve_count": 0,
                 "request_info_after_approve_count": 0,
+                "approve_after_escalate_count": 0,
                 "latest_human_decision": None,
                 "latest_action_outcome": None,
                 "recent_reasons": [],
@@ -1345,6 +1346,13 @@ class VendorStore:
         override_count = 0
         reject_after_approve = 0
         request_info_after_approve = 0
+        # Lenient signal: the human approved an invoice the agent wanted to
+        # escalate. A vendor that repeatedly clears the agent's escalations
+        # this way is one the agent over-escalates — the soft-anomaly step
+        # in the decision cascade uses this to stop re-escalating a benign
+        # statistical anomaly (it never relaxes a hard gate). See
+        # ap_decision._compute_routing_decision Step 7.
+        approve_after_escalate = 0
         recent_reasons: List[str] = []
 
         for row in rows:
@@ -1363,6 +1371,8 @@ class VendorStore:
                 reject_after_approve += 1
             if human_decision == "request_info" and agent_rec == "approve":
                 request_info_after_approve += 1
+            if human_decision == "approve" and agent_rec == "escalate":
+                approve_after_escalate += 1
 
             reason = str(row.get("reason") or "").strip()
             if reason and reason not in recent_reasons and len(recent_reasons) < 3:
@@ -1391,6 +1401,7 @@ class VendorStore:
             "strictness_bias": strictness_bias,
             "reject_after_approve_count": reject_after_approve,
             "request_info_after_approve_count": request_info_after_approve,
+            "approve_after_escalate_count": approve_after_escalate,
             "latest_human_decision": latest.get("human_decision"),
             "latest_action_outcome": latest.get("action_outcome"),
             "recent_reasons": recent_reasons,

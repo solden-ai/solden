@@ -116,6 +116,104 @@ class TestAPDecisionService:
         assert decision.recommendation == "escalate"
         assert "bank_details_recently_changed" in decision.risk_flags
 
+    def test_escalate_amount_2sigma_without_history(self, tmp_path):
+        """Amount >2σ from the vendor average escalates when there's no
+        lenient approval history (Step 7, undampened)."""
+        from solden.services.ap_decision import APDecisionService
+
+        invoice = _make_invoice(vendor_name="Spiky Vendor", amount=5000.0, confidence=0.97)
+        vendor_profile = {
+            "invoice_count": 8,
+            "avg_invoice_amount": 1000.0,
+            "amount_stddev": 100.0,
+            "always_approved": False,
+        }
+        svc = APDecisionService()
+        decision = asyncio.run(svc.decide(
+            invoice,
+            vendor_profile=vendor_profile,
+            vendor_history=[],
+            validation_gate={"passed": True, "reason_codes": []},
+        ))
+
+        assert decision.recommendation == "escalate"
+        assert "amount_anomaly_2sigma" in decision.risk_flags
+        assert "anomaly_dampened_by_history" not in decision.risk_flags
+
+    def test_soft_dampen_amount_anomaly_with_approval_history(self, tmp_path):
+        """After enough human approvals of this vendor's escalations, the
+        2σ amount anomaly softens to needs_info instead of escalate."""
+        from solden.services.ap_decision import APDecisionService
+
+        invoice = _make_invoice(vendor_name="Spiky Vendor", amount=5000.0, confidence=0.97)
+        vendor_profile = {
+            "invoice_count": 8,
+            "avg_invoice_amount": 1000.0,
+            "amount_stddev": 100.0,
+            "always_approved": False,
+        }
+        svc = APDecisionService()
+        decision = asyncio.run(svc.decide(
+            invoice,
+            vendor_profile=vendor_profile,
+            vendor_history=[],
+            validation_gate={"passed": True, "reason_codes": []},
+            decision_feedback={"approve_after_escalate_count": 3},
+        ))
+
+        assert decision.recommendation == "needs_info"
+        assert "anomaly_dampened_by_history" in decision.risk_flags
+        assert decision.info_needed  # carries a real question
+
+    def test_soft_dampen_below_threshold_still_escalates(self, tmp_path):
+        """Two prior approvals (below the threshold of 3) do not yet dampen."""
+        from solden.services.ap_decision import APDecisionService
+
+        invoice = _make_invoice(vendor_name="Spiky Vendor", amount=5000.0, confidence=0.97)
+        vendor_profile = {
+            "invoice_count": 8,
+            "avg_invoice_amount": 1000.0,
+            "amount_stddev": 100.0,
+            "always_approved": False,
+        }
+        svc = APDecisionService()
+        decision = asyncio.run(svc.decide(
+            invoice,
+            vendor_profile=vendor_profile,
+            vendor_history=[],
+            validation_gate={"passed": True, "reason_codes": []},
+            decision_feedback={"approve_after_escalate_count": 2},
+        ))
+
+        assert decision.recommendation == "escalate"
+        assert "anomaly_dampened_by_history" not in decision.risk_flags
+
+    def test_dampen_never_relaxes_a_hard_signal(self, tmp_path):
+        """The dampener is bounded to the soft anomaly. A duplicate signal
+        (a hard escalate earlier in the cascade) still escalates even with
+        a large lenient-approval history."""
+        from solden.services.ap_decision import APDecisionService
+
+        invoice = _make_invoice(vendor_name="Spiky Vendor", amount=5000.0, confidence=0.97)
+        vendor_profile = {
+            "invoice_count": 8,
+            "avg_invoice_amount": 1000.0,
+            "amount_stddev": 100.0,
+            "always_approved": False,
+        }
+        svc = APDecisionService()
+        decision = asyncio.run(svc.decide(
+            invoice,
+            vendor_profile=vendor_profile,
+            vendor_history=[],
+            validation_gate={"passed": True, "reason_codes": []},
+            cross_invoice_analysis={"duplicates": [{"severity": "high", "id": "dup1"}]},
+            decision_feedback={"approve_after_escalate_count": 10},
+        ))
+
+        assert decision.recommendation == "escalate"
+        assert "anomaly_dampened_by_history" not in decision.risk_flags
+
     def test_needs_info_missing_po_required(self, tmp_path):
         """PO required but missing → needs_info with a question."""
         from solden.services.ap_decision import APDecisionService
@@ -410,6 +508,9 @@ class TestVendorStore:
         assert summary["override_count"] == 3
         assert summary["reject_after_approve_count"] == 1
         assert summary["request_info_after_approve_count"] == 1
+        # AP-3 was a human approve of an agent escalate — the lenient signal
+        # the soft-anomaly dampener reads.
+        assert summary["approve_after_escalate_count"] == 1
         assert summary["strictness_bias"] == "strict"
 
 
