@@ -77,6 +77,18 @@ def is_slack_approve_rationale_enabled() -> bool:
     return _env_flag("FEATURE_SLACK_APPROVE_RATIONALE", default=False)
 
 
+def is_gmail_approve_rationale_enabled() -> bool:
+    """Optional free-text rationale dialog on the Gmail sidebar Approve.
+
+    When ``FEATURE_GMAIL_APPROVE_RATIONALE=true``, approving from the
+    Gmail sidebar opens an optional "why" dialog before dispatch; the note
+    is captured as the human rationale. Default ``False`` so the sidebar
+    keeps one-click approve until a deployment opts in. Delivered to the
+    extension via the workspace bootstrap ``feature_flags`` block.
+    """
+    return _env_flag("FEATURE_GMAIL_APPROVE_RATIONALE", default=False)
+
+
 def is_procurement_chat_enabled() -> bool:
     """Procurement (purchase_order) chat approval cards.
 

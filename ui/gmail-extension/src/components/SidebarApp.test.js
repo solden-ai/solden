@@ -345,6 +345,47 @@ describe('SidebarApp', () => {
       'refreshQueue should be called at least once after the action');
   });
 
+  it('defers Approve to the rationale dialog when approveRationaleEnabled is on', async () => {
+    const item = buildItem({ state: 'needs_approval' });
+    store.queueState = [item];
+    store.selectedItemId = item.id;
+    store.currentUserRole = 'operator';
+    store.contextState.set(item.id, {
+      actions: { available: ['approve_invoice', 'reject_invoice'], primary: 'approve_invoice' },
+    });
+
+    const backendFetch = mock.fn(async () => ({ ok: true }));
+    const queueManager = createQueueManager({
+      backendFetch,
+      fetchItemContext: mock.fn(async () => ({})),
+      runtimeConfig: {
+        organizationId: 'org-123',
+        userEmail: 'ops@soldenai.com',
+        backendUrl: 'https://api.test',
+        approveRationaleEnabled: true,
+      },
+    });
+
+    const view = mount(h(SidebarApp, { queueManager }));
+    await flushTicks(5);
+
+    const approveBtn = findButton(view.container, 'Approve');
+    assert.ok(approveBtn, 'Approve button must render');
+    click(approveBtn);
+    await flushTicks(5);
+
+    // With the flag on, the click opens the optional-rationale dialog and
+    // holds the dispatch until the operator confirms — nothing posts yet.
+    assert.ok(
+      !findCallByUrl(backendFetch, '/api/agent/intents/execute'),
+      'approve must wait for the rationale dialog when the flag is on',
+    );
+    assert.ok(
+      view.container.querySelector('.cl-action-dialog'),
+      'the optional rationale dialog should be visible',
+    );
+  });
+
   it('hides the ActionBar when actions.available is empty (terminal state)', async () => {
     const item = buildItem({ state: 'closed' });
     store.queueState = [item];

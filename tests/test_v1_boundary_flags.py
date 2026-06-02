@@ -235,3 +235,28 @@ class TestOutlookAutopilotGating:
                 pass
 
         spy.assert_not_called()
+
+
+class TestApproveRationaleFlags:
+    """Optional approve-rationale flags for the Slack + Gmail surfaces."""
+
+    def test_defaults_are_off(self, monkeypatch):
+        monkeypatch.delenv("FEATURE_SLACK_APPROVE_RATIONALE", raising=False)
+        monkeypatch.delenv("FEATURE_GMAIL_APPROVE_RATIONALE", raising=False)
+        assert feature_flags.is_slack_approve_rationale_enabled() is False
+        assert feature_flags.is_gmail_approve_rationale_enabled() is False
+
+    def test_independent_toggles(self, monkeypatch):
+        monkeypatch.setenv("FEATURE_SLACK_APPROVE_RATIONALE", "true")
+        monkeypatch.setenv("FEATURE_GMAIL_APPROVE_RATIONALE", "false")
+        assert feature_flags.is_slack_approve_rationale_enabled() is True
+        assert feature_flags.is_gmail_approve_rationale_enabled() is False
+
+    def test_bootstrap_client_feature_flags_reflect_env(self, monkeypatch):
+        from solden.api.workspace_shell import _client_feature_flags
+
+        monkeypatch.setenv("FEATURE_GMAIL_APPROVE_RATIONALE", "true")
+        monkeypatch.delenv("FEATURE_SLACK_APPROVE_RATIONALE", raising=False)
+        flags = _client_feature_flags()
+        assert flags["gmail_approve_rationale"] is True
+        assert flags["slack_approve_rationale"] is False

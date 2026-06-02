@@ -2171,6 +2171,27 @@ export default function SidebarApp({ queueManager }) {
       });
       if (!reason) return;
       inputExtras.reason = typeof reason === 'string' ? reason : (reason?.value || '');
+    } else if (
+      intent === 'approve_invoice'
+      && inputExtras.reason === undefined
+      && Boolean(queueManager?.runtimeConfig?.approveRationaleEnabled)
+    ) {
+      // Optional approve rationale (opt-in via FEATURE_GMAIL_APPROVE_RATIONALE,
+      // delivered through bootstrap). The operator may add a "why" or just
+      // confirm with an empty note. Distinguish cancel (null → back out)
+      // from confirm-with-empty ('' → approve with no note).
+      const note = await openSidebarActionDialog({
+        actionType: 'generic',
+        dialogMode: 'input',
+        title: 'Approve invoice',
+        label: 'Note (optional)',
+        placeholder: 'Why are you approving? (optional)',
+        confirmLabel: 'Approve',
+        required: false,
+      });
+      if (note === null || note === undefined) return; // cancelled
+      const text = (typeof note === 'string' ? note : (note?.value || '')).trim();
+      if (text) inputExtras.reason = text;
     }
 
     setSidebarActionBusy(true);

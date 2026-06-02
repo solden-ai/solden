@@ -1335,6 +1335,14 @@ async function _hydrateErpRuntimeConfig(qm) {
     const payload = await qm.backendFetch(url);
     if (!payload || typeof payload !== 'object') return;
 
+    // Surface feature flags onto runtimeConfig so the sidebar can toggle
+    // opt-in behaviours (e.g. the optional approve-rationale dialog)
+    // without a per-action refetch. Default false when absent.
+    const flags = (payload.feature_flags && typeof payload.feature_flags === 'object')
+      ? payload.feature_flags
+      : {};
+    rc.approveRationaleEnabled = Boolean(flags.gmail_approve_rationale);
+
     // bootstrap.integrations may be an array (admin console shape) or
     // a keyed object depending on endpoint version. Handle both.
     const integrations = payload.integrations;

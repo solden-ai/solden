@@ -1478,6 +1478,23 @@ async def get_admin_bootstrap(
         "required_actions": health.get("required_actions", []),
         "dashboard": _safe_dashboard_stats(org_id),
         "trust_arc": _safe_trust_arc_state(org_id),
+        # Surface-level feature flags the clients (Gmail extension,
+        # workspace SPA) read to toggle opt-in behaviours. Env-driven,
+        # default off — see solden/core/feature_flags.py.
+        "feature_flags": _client_feature_flags(),
+    }
+
+
+def _client_feature_flags() -> Dict[str, bool]:
+    """Feature flags exposed to front-end clients via bootstrap."""
+    from solden.core.feature_flags import (
+        is_gmail_approve_rationale_enabled,
+        is_slack_approve_rationale_enabled,
+    )
+
+    return {
+        "gmail_approve_rationale": is_gmail_approve_rationale_enabled(),
+        "slack_approve_rationale": is_slack_approve_rationale_enabled(),
     }
 
 

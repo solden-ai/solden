@@ -1,4 +1,4 @@
-/* clearledgr-source-fingerprint:286bf5594bc540be175dcdf4cdae23fd749204706c17133a670f6a90a7c86f26 */
+/* clearledgr-source-fingerprint:d9e8d1e0529f70f507dc5909c18ad3352874f14a79f585d707633cf8a41ee332 */
 (() => {
   var __create = Object.create;
   var __getProtoOf = Object.getPrototypeOf;
@@ -60807,6 +60807,21 @@ Reason (required — logged to the audit trail):`);
         if (!reason)
           return;
         inputExtras.reason = typeof reason === "string" ? reason : reason?.value || "";
+      } else if (intent === "approve_invoice" && inputExtras.reason === undefined && Boolean(queueManager?.runtimeConfig?.approveRationaleEnabled)) {
+        const note = await openSidebarActionDialog({
+          actionType: "generic",
+          dialogMode: "input",
+          title: "Approve invoice",
+          label: "Note (optional)",
+          placeholder: "Why are you approving? (optional)",
+          confirmLabel: "Approve",
+          required: false
+        });
+        if (note === null || note === undefined)
+          return;
+        const text = (typeof note === "string" ? note : note?.value || "").trim();
+        if (text)
+          inputExtras.reason = text;
       }
       setSidebarActionBusy(true);
       try {
@@ -61034,7 +61049,7 @@ Reason (required — logged to the audit trail):`);
     const tab = document.createElement("a");
     tab.id = SETTINGS_TAB_ID;
     tab.className = "f0";
-    tab.href = "#settings/clearledgr";
+    tab.href = "#settings/solden";
     tab.textContent = "Solden";
     tab.style.cssText = "cursor:pointer;";
     tab.addEventListener("click", (e3) => {
@@ -61044,7 +61059,7 @@ Reason (required — logged to the audit trail):`);
       showSettingsContent(queueManager);
     });
     tabBar.appendChild(tab);
-    if (window.location.hash.includes("settings/clearledgr")) {
+    if (window.location.hash.includes("settings/solden") || window.location.hash.includes("settings/clearledgr")) {
       tabBar.querySelectorAll("a").forEach((a3) => a3.classList.remove("f1"));
       tab.classList.add("f1");
       showSettingsContent(queueManager);
@@ -62137,6 +62152,8 @@ Reason (required — logged to the audit trail):`);
       const payload = await qm.backendFetch(url);
       if (!payload || typeof payload !== "object")
         return;
+      const flags = payload.feature_flags && typeof payload.feature_flags === "object" ? payload.feature_flags : {};
+      rc.approveRationaleEnabled = Boolean(flags.gmail_approve_rationale);
       const integrations = payload.integrations;
       let erpEntry = null;
       if (Array.isArray(integrations)) {
