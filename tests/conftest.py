@@ -2,7 +2,9 @@
 Shared pytest fixtures and hooks for the Solden test suite.
 """
 
+import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -174,6 +176,31 @@ def reset_service_singletons():
 _TEST_DB_ENGINE = os.environ.get("TEST_DB_ENGINE", "postgres").strip().lower()
 
 
+def _configure_local_docker_for_testcontainers() -> None:
+    """Point Python's Docker SDK at the same daemon as the Docker CLI."""
+    if os.environ.get("DOCKER_HOST"):
+        docker_host = os.environ["DOCKER_HOST"]
+    else:
+        try:
+            raw = subprocess.check_output(
+                ["docker", "context", "inspect", "--format", "{{json .Endpoints.docker.Host}}"],
+                text=True,
+                stderr=subprocess.DEVNULL,
+            ).strip()
+            docker_host = json.loads(raw) if raw else ""
+        except Exception:
+            docker_host = ""
+        if docker_host:
+            os.environ["DOCKER_HOST"] = docker_host
+
+    # Colima exposes Docker through a user-scoped socket. testcontainers'
+    # Ryuk sidecar tries to bind-mount that socket path and fails inside the
+    # Linux VM. The test fixture stops the Postgres container explicitly, so
+    # disabling Ryuk here keeps local Docker-backed tests runnable.
+    if ".colima/" in str(docker_host):
+        os.environ.setdefault("TESTCONTAINERS_RYUK_DISABLED", "true")
+
+
 def _resolve_postgres_test_database_url():
     """Return a Postgres DSN to point tests at, spinning a container if needed.
 
@@ -186,6 +213,8 @@ def _resolve_postgres_test_database_url():
     explicit = os.environ.get("TEST_DATABASE_URL", "").strip()
     if explicit:
         return explicit, None
+
+    _configure_local_docker_for_testcontainers()
 
     try:
         from testcontainers.postgres import PostgresContainer
