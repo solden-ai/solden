@@ -19,7 +19,7 @@ from typing import Any, Dict, Optional
 
 from fastapi import Depends, Header, HTTPException, Cookie
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 from solden.core.database import get_db as _canonical_get_db
 
@@ -130,7 +130,13 @@ class User(BaseModel):
     """
 
     id: str
-    email: EmailStr
+    # Plain str, not EmailStr: this is the read/response representation
+    # built from already-persisted rows. Re-validating the address on
+    # every read (e.g. GET /auth/me) adds no security — emails are
+    # validated at signup via Google OAuth — but EmailStr 500s on edge
+    # cases (reserved TLDs, legacy rows). Keep validation at the write
+    # boundary, not here.
+    email: str
     name: str
     organization_id: str
     role: str = "user"  # DEPRECATED post-v89
