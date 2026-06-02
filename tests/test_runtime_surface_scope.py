@@ -273,7 +273,12 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         # so the prune silently 404'd them in prod (manifesto per-file review):
         # ap items audit/export, ops/box-health, and the 3 NetSuite-panel
         # action POSTs (approve/reject/request-info). Cap 455 -> 460.
-        assert len(paths) <= 460
+        # 2026-06-02: workspace-records surface hardening (3f886f91) added the
+        # workspace-vocabulary routes the SPA now calls directly instead of
+        # reaching through the Gmail-extension paths (/api/workspace/records,
+        # /exceptions, /exceptions/stats, /exceptions/{id}/resolve). Net surface
+        # +1 after the post-AP gating in b8cc0451. Cap 460 -> 461.
+        assert len(paths) <= 461
         assert not any(path.startswith("/config/") for path in paths)
         assert "/erp/status/{organization_id}" not in paths
         assert "/erp/quickbooks/connect" not in paths
