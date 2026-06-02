@@ -170,6 +170,18 @@ app.config_from_object(
                 "task": "solden.services.celery_tasks.fire_due_escalation_policies",
                 "schedule": 60.0,
             },
+            # Proactive monitoring health sweep across active orgs:
+            # dead-letter depth, ERP posting-failure rate, auth failures,
+            # stale autopilot, overdue invoices, Gmail-watch expiry. This
+            # used to run only in the agent_background in-process loop
+            # (PROCESS_ROLE=all); scheduling it here means alerting is no
+            # longer blind in the prescribed web+worker topology. Hourly,
+            # matching the prior in-process cadence so alert volume is
+            # unchanged.
+            "run-monitoring-checks": {
+                "task": "solden.services.celery_tasks.run_monitoring_checks_all_orgs",
+                "schedule": 60 * 60.0,  # hourly
+            },
             # Module 8: hourly sweep of due report subscriptions.
             # 15 minutes after the hour avoids the top-of-hour broker
             # contention. Each task picks up to 100 due rows, runs

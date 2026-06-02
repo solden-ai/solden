@@ -806,6 +806,39 @@ def poll_sap_b1_payments_all_orgs() -> dict:
     return summary
 
 
+@app.task(name="solden.services.celery_tasks.run_monitoring_checks_all_orgs")
+def run_monitoring_checks_all_orgs() -> dict:
+    """Run the monitoring health sweep for every active org.
+
+    Covers dead-letter depth, ERP posting-failure rate, auth failures,
+    stale autopilot, overdue invoices, and Gmail-watch expiry, emitting
+    alerts on threshold breach.
+
+    Previously this only ran inside the agent_background in-process loop,
+    which fires only when PROCESS_ROLE=all. In the prescribed web+worker
+    prod topology neither process ran it, so proactive alerting was blind.
+    Scheduling it on Celery beat closes that gap — the sweep now runs on
+    the worker regardless of role. Uses the same org enumeration and
+    per-org runner as the in-process loop for parity.
+    """
+    import asyncio
+    from solden.services.agent_background import _active_org_ids, _run_monitoring_checks
+
+    org_ids = _active_org_ids()
+    checked = 0
+    errors = 0
+    for org_id in org_ids:
+        try:
+            asyncio.run(_run_monitoring_checks(org_id))
+            checked += 1
+        except Exception as exc:
+            logger.warning(
+                "[CeleryBeat] monitoring sweep failed for org=%s: %s", org_id, exc
+            )
+            errors += 1
+    return {"orgs_checked": checked, "errors": errors}
+
+
 # ---------------------------------------------------------------------------
 # Module 7 v1 Pass 3 — audit-event SIEM webhook fan-out
 #
