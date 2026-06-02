@@ -147,7 +147,7 @@ def test_production_https_redirect_respects_proxy_headers_and_exempts_health(mon
 
 def test_web_process_role_skips_deferred_startup(monkeypatch):
     monkeypatch.delenv("CLEARLEDGR_SKIP_DEFERRED_STARTUP", raising=False)
-    monkeypatch.setenv("CLEARLEDGR_PROCESS_ROLE", "web")
+    monkeypatch.setenv("SOLDEN_PROCESS_ROLE", "web")
 
     assert _should_skip_deferred_startup() is True
     assert _runtime_surface_contract()["process_role"] == "web"
@@ -155,7 +155,7 @@ def test_web_process_role_skips_deferred_startup(monkeypatch):
 
 def test_worker_process_role_keeps_deferred_startup_enabled(monkeypatch):
     monkeypatch.delenv("CLEARLEDGR_SKIP_DEFERRED_STARTUP", raising=False)
-    monkeypatch.setenv("CLEARLEDGR_PROCESS_ROLE", "worker")
+    monkeypatch.setenv("SOLDEN_PROCESS_ROLE", "worker")
 
     assert _should_skip_deferred_startup() is False
     assert _runtime_surface_contract()["process_role"] == "worker"

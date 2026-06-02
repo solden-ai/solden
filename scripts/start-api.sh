@@ -5,7 +5,7 @@ HOST="${HOST:-0.0.0.0}"
 PORT="${PORT:-8010}"
 WORKERS="${WORKERS:-4}"
 LOG_LEVEL="${LOG_LEVEL:-info}"
-export CLEARLEDGR_PROCESS_ROLE="${CLEARLEDGR_PROCESS_ROLE:-web}"
+export SOLDEN_PROCESS_ROLE="${SOLDEN_PROCESS_ROLE:-${CLEARLEDGR_PROCESS_ROLE:-web}}"
 
 exec gunicorn main:app \
   --workers "${WORKERS}" \

@@ -13,7 +13,7 @@ from solden.core.auth import TokenData
 
 @pytest.fixture()
 def db(tmp_path, monkeypatch):
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
     monkeypatch.setenv("AP_TEMPORAL_ENABLED", "false")
     db = db_module.get_db()

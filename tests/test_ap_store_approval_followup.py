@@ -7,7 +7,7 @@ from solden.core.database import get_db
 
 
 def test_get_pending_approver_ids_falls_back_to_pending_chain_steps(tmp_path, monkeypatch):
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key-for-approval-followup")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key-for-approval-followup")
     db = get_db()
     db.initialize()
 
@@ -57,7 +57,7 @@ def test_get_pending_approver_ids_falls_back_to_pending_chain_steps(tmp_path, mo
 
 
 def test_get_pending_approver_ids_prefers_delivery_targets_metadata(tmp_path, monkeypatch):
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key-for-approval-followup")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key-for-approval-followup")
     db = get_db()
     db.initialize()
 

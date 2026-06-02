@@ -64,7 +64,7 @@ class _GovernanceRuntime:
 
 
 def test_finance_agent_loop_blocks_doctrine_forbidden_action(tmp_path, monkeypatch):
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
     db = SoldenDB(str(tmp_path / "governance-block.db"))
     db.initialize()
     db.create_ap_item(
@@ -113,7 +113,7 @@ def test_finance_agent_loop_blocks_doctrine_forbidden_action(tmp_path, monkeypat
 
 
 def test_finance_agent_loop_attempts_self_recovery_for_failed_post(tmp_path, monkeypatch):
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
     db = SoldenDB(str(tmp_path / "governance-recovery.db"))
     db.initialize()
     db.create_ap_item(
@@ -166,7 +166,7 @@ def test_finance_agent_loop_attempts_self_recovery_for_failed_post(tmp_path, mon
 
 
 def test_finance_agent_loop_allows_manual_risky_action_to_reach_workflow(tmp_path, monkeypatch):
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
     db = SoldenDB(str(tmp_path / "governance-manual.db"))
     db.initialize()
     db.create_ap_item(

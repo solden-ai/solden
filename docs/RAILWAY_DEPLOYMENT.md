@@ -17,9 +17,9 @@ Solden is ready to run on Railway as two services plus managed data:
 
 The backend now supports explicit process roles:
 
-- `CLEARLEDGR_PROCESS_ROLE=web`
-- `CLEARLEDGR_PROCESS_ROLE=worker`
-- `CLEARLEDGR_PROCESS_ROLE=all`
+- `SOLDEN_PROCESS_ROLE=web`
+- `SOLDEN_PROCESS_ROLE=worker`
+- `SOLDEN_PROCESS_ROLE=all`
 
 Use `web` on the API service and `worker` on the background service.
 
@@ -46,7 +46,7 @@ Shared:
 ```bash
 DATABASE_URL=postgresql://...
 REDIS_URL=redis://...
-CLEARLEDGR_SECRET_KEY=...
+SOLDEN_SECRET_KEY=...
 TOKEN_ENCRYPTION_KEY=...
 ANTHROPIC_API_KEY=...
 OPENAI_API_KEY=...
@@ -79,7 +79,7 @@ SLACK_DEFAULT_CHANNEL=#finance-approvals
 API service only:
 
 ```bash
-CLEARLEDGR_PROCESS_ROLE=web
+SOLDEN_PROCESS_ROLE=web
 PORT=8010
 HOST=0.0.0.0
 WORKERS=2
@@ -88,7 +88,7 @@ WORKERS=2
 Worker service only:
 
 ```bash
-CLEARLEDGR_PROCESS_ROLE=worker
+SOLDEN_PROCESS_ROLE=worker
 ```
 
 ## Slack app settings
@@ -124,7 +124,7 @@ For a Railway-hosted backend:
 
 ```bash
 cd ui/gmail-extension
-CLEARLEDGR_API_URL=https://<your-public-api-domain> ./build.sh railway
+SOLDEN_API_URL=https://<your-public-api-domain> ./build.sh railway
 ```
 
 Then load the unpacked build from `ui/gmail-extension/build`.
@@ -132,8 +132,8 @@ Then load the unpacked build from `ui/gmail-extension/build`.
 ## Recommended rollout order
 
 1. Deploy Postgres and Redis.
-2. Deploy the `api` service with `CLEARLEDGR_PROCESS_ROLE=web`.
-3. Deploy the `worker` service with `CLEARLEDGR_PROCESS_ROLE=worker`.
+2. Deploy the `api` service with `SOLDEN_PROCESS_ROLE=web`.
+3. Deploy the `worker` service with `SOLDEN_PROCESS_ROLE=worker`.
 4. Set Slack callback URLs to the Railway public domain.
 5. Set Gmail OAuth redirect URIs to the Railway public domain.
 6. Reconnect Slack from inside Solden.

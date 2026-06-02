@@ -86,7 +86,7 @@ Last reviewed: 2026-04-26.
 - **Field-level encryption** for sensitive columns. Bank details (IBAN
   + routing + account number), ERP credentials, OAuth refresh tokens
   are stored as Fernet ciphertext — never plaintext.
-- **Key derivation**: SHA256 hash of `CLEARLEDGR_SECRET_KEY` →
+- **Key derivation**: SHA256 hash of `SOLDEN_SECRET_KEY` →
   base64-urlsafe encoded Fernet key —
   [solden/core/database.py:466-473](../../solden/core/database.py#L466-L473)
   (`_get_fernet`).

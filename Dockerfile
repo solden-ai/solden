@@ -41,7 +41,7 @@ ENV PORT=8010
 ENV HOST=0.0.0.0
 ENV WORKERS=4
 ENV LOG_LEVEL=info
-ENV CLEARLEDGR_PROCESS_ROLE=web
+ENV SOLDEN_PROCESS_ROLE=web
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

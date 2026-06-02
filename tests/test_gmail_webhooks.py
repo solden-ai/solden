@@ -98,7 +98,7 @@ class TestValidatePushPayload:
 
 class TestUnsignOAuthState:
     def test_valid_state(self, monkeypatch):
-        monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret")
+        monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret")
         payload = {"user_id": "u1", "org_id": "acme", "iat": int(time.time())}
         state = _sign_state(payload, "test-secret")
         result = _unsign_oauth_state(state)
@@ -106,19 +106,19 @@ class TestUnsignOAuthState:
         assert result["org_id"] == "acme"
 
     def test_empty_state(self, monkeypatch):
-        monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret")
+        monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret")
         with pytest.raises(HTTPException) as exc_info:
             _unsign_oauth_state("")
         assert exc_info.value.status_code == 400
 
     def test_no_dot_separator(self, monkeypatch):
-        monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret")
+        monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret")
         with pytest.raises(HTTPException) as exc_info:
             _unsign_oauth_state("nodot")
         assert exc_info.value.status_code == 400
 
     def test_tampered_signature(self, monkeypatch):
-        monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret")
+        monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret")
         payload = {"user_id": "u1", "iat": int(time.time())}
         state = _sign_state(payload, "test-secret")
         tampered = state[:-4] + "0000"
@@ -127,7 +127,7 @@ class TestUnsignOAuthState:
         assert "signature" in exc_info.value.detail
 
     def test_expired_state(self, monkeypatch):
-        monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret")
+        monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret")
         payload = {"user_id": "u1", "iat": int(time.time()) - 2000}
         state = _sign_state(payload, "test-secret")
         with pytest.raises(HTTPException) as exc_info:
@@ -136,7 +136,7 @@ class TestUnsignOAuthState:
 
     def test_accepts_workspace_signed_state_with_dev_secret_fallback(self, monkeypatch):
         monkeypatch.setenv("ENV", "dev")
-        monkeypatch.delenv("CLEARLEDGR_SECRET_KEY", raising=False)
+        monkeypatch.delenv("SOLDEN_SECRET_KEY", raising=False)
         payload = {"user_id": "u1", "org_id": "acme", "iat": int(time.time())}
         state = workspace_shell_module._sign_state(payload)
         result = _unsign_oauth_state(state)

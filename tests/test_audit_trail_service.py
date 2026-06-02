@@ -5,7 +5,7 @@ from solden.services.audit_trail import AuditEventType, AuditTrailService
 
 
 def test_audit_trail_service_persists_events_via_shared_audit_store(tmp_path, monkeypatch):
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
     db = SoldenDB(str(tmp_path / "audit-trail.db"))
     db.initialize()
 

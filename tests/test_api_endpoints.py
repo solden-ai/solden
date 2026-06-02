@@ -162,7 +162,7 @@ class TestAuthEndpoints:
     def test_google_callback_uses_one_time_auth_code_exchange(self, monkeypatch):
         monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-google-client")
         monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-google-secret")
-        monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+        monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
         monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-key")
 
         state = auth_module._sign_google_state(
@@ -436,7 +436,7 @@ class TestGmailWebhooks:
         assert response.json().get("detail") == "missing_oauth_state"
 
     def test_gmail_callback_rejects_tampered_oauth_state(self, monkeypatch):
-        monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+        monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
         response = client.get(
             "/gmail/callback",
             params={"code": "test-code", "state": "tampered-state-without-signature"},
@@ -445,7 +445,7 @@ class TestGmailWebhooks:
         assert response.json().get("detail") == "invalid_oauth_state"
 
     def test_gmail_callback_redirect_appends_success_with_existing_query(self, monkeypatch):
-        monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+        monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
         state = workspace_shell_module._sign_state(
             {
                 "organization_id": "org-test",
@@ -488,7 +488,7 @@ class TestGmailWebhooks:
         assert "Monitoring active" in response.text
 
     def test_gmail_callback_preserves_existing_refresh_token_when_google_omits_one(self, monkeypatch):
-        monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+        monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
         state = workspace_shell_module._sign_state(
             {
                 "organization_id": "org-test",
@@ -1610,7 +1610,7 @@ class TestAdminConsoleIntegrations:
         assert response.status_code == 403
 
     def test_start_gmail_connect_returns_google_auth_url(self, monkeypatch):
-        monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+        monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
         monkeypatch.setenv("GOOGLE_REDIRECT_URI", "http://127.0.0.1:8010/gmail/callback")
         captured = {}
 

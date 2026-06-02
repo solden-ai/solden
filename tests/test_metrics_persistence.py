@@ -9,7 +9,7 @@ from solden.core import database as db_module
 
 def test_metrics_use_durable_store_in_staging(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("ENV", "staging")
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-encryption-key")
     db = db_module.get_db()
     db.initialize()
@@ -43,7 +43,7 @@ def test_metrics_use_durable_store_in_staging(monkeypatch, tmp_path: Path):
 
 def test_metrics_prunes_rows_older_than_retention(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("ENV", "staging")
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-encryption-key")
     monkeypatch.setenv("API_METRICS_RETENTION_DAYS", "1")
     monkeypatch.setenv("API_METRICS_PRUNE_INTERVAL_SECONDS", "5")

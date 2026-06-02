@@ -5,7 +5,7 @@ from solden.services.agent_memory import AgentMemoryService
 
 
 def test_agent_memory_service_persists_profile_events_and_belief(tmp_path, monkeypatch):
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
     db = SoldenDB(str(tmp_path / "agent-memory.db"))
     db.initialize()
 
@@ -62,7 +62,7 @@ def test_agent_memory_service_persists_profile_events_and_belief(tmp_path, monke
 
 
 def test_agent_memory_service_recall_patterns_and_record_outcome(tmp_path, monkeypatch):
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
     db = SoldenDB(str(tmp_path / "agent-memory-recall.db"))
     db.initialize()
 
@@ -140,7 +140,7 @@ def test_agent_memory_service_recall_patterns_and_record_outcome(tmp_path, monke
 
 
 def test_agent_memory_surface_aggregates_semantic_and_episodic_context(tmp_path, monkeypatch):
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
     db = SoldenDB(str(tmp_path / "agent-memory-surface.db"))
     db.initialize()
 
@@ -201,7 +201,7 @@ def test_agent_memory_surface_aggregates_semantic_and_episodic_context(tmp_path,
 
 
 def test_agent_memory_compacts_old_events_and_persists_eval_snapshot(tmp_path, monkeypatch):
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
     db = SoldenDB(str(tmp_path / "agent-memory-compact.db"))
     db.initialize()
 
@@ -249,7 +249,7 @@ def test_agent_memory_compacts_old_events_and_persists_eval_snapshot(tmp_path, m
 
 
 def test_agent_memory_ensure_profile_preserves_existing_overrides(tmp_path, monkeypatch):
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
     db = SoldenDB(str(tmp_path / "agent-memory-profile.db"))
     db.initialize()
 

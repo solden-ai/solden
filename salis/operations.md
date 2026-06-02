@@ -151,7 +151,7 @@ Until we contract with real providers, this is manual intervention — admin cli
 
 | Secret | Where it lives | How to rotate |
 |---|---|---|
-| `CLEARLEDGR_SECRET_KEY` | Railway env | Rotate then restart all services. Invalidates JWTs; every user re-logs in. |
+| `SOLDEN_SECRET_KEY` | Railway env | Rotate then restart all services. Invalidates JWTs; every user re-logs in. |
 | `TOKEN_ENCRYPTION_KEY` | Railway env | Tricky — it encrypts Gmail + ERP tokens at rest. Rotating requires re-encrypting every existing token with the new key. Don't do this without a migration script. |
 | `ANTHROPIC_API_KEY` | Railway env | Rotate in Anthropic console, update Railway env, restart. |
 | `SLACK_SIGNING_SECRET` | per-workspace in `slack_installs` | Rotate via Slack app config; update the row. |

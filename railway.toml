@@ -39,7 +39,7 @@ healthcheckTimeout = 30
 #     celery -A solden.services.celery_app worker -l info -c ${CELERY_CONCURRENCY:-4}
 #
 #   Environment:
-#     CLEARLEDGR_PROCESS_ROLE=worker
+#     SOLDEN_PROCESS_ROLE=worker
 #     CELERY_CONCURRENCY=4
 #     REDIS_URL=${{redis.REDIS_URL}}
 #     DATABASE_URL=${{postgres.DATABASE_URL}}

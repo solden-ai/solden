@@ -62,7 +62,7 @@ def _patch_oauth_env(monkeypatch):
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "fake-client.apps.googleusercontent.com")
     monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "GOCSPX-fake")
     monkeypatch.setenv("GOOGLE_REDIRECT_URI", "https://api.test/gmail/callback")
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret")
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "test-token-encryption")
 
 

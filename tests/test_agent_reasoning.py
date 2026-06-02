@@ -8,7 +8,7 @@ from solden.services.agent_reasoning import AgentReasoningService, ReasoningFact
 
 def test_agent_reasoning_uses_persisted_profile_thresholds(tmp_path, monkeypatch):
     monkeypatch.setenv("CLEARLEDGR_DB_PATH", str(tmp_path / "agent-reasoning.db"))
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
     db_module._DB_INSTANCE = None
 
     db = get_db()

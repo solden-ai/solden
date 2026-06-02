@@ -28,7 +28,7 @@ COPY . .
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
 USER appuser
 
-ENV CLEARLEDGR_PROCESS_ROLE=worker
+ENV SOLDEN_PROCESS_ROLE=worker
 ENV LOG_LEVEL=info
 
 CMD ["sh", "scripts/start-worker.sh"]

@@ -58,7 +58,7 @@ Five things we care about:
 
 **Stored in env (Railway):**
 
-- `CLEARLEDGR_SECRET_KEY` — JWT signing + CSRF
+- `SOLDEN_SECRET_KEY` — JWT signing + CSRF
 - `TOKEN_ENCRYPTION_KEY` — Fernet key for at-rest encryption of the items above
 - `ANTHROPIC_API_KEY` — Claude access
 - `DATABASE_URL`, `REDIS_URL` — connection strings
@@ -81,7 +81,7 @@ Five things we care about:
 
 ## Authentication
 
-**User auth:** JWT via `core/auth.py`. Token issued on `POST /auth/login`, carries `user_id`, `email`, `organization_id`, `role`, `exp`. Signed with `CLEARLEDGR_SECRET_KEY`. Refresh tokens not implemented (users re-log after expiry).
+**User auth:** JWT via `core/auth.py`. Token issued on `POST /auth/login`, carries `user_id`, `email`, `organization_id`, `role`, `exp`. Signed with `SOLDEN_SECRET_KEY`. Refresh tokens not implemented (users re-log after expiry).
 
 **Role matrix:**
 

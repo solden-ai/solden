@@ -5,7 +5,7 @@ from solden.services.finance_learning import FinanceLearningService
 
 
 def test_finance_learning_records_outcome_calibration_from_runtime_outcome(tmp_path, monkeypatch):
-    monkeypatch.setenv("CLEARLEDGR_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
     db = SoldenDB(str(tmp_path / "finance-learning.db"))
     db.initialize()
 

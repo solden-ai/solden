@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-export CLEARLEDGR_PROCESS_ROLE="${CLEARLEDGR_PROCESS_ROLE:-worker}"
+export SOLDEN_PROCESS_ROLE="${SOLDEN_PROCESS_ROLE:-${CLEARLEDGR_PROCESS_ROLE:-worker}}"
 
 # §11.2.1: Celery worker fleet — stateless processes consuming from Redis Streams.
 # Falls back to legacy async worker if Celery is not available.
