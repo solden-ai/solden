@@ -87,6 +87,9 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
     if (!api || !resolveDialog?.id) return;
     const exceptionId = resolveDialog.id;
     const note = String(resolveDialog.note || '').trim();
+    // Rationale is required server-side; re-guard here so no future caller
+    // path (keyboard-enter, programmatic submit) can POST an empty note.
+    if (!note) return;
     setResolveDialog(null);
     setResolvingId(exceptionId);
     try {
