@@ -1660,3 +1660,150 @@ def test_teams_interactive_blocks_actions_when_rollout_control_disables_teams(mo
     events = db.list_ap_audit_events(item["id"])
     event_types = [e.get("event_type") for e in events]
     assert "channel_action_blocked" in event_types
+
+
+# ---------------------------------------------------------------------------
+# Optional Slack approve-rationale modal (FEATURE_SLACK_APPROVE_RATIONALE)
+# ---------------------------------------------------------------------------
+
+
+def test_slack_approve_opens_rationale_modal_when_enabled(monkeypatch, client, db):
+    """Flag on: clicking Approve opens the rationale modal via views.open
+    and does NOT dispatch the approval — that waits for the modal submit."""
+    monkeypatch.setenv("FEATURE_SLACK_APPROVE_RATIONALE", "true")
+    _seed_slack_install_for_default_org(db)
+    item = _create_ap_item(db, gmail_id="thread-modal-1")
+
+    async def _return_body(request):
+        return await request.body()
+
+    monkeypatch.setattr("solden.api.slack_invoices._require_slack_signature", _return_body)
+
+    opened: dict = {}
+
+    async def _spy_open_view(self, trigger_id, view, token_override=None):
+        opened["trigger_id"] = trigger_id
+        opened["callback_id"] = view.get("callback_id")
+        return {"ok": True}
+
+    monkeypatch.setattr("solden.services.slack_api.SlackAPIClient.open_view", _spy_open_view)
+    monkeypatch.setattr(
+        "solden.services.slack_api.resolve_slack_runtime",
+        lambda org=None: {"bot_token": "xoxb-test"},
+    )
+
+    payload = {
+        "type": "block_actions",
+        "trigger_id": "trigger-123",
+        "user": {"id": "U1", "email": "cfo@acme.test"},
+        "team": {"id": _TEST_SLACK_TEAM_ID},
+        "channel": {"id": "C1"},
+        "message": {"ts": "1711111111.000"},
+        "actions": [{"action_id": "approve_invoice_thread-modal-1", "value": "thread-modal-1"}],
+    }
+    resp = client.post(
+        "/slack/invoices/interactive",
+        content=_slack_form_body(payload),
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "x-slack-request-timestamp": str(int(time.time())),
+        },
+    )
+    assert resp.status_code == 200
+    assert opened.get("callback_id") == "cl_approve_rationale"
+    assert opened.get("trigger_id") == "trigger-123"
+    # Not approved yet — the decision is pending the modal submission.
+    assert db.get_ap_item(item["id"])["state"] == "needs_approval"
+
+
+def test_slack_view_submission_injects_rationale_into_dispatch(monkeypatch, client, db):
+    """The modal submit re-enters the standard dispatch with the captured
+    rationale wired into a synthetic approve action."""
+    _seed_slack_install_for_default_org(db)
+    _create_ap_item(db, gmail_id="thread-modal-2")
+
+    async def _return_body(request):
+        return await request.body()
+
+    monkeypatch.setattr("solden.api.slack_invoices._require_slack_signature", _return_body)
+
+    captured: dict = {}
+
+    async def _spy_dispatch(db_, payload, background_tasks, request_ts):
+        captured["payload"] = payload
+        captured["request_ts"] = request_ts
+        return {"response_type": "ephemeral", "text": "ok"}
+
+    monkeypatch.setattr("solden.api.slack_invoices._process_interactive_payload", _spy_dispatch)
+
+    view_submission = {
+        "type": "view_submission",
+        "team": {"id": _TEST_SLACK_TEAM_ID},
+        "user": {"id": "U1", "email": "cfo@acme.test"},
+        "view": {
+            "callback_id": "cl_approve_rationale",
+            "private_metadata": json.dumps({
+                "gmail_id": "thread-modal-2",
+                "ap_item_id": "",
+                "organization_id": "org-test",
+                "action_id": "approve_invoice_thread-modal-2",
+                "channel_id": "C1",
+                "message_ts": "1711111111.000",
+                "request_ts": "1711111100",
+            }),
+            "state": {"values": {"rationale_block": {"rationale_input": {"value": "Confirmed with CFO"}}}},
+        },
+    }
+    resp = client.post(
+        "/slack/invoices/interactive",
+        content=_slack_form_body(view_submission),
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "x-slack-request-timestamp": str(int(time.time())),
+        },
+    )
+    assert resp.status_code == 200
+    # view_submission returns an empty 200 so Slack closes the modal.
+    assert resp.json() == {}
+    syn = captured["payload"]
+    assert syn["type"] == "block_actions"
+    action_val = json.loads(syn["actions"][0]["value"])
+    assert action_val["reason"] == "Confirmed with CFO"
+    assert action_val["gmail_id"] == "thread-modal-2"
+    # Re-entry reuses the original interaction timestamp for idempotency.
+    assert captured["request_ts"] == "1711111100"
+
+
+def test_slack_view_submission_ignores_unknown_callback(monkeypatch, client, db):
+    """A view_submission we didn't open is acknowledged but never dispatched."""
+
+    async def _return_body(request):
+        return await request.body()
+
+    monkeypatch.setattr("solden.api.slack_invoices._require_slack_signature", _return_body)
+
+    dispatched = {"called": False}
+
+    async def _spy_dispatch(*args, **kwargs):
+        dispatched["called"] = True
+        return {}
+
+    monkeypatch.setattr("solden.api.slack_invoices._process_interactive_payload", _spy_dispatch)
+
+    payload = {
+        "type": "view_submission",
+        "team": {"id": _TEST_SLACK_TEAM_ID},
+        "user": {"id": "U1"},
+        "view": {"callback_id": "some_other_modal", "private_metadata": "{}", "state": {"values": {}}},
+    }
+    resp = client.post(
+        "/slack/invoices/interactive",
+        content=_slack_form_body(payload),
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "x-slack-request-timestamp": str(int(time.time())),
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {}
+    assert dispatched["called"] is False

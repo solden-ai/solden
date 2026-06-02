@@ -65,6 +65,18 @@ def is_teams_enabled() -> bool:
     return _env_flag("FEATURE_TEAMS_ENABLED", default=False)
 
 
+def is_slack_approve_rationale_enabled() -> bool:
+    """Optional free-text rationale modal on the Slack Approve button.
+
+    When ``FEATURE_SLACK_APPROVE_RATIONALE=true``, clicking Approve on an
+    invoice card opens a modal with an optional "why" field before the
+    approval is dispatched; the note is captured as the human rationale
+    on the audit trail and learning feed. Default ``False`` so existing
+    deployments keep one-click approve until they opt in.
+    """
+    return _env_flag("FEATURE_SLACK_APPROVE_RATIONALE", default=False)
+
+
 def is_procurement_chat_enabled() -> bool:
     """Procurement (purchase_order) chat approval cards.
 

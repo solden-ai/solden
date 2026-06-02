@@ -17,6 +17,7 @@ from solden.core.ap_item_resolution import (
 )
 from solden.core.database import get_db
 from solden.core.org_utils import assert_org_id
+from solden.core.feature_flags import is_slack_approve_rationale_enabled
 
 router = APIRouter(prefix="/slack/invoices", tags=["slack-invoices"])
 legacy_router = APIRouter(prefix="/slack", tags=["slack-invoices"])
@@ -713,6 +714,126 @@ async def _complete_slack_action_via_response_url(normalized: Any, processed_key
     )
 
 
+_APPROVE_RATIONALE_CALLBACK_ID = "cl_approve_rationale"
+
+
+async def _open_approve_rationale_modal(normalized, payload: Dict[str, Any], request_ts: Optional[str]) -> bool:
+    """Open the optional approve-rationale modal. Returns True if Slack
+    accepted the views.open call, False on any failure (caller then falls
+    through to a normal one-click approve so the action is never dropped).
+    """
+    trigger_id = str(payload.get("trigger_id") or "").strip()
+    if not trigger_id:
+        return False
+    raw_action = (payload.get("actions") or [{}])[0]
+    action_id = str((raw_action or {}).get("action_id") or "").strip()
+    channel_id = str(((payload.get("channel") or {}) if isinstance(payload.get("channel"), dict) else {}).get("id") or "")
+    message_ts = str(((payload.get("message") or {}) if isinstance(payload.get("message"), dict) else {}).get("ts") or "")
+    private_metadata = json.dumps({
+        "gmail_id": normalized.gmail_id or "",
+        "ap_item_id": normalized.ap_item_id or "",
+        "organization_id": normalized.organization_id or "",
+        "action_id": action_id,
+        "channel_id": channel_id,
+        "message_ts": message_ts,
+        "request_ts": request_ts or "",
+    })
+    view = {
+        "type": "modal",
+        "callback_id": _APPROVE_RATIONALE_CALLBACK_ID,
+        "private_metadata": private_metadata,
+        "title": {"type": "plain_text", "text": "Approve invoice"},
+        "submit": {"type": "plain_text", "text": "Approve"},
+        "close": {"type": "plain_text", "text": "Cancel"},
+        "blocks": [
+            {
+                "type": "input",
+                "block_id": "rationale_block",
+                "optional": True,
+                "label": {"type": "plain_text", "text": "Why are you approving? (optional)"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "rationale_input",
+                    "multiline": True,
+                    "placeholder": {
+                        "type": "plain_text",
+                        "text": "e.g. Confirmed the PO with the team; safe to pay.",
+                    },
+                },
+            },
+        ],
+    }
+    try:
+        from solden.services.slack_api import SlackAPIClient, resolve_slack_runtime
+
+        token = (resolve_slack_runtime(normalized.organization_id) or {}).get("bot_token")
+        if not token:
+            logger.warning(
+                "[Slack] approve-rationale modal skipped: no bot token for org %s",
+                normalized.organization_id,
+            )
+            return False
+        await SlackAPIClient(bot_token=token).open_view(trigger_id, view, token_override=token)
+        return True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[Slack] views.open for approve-rationale modal failed: %s", exc)
+        return False
+
+
+async def _handle_view_submission(db, payload: Dict[str, Any], background_tasks: BackgroundTasks, request_ts: Optional[str]):
+    """Handle a Slack view_submission. Only the approve-rationale modal is
+    recognised; its captured reason is injected into a synthetic approve
+    action that re-enters the standard dispatch (tenant + idempotency +
+    precedence preserved). Empty optional rationale → plain approve.
+    """
+    view = (payload.get("view") or {}) if isinstance(payload.get("view"), dict) else {}
+    if str(view.get("callback_id") or "") != _APPROVE_RATIONALE_CALLBACK_ID:
+        # Unknown modal — acknowledge so Slack closes it, do nothing.
+        return {}
+
+    try:
+        meta = json.loads(str(view.get("private_metadata") or "{}"))
+        if not isinstance(meta, dict):
+            meta = {}
+    except Exception:
+        meta = {}
+
+    # Pull the optional free-text rationale out of the modal state.
+    reason = ""
+    try:
+        state_values = ((view.get("state") or {}).get("values") or {})
+        block = state_values.get("rationale_block") or {}
+        element = block.get("rationale_input") or {}
+        reason = str(element.get("value") or "").strip()
+    except Exception:
+        reason = ""
+
+    gmail_id = str(meta.get("gmail_id") or "")
+    action_id = str(meta.get("action_id") or "") or (f"approve_invoice_{gmail_id}" if gmail_id else "approve_invoice")
+    synthetic = {
+        # Treated as a block_actions approve by the dispatch path. No
+        # trigger_id (so the modal is never re-opened) and no response_url
+        # (so dispatch runs synchronously).
+        "type": "block_actions",
+        "team": payload.get("team") or {"id": str(meta.get("team_id") or "")},
+        "user": payload.get("user") or {},
+        "channel": {"id": str(meta.get("channel_id") or "")},
+        "message": {"ts": str(meta.get("message_ts") or "")},
+        "actions": [{
+            "action_id": action_id,
+            "value": json.dumps({"gmail_id": gmail_id, "reason": reason}),
+        }],
+    }
+    effective_ts = str(meta.get("request_ts") or "") or request_ts
+    try:
+        await _process_interactive_payload(db, synthetic, background_tasks, effective_ts)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[Slack] approve-rationale dispatch failed: %s", exc)
+    # view_submission expects an empty 200 (closes the modal) — never the
+    # ephemeral dispatch body, which Slack would misread as a response_action.
+    return {}
+
+
 @router.post("/interactive")
 async def handle_invoice_interactive(request: Request, background_tasks: BackgroundTasks):
     """Handle Slack interactive actions for invoice approvals."""
@@ -756,6 +877,28 @@ async def handle_invoice_interactive(request: Request, background_tasks: Backgro
             metadata={"detail": "malformed_payload", "status_code": 400},
         )
         raise HTTPException(status_code=400, detail="invalid_payload")
+
+    request_ts = request.headers.get("x-slack-request-timestamp")
+    # Modal submit (optional approve-rationale modal) — net-new path. It
+    # re-enters the same dispatch below with the captured reason injected.
+    if str(payload.get("type") or "").strip() == "view_submission":
+        return await _handle_view_submission(db, payload, background_tasks, request_ts)
+    return await _process_interactive_payload(db, payload, background_tasks, request_ts)
+
+
+async def _process_interactive_payload(
+    db,
+    payload: Dict[str, Any],
+    background_tasks: BackgroundTasks,
+    request_ts: Optional[str],
+):
+    """Route a verified Slack interaction payload to its handler.
+
+    Split out of ``handle_invoice_interactive`` so the view_submission
+    path (the optional approve-rationale modal) can re-enter the exact
+    same tenant-binding + idempotency + precedence + dispatch logic with
+    the captured reason injected — no security logic is duplicated.
+    """
     raw_action = (payload.get("actions") or [{}])[0] if isinstance((payload.get("actions") or [{}])[0], dict) else {}
     _chase_action_id = str(raw_action.get("action_id") or "")
     _chase_session_id = str(raw_action.get("value") or "")
@@ -949,7 +1092,7 @@ async def handle_invoice_interactive(request: Request, background_tasks: Backgro
     try:
         normalized = _normalize_slack_action(
             payload,
-            request_ts=request.headers.get("x-slack-request-timestamp"),
+            request_ts=request_ts,
             organization_id=organization_id,
         )
     except ApprovalActionContractError as exc:
@@ -969,6 +1112,25 @@ async def handle_invoice_interactive(request: Request, background_tasks: Backgro
     normalized.organization_id = organization_id
     normalized.ap_item_id = ap_item_id
     normalized.correlation_id = _resolve_correlation_id(db, ap_item_id, organization_id, normalized.gmail_id)
+
+    # Optional approve-rationale modal (flag-gated, opt-in per deployment).
+    # Intercept an approve that has no reason yet: open a modal to collect
+    # the optional "why", then the view_submission re-enters this function
+    # with the reason set (skipping this block) and dispatches normally.
+    # Reject/request_info/budget-override (which already carry a reason) and
+    # flag-off orgs fall straight through to dispatch as before.
+    if (
+        str(getattr(normalized, "action", "") or "").strip().lower() == "approve"
+        and not str(getattr(normalized, "reason", "") or "").strip()
+        and str(payload.get("trigger_id") or "").strip()
+        and is_slack_approve_rationale_enabled()
+    ):
+        opened = await _open_approve_rationale_modal(normalized, payload, request_ts)
+        if opened:
+            # Modal is up; the approval dispatches on view_submission.
+            return {"response_type": "ephemeral", "text": ""}
+        # Modal failed to open (token/trigger issue) — fall through so the
+        # approval is never silently dropped.
 
     blocked_reason = _get_channel_action_block_reason(
         normalized.organization_id,

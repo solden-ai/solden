@@ -102,6 +102,23 @@ class SlackAPIClient:
         """Validate the bot token and return the Slack auth context."""
         return await self._request("POST", "auth.test", data={})
     
+    async def open_view(
+        self,
+        trigger_id: str,
+        view: Dict[str, Any],
+        token_override: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Open a modal via views.open. ``trigger_id`` is short-lived
+        (~3s from the originating interaction), so callers must invoke
+        this promptly inside the interaction handler.
+        """
+        return await self._request(
+            "POST",
+            "views.open",
+            {"trigger_id": trigger_id, "view": view},
+            token_override=token_override,
+        )
+
     # ==================== MESSAGING ====================
     
     async def send_message(
