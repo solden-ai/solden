@@ -1,5 +1,5 @@
 {
-  "name": "clearledgr-web-app",
+  "name": "solden-web-app",
   "version": "0.1.0",
   "description": "workspace.soldenai.com — work-in-progress control center. Renders live Solden records; Gmail/Slack/Teams/ERP are companion surfaces.",
   "type": "module",
