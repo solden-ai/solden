@@ -4,7 +4,7 @@
 
 - **Role:** Architecture reference for the production agent runtime model
 - **Scope:** Shared technical runtime behind Solden's operational-memory model, with AP v1 as the first shipped skill domain
-- **Canonical doctrine:** `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
+- **Canonical doctrine:** `PLAN.md`
 
 This document describes the technical runtime behind Solden's operational memory for back-office work in progress. Finance is the entry point, and AP is the first shipped domain.
 
@@ -45,7 +45,7 @@ Gmail surface (operator context)
 
 ### 1. Intent API layer
 
-- File: `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/agent_intents.py`
+- File: `solden/api/agent_intents.py`
 - Responsibility:
   - validate request shape
   - enforce auth boundaries
@@ -54,7 +54,7 @@ Gmail surface (operator context)
 
 ### 2. Runtime dispatcher
 
-- File: `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/finance_agent_runtime.py`
+- File: `solden/services/finance_agent_runtime.py`
 - Responsibility:
   - maintain skill registry
   - map intent to skill
@@ -64,9 +64,9 @@ Gmail surface (operator context)
 ### 3. Skill modules
 
 - Files:
-  - `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/finance_skills/base.py`
-  - `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/finance_skills/ap_skill.py`
-  - `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/finance_skills/workflow_health_skill.py`
+  - `solden/services/finance_skills/base.py`
+  - `solden/services/finance_skills/ap_skill.py`
+  - `solden/services/finance_skills/workflow_health_skill.py`
 - Responsibility:
   - AP domain behavior (routing, retries, follow-up preparation)
   - read-only health/status skill behavior
@@ -74,10 +74,10 @@ Gmail surface (operator context)
 
 ### 4. AP workflow orchestration and state machine
 
-- Primary file: `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/invoice_workflow.py`
+- Primary file: `solden/services/invoice_workflow.py`
 - Supporting state and storage:
-  - `/Users/mombalam/Desktop/Solden.v1/clearledgr/core/ap_states.py`
-  - `/Users/mombalam/Desktop/Solden.v1/clearledgr/core/stores/ap_store.py`
+  - `solden/core/ap_states.py`
+  - `solden/core/stores/ap_store.py`
 - Responsibility:
   - legal state transitions
   - deterministic policy checks
@@ -135,7 +135,7 @@ Each new skill must inherit the same policy, HITL, audit, and idempotency contro
 
 ## References
 
-1. `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
-2. `/Users/mombalam/Desktop/Solden.v1/docs/V1_BACKEND_CONTRACTS.md`
-3. `/Users/mombalam/Desktop/Solden.v1/docs/V1_EMBEDDED_WORKER_EXPERIENCE.md`
-4. `/Users/mombalam/Desktop/Solden.v1/docs/API_REFERENCE.md`
+1. `PLAN.md`
+2. `docs/V1_BACKEND_CONTRACTS.md`
+3. `docs/V1_EMBEDDED_WORKER_EXPERIENCE.md`
+4. `docs/API_REFERENCE.md`

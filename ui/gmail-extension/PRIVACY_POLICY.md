@@ -80,7 +80,7 @@ For users in the European Economic Area:
 ## Contact
 
 For privacy inquiries:
-- Email: privacy@clearledgr.com
+- Email: privacy@soldenai.com
 - Address: [Company Address]
 
 ## Changes to This Policy

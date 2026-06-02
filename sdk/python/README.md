@@ -2,7 +2,7 @@
 
 Official Python client. Sync + async. Thin wrapper over the public
 REST API documented at
-[docs/v1/](https://github.com/soldenai/Clearledgr-AP/tree/main/docs/v1).
+[docs/v1/](https://github.com/solden-ai/solden/tree/main/docs/v1).
 
 ## Install
 

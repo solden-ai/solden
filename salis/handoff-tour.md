@@ -39,11 +39,11 @@ Read lines 1-300. This is the app bootstrap + the **strict runtime surface profi
 
 Then read around lines 1228-1309 — the `/health` endpoint. It tells Railway whether to route traffic. If Redis is unreachable in production, it flips to unhealthy and Railway pulls the service out of rotation. This is deliberate.
 
-### 2. `clearledgr/core/coordination_engine.py`
+### 2. `solden/core/coordination_engine.py`
 
 Read the class docstring and `execute()` at line 243. This is the engine that drives every Box. Steps 1-7 of its execution loop are literally spelled out in the code. Pay attention to `_pre_write` at 375 — this is where Rule 1 is enforced. Pay attention to `_Rule1PreWriteFailed` at 73 — this is what happens when Rule 1 can't hold and the engine has to fail closed.
 
-### 3. `clearledgr/core/plan.py`
+### 3. `solden/core/plan.py`
 
 Read the whole file. It's short. `Action` and `Plan` are the dataclasses the engine consumes. Every handler in `coordination_engine.py`'s `_register_handlers` maps an action name to a method. That's the whole dispatch model.
 
@@ -76,8 +76,8 @@ This is the abstraction that makes the product make sense. Everything else is ad
 
 A **Box** is a persistent home for one workflow instance. Today we have two Box types live:
 
-- `ap_item` — one AP invoice. Goes from `received` → `validated` → `needs_approval` → `approved` → `ready_to_post` → `posted_to_erp`. Defined in `clearledgr/core/ap_states.py`.
-- `vendor_onboarding_session` — one vendor going through KYC + bank verification. Goes `invited` → `kyc` → `bank_verify` → `bank_verified` → `ready_for_erp` → `active`. Defined in `clearledgr/core/vendor_onboarding_states.py`.
+- `ap_item` — one AP invoice. Goes from `received` → `validated` → `needs_approval` → `approved` → `ready_to_post` → `posted_to_erp`. Defined in `solden/core/ap_states.py`.
+- `vendor_onboarding_session` — one vendor going through KYC + bank verification. Goes `invited` → `kyc` → `bank_verify` → `bank_verified` → `ready_for_erp` → `active`. Defined in `solden/core/vendor_onboarding_states.py`.
 
 One committed but frozen:
 
@@ -90,7 +90,7 @@ Every Box has:
 - A **timeline** — the audit chain, one row per meaningful event, in `audit_events`.
 - Optional **links** to other Boxes (the `box_links` table — e.g., this AP invoice is linked to this vendor onboarding session).
 
-Every write to shared primitives (`audit_events`, `llm_call_log`, `pending_notifications`) is keyed on `(box_id, box_type)`. There's a `BoxType` registry at `clearledgr/core/box_registry.py`. When we add clawback, the registry gets one new entry and 90% of the infrastructure works for free.
+Every write to shared primitives (`audit_events`, `llm_call_log`, `pending_notifications`) is keyed on `(box_id, box_type)`. There's a `BoxType` registry at `solden/core/box_registry.py`. When we add clawback, the registry gets one new entry and 90% of the infrastructure works for free.
 
 This is Migration v42. Before it, these tables were keyed on `ap_item_id`, and vendor onboarding had to pass empty strings — the "semantic lie" I fixed in the Box Foundation commit (see ADR-001 when it's written).
 
@@ -114,7 +114,7 @@ I spent real time getting this right. The engine retries the pre-write 3 times w
 
 Imagine a vendor sends an invoice to the customer's AP inbox. Here's the code path.
 
-1. **Gmail Pub/Sub push → `clearledgr/api/gmail_webhooks.py:855`**
+1. **Gmail Pub/Sub push → `solden/api/gmail_webhooks.py:855`**
    The `@router.post("/push")` handler receives the notification. It verifies the Pub/Sub JWT (OIDC from Google, at line 712) before anything else — fail-closed on signature failure.
 
 2. **Background task → `process_gmail_notification()` at line 991**
@@ -126,26 +126,26 @@ Imagine a vendor sends an invoice to the customer's AP inbox. Here's the code pa
 4. **AP item creation**
    If it's an invoice, we create an `ap_items` row with `state=received`. The audit chain starts here.
 
-5. **Extraction → `clearledgr/services/email_parser.py`**
+5. **Extraction → `solden/services/email_parser.py`**
    Claude extracts vendor, amount, invoice number, due date, PO number. Each extracted field carries a confidence score. Confidence is visible in the UI so operators know what to double-check.
 
-6. **Validation gate → `clearledgr/services/invoice_validation.py`**
+6. **Validation gate → `solden/services/invoice_validation.py`**
    Deterministic rules: PO required? Duplicate? Over threshold? Each rule produces a reason code. If any rule fails hard, the Box moves to `needs_info` and surfaces in the sidebar with a reason.
 
 7. **Planning → `solden/core/planning_engine.py`**
    The `DeterministicPlanningEngine` (rules-first, no LLM) decides the next actions. The plan is durable: a box's remaining plan is persisted to `pending_plan` at async waits and resumed via the CAS-guarded `_cas_clear_pending_plan`; crashed work is recovered by Redis Streams reclaim + Celery `acks_late` + the `agent_retry_jobs` drain.
 
-8. **Coordination → `clearledgr/core/coordination_engine.py`**
+8. **Coordination → `solden/core/coordination_engine.py`**
    The engine consumes the plan, one action at a time, with Rule 1 pre-writes between every step.
 
-9. **Slack card → `clearledgr/services/slack_api.py`**
+9. **Slack card → `solden/services/slack_api.py`**
    If the action is `send_slack_approval`, a card posts to the configured channel. The `channel_threads` table records (ap_item_id, channel=slack, thread_id, state=pending).
 
-10. **Approval received → `clearledgr/api/slack_invoices.py`**
-    The Slack interactive handler verifies HMAC (`clearledgr/core/slack_verify.py`), finds the `channel_threads` row, looks up the Box, advances state. `channel_threads.state` goes to `approved`.
+10. **Approval received → `solden/api/slack_invoices.py`**
+    The Slack interactive handler verifies HMAC (`solden/core/slack_verify.py`), finds the `channel_threads` row, looks up the Box, advances state. `channel_threads.state` goes to `approved`.
 
-11. **ERP post → `clearledgr/integrations/erp_router.py`**
-    Dispatcher picks QuickBooks / Xero / NetSuite / SAP based on the org's connection. Each connector is in `clearledgr/integrations/erp_<name>.py`. Bill posts. `ap_items.erp_reference` gets set.
+11. **ERP post → `solden/integrations/erp_router.py`**
+    Dispatcher picks QuickBooks / Xero / NetSuite / SAP based on the org's connection. Each connector is in `solden/integrations/erp_<name>.py`. Bill posts. `ap_items.erp_reference` gets set.
 
 12. **Timeline reconstruction**
     The Box's audit chain now has every step. `list_box_audit_events(box_type='ap_item', box_id=...)` returns the complete story. This is the customer-facing "show me what happened with this invoice" feature.
@@ -158,19 +158,19 @@ For each step, the pre-write at step N means an audit row exists that says "abou
 
 | Abstraction | File | What it is |
 |---|---|---|
-| **Box** | `clearledgr/core/box_registry.py` | Registered types. Add a type here to add a workflow class. |
-| **State machine** | `clearledgr/core/ap_states.py`, `vendor_onboarding_states.py` | Typed enum + `VALID_TRANSITIONS` dict. `transition_or_raise` enforces. |
-| **Plan + Action** | `clearledgr/core/plan.py` | Dataclasses the engine consumes. Plans are JSON-serializable for crash resume. |
-| **Skill** | `clearledgr/core/skills/` | APSkill, CompoundSkill. Exposes Claude-callable tools. Skills don't execute actions — they're the LLM interface. |
-| **Coordination engine** | `clearledgr/core/coordination_engine.py` | Executes plans. Enforces Rule 1. Handles retries, waits, post-writes. |
-| **Planning engine** | `clearledgr/core/agent_runtime.py` | `AgentPlanningEngine`. Runs the Claude tool-use loop. Produces Plans. |
-| **Finance agent runtime** | `clearledgr/services/finance_agent_runtime.py` | The public facade. `execute_ap_invoice_processing()` is what `agent_orchestrator.process_invoice` calls. |
-| **Event queue** | `clearledgr/core/event_queue.py` | Redis Streams in prod, in-memory in dev. Events drive the planning engine. |
+| **Box** | `solden/core/box_registry.py` | Registered types. Add a type here to add a workflow class. |
+| **State machine** | `solden/core/ap_states.py`, `vendor_onboarding_states.py` | Typed enum + `VALID_TRANSITIONS` dict. `transition_or_raise` enforces. |
+| **Plan + Action** | `solden/core/plan.py` | Dataclasses the engine consumes. Plans are JSON-serializable for crash resume. |
+| **Skill** | `solden/core/skills/` | APSkill, CompoundSkill. Exposes Claude-callable tools. Skills don't execute actions — they're the LLM interface. |
+| **Coordination engine** | `solden/core/coordination_engine.py` | Executes plans. Enforces Rule 1. Handles retries, waits, post-writes. |
+| **Planning engine** | `solden/core/agent_runtime.py` | `AgentPlanningEngine`. Runs the Claude tool-use loop. Produces Plans. |
+| **Finance agent runtime** | `solden/services/finance_agent_runtime.py` | The public facade. `execute_ap_invoice_processing()` is what `agent_orchestrator.process_invoice` calls. |
+| **Event queue** | `solden/core/event_queue.py` | Redis Streams in prod, in-memory in dev. Events drive the planning engine. |
 | **Agent retry jobs** | `solden/services/agent_retry_jobs.py` | Durable retry queue (ERP-post recovery). Drained on startup + every tick, backoff + dead-letter. |
-| **audit_events** | `clearledgr/core/stores/ap_store.py:append_audit_event` | The universal timeline. Every write goes through this funnel. |
-| **channel_threads** | `clearledgr/core/stores/ap_store.py:upsert_channel_thread` | Per-Box per-channel state (Slack thread, Teams conversation). |
-| **box_links** | `clearledgr/core/stores/pipeline_store.py:link_boxes` | Cross-Box relationships. Invoice ↔ vendor-onboarding. |
-| **LLM call log** | `clearledgr/core/llm_gateway.py` | Every Claude call logged with `box_id` for cost + reconstructability. |
+| **audit_events** | `solden/core/stores/ap_store.py:append_audit_event` | The universal timeline. Every write goes through this funnel. |
+| **channel_threads** | `solden/core/stores/ap_store.py:upsert_channel_thread` | Per-Box per-channel state (Slack thread, Teams conversation). |
+| **box_links** | `solden/core/stores/pipeline_store.py:link_boxes` | Cross-Box relationships. Invoice ↔ vendor-onboarding. |
+| **LLM call log** | `solden/core/llm_gateway.py` | Every Claude call logged with `box_id` for cost + reconstructability. |
 
 You can walk any of these on your own. They're all short and have docstrings that explain the why, not just the what.
 
@@ -196,8 +196,8 @@ If you're looking at a Box in an exception state and wondering "what actually ha
 ## The hardest parts — where I spent the most time
 
 - **Rule 1 atomicity.** State UPDATE + audit INSERT have to share one transaction. `vendor_store.transition_onboarding_session_state` (line 1785) is the reference implementation. When in doubt, copy its shape.
-- **Idempotency.** It's everywhere. DB UNIQUE on `audit_events.idempotency_key`. API-layer caching via `clearledgr/core/idempotency.py`. Per-decision keys on approvals. If you add a mutating endpoint, ask: "what happens if this fires twice?" If you don't know, you're about to ship a bug.
-- **Multi-tenant isolation.** Every query filters by `organization_id`. `soft_org_guard` (in `clearledgr/api/deps.py`) catches query-param spoofing. `verify_org_access` is per-handler. `tests/test_tenant_isolation.py` is the regression fence. If you add a new list/get endpoint and it doesn't filter by org, the test will catch it. If it doesn't, update the test.
+- **Idempotency.** It's everywhere. DB UNIQUE on `audit_events.idempotency_key`. API-layer caching via `solden/core/idempotency.py`. Per-decision keys on approvals. If you add a mutating endpoint, ask: "what happens if this fires twice?" If you don't know, you're about to ship a bug.
+- **Multi-tenant isolation.** Every query filters by `organization_id`. `soft_org_guard` (in `solden/api/deps.py`) catches query-param spoofing. `verify_org_access` is per-handler. `tests/test_tenant_isolation.py` is the regression fence. If you add a new list/get endpoint and it doesn't filter by org, the test will catch it. If it doesn't, update the test.
 - **Gmail token refresh race.** QuickBooks and Xero invalidate the prior refresh token on every refresh. Two concurrent 401s → both try to refresh → one wins, the others burn the RT and brick the connection. See the big comment in `erp_router.py:215`. Two-tier lock (Redis SETNX + in-process asyncio). Do not remove this without understanding why it exists.
 - **The `ap_item_id` → `box_id` migration (v42).** The whole point is that audit, LLM log, and pending notifications are Box-keyed now. Don't assume `ap_item_id` anywhere new.
 
@@ -269,7 +269,7 @@ Be honest with yourselves about where the product actually is:
 - **Monitoring:** Sentry is wired, nobody is paged on it. PagerDuty / OpsGenie is not set up.
 - **Runbooks:** `salis/operations.md` has them (will have them — write it). Until then: restart = Railway redeploy. Rollback = `git revert`. Incident response = read logs, hope.
 
-None of this is a blocker for the first pilot. All of it will become blocking once pilot #2 shows up. The CEO plan (`~/.gstack/projects/clearledgr-Clearledgr-AP/ceo-plans/2026-04-21-path-to-first-customer.md`) treats the first pilot as the validation moment for the whole integration layer. It is.
+None of this is a blocker for the first pilot. All of it will become blocking once pilot #2 shows up. Treat the current repo docs and launch trackers as the validation source for the integration layer.
 
 ---
 
@@ -283,7 +283,7 @@ Week 1:
 5. Read `main.py`, `coordination_engine.py`, `plan.py` with the model in mind.
 
 Week 2:
-6. Pick one Box type (AP item is easier than vendor onboarding) and trace it end-to-end. Stdoutsourced trace: `grep -n "ap_items" clearledgr/**/*.py` gets you started.
+6. Pick one Box type (AP item is easier than vendor onboarding) and trace it end-to-end. Stdoutsourced trace: `grep -n "ap_items" solden/**/*.py` gets you started.
 7. Read the `tests/test_box_invariants.py` file. Those tests encode the thesis-level guarantees. If they fail, the product is broken in a way that matters.
 8. Pair with Mo on one real Cowrywise or test invoice going end-to-end if possible. Nothing beats watching it run.
 

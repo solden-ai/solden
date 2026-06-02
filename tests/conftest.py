@@ -163,7 +163,7 @@ def reset_service_singletons():
 #   2. TEST_DB_ENGINE=postgres (default) + TEST_DATABASE_URL set → use
 #        that URL. Useful for:
 #          - Local dev with a running PG (e.g. `brew services start
-#            postgresql@15`): `TEST_DATABASE_URL=postgresql://localhost/clearledgr_test`
+#            postgresql@15`): `TEST_DATABASE_URL=postgresql://localhost/solden_test`
 #          - CI pipelines with a service container provisioned separately
 #   3. TEST_DB_ENGINE=postgres (default) + no URL → spin up a
 #        testcontainer. Requires Docker daemon reachable.
@@ -240,14 +240,14 @@ def _ensure_worker_database(base_url: str, worker: str) -> str:
     the one ``TEST_DATABASE_URL`` database by default — and the per-test
     TRUNCATE fixture would have 8 workers clobbering each other's rows.
     Give each worker its own database (``<base>_<worker>``, e.g.
-    ``clearledgr_test_gw0``) so the existing session-init + per-test
+    ``solden_test_gw0``) so the existing session-init + per-test
     truncate machinery isolates cleanly. The DB is created if missing
     (idempotent migrations + per-test truncate handle reuse across runs).
     """
     from urllib.parse import urlsplit, urlunsplit
 
     parts = urlsplit(base_url)
-    base_db = parts.path.lstrip("/") or "clearledgr_test"
+    base_db = parts.path.lstrip("/") or "solden_test"
     worker_db = f"{base_db}_{worker}"
 
     import psycopg

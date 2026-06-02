@@ -31,11 +31,12 @@ test('record route navigates with the explicit AP item id and keeps storage as f
 
   assert.equal(ok, true);
   assert.deepEqual(navigations, [{
-    routeId: 'clearledgr/invoice/:id',
+    routeId: 'solden/invoice/:id',
     params: { id: 'ap-item-123' },
   }]);
   assert.equal(storage.get(ACTIVE_RECORD_ID_STORAGE_KEY), 'ap-item-123');
   assert.equal(resolveRecordRouteId({}, ''), 'ap-item-123');
+  assert.equal(resolveRecordRouteId({}, '#solden/invoice/ap-item-123'), 'ap-item-123');
   assert.equal(resolveRecordRouteId({}, '#clearledgr/invoice/ap-item-123'), 'ap-item-123');
 
   delete global.window;

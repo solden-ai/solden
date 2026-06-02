@@ -32,7 +32,7 @@ npm run sideload
 
 ## Deployment
 
-1. Host `taskpane.html`, `taskpane.css`, `functions.html`, and `src/` on HTTPS (e.g., `https://app.clearledgr.com/outlook/`)
+1. Host `taskpane.html`, `taskpane.css`, `functions.html`, and `src/` on HTTPS (e.g., `https://app.soldenai.com/outlook/`)
 2. Update URLs in `manifest.xml` to point to the hosted location
 3. Submit `manifest.xml` to Microsoft AppSource or deploy via admin center
 

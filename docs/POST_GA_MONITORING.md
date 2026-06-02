@@ -6,7 +6,7 @@ Solden v1 — Live operations monitoring. Covers thresholds, cadence, ownership,
 
 ## 1. Metrics and Thresholds
 
-Four metrics are evaluated by `_evaluate_monitoring_thresholds()` in `clearledgr/api/ops.py`. All are configurable via environment variables.
+Four metrics are evaluated by `_evaluate_monitoring_thresholds()` in `solden/api/ops.py`. All are configurable via environment variables.
 
 | Metric | Env Var | Default | Alert Severity | Meaning |
 |---|---|---|---|---|

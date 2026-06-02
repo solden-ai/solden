@@ -12,7 +12,7 @@ How the core loop actually works. If `architecture.md` is the map, this is the f
 
 ### `AgentEvent`
 
-[`clearledgr/core/events.py`](../clearledgr/core/events.py)
+[`solden/core/events.py`](../solden/core/events.py)
 
 ```python
 @dataclass
@@ -27,7 +27,7 @@ The enum is the closed set of things the agent can react to. Adding a new event 
 
 ### `Plan`
 
-[`clearledgr/core/plan.py`](../clearledgr/core/plan.py)
+[`solden/core/plan.py`](../solden/core/plan.py)
 
 ```python
 @dataclass
@@ -51,7 +51,7 @@ A `Plan` is inert data. The planner returns it, the coordinator executes it. If 
 
 ### `BoxLifecycleStore` records
 
-[`clearledgr/core/stores/box_lifecycle_store.py`](../clearledgr/core/stores/box_lifecycle_store.py)
+[`solden/core/stores/box_lifecycle_store.py`](../solden/core/stores/box_lifecycle_store.py)
 
 ```python
 box_exceptions:   id, box_id, box_type, organization_id,
@@ -110,9 +110,9 @@ Don't write to these directly. Use the funnels:
 
 Three files to know:
 
-- [`clearledgr/services/celery_tasks.py`](../clearledgr/services/celery_tasks.py) — the outermost dispatcher. Loads box state, calls the planner, runs the coordinator, catches any exception and reports `status=failed`.
-- [`clearledgr/core/planning_engine.py`](../clearledgr/core/planning_engine.py) — `DeterministicPlanningEngine.plan(...)`. 19 handlers covering §4.1–4.3 and §5 (vendor onboarding).
-- [`clearledgr/core/coordination_engine.py`](../clearledgr/core/coordination_engine.py) — `CoordinationEngine.execute(plan)`. 60+ handlers in `_handlers`. Rule 1 enforcement in `_pre_write`. Retry + classification in `_execute_with_retry`.
+- [`solden/services/celery_tasks.py`](../solden/services/celery_tasks.py) — the outermost dispatcher. Loads box state, calls the planner, runs the coordinator, catches any exception and reports `status=failed`.
+- [`solden/core/planning_engine.py`](../solden/core/planning_engine.py) — `DeterministicPlanningEngine.plan(...)`. 19 handlers covering §4.1–4.3 and §5 (vendor onboarding).
+- [`solden/core/coordination_engine.py`](../solden/core/coordination_engine.py) — `CoordinationEngine.execute(plan)`. 60+ handlers in `_handlers`. Rule 1 enforcement in `_pre_write`. Retry + classification in `_execute_with_retry`.
 
 ---
 
@@ -141,8 +141,8 @@ The invariant: no optimistic state progression. ERP posts land in `posted_to_erp
 
 How it's enforced:
 
-- [`invoice_posting.py:520-540`](../clearledgr/services/invoice_posting.py) — `approve_invoice` calls `_post_to_erp`, AWAITS the result, THEN calls `_transition_invoice_state(target_state="posted_to_erp")` only on `result.get("status") == "success"`.
-- [`coordination_engine.py:1025`](../clearledgr/core/coordination_engine.py) — `_handle_send_approval` returns `waiting_condition = {"type": "approval_response", ...}`. No state advance. The plan is paused until `approval_received` event arrives.
+- [`invoice_posting.py:520-540`](../solden/services/invoice_posting.py) — `approve_invoice` calls `_post_to_erp`, AWAITS the result, THEN calls `_transition_invoice_state(target_state="posted_to_erp")` only on `result.get("status") == "success"`.
+- [`coordination_engine.py:1025`](../solden/core/coordination_engine.py) — `_handle_send_approval` returns `waiting_condition = {"type": "approval_response", ...}`. No state advance. The plan is paused until `approval_received` event arrives.
 - Slack inbound callback enqueues an `approval_received` event, which the coordinator runs, which dispatches `approve_invoice`, which does the ERP post + state advance only on confirmation.
 
 If you're adding a new "make external call and advance state" flow, follow the same pattern: return the external call's `Action`, WAIT for the result, check for success, THEN produce the next `Action` that advances state.
@@ -201,7 +201,7 @@ Adding the enum member in `events.py` is mandatory. Forgetting the dispatcher en
 
 ## Writing an action handler
 
-An action handler lives on `CoordinationEngine` and is registered in `_register_handlers` at [`coordination_engine.py:120`](../clearledgr/core/coordination_engine.py).
+An action handler lives on `CoordinationEngine` and is registered in `_register_handlers` at [`coordination_engine.py:120`](../solden/core/coordination_engine.py).
 
 ```python
 async def _handle_my_new_action(
@@ -236,7 +236,7 @@ Planner-handler coverage fence lives in [`tests/test_execution_engine.py::TestPl
 
 ## Retry + failure classification
 
-[`coordination_engine.py:_execute_with_retry`](../clearledgr/core/coordination_engine.py) classifies every handler exception into one of:
+[`coordination_engine.py:_execute_with_retry`](../solden/core/coordination_engine.py) classifies every handler exception into one of:
 
 - **TRANSIENT** (network blip, 503 from ERP, Redis timeout) — retry with exponential backoff, max 3 attempts per action.
 - **RATE_LIMIT** (429 from ERP) — retry with a longer delay + wait for the rate-limit reset header.

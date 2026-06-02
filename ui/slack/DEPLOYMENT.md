@@ -47,7 +47,7 @@ export SLACK_CLIENT_SECRET="..."
 Ensure your API is accessible at a public URL:
 ```bash
 # Example with your cloud provider
-https://api.clearledgr.com
+https://api.soldenai.com
 ```
 
 Update manifest.json URLs from `YOUR_DOMAIN` to your actual domain.
@@ -65,10 +65,10 @@ Once installed, users can:
 
 | Command | Description |
 |---------|-------------|
-| `/clearledgr status` | View AP execution status |
-| `/clearledgr run` | Trigger AP queue checks |
-| `/clearledgr exceptions` | List open AP exceptions |
-| `/clearledgr tasks` | View pending finance tasks |
+| `/solden status` | View AP execution status |
+| `/solden run` | Trigger AP queue checks |
+| `/solden exceptions` | List open AP exceptions |
+| `/solden tasks` | View pending finance tasks |
 | `/reconcile` | Legacy quick AP health check command |
 
 ## Features

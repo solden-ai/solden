@@ -17,7 +17,7 @@ Usage:
 Environment Variables Required:
     GOOGLE_CLOUD_PROJECT - Your GCP project ID
     GOOGLE_APPLICATION_CREDENTIALS - Path to service account key JSON
-    CLEARLEDGR_WEBHOOK_URL - Your production webhook URL (e.g., https://api.clearledgr.com/gmail/push)
+    SOLDEN_WEBHOOK_URL - Your production webhook URL (e.g., https://api.soldenai.com/gmail/push)
 """
 
 import argparse
@@ -36,8 +36,8 @@ except ImportError:
 
 
 # Configuration
-TOPIC_NAME = "clearledgr-gmail-push"
-SUBSCRIPTION_NAME = "clearledgr-gmail-push-sub"
+TOPIC_NAME = "solden-gmail-push"
+SUBSCRIPTION_NAME = "solden-gmail-push-sub"
 GMAIL_PUBLISHER = "serviceAccount:gmail-api-push@system.gserviceaccount.com"
 
 
@@ -212,7 +212,7 @@ GMAIL_PUBSUB_SUBSCRIPTION=projects/{project_id}/subscriptions/{topic_name}-sub
 # OAuth Configuration (get from Google Cloud Console)
 GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-client-secret
-GOOGLE_REDIRECT_URI=https://api.clearledgr.com/gmail/callback
+GOOGLE_REDIRECT_URI=https://api.soldenai.com/gmail/callback
 
 # For local development
 # GOOGLE_REDIRECT_URI=http://localhost:8010/gmail/callback
@@ -230,7 +230,10 @@ def main():
     )
     parser.add_argument(
         "--webhook-url",
-        default=os.environ.get("CLEARLEDGR_WEBHOOK_URL", "https://api.clearledgr.com/gmail/push"),
+        default=os.environ.get(
+            "SOLDEN_WEBHOOK_URL",
+            os.environ.get("CLEARLEDGR_WEBHOOK_URL", "https://api.soldenai.com/gmail/push"),
+        ),
         help="Webhook URL for push notifications",
     )
     parser.add_argument(

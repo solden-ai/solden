@@ -12,9 +12,9 @@
   ],
   "gmail": {
     "name": "Solden AP",
-    "logoUrl": "https://api.clearledgr.com/static/icons/icon128.png",
-    "primaryColor": "#0A1628",
-    "secondaryColor": "#00D67E",
+    "logoUrl": "https://api.soldenai.com/static/icons/icon128.png",
+    "primaryColor": "#0A1F44",
+    "secondaryColor": "#18BFB0",
     "contextualTriggers": [
       {
         "unconditional": {},
@@ -25,7 +25,7 @@
       {
         "text": "Open Solden",
         "openLink": {
-          "url": "https://mail.google.com/mail/u/0/#clearledgr/home"
+          "url": "https://mail.google.com/mail/u/0/#solden/home"
         }
       }
     ]

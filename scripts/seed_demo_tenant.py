@@ -409,7 +409,7 @@ def main() -> int:
     print(f"  Vendors:         {len(VENDORS)}")
     print(f"  AP items:        {ap_count}")
     print()
-    print("Sign in at https://workspace.clearledgr.com/login as any of:")
+    print("Sign in at https://workspace.soldenai.com/login as any of:")
     for spec in USERS:
         print(f"  - {spec['email']:50s} ({spec['role']})")
     print(f"  Password: {args.password}")

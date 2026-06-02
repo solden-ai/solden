@@ -1,7 +1,7 @@
 <suitelet scriptid="customscript_cl_sl_panel">
-    <description>Serves the Clearledgr panel HTML to the iframe embedded by the Vendor Bill UE script.</description>
+    <description>Serves the Solden panel HTML to the iframe embedded by the Vendor Bill UE script.</description>
     <isinactive>F</isinactive>
-    <name>Clearledgr — Panel Suitelet</name>
+    <name>Solden — Panel Suitelet</name>
     <notifyadmins>F</notifyadmins>
     <notifyemails></notifyemails>
     <notifygroup></notifygroup>
@@ -17,7 +17,7 @@
             <loglevel>DEBUG</loglevel>
             <runasrole>ADMINISTRATOR</runasrole>
             <status>RELEASED</status>
-            <title>Clearledgr — Panel Suitelet · Deployment</title>
+            <title>Solden — Panel Suitelet · Deployment</title>
         </scriptdeployment>
     </scriptdeployments>
 </suitelet>

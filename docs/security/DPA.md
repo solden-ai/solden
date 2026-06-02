@@ -104,5 +104,5 @@ English law unless the service agreement specifies otherwise.
 
 ## How to execute
 
-Email `legal@clearledgr.com` to request the executable DPA. We aim to
+Email `legal@soldenai.com` to request the executable DPA. We aim to
 return countersigned within 5 business days.

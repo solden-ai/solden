@@ -20,10 +20,10 @@ Status: `done`
 
 | ERP | API-first success | API fail -> fallback request | Fallback completion success | Fallback completion failure | Canonical response fields verified | Idempotency verified | Evidence links | Status | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| QuickBooks | PASS (contract-level) | PASS | PASS | PASS | PASS | PASS | `/Users/mombalam/Desktop/Solden.v1/tests/test_erp_api_first.py`, `/Users/mombalam/Desktop/Solden.v1/tests/test_browser_agent_layer.py` | PARTIAL | Live sandbox posting evidence pending |
-| Xero | PASS (contract-level) | PASS | PASS | PASS | PASS | PASS | `/Users/mombalam/Desktop/Solden.v1/tests/test_erp_api_first.py`, `/Users/mombalam/Desktop/Solden.v1/tests/test_browser_agent_layer.py` | PARTIAL | Live sandbox posting evidence pending |
-| NetSuite | PASS (contract-level) | PASS | PASS | PASS | PASS | PASS | `/Users/mombalam/Desktop/Solden.v1/tests/test_erp_api_first.py`, `/Users/mombalam/Desktop/Solden.v1/tests/test_browser_agent_layer.py` | PARTIAL | Live sandbox posting evidence pending |
-| SAP | PASS (contract-level) | PASS | PASS | PASS | PASS | PASS | `/Users/mombalam/Desktop/Solden.v1/tests/test_erp_api_first.py`, `/Users/mombalam/Desktop/Solden.v1/tests/test_browser_agent_layer.py` | PARTIAL | Live sandbox posting evidence pending |
+| QuickBooks | PASS (contract-level) | PASS | PASS | PASS | PASS | PASS | `tests/test_erp_api_first.py`, `tests/test_browser_agent_layer.py` | PARTIAL | Live sandbox posting evidence pending |
+| Xero | PASS (contract-level) | PASS | PASS | PASS | PASS | PASS | `tests/test_erp_api_first.py`, `tests/test_browser_agent_layer.py` | PARTIAL | Live sandbox posting evidence pending |
+| NetSuite | PASS (contract-level) | PASS | PASS | PASS | PASS | PASS | `tests/test_erp_api_first.py`, `tests/test_browser_agent_layer.py` | PARTIAL | Live sandbox posting evidence pending |
+| SAP | PASS (contract-level) | PASS | PASS | PASS | PASS | PASS | `tests/test_erp_api_first.py`, `tests/test_browser_agent_layer.py` | PARTIAL | Live sandbox posting evidence pending |
 
 ## Remaining To Close
 

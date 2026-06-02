@@ -195,7 +195,7 @@ Oracle's reviewer can move quickly.
 |---|---|
 | Does the SuiteApp store any secrets in client-readable JavaScript? | **No.** All secrets live in `customrecord_cl_settings` (server-side custom record) or environment variables on the Solden API. The panel iframe receives only a short-lived JWT (15-minute TTL) minted server-side by the Suitelet. |
 | What authentication does the SuiteApp use to call back to Solden's API? | HMAC-SHA256 signed JWT minted by the Suitelet using the per-tenant `bundle_secret` from `customrecord_cl_settings`. The same secret signs the outbound `afterSubmit` webhook. JWT carries `accountId`, `billId`, `userEmail` claims with a 15-minute `exp`. |
-| Is the JWT verified server-side on every request? | **Yes.** `clearledgr/api/netsuite_panel.py:_verify_panel_jwt` validates the HMAC signature, the `exp` claim, and cross-checks `accountId`/`billId` claims against the request's path + query params. Rejects otherwise. |
+| Is the JWT verified server-side on every request? | **Yes.** `solden/api/netsuite_panel.py:_verify_panel_jwt` validates the HMAC signature, the `exp` claim, and cross-checks `accountId`/`billId` claims against the request's path + query params. Rejects otherwise. |
 | What happens if the secret is leaked? | Operator rotates the secret in `customrecord_cl_settings` AND in Solden's `erp_connections.credentials.webhook_secret`. All previously-issued JWTs become invalid (signature mismatch). No replay window beyond the 15-minute JWT TTL. |
 
 ### C.2 Data handling

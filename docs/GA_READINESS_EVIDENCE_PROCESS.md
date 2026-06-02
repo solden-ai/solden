@@ -1,6 +1,6 @@
 # GA Readiness Evidence Process (AP v1)
 
-Source doctrine: `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
+Source doctrine: `PLAN.md`
 
 Purpose:
 - Define how GA-readiness evidence is produced, stored, referenced, and approved.
@@ -132,7 +132,7 @@ Required for pilot/GA claims involving Gmail as the primary operator surface:
 Reference execution command:
 
 ```bash
-cd /Users/mombalam/Desktop/Solden.v1/ui/gmail-extension
+cd ui/gmail-extension
 npm run test:e2e-auth:evidence -- --release-id <release_id>
 ```
 

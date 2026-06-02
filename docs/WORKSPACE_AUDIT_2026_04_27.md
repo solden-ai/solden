@@ -2,7 +2,7 @@
 
 **Scope:** `ui/web-app/src/` — all 14 pages + shell components
 **Standard:** Linear / Notion / Mercury-grade product UX (dense, calm, professional)
-**Trigger:** Mo flagged the Settings page on `workspace.clearledgr.com` as not customer-ready and asked for a real review of the rest before any "GA-ready" claim is repeated.
+**Trigger:** Mo flagged the Settings page on `workspace.soldenai.com` as not customer-ready and asked for a real review of the rest before any "GA-ready" claim is repeated.
 
 ---
 

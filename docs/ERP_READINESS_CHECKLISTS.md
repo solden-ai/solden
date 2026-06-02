@@ -27,7 +27,7 @@ who ran the test, not the requester.  Collected evidence should be committed to
 | 7 | **Runbook completeness** — Entry in `docs/RUNBOOKS.md` for QBO auth expiry and bill-posting failure | ❌ | See RUNBOOKS.md | | |
 | 8 | **Signed-off validation evidence** — Screenshots / logs committed; QA sign-off recorded | ❌ | | | |
 
-**Connector module:** `clearledgr/services/erp/quickbooks.py`
+**Connector module:** `solden/services/erp/quickbooks.py`
 
 ---
 
@@ -44,7 +44,7 @@ who ran the test, not the requester.  Collected evidence should be committed to
 | 7 | **Runbook completeness** — Entry in `docs/RUNBOOKS.md` for Xero auth expiry and posting failure | ❌ | See RUNBOOKS.md | | |
 | 8 | **Signed-off validation evidence** — Screenshots / logs committed | ❌ | | | |
 
-**Connector module:** `clearledgr/services/erp/xero.py`
+**Connector module:** `solden/services/erp/xero.py`
 
 ---
 
@@ -61,7 +61,7 @@ who ran the test, not the requester.  Collected evidence should be committed to
 | 7 | **Runbook completeness** — Entry in `docs/RUNBOOKS.md` for NetSuite credential rotation and posting failure | ❌ | See RUNBOOKS.md | | |
 | 8 | **Signed-off validation evidence** — Screenshots / logs committed | ❌ | | | |
 
-**Connector module:** `clearledgr/services/erp/netsuite.py`
+**Connector module:** `solden/services/erp/netsuite.py`
 
 ---
 
@@ -78,8 +78,8 @@ who ran the test, not the requester.  Collected evidence should be committed to
 | 7 | **Runbook completeness** — Entry in `docs/RUNBOOKS.md` for SAP token expiry and posting failure | ❌ | See RUNBOOKS.md | | |
 | 8 | **Signed-off validation evidence** — Screenshots / logs committed | ❌ | | | |
 
-**Connector module:** `clearledgr/services/erp/sap.py`
-**Status polling:** `clearledgr/services/erp_sync.py` → `_sync_sap_bill()`
+**Connector module:** `solden/services/erp/sap.py`
+**Status polling:** `solden/services/erp_sync.py` → `_sync_sap_bill()`
 **GL lookup:** `SAPAdapter.list_gl_accounts()` — real OData call implemented; dry_run=True returns mock for testing.
 
 ---

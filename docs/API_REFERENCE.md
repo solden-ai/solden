@@ -8,14 +8,14 @@ Use this document for AP v1 product-facing and operator/admin-facing APIs, and u
 
 ## Canonical References
 
-- Doctrine + launch gates + interface expectations: `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
-- AP v1 backend contract semantics: `/Users/mombalam/Desktop/Solden.v1/docs/V1_BACKEND_CONTRACTS.md`
+- Doctrine + launch gates + interface expectations: `PLAN.md`
+- AP v1 backend contract semantics: `docs/V1_BACKEND_CONTRACTS.md`
 - Runtime OpenAPI (exhaustive route listing): `/docs`
 
 ## Base URLs
 
 ```text
-Production: https://api.clearledgr.com
+Production: https://api.soldenai.com
 Development: http://localhost:8010
 ```
 
@@ -301,8 +301,8 @@ Slack and Teams must map to the same approval action semantics for AP v1:
 - `request_info`
 
 See:
-- `/Users/mombalam/Desktop/Solden.v1/docs/V1_BACKEND_CONTRACTS.md`
-- `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
+- `docs/V1_BACKEND_CONTRACTS.md`
+- `PLAN.md`
 
 ---
 
@@ -319,7 +319,7 @@ Important distinction:
 - **Connector endpoint exists** != **connector is operationally parity-enabled for AP v1 GA**
 
 Operational parity requirements are defined in:
-- `/Users/mombalam/Desktop/Solden.v1/PLAN.md` (Section 6 ERP parity contract)
+- `PLAN.md` (Section 6 ERP parity contract)
 
 ---
 
@@ -366,7 +366,7 @@ For exact request/response schemas in your running build:
    - `http://localhost:8010/docs`
    - `http://localhost:8010/redoc`
 3. Verify routes against:
-   - `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
-   - `/Users/mombalam/Desktop/Solden.v1/docs/V1_BACKEND_CONTRACTS.md`
+   - `PLAN.md`
+   - `docs/V1_BACKEND_CONTRACTS.md`
 
 This is the safest workflow because route registration can vary with enabled modules and environment flags.

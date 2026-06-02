@@ -28,8 +28,11 @@ def _default_google_redirect_uri() -> str:
     if not base:
         base = "http://127.0.0.1:8010"
     return f"{base}/gmail/callback"
-PUBSUB_TOPIC = os.getenv("GMAIL_PUBSUB_TOPIC", "projects/clearledgr/topics/gmail-push")
-TOKEN_KEY_FILE = os.getenv("TOKEN_ENCRYPTION_KEY_FILE", ".clearledgr_token_key")
+PUBSUB_TOPIC = os.getenv("GMAIL_PUBSUB_TOPIC", "projects/solden/topics/gmail-push")
+TOKEN_KEY_FILE = os.getenv(
+    "TOKEN_ENCRYPTION_KEY_FILE",
+    ".clearledgr_token_key" if os.path.exists(".clearledgr_token_key") else ".solden_token_key",
+)
 
 
 def get_google_oauth_config() -> Dict[str, str]:

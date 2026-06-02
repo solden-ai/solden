@@ -17,7 +17,7 @@
     const config = {
         billId: meta('cl-bill-id'),
         accountId: meta('cl-account-id'),
-        apiBase: meta('cl-api-base') || 'https://api.clearledgr.com',
+        apiBase: meta('cl-api-base') || 'https://api.soldenai.com',
         token: meta('cl-token') || '',
     };
 
@@ -143,9 +143,9 @@
         if (!link) return;
         const base = (config.apiBase || '').replace(/\/api$/, '').replace(/\/$/, '');
         // Deep-link target is the customer-facing app, not the API.
-        // We don't know the app domain here — fall back to clearledgr.com/app
+        // We don't know the app domain here — fall back to app.soldenai.com
         // until Phase 3 surfaces a per-tenant app URL via customrecord_cl_settings.
-        link.href = 'https://app.clearledgr.com/ap-items/' + encodeURIComponent(apItemId);
+        link.href = 'https://app.soldenai.com/ap-items/' + encodeURIComponent(apItemId);
     }
 
     function renderError(message) {

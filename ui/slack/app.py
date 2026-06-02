@@ -10,10 +10,10 @@ Architecture:
                    Sheets Add-on
 
 Features:
-- /clearledgr slash commands
+- /solden slash commands
 - Interactive approval buttons
 - Real-time exception notifications
-- Vita AI chat via @clearledgr mentions
+- Vita AI chat via @solden mentions
 """
 
 import logging
@@ -200,7 +200,7 @@ async def slack_events(request: Request):
                 )
         return {"ok": True}
 
-    # Handle app mentions (@clearledgr)
+    # Handle app mentions (@solden)
     if event_type == "app_mention":
         await handle_mention(event)
     
@@ -219,7 +219,7 @@ async def slack_events(request: Request):
 
 @router.post("/commands")
 async def slack_commands(request: Request):
-    """Handle /clearledgr slash commands."""
+    """Handle /solden slash commands."""
     body = await request.body()
     timestamp = request.headers.get("X-Slack-Request-Timestamp", "")
     signature = request.headers.get("X-Slack-Signature", "")
@@ -371,27 +371,27 @@ async def slack_interactions(request: Request):
 # ==================== COMMAND HANDLERS ====================
 
 async def handle_command(action: str, args: str, user_id: str, channel_id: str) -> str:
-    """Handle /clearledgr commands."""
+    """Handle /solden commands."""
     
     if action == "help":
         return """*Solden Commands:*
 
 *Setup & Config:*
-- `/clearledgr setup` - Onboarding checklist and integration status
-- `/clearledgr config channel #channel` - Set the approval notification channel
-- `/clearledgr setup erp [quickbooks|xero|netsuite]` - Connect your ERP
-- `/clearledgr invite user@email.com [admin|member]` - Invite a team member
+- `/solden setup` - Onboarding checklist and integration status
+- `/solden config channel #channel` - Set the approval notification channel
+- `/solden setup erp [quickbooks|xero|netsuite]` - Connect your ERP
+- `/solden invite user@email.com [admin|member]` - Invite a team member
 
 *Daily Use:*
-- `/clearledgr status` - View current status
-- `/clearledgr queue` - View invoice priority queue
-- `/clearledgr approve [id]` - Approve a draft entry
-- `/clearledgr exceptions` - View open exceptions
-- `/clearledgr drafts` - View pending draft entries
-- `/clearledgr reconcile` - Run reconciliation
-- `/clearledgr ask [question]` - Ask Vita AI a question
-- `/clearledgr forecast` - View cash flow forecast
-- `/clearledgr budget` - View budget status
+- `/solden status` - View current status
+- `/solden queue` - View invoice priority queue
+- `/solden approve [id]` - Approve a draft entry
+- `/solden exceptions` - View open exceptions
+- `/solden drafts` - View pending draft entries
+- `/solden reconcile` - Run reconciliation
+- `/solden ask [question]` - Ask Vita AI a question
+- `/solden forecast` - View cash flow forecast
+- `/solden budget` - View budget status
 
 *Natural Language (just type):*
 - "Approve all AWS invoices under $500"
@@ -436,7 +436,7 @@ async def handle_command(action: str, args: str, user_id: str, channel_id: str) 
         if args and args.startswith("channel"):
             channel_arg = args.split(None, 1)[1].strip() if len(args.split()) > 1 else ""
             return await handle_config_channel(channel_arg, user_id)
-        return "Usage: `/clearledgr config channel #channel-name`"
+        return "Usage: `/solden config channel #channel-name`"
 
     elif action == "invite" and args:
         parts = args.split()
@@ -726,11 +726,11 @@ async def handle_setup(user_id: str) -> str:
 {channel_icon} *Approval Channel:* {approval_ch}
 
 *Quick Setup:*
-{"• `/clearledgr setup erp quickbooks` — Connect QuickBooks" if not active_erps else ""}
-{"• `/clearledgr setup erp xero` — Connect Xero" if not active_erps else ""}
-{"• `/clearledgr setup erp netsuite` — Connect NetSuite" if not active_erps else ""}
-• `/clearledgr config channel #channel` — Set approval channel
-• `/clearledgr invite user@email.com admin` — Invite a team member"""
+{"• `/solden setup erp quickbooks` — Connect QuickBooks" if not active_erps else ""}
+{"• `/solden setup erp xero` — Connect Xero" if not active_erps else ""}
+{"• `/solden setup erp netsuite` — Connect NetSuite" if not active_erps else ""}
+• `/solden config channel #channel` — Set approval channel
+• `/solden invite user@email.com admin` — Invite a team member"""
 
 
 async def handle_config_channel(channel_arg: str, user_id: str) -> str:
@@ -738,7 +738,7 @@ async def handle_config_channel(channel_arg: str, user_id: str) -> str:
     from solden.core.database import get_db
 
     if not channel_arg:
-        return "Usage: `/clearledgr config channel #channel-name`"
+        return "Usage: `/solden config channel #channel-name`"
 
     # Normalize: strip <# > wrapper that Slack adds for channel mentions
     channel_name = channel_arg.strip()
@@ -775,9 +775,9 @@ async def handle_setup_erp(erp_type: str, user_id: str) -> str:
     """Start ERP connection flow from Slack."""
     if not erp_type:
         return """*Connect your ERP:*
-• `/clearledgr setup erp quickbooks` — QuickBooks Online (OAuth)
-• `/clearledgr setup erp xero` — Xero (OAuth)
-• `/clearledgr setup erp netsuite` — NetSuite (Token-Based Auth)"""
+• `/solden setup erp quickbooks` — QuickBooks Online (OAuth)
+• `/solden setup erp xero` — Xero (OAuth)
+• `/solden setup erp netsuite` — NetSuite (Token-Based Auth)"""
 
     erp_type = erp_type.lower().strip()
     if erp_type not in ("quickbooks", "xero", "netsuite"):
@@ -886,7 +886,7 @@ async def process_natural_language(text: str, user_id: str, channel_id: str) -> 
             # Low confidence - ask for clarification or fall back to help
             if parsed.clarification_needed:
                 return f"Clarification needed: {parsed.clarification_needed}"
-            return f"I didn't quite understand that. Try `/clearledgr help` for available commands, or try:\n• \"Show pending invoices\"\n• \"Approve all AWS under $500\"\n• \"How much did we pay Stripe last month?\""
+            return f"I didn't quite understand that. Try `/solden help` for available commands, or try:\n• \"Show pending invoices\"\n• \"Approve all AWS under $500\"\n• \"How much did we pay Stripe last month?\""
         
         # Execute the command
         result = await processor.execute(parsed)
@@ -943,7 +943,7 @@ async def process_natural_language(text: str, user_id: str, channel_id: str) -> 
 # ==================== EVENT HANDLERS ====================
 
 async def handle_mention(event: Dict):
-    """Handle @clearledgr mentions - now with natural language understanding."""
+    """Handle @solden mentions - now with natural language understanding."""
     channel = event.get("channel", "")
     text = event.get("text", "")
     user = event.get("user", "")
@@ -1567,7 +1567,7 @@ Matches: {matches}
 Exceptions: {exceptions}
 Match Rate: {match_rate:.1f}%
 
-{"Use `/clearledgr exceptions` to review exceptions." if exceptions > 0 else "No exceptions - great job!"}"""
+{"Use `/solden exceptions` to review exceptions." if exceptions > 0 else "No exceptions - great job!"}"""
     
     await send_message(channel, text)
 

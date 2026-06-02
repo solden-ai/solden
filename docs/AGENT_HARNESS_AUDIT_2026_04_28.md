@@ -16,9 +16,9 @@
 | Planning engine decides what to do | **Partial.** Only invoked from the Celery `process_agent_event` background drain. Synchronous skill calls (`runtime.execute_skill_request`) do not consult it — but **every sync skill request now writes a `plan_observed` audit event** (P3 fix) so analytics can reason about both paths uniformly. |
 | Coordination engine executes the plan | **Partial.** Same as planning — async path only. Synchronous skills run skill contracts directly. |
 | Governance gate vetoes unsafe actions | **Wired everywhere a Box mutation runs.** Loop service calls `build_deliberation` before execution. Workspace SPA actions now reach this gate (since their routes went through the P0 Phase 2 migration to `execute_intent`); previously they bypassed it. |
-| AP state machine validates every transition | **Solid at the data layer.** Every `update_ap_item(state=...)` call funnels through [ap_store.py:237](../clearledgr/core/stores/ap_store.py#L237), which calls `transition_or_raise` ([L303](../clearledgr/core/stores/ap_store.py#L303)) and writes the audit event atomically in the same transaction ([L343-381](../clearledgr/core/stores/ap_store.py#L343-L381)). No raw `UPDATE ap_items` exists anywhere. **One real defect remains:** [coordination_engine.py:594](../clearledgr/core/coordination_engine.py#L594) wraps the call in `try: ... except Exception: pass`, which silently swallows `IllegalTransitionError` if the transition is illegal. |
-| Box lifecycle records every transition | **Correct by design — audit was misframed on first read.** `BoxLifecycleStore` was never intended to record transitions. Per its docstring ([box_lifecycle_store.py:1-29](../clearledgr/core/stores/box_lifecycle_store.py#L1-L29)): "state and timeline already have first-class homes (state-field on the source table; `audit_events`); this mixin makes the *other two* (exceptions, outcomes) first-class too." Transitions live as the column + an audit_events row. No shelfware; clean separation. |
-| Append-only audit trail | **Solid.** ~101 `append_audit_event` call sites; DB triggers in [database.py:374-428](../clearledgr/core/database.py#L374-L428) reject UPDATE/DELETE on `audit_events` and `ap_policy_audit_events`. (Live-DB confirmation: `SELECT tgname FROM pg_trigger WHERE tgname LIKE 'trg_audit%'` — not run in this audit.) |
+| AP state machine validates every transition | **Solid at the data layer.** Every `update_ap_item(state=...)` call funnels through [ap_store.py:237](../solden/core/stores/ap_store.py#L237), which calls `transition_or_raise` ([L303](../solden/core/stores/ap_store.py#L303)) and writes the audit event atomically in the same transaction ([L343-381](../solden/core/stores/ap_store.py#L343-L381)). No raw `UPDATE ap_items` exists anywhere. **One real defect remains:** [coordination_engine.py:594](../solden/core/coordination_engine.py#L594) wraps the call in `try: ... except Exception: pass`, which silently swallows `IllegalTransitionError` if the transition is illegal. |
+| Box lifecycle records every transition | **Correct by design — audit was misframed on first read.** `BoxLifecycleStore` was never intended to record transitions. Per its docstring ([box_lifecycle_store.py:1-29](../solden/core/stores/box_lifecycle_store.py#L1-L29)): "state and timeline already have first-class homes (state-field on the source table; `audit_events`); this mixin makes the *other two* (exceptions, outcomes) first-class too." Transitions live as the column + an audit_events row. No shelfware; clean separation. |
+| Append-only audit trail | **Solid.** ~101 `append_audit_event` call sites; DB triggers in [database.py:374-428](../solden/core/database.py#L374-L428) reject UPDATE/DELETE on `audit_events` and `ap_policy_audit_events`. (Live-DB confirmation: `SELECT tgname FROM pg_trigger WHERE tgname LIKE 'trg_audit%'` — not run in this audit.) |
 | Durable task runs, resumable on restart | **Gap.** Rows are created in `task_runs`. Startup recovery (`resume_pending_agent_tasks`) drains a different table (`agent_retry_jobs`). An api crash mid-coordination orphans `task_runs` rows; nothing scans for them on boot. |
 
 **Summary score (revised + post-remediation 2026-04-28): 7/9 fully wired, 2/9 partial, 0/9 gap.** P0 (workspace SPA bypass), P1 (silent transition swallow), P2 (`task_runs` orphan resume), P3 (`plan_observed` on sync path), P4 (structured agent reasoning columns) all landed. P5 was withdrawn on close-read. Two remaining `partial` rows describe the deliberate two-path planning architecture (sync skills don't run through `DeterministicPlanningEngine` / `CoordinationEngine` — they run a simpler skill contract under the same governance gate).
@@ -39,18 +39,18 @@ This is the single most important finding. The thesis describes one harness. The
 
 The canonical, fully-realised harness path. Used by:
 - Gmail push: webhook enqueues `process_gmail_push` Celery task → AgentEvent → `process_agent_event` → `_dispatch_event` → `get_planning_engine(db).plan(event)` → `CoordinationEngine.run(plan)`
-- Slack approve/reject button: [slack_invoices.py:626](../clearledgr/api/slack_invoices.py#L626) enqueues `APPROVAL_RECEIVED` to event queue
-- Vendor portal KYC + IBAN: [vendor_portal.py:310, 459](../clearledgr/api/vendor_portal.py#L310) enqueue `KYC_DOCUMENT_RECEIVED` / `IBAN_CHANGE_SUBMITTED`
+- Slack approve/reject button: [slack_invoices.py:626](../solden/api/slack_invoices.py#L626) enqueues `APPROVAL_RECEIVED` to event queue
+- Vendor portal KYC + IBAN: [vendor_portal.py:310, 459](../solden/api/vendor_portal.py#L310) enqueue `KYC_DOCUMENT_RECEIVED` / `IBAN_CHANGE_SUBMITTED`
 - ERP webhooks (NetSuite/SAP/Xero/QBO): enqueue via intake adapter
 - Gmail label sync (Phase 2): `LABEL_CHANGED` event
 
-Verdict: **architecturally clean.** Planning is deterministic, coordination executes, audit fires, governance is consulted (per agent B at [finance_agent_loop.py:79](../clearledgr/services/finance_agent_loop.py#L79)).
+Verdict: **architecturally clean.** Planning is deterministic, coordination executes, audit fires, governance is consulted (per agent B at [finance_agent_loop.py:79](../solden/services/finance_agent_loop.py#L79)).
 
 ### Path 2 — Synchronous skill execution (`runtime → loop → skill contract`)
 
 Used by:
-- Gmail extension actions: every sidebar action that calls `_build_finance_runtime` ([gmail_extension.py](../clearledgr/api/gmail_extension.py) — 11 sites) → `runtime.execute_*()` → `FinanceAgentLoopService.execute_skill_request`
-- Agent intents API: [agent_intents.py:127, 139](../clearledgr/api/agent_intents.py#L139) — `runtime.preview_intent()` / `runtime.execute_intent()`
+- Gmail extension actions: every sidebar action that calls `_build_finance_runtime` ([gmail_extension.py](../solden/api/gmail_extension.py) — 11 sites) → `runtime.execute_*()` → `FinanceAgentLoopService.execute_skill_request`
+- Agent intents API: [agent_intents.py:127, 139](../solden/api/agent_intents.py#L139) — `runtime.preview_intent()` / `runtime.execute_intent()`
 
 What this path has: governance deliberation (`build_deliberation` blocks before skill runs), audit emission, skill-contract execution, agent memory.
 
@@ -60,7 +60,7 @@ Verdict: **partial harness.** Strong governance, no planning. Acceptable if we'r
 
 ### Path 3 — Direct-DB bypass
 
-Used by **the workspace SPA AP item action surface** — the buttons your customers click. Specific routes in [ap_items_action_routes.py](../clearledgr/api/ap_items_action_routes.py):
+Used by **the workspace SPA AP item action surface** — the buttons your customers click. Specific routes in [ap_items_action_routes.py](../solden/api/ap_items_action_routes.py):
 
 | Route | Function | What it calls |
 |---|---|---|
@@ -71,9 +71,9 @@ Used by **the workspace SPA AP item action surface** — the buttons your custom
 | `POST /api/ap-items/{id}/snooze` etc. | snooze / unsnooze / retry / reverse / merge / split | `ap_item_service` → direct DB |
 | Bulk approve / reject (BatchOps) | `_execute_approve` etc. | direct DB |
 
-**Evidence.** `ap_item_service.py` has exactly **one** runtime invocation across the whole file (line 2992, a fallback auto-resume call). Every other state mutation is a direct `db.update_ap_item(...)` ([ap_item_service.py:768, 2893](../clearledgr/services/ap_item_service.py#L768)).
+**Evidence.** `ap_item_service.py` has exactly **one** runtime invocation across the whole file (line 2992, a fallback auto-resume call). Every other state mutation is a direct `db.update_ap_item(...)` ([ap_item_service.py:768, 2893](../solden/services/ap_item_service.py#L768)).
 
-What this path has: route-level `transition_or_raise` validation in some cases (e.g. `snooze` at [ap_items_action_routes.py:2000](../clearledgr/api/ap_items_action_routes.py#L2000)), per-action audit events.
+What this path has: route-level `transition_or_raise` validation in some cases (e.g. `snooze` at [ap_items_action_routes.py:2000](../solden/api/ap_items_action_routes.py#L2000)), per-action audit events.
 
 What this path **does not have**: the runtime, planning, coordination, governance, agent memory, agent-loop deliberation. The Box-lifecycle-store. None of it.
 
@@ -85,13 +85,13 @@ Verdict: **bypass.** This is the most-used customer surface in the product, and 
 
 ### 1. Lifespan / startup wiring of `FinanceAgentLoopService`
 
-`FinanceAgentLoopService` is **lazy-instantiated on first skill call**, not started as an autonomous loop at boot. [finance_agent_runtime.py:1505-1514](../clearledgr/services/finance_agent_runtime.py#L1505-L1514) constructs it on demand from `_agent_loop_service()`. There is no `asyncio.create_task` ticking it; "agent loop" here means the **synchronous control-flow spine** of a skill request, not a background heartbeat.
+`FinanceAgentLoopService` is **lazy-instantiated on first skill call**, not started as an autonomous loop at boot. [finance_agent_runtime.py:1505-1514](../solden/services/finance_agent_runtime.py#L1505-L1514) constructs it on demand from `_agent_loop_service()`. There is no `asyncio.create_task` ticking it; "agent loop" here means the **synchronous control-flow spine** of a skill request, not a background heartbeat.
 
 That's a defensible architecture choice, but the marketing and thesis language ("autonomous agent loop") is misleading — the loop is reactive, not autonomous. Verdict: **wired, but architecturally different from how it's described externally.**
 
 ### 2. Runtime → planning engine
 
-The planning engine is called from exactly one place: [celery_tasks.py:122-136](../clearledgr/services/celery_tasks.py#L122) inside `_dispatch_event`. The synchronous runtime does not call it. Verdict: **partial.**
+The planning engine is called from exactly one place: [celery_tasks.py:122-136](../solden/services/celery_tasks.py#L122) inside `_dispatch_event`. The synchronous runtime does not call it. Verdict: **partial.**
 
 ### 3. Planning → coordination engine
 
@@ -99,25 +99,25 @@ Same call site as #2 — coordination only runs on the async path. Synchronous s
 
 ### 4. Governance gate
 
-Live on the synchronous skill path: [finance_agent_loop.py:79](../clearledgr/services/finance_agent_loop.py#L79) calls `build_deliberation`; [finance_agent_loop.py:106-149](../clearledgr/services/finance_agent_loop.py#L106) blocks the skill if `should_execute=False`. Self-recovery fires post-failure ([finance_agent_governance.py:382](../clearledgr/services/finance_agent_governance.py#L382)). Verdict: **wired** for Path 2; **not reached** on Path 3.
+Live on the synchronous skill path: [finance_agent_loop.py:79](../solden/services/finance_agent_loop.py#L79) calls `build_deliberation`; [finance_agent_loop.py:106-149](../solden/services/finance_agent_loop.py#L106) blocks the skill if `should_execute=False`. Self-recovery fires post-failure ([finance_agent_governance.py:382](../solden/services/finance_agent_governance.py#L382)). Verdict: **wired** for Path 2; **not reached** on Path 3.
 
 ### 5. AP state machine
 
-`VALID_TRANSITIONS` is defined in [ap_states.py:64-85](../clearledgr/core/ap_states.py#L64-L85). **Validation is enforced at the data layer**, not in callers — every state write in the codebase goes through `update_ap_item` ([ap_store.py:237](../clearledgr/core/stores/ap_store.py#L237)), which:
+`VALID_TRANSITIONS` is defined in [ap_states.py:64-85](../solden/core/ap_states.py#L64-L85). **Validation is enforced at the data layer**, not in callers — every state write in the codebase goes through `update_ap_item` ([ap_store.py:237](../solden/core/stores/ap_store.py#L237)), which:
 
-- Calls `transition_or_raise(prev_state, new_state, ap_item_id)` at [L303](../clearledgr/core/stores/ap_store.py#L303)
-- Writes a `state_transition` audit event in the same DB transaction at [L343-381](../clearledgr/core/stores/ap_store.py#L343-L381)
-- Emits a state-change webhook post-commit at [L387-405](../clearledgr/core/stores/ap_store.py#L387-L405)
+- Calls `transition_or_raise(prev_state, new_state, ap_item_id)` at [L303](../solden/core/stores/ap_store.py#L303)
+- Writes a `state_transition` audit event in the same DB transaction at [L343-381](../solden/core/stores/ap_store.py#L343-L381)
+- Emits a state-change webhook post-commit at [L387-405](../solden/core/stores/ap_store.py#L387-L405)
 
 This is correct architecture: callers can't accidentally bypass validation because there's only one chokepoint. A grep for raw `UPDATE ap_items` returns nothing outside DDL.
 
-**One real defect:** [coordination_engine.py:594](../clearledgr/core/coordination_engine.py#L594) — `_move_to_exception` wraps the validated call in `try: ... except Exception: pass`. If the current state can't legally transition to `needs_info`, the `IllegalTransitionError` is silently swallowed and the box is left in its broken state with no log, no audit, and no caller signal. Other sites that call `update_ap_item(state=...)` either let the exception propagate or `logger.warning + continue`, which is fine.
+**One real defect:** [coordination_engine.py:594](../solden/core/coordination_engine.py#L594) — `_move_to_exception` wraps the validated call in `try: ... except Exception: pass`. If the current state can't legally transition to `needs_info`, the `IllegalTransitionError` is silently swallowed and the box is left in its broken state with no log, no audit, and no caller signal. Other sites that call `update_ap_item(state=...)` either let the exception propagate or `logger.warning + continue`, which is fine.
 
 Verdict: **wired** at the data layer; **one site needs the silent except removed.**
 
 ### 6. Box lifecycle (state transitions)
 
-Initially I flagged this as "shelfware for transitions" — that was wrong on close-read. `BoxLifecycleStore`'s docstring ([box_lifecycle_store.py:1-29](../clearledgr/core/stores/box_lifecycle_store.py#L1-L29)) is explicit: "state and timeline already have first-class homes (state-field on the source table; `audit_events` keyed on `(box_id, box_type)`); this mixin makes the **other two** first-class too: exceptions and outcomes."
+Initially I flagged this as "shelfware for transitions" — that was wrong on close-read. `BoxLifecycleStore`'s docstring ([box_lifecycle_store.py:1-29](../solden/core/stores/box_lifecycle_store.py#L1-L29)) is explicit: "state and timeline already have first-class homes (state-field on the source table; `audit_events` keyed on `(box_id, box_type)`); this mixin makes the **other two** first-class too: exceptions and outcomes."
 
 So the four pieces of "Box lifecycle" the deck promises are:
 - **State** → `ap_items.state` column (validated by `update_ap_item`).
@@ -137,15 +137,15 @@ All four have homes; all four are written. Verdict: **wired by design.**
 
 ### 8. `audit_events` triggers (append-only)
 
-Triggers defined in [database.py:374-428](../clearledgr/core/database.py#L374-L428): `clearledgr_prevent_append_only_mutation()` raises on UPDATE/DELETE for both `audit_events` and `ap_policy_audit_events`. Installed unconditionally in `initialize()`, no flag gate. Verdict: **solid in code.** Live confirmation deferred to a one-line `pg_trigger` query.
+Triggers defined in [database.py:374-428](../solden/core/database.py#L374-L428): `clearledgr_prevent_append_only_mutation()` raises on UPDATE/DELETE for both `audit_events` and `ap_policy_audit_events`. Installed unconditionally in `initialize()`, no flag gate. Verdict: **solid in code.** Live confirmation deferred to a one-line `pg_trigger` query.
 
 ### 9. `task_runs` durability
 
-`TaskStore.create_task_run` ([task_store.py:54-121](../clearledgr/core/stores/task_store.py#L54-L121)) persists task rows; status updates work. Verdict: **partial** — see #10.
+`TaskStore.create_task_run` ([task_store.py:54-121](../solden/core/stores/task_store.py#L54-L121)) persists task rows; status updates work. Verdict: **partial** — see #10.
 
 ### 10. Task resume on startup
 
-This one is a real gap. `app_startup.run_deferred_startup` calls `runtime.resume_pending_agent_tasks()` ([app_startup.py:79](../clearledgr/services/app_startup.py#L79)) which delegates to `drain_agent_retry_jobs()` — that targets the `agent_retry_jobs` table, **not `task_runs`**. So:
+This one is a real gap. `app_startup.run_deferred_startup` calls `runtime.resume_pending_agent_tasks()` ([app_startup.py:79](../solden/services/app_startup.py#L79)) which delegates to `drain_agent_retry_jobs()` — that targets the `agent_retry_jobs` table, **not `task_runs`**. So:
 
 - An api crash mid-`CoordinationEngine.run` orphans the `task_runs` row.
 - Nothing on boot scans `task_runs` for `pending` or in-flight rows.
@@ -169,7 +169,7 @@ Not directly queryable: agent reasoning summary, governance verdict, plan snapsh
 
 ### P0 — A subset of workspace SPA actions bypass the harness (corrected scope)
 
-Initial framing claimed every AP item action was a bypass. Closer inspection of [ap_items_action_routes.py](../clearledgr/api/ap_items_action_routes.py) shows the picture is more nuanced:
+Initial framing claimed every AP item action was a bypass. Closer inspection of [ap_items_action_routes.py](../solden/api/ap_items_action_routes.py) shows the picture is more nuanced:
 
 **Already routed through `runtime.execute_intent` (4 routes — correct):**
 - `/bulk-approve` (L2178), `/bulk-reject` (L2268), `/bulk-retry-post` (L2454), `/{id}/retry-post` (L1722)
@@ -191,15 +191,15 @@ Initial framing claimed every AP item action was a bypass. Closer inspection of 
 **Remediation status (2026-04-28) — P0 complete.** All 10 state-mutating routes now flow through `runtime.execute_intent`. Phase 1 (commit `ce55b49`) added a thin runtime-audit hook on each bypass route; Phase 2 (commits `c8448ac`, `b2f717c`, `5f2624e`, plus this batch-4 commit) replaced the hook with first-class intent registration:
 
 - **10 new intents** registered in `APFinanceSkill._INTENTS` and listed in the `action_catalog`: `snooze_invoice`, `unsnooze_invoice`, `reverse_invoice_post`, `manually_classify_invoice`, `resubmit_invoice`, `split_invoice`, `merge_invoices`, `resolve_non_invoice_review`, `resolve_entity_route`, `update_invoice_fields`. Total skill intents: **21**.
-- **10 new handler classes** in [ap_intent_handlers.py](../clearledgr/services/finance_skills/ap_intent_handlers.py). Each implements `policy_precheck` (deterministic eligibility check producing structured `reason_codes`) + `execute` (the actual business logic plus blocked / failed / completed audit emission). Business logic moved verbatim out of the routes so every surface (workspace, Slack, Gmail extension) shares one contract.
-- **10 audit contracts** + **10 operator-copy entries** in [ap_intent_contracts.py](../clearledgr/services/finance_skills/ap_intent_contracts.py) so each new event-type token (e.g. `invoice_snoozed`, `invoices_merged`, `entity_route_resolved`) is declared with `mutates_ap_state: true` and carries preview-UI copy.
-- **10 routes** in [ap_items_action_routes.py](../clearledgr/api/ap_items_action_routes.py) reduced to thin HTTP→intent wrappers: build payload, call `runtime.execute_intent(...)` with a stable idempotency key, translate `status="blocked"` / `status="error"` to deterministic HTTP status codes, return the intent's response.
+- **10 new handler classes** in [ap_intent_handlers.py](../solden/services/finance_skills/ap_intent_handlers.py). Each implements `policy_precheck` (deterministic eligibility check producing structured `reason_codes`) + `execute` (the actual business logic plus blocked / failed / completed audit emission). Business logic moved verbatim out of the routes so every surface (workspace, Slack, Gmail extension) shares one contract.
+- **10 audit contracts** + **10 operator-copy entries** in [ap_intent_contracts.py](../solden/services/finance_skills/ap_intent_contracts.py) so each new event-type token (e.g. `invoice_snoozed`, `invoices_merged`, `entity_route_resolved`) is declared with `mutates_ap_state: true` and carries preview-UI copy.
+- **10 routes** in [ap_items_action_routes.py](../solden/api/ap_items_action_routes.py) reduced to thin HTTP→intent wrappers: build payload, call `runtime.execute_intent(...)` with a stable idempotency key, translate `status="blocked"` / `status="error"` to deterministic HTTP status codes, return the intent's response.
 - **`_record_agent_action` helper deleted.** Phase 1's bypass-shim is no longer reachable; per "no backwards-compat cruft" it's removed entirely. Dead `match_entity_candidate` / `normalize_entity_candidate` / `resolve_entity_routing` imports at the route layer also removed (now consumed only inside the intent handler).
 - **Effect on the moat claim:** every state-mutating workspace action now goes through the same six layers as the canonical async path — runtime → loop service → governance deliberation → policy precheck → side effect → runtime audit (with `governance_verdict` + `agent_confidence` columns from migration v50). The "every action goes through the agent" claim is now true for the workspace SPA surface, not just for Slack approves and Celery-dispatched events.
 
 ### P1 — Silent `IllegalTransitionError` swallow at one site
 
-**Single real defect.** [coordination_engine.py:594](../clearledgr/core/coordination_engine.py#L594) wraps `update_ap_item(state="needs_info", ...)` in `try: ... except Exception: pass`. If the current state can't transition to `needs_info` (e.g. the box is already terminal), the exception is silently swallowed: no log, no audit, no caller signal, no recovery. The box stays in its prior broken state and the operator never finds out. Severity: **P1 — narrow, but a true silent-failure bug.** Fix: log + propagate, or audit the violation and route to a manual queue.
+**Single real defect.** [coordination_engine.py:594](../solden/core/coordination_engine.py#L594) wraps `update_ap_item(state="needs_info", ...)` in `try: ... except Exception: pass`. If the current state can't transition to `needs_info` (e.g. the box is already terminal), the exception is silently swallowed: no log, no audit, no caller signal, no recovery. The box stays in its prior broken state and the operator never finds out. Severity: **P1 — narrow, but a true silent-failure bug.** Fix: log + propagate, or audit the violation and route to a manual queue.
 
 ### P2 — `task_runs` orphan on api crash; no startup resume
 
@@ -209,13 +209,13 @@ Initial framing claimed every AP item action was a bypass. Closer inspection of 
 
 Synchronous skills get governance; async events get planning + coordination + governance; workspace SPA actions get neither. Three reliability profiles is two too many. Severity: **P3 — architectural debt, not a bug.**
 
-**Remediation status (2026-04-28):** [finance_agent_loop.py:`_emit_plan_observed`](../clearledgr/services/finance_agent_loop.py) now emits a `plan_observed` audit event on every synchronous skill request, mirroring the implicit `plan_step_*` records the async coordination engine writes. Captures intent, skill_id, governance verdict, recall depth, preview status, and confidence. Both paths now share the same observability surface — analytics can ask "what plans did the agent observe / veto / execute?" against `event_type='plan_observed'` regardless of which path produced the row.
+**Remediation status (2026-04-28):** [finance_agent_loop.py:`_emit_plan_observed`](../solden/services/finance_agent_loop.py) now emits a `plan_observed` audit event on every synchronous skill request, mirroring the implicit `plan_step_*` records the async coordination engine writes. Captures intent, skill_id, governance verdict, recall depth, preview status, and confidence. Both paths now share the same observability surface — analytics can ask "what plans did the agent observe / veto / execute?" against `event_type='plan_observed'` regardless of which path produced the row.
 
 ### P4 — Agent reasoning is JSON-blob, not queryable
 
 `payload_json` holds the why; columns hold the what. Fine for individual-invoice trace; insufficient for analytics, model evaluation, or audit at scale. Severity: **P4 — design choice with cost; not urgent.**
 
-**Remediation status (2026-04-28):** migration v50 (`_v50_agent_decision_reasoning` in [migrations.py](../clearledgr/core/migrations.py)) adds two structured columns to `audit_events`:
+**Remediation status (2026-04-28):** migration v50 (`_v50_agent_decision_reasoning` in [migrations.py](../solden/core/migrations.py)) adds two structured columns to `audit_events`:
 - `governance_verdict` (TEXT, nullable) — canonical token: `should_execute` / `vetoed` / `warned` / NULL.
 - `agent_confidence` (REAL, nullable) — agent confidence at decision time, on [0, 1].
 
@@ -243,7 +243,7 @@ The moat language can be defended once P0 and P1 are fixed. Until then, leaning 
 
 ## Recommended remediation order
 
-1. **P1 fix (small, ~30 min)** — Remove the silent `except Exception: pass` at [coordination_engine.py:594](../clearledgr/core/coordination_engine.py#L594). On `IllegalTransitionError`, audit the rejected transition and propagate so the orchestrator surfaces the failure.
+1. **P1 fix (small, ~30 min)** — Remove the silent `except Exception: pass` at [coordination_engine.py:594](../solden/core/coordination_engine.py#L594). On `IllegalTransitionError`, audit the rejected transition and propagate so the orchestrator surfaces the failure.
 2. **P2 fix (~2-3 hours)** — Add a `task_runs` startup scan in `app_startup.run_deferred_startup` that for each in-flight row decides: resume if recent, mark `failed` with reason `api_crash_orphan` if older than a threshold.
 3. **P0 fix (~2-3 days)** — Re-route workspace SPA AP item actions through `runtime.execute_intent()`. Inventory existing intents vs. needed actions; fill gaps; migrate `ap_items_action_routes` to thin HTTP→intent wrappers. Preserve bulk-endpoint performance via batched intent execution.
 4. **P3 fix (~1 week)** — Make the synchronous skill path emit a `plan_observed` audit event before execution so the planning layer is observable on both paths, even when the skill is a 1-step intent. Document the two-path contract explicitly.

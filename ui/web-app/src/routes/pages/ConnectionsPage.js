@@ -348,7 +348,7 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
         >
           ${!teamsEnabled ? html`
             <div class="secondary-note">
-              Set <code>FEATURE_TEAMS_ENABLED=true</code> on api/worker/beat once the Microsoft-side registrations are complete. The full runbook is in <a href="https://github.com/clearledgr/Solden/blob/main/ui/teams/INSTALL.md" target="_blank" rel="noreferrer">ui/teams/INSTALL.md</a>.
+              Set <code>FEATURE_TEAMS_ENABLED=true</code> on api/worker/beat once the Microsoft-side registrations are complete. The full runbook is in <a href="https://github.com/solden-ai/solden/blob/main/ui/teams/INSTALL.md" target="_blank" rel="noreferrer">ui/teams/INSTALL.md</a>.
             </div>
           ` : html`
             <div class="secondary-section" style="margin-top:6px">
@@ -358,7 +358,7 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
                 Teams app package sideloaded into your tenant. End state:
                 Adaptive Cards in any channel with working Approve / Reject
                 buttons that round-trip through Solden's audit chain. Full
-                steps in <a href="https://github.com/clearledgr/Solden/blob/main/ui/teams/INSTALL.md" target="_blank" rel="noreferrer">ui/teams/INSTALL.md</a>.
+                steps in <a href="https://github.com/solden-ai/solden/blob/main/ui/teams/INSTALL.md" target="_blank" rel="noreferrer">ui/teams/INSTALL.md</a>.
               </p>
               <div class="secondary-inline-actions">
                 <a class="btn-secondary btn-sm" href="/api/workspace/integrations/teams/manifest?organization_id=${encodeURIComponent(orgId)}" target="_blank" rel="noreferrer">Download Teams app package</a>

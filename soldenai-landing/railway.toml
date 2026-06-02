@@ -1,7 +1,7 @@
 # Railway deployment for the Solden marketing site.
 #
 # Static site at soldenai.com. Separate from the workspace SPA at
-# workspace.clearledgr.com — this site doesn't proxy any API. Custom
+# workspace.soldenai.com — this site doesn't proxy any API. Custom
 # domain attached to this service in the Railway dashboard.
 
 [build]

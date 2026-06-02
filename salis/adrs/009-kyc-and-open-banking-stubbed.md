@@ -25,7 +25,7 @@ Specifically:
 
 - KYC form submission saves the data to the vendor profile (`vendor_profiles` table, encrypted where sensitive) and transitions the session to `bank_verify`. No external verification.
 - Bank details submission encrypts the IBAN with Fernet (`TOKEN_ENCRYPTION_KEY`-derived) and saves. IBAN is validated structurally (mod-97 checksum) but account-ownership is not verified. Session transitions directly `bank_verify` → `bank_verified` on submit (the direct transition was introduced when micro-deposit was removed).
-- Integration points for real providers exist in `clearledgr/services/vendor_onboarding_lifecycle.py` but each provider call is a no-op stub awaiting implementation.
+- Integration points for real providers exist in `solden/services/vendor_onboarding_lifecycle.py` but each provider call is a no-op stub awaiting implementation.
 
 This is documented in the vendor onboarding spec (`vendor-onboarding-spec.md`) and in the session's memory files.
 
@@ -61,7 +61,7 @@ Trigger condition: first customer whose contract requires verified vendor onboar
 
 1. Select provider (probably Companies House API for UK KYC; probably TrueLayer for UK/EU open-banking).
 2. Sign contract.
-3. Implement `clearledgr/services/vendor_onboarding_lifecycle.enrich_vendor_on_kyc` for real against the provider.
+3. Implement `solden/services/vendor_onboarding_lifecycle.enrich_vendor_on_kyc` for real against the provider.
 4. Implement the open-banking verification adapter against the session transition `bank_verify` → `bank_verified`.
 5. Update the direct transition to a provider-gated one.
 6. Write tests against provider sandboxes.
@@ -72,8 +72,8 @@ Effort estimate when triggered: 1-2 weeks per provider depending on sandbox acce
 ## Reference
 
 - `vendor-onboarding-spec.md` — the engineering spec (1500 lines).
-- `clearledgr/services/vendor_onboarding_lifecycle.py` — where stub boundaries live.
-- `clearledgr/core/stores/vendor_store.py:1785` — `transition_onboarding_session_state` with the direct `bank_verify` → `bank_verified` edge documented in the comment.
-- `clearledgr/api/vendor_portal.py` — the portal endpoints that drive the flow.
-- `clearledgr/core/portal_input.py` — input validation (real, not stubbed).
-- `clearledgr/core/portal_auth.py` — magic-link auth (real, not stubbed).
+- `solden/services/vendor_onboarding_lifecycle.py` — where stub boundaries live.
+- `solden/core/stores/vendor_store.py:1785` — `transition_onboarding_session_state` with the direct `bank_verify` → `bank_verified` edge documented in the comment.
+- `solden/api/vendor_portal.py` — the portal endpoints that drive the flow.
+- `solden/core/portal_input.py` — input validation (real, not stubbed).
+- `solden/core/portal_auth.py` — magic-link auth (real, not stubbed).

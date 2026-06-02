@@ -164,7 +164,7 @@ BILL/Ramp/Stacks.ai.
 ## Migration from `landing-page/`
 
 The legacy Clearledgr-era `landing-page/` directory continues to run
-at `clearledgr.com`. Once `soldenai.com` is live on Railway, point a
-301 redirect from `clearledgr.com` to `soldenai.com` at the edge (or
+at `soldenai.com`. Once `soldenai.com` is live on Railway, point a
+301 redirect from `soldenai.com` to `soldenai.com` at the edge (or
 inside `landing-page/server.js`) and retire the old service when
 analytics confirm zero residual traffic.

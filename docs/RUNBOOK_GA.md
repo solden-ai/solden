@@ -19,7 +19,7 @@ account.
    - **Name:** Solden workspace
    - **Supported account types:** "Accounts in any organizational
      directory (Any Azure AD directory — Multitenant)"
-   - **Redirect URI (Web):** `https://api.clearledgr.com/auth/microsoft/callback`
+   - **Redirect URI (Web):** `https://api.soldenai.com/auth/microsoft/callback`
 3. After registration, copy the **Application (client) ID** from the
    Overview page.
 4. **Certificates & secrets** → **New client secret** → 24 month
@@ -39,7 +39,7 @@ account.
 
 **Verify:**
 - Click **Continue with Microsoft** in incognito at
-  https://workspace.clearledgr.com/login
+  https://workspace.soldenai.com/login
 - Pick a Microsoft account, complete consent
 - You should land on the workspace home page
 
@@ -66,7 +66,7 @@ in Azure + the env vars + the Teams app manifest packaged.
    - **Microsoft App ID:** Auto-generate, OR reuse the App
      registration from Step 1 above (recommended — single Azure
      identity for both auth + bot)
-   - **Messaging endpoint:** `https://api.clearledgr.com/teams/messages`
+   - **Messaging endpoint:** `https://api.soldenai.com/teams/messages`
 2. Copy the **Microsoft App ID** and **App Secret** (or generate a
    new client secret on the App registration if reusing).
 3. Set on the api / worker / beat services:
@@ -79,7 +79,7 @@ in Azure + the env vars + the Teams app manifest packaged.
    - `manifest.json` should declare:
      - `"id": "<Microsoft App ID>"`
      - `"bots": [{"botId": "<Microsoft App ID>", ...}]`
-     - `"validDomains": ["api.clearledgr.com", "workspace.clearledgr.com"]`
+     - `"validDomains": ["api.soldenai.com", "workspace.soldenai.com"]`
    - Package with `color.png` (192×192) + `outline.png` (32×32).
    - Distribute the zip via "Upload a custom app" inside Teams admin
      center, OR submit to AppSource for public listing.
@@ -102,13 +102,13 @@ fixes, but no end-to-end integration test confirms current behaviour.
 1. Open https://console.cloud.google.com/apis/credentials
 2. Find the OAuth 2.0 Client ID `333271407440-j42m0b6sh4j42bvlkr0vko7l058uf3ja…`
 3. Confirm **Authorized redirect URIs** includes:
-   - `https://api.clearledgr.com/auth/google/callback`
-   - `https://api.clearledgr.com/gmail/callback`
+   - `https://api.soldenai.com/auth/google/callback`
+   - `https://api.soldenai.com/gmail/callback`
 4. Confirm **Authorized JavaScript origins** includes:
-   - `https://workspace.clearledgr.com`
+   - `https://workspace.soldenai.com`
 
 **Verify:**
-- Open https://workspace.clearledgr.com/login in incognito
+- Open https://workspace.soldenai.com/login in incognito
 - Click **Continue with Google**, select an account
 - Should redirect to workspace home with a session cookie set
 
@@ -133,8 +133,8 @@ listing. Today the extension is dev-mode only.
    - **Screenshots:** capture from the live extension running against
      production (sidebar with a real invoice, three banner states,
      compose-time linkage)
-   - **Privacy Policy URL:** `https://workspace.clearledgr.com/privacy`
-   - **Support URL:** `mailto:hello@clearledgr.com`
+   - **Privacy Policy URL:** `https://workspace.soldenai.com/privacy`
+   - **Support URL:** `mailto:hello@soldenai.com`
 5. Submit for review. Google typically approves in 1–3 business days.
 
 **Update flow after the first publish:**
@@ -146,11 +146,11 @@ listing. Today the extension is dev-mode only.
 
 ---
 
-## 5. workspace.clearledgr.com — Let's Encrypt cert (RESOLVED 2026-04-27)
+## 5. workspace.soldenai.com — Let's Encrypt cert (RESOLVED 2026-04-27)
 
 Cert was issued after Railway's TXT-verification flow (CNAME +
 `_railway-verify.workspace` TXT) completed. SPA now serves on
-https://workspace.clearledgr.com with a valid certificate.
+https://workspace.soldenai.com with a valid certificate.
 
 If the cert ever needs to be re-issued (renewal, rotation, etc.), the
 two records that need to stay in DNS are:
@@ -202,7 +202,7 @@ endpoint. Sufficient for first GA iteration.
 
 **Optional upgrade for serious enterprise customers:** subscribe to
 [statuspage.io](https://statuspage.io) ($29/mo) and embed at
-`status.clearledgr.com`. Subscribe link in the StatusPage footer can
+`status.soldenai.com`. Subscribe link in the StatusPage footer can
 point at the third-party service for incident notifications.
 
 ---
@@ -226,7 +226,7 @@ brand-new tenant has nothing to show. The demo seed creates an
    `Demo!2026` — override with `--password XYZ`.
 
 **Verify:**
-- Sign in at https://workspace.clearledgr.com/login as
+- Sign in at https://workspace.soldenai.com/login as
   `controller@acme-demo.clearledgr.dev` with the printed password.
 - The home dashboard should show non-zero KPI tiles, the pipeline page
   should show items in every column, and the entity switcher should
@@ -238,7 +238,7 @@ ONLY that org. Never run this against a tenant ID with real data.
 
 ---
 
-## 9. Marketing site at clearledgr.com
+## 9. Marketing site at soldenai.com
 
 **Why:** Cold prospects from outbound need a destination that isn't
 the workspace login. Pricing, ICP messaging, "Request a demo" all
@@ -253,7 +253,7 @@ and terms. Sales security packets live under [`docs/security/`](security/).
 1. **Cloudflare Pages** (recommended — free, fastest CDN):
    - Connect the GitHub repo
    - Build settings: no build command; output dir = `landing-page`
-   - Add custom domain `clearledgr.com` + `www.clearledgr.com`
+   - Add custom domain `soldenai.com` + `www.soldenai.com`
 2. **Or Netlify**:
    - Drag-and-drop the `landing-page/` folder, OR connect the repo
      with the same publish dir
@@ -278,7 +278,7 @@ For fastest time-to-GA:
 2. **Microsoft OAuth env vars** (5 min after Azure registration done) — unblocks SAP-shop signin
 3. **Chrome Web Store submit** (30 min + 1–3 days for Google review) — unblocks extension install
 4. **Google OAuth verification** (5 min) — confirms Google signin works
-5. **workspace.clearledgr.com cert wait** (24h) — friendly URL
+5. **workspace.soldenai.com cert wait** (24h) — friendly URL
 6. **Teams adapter env vars + flag flip** (1h after Bot registration)
 7. **Marketing site build** (1–2 weeks part-time)
 8. **SOC2 evidence package** (6 weeks for Type 1; engage auditor)

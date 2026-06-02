@@ -30,7 +30,7 @@ Before starting, confirm all of the following:
 Before manual drill execution, run the authenticated Gmail runtime evidence command:
 
 ```bash
-cd /Users/mombalam/Desktop/Solden.v1/ui/gmail-extension
+cd ui/gmail-extension
 npm run test:e2e-auth:evidence -- --release-id ap-v1-2026-02-25-pilot-rc1
 ```
 
@@ -306,7 +306,7 @@ Verify response: `"summary": {"ready_for_ga": true}`.
 Validate launch evidence tracker completeness:
 
 ```bash
-python3 /Users/mombalam/Desktop/Solden.v1/scripts/validate_launch_evidence.py --mode pilot --json
+python3 scripts/validate_launch_evidence.py --mode pilot --json
 ```
 
 Expected for pilot readiness: `"passed": true` (or explicit accepted-risk entries with owner/expiry captured in manifest + tracker).

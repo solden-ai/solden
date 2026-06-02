@@ -18,7 +18,7 @@ deprecated in 2022, so this uses loopback redirect — the modern
 recommended path for desktop OAuth).
 
 Sign in as the Google account that OWNS the Chrome Web Store
-listing (typically founders@clearledgr.com), not your personal
+listing (typically founders@soldenai.com), not your personal
 account, otherwise the refresh token won't have permission to
 publish.
 """
@@ -200,7 +200,7 @@ def main() -> int:
 
     print("=" * 72)
     print("SUCCESS. Add these four secrets at:")
-    print("  https://github.com/clearledgr/Clearledgr-AP/settings/secrets/actions")
+    print("  https://github.com/solden-ai/solden/settings/secrets/actions")
     print("=" * 72)
     print()
     print(f"  CHROME_EXTENSION_ID    = {args.extension_id}")

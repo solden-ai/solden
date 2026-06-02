@@ -1,6 +1,6 @@
 # Solden Gmail Extension - Design Specification v1.2
 
-> **Update (Mar 23, 2026):** Solden is an embedded finance-ops execution layer. The **Gmail/AP wedge** is designed as **Streak for finance ops**. [`DESIGN.md`](/Users/mombalam/Desktop/Solden.v1/DESIGN.md) is the primary source of truth for overall product design doctrine, while this file remains the Gmail-extension-specific spec.
+> **Update (Mar 23, 2026):** Solden is an embedded finance-ops execution layer. The **Gmail/AP wedge** is designed as **Streak for finance ops**. [`DESIGN.md`](../../DESIGN.md) is the primary source of truth for overall product design doctrine, while this file remains the Gmail-extension-specific spec.
 
 > **Current Gmail doctrine:**  
 > - the `Solden AP` thread panel is the daily execution surface  
@@ -67,7 +67,7 @@ Repeat 50+ times per day (BURNOUT)
 ### The Solution
 
 ```
-CLEARLEDGR Flow:
+Solden Flow:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Emails arrive
         ↓

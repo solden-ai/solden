@@ -43,7 +43,7 @@ Two-way bridge between SAP S/4HANA and Solden's coordination layer
                 └─────────────────────────────────────┼──┘
                                                       │
                                                       ▼
-                                  Solden backend (api.clearledgr.com)
+                                  Solden backend (api.soldenai.com)
                                   ├─ /extension/sap/exchange         (XSUAA → CL JWT)
                                   ├─ /extension/ap-items/by-sap-invoice
                                   ├─ /extension/route-low-risk-approval
@@ -76,7 +76,7 @@ Total realistic ship-to-store timeline: **6–12 months** (longest of the three 
 
 The code on disk is Phase-1+2+3 (read) + Phase-1+2 (write) ready. What
 still needs human action: a BTP trial subaccount, an XSUAA service
-binding, a Destination pointing at `api.clearledgr.com`, and the
+binding, a Destination pointing at `api.soldenai.com`, and the
 event-firing path on the customer's S/4HANA.
 
 ## Repo layout
@@ -126,7 +126,7 @@ integrations/sap-fiori-extension/
    - `destination` (plan `lite`)
 5. **Destination** named `clearledgr-api` configured in the subaccount
    (BTP cockpit → Connectivity → Destinations → New):
-   - URL: `https://api.clearledgr.com`
+   - URL: `https://api.soldenai.com`
    - Type: HTTP
    - ProxyType: Internet
    - Authentication: NoAuthentication (Approuter forwards the
@@ -228,7 +228,7 @@ event source. Two paths depending on their S/4HANA flavour:
    `sap.s4.beh.supplierinvoice.v1.*` (Created, Posted, Blocked,
    Cancelled, Paid).
 2. Configure a webhook target pointing at
-   `https://api.clearledgr.com/erp/webhooks/sap/<orgId>` with the
+   `https://api.soldenai.com/erp/webhooks/sap/<orgId>` with the
    shared HMAC secret from `erp_connections.credentials.webhook_secret`.
 
 **S/4HANA on-premise — ABAP enhancement:**
@@ -237,17 +237,17 @@ event source. Two paths depending on their S/4HANA flavour:
    POSTs the event payload through SAP Cloud Connector.
 2. Use the same JSON shape the dispatcher accepts (the
    `event_type` / `invoice` form documented in
-   `clearledgr/services/sap_webhook_dispatch.py`).
+   `solden/services/sap_webhook_dispatch.py`).
 3. Sign with the same HMAC secret + `X-SAP-Signature: v1=<hex>` /
    `X-SAP-Timestamp: <unix>` headers the existing webhook verifier
-   in `clearledgr/core/erp_webhook_verify.py` expects.
+   in `solden/core/erp_webhook_verify.py` expects.
 
 ## Backend dependencies
 
 This integration expects on the Solden side:
 
 * **`POST /extension/sap/exchange`** — XSUAA → Solden JWT bridge.
-  Implemented in [`clearledgr/api/sap_extension.py`](../../clearledgr/api/sap_extension.py).
+  Implemented in [`solden/api/sap_extension.py`](../../solden/api/sap_extension.py).
 * **`GET /extension/ap-items/by-sap-invoice`** — Box read by composite
   key (`?company_code=&supplier_invoice=&fiscal_year=`).
 * **CORS regex** allows `*.hana.ondemand.com`, `*.s4hana.cloud.sap`,
@@ -259,9 +259,9 @@ This integration expects on the Solden side:
   `/extension/route-low-risk-approval` and `/extension/reject-invoice`
   endpoints; the AP item's `metadata.source == "sap_native"` triggers
   the SAP write-back path in
-  [`clearledgr/services/erp_native_approval.py`](../../clearledgr/services/erp_native_approval.py).
+  [`solden/services/erp_native_approval.py`](../../solden/services/erp_native_approval.py).
 * **SAP write-back helpers** in
-  [`clearledgr/integrations/erp_sap_s4hana.py`](../../clearledgr/integrations/erp_sap_s4hana.py):
+  [`solden/integrations/erp_sap_s4hana.py`](../../solden/integrations/erp_sap_s4hana.py):
     * `release_payment_block(...)` — PATCH `A_SupplierInvoice` with
       `PaymentBlockingReason=""`.
     * `cancel_supplier_invoice(...)` — POST
@@ -276,7 +276,7 @@ This integration expects on the Solden side:
 * Set up SAP Cloud Connector if they're on-prem.
 * Trust their corporate IDP via SAP IAS in the BTP subaccount.
 * Configure the Destination in their subaccount pointing at
-  `api.clearledgr.com`.
+  `api.soldenai.com`.
 * Assign role collections (`Solden Box Panel — Reader` / `Approver`)
   to their AP team in BTP cockpit.
 * For the Manifest Extension upgrade: enable UI5 flexibility services

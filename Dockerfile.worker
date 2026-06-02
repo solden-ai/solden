@@ -1,4 +1,4 @@
-# Clearledgr Background Worker
+# Solden Background Worker
 
 FROM python:3.11-slim as builder
 

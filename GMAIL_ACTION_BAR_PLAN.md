@@ -20,9 +20,9 @@ still requires a context switch.
 ## Current state
 
 ### Backend (done)
-- `clearledgr/api/ap_item_detail.py:86` — `_available_intents(current_state)`
+- `solden/api/ap_item_detail.py:86` — `_available_intents(current_state)`
   computes which intents are legal for a Box's current state.
-- `clearledgr/api/ap_item_detail.py:605` — the `/api/workspace/ap-items/{id}/detail`
+- `solden/api/ap_item_detail.py:605` — the `/api/workspace/ap-items/{id}/detail`
   payload includes `actions.available`.
 - `/api/agent/intents/execute` — canonical intent dispatcher. Same path
   Slack and the workspace use. Surface-agnostic.
@@ -74,7 +74,7 @@ to verify the exact route the queueManager uses). Confirm whether
 it to the response, mirroring the workspace detail endpoint. Pure
 additive change; no breakage.
 
-**Files:** `clearledgr/api/extension_*.py` (whichever route serves
+**Files:** `solden/api/extension_*.py` (whichever route serves
 ThreadSidebar data), `ui/gmail-extension/src/queue/queueManager.js`
 (if the field needs to surface through the queue manager's normalized
 item shape).

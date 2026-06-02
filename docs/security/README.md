@@ -28,8 +28,8 @@ to attestation.
 
 **For sales:** zip the entire `docs/security/` directory and send it to
 prospects who ask for SOC2 evidence. Pair with the live
-[Privacy Policy](https://workspace.clearledgr.com/privacy) and
-[Terms](https://workspace.clearledgr.com/terms).
+[Privacy Policy](https://workspace.soldenai.com/privacy) and
+[Terms](https://workspace.soldenai.com/terms).
 
 **For prospects:** every control in [CONTROLS.md](CONTROLS.md) cites a
 specific file:line in the source tree. The repo is auditable on request

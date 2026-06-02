@@ -22,7 +22,7 @@ Every file in the repo belongs to one of these three layers. If you're not sure 
   │                    CORE (the product)                           │
   │                                                                 │
   │   API routers  ──────►  Services (business logic)               │
-  │   (clearledgr/api/)     (clearledgr/services/)                  │
+  │   (solden/api/)     (solden/services/)                  │
   │                              │                                  │
   │                              ▼                                  │
   │      DeterministicPlanningEngine ──► CoordinationEngine         │
@@ -51,7 +51,7 @@ Every file in the repo belongs to one of these three layers. If you're not sure 
 
 ## Module map (what lives where)
 
-### `clearledgr/api/` — HTTP routers
+### `solden/api/` — HTTP routers
 
 37 route modules. Each owns a domain:
 
@@ -66,7 +66,7 @@ Every file in the repo belongs to one of these three layers. If you're not sure 
 - `ops.py` — operational endpoints (health, KPIs, tenant-health, monitoring).
 - `auth.py`, `deps.py` — JWT auth, soft_org_guard, verify_org_access.
 
-### `clearledgr/core/` — engine + contracts
+### `solden/core/` — engine + contracts
 
 - `planning_engine.py` — `DeterministicPlanningEngine`. Event → Plan via rules (no LLM here). Raises on unhandled event types and records a `box_exceptions` row if the event names a Box.
 - `coordination_engine.py` — `CoordinationEngine`. Consumes Plans. Enforces Rule 1 via `_pre_write`. Dispatches actions via `_handlers`.
@@ -85,7 +85,7 @@ Every file in the repo belongs to one of these three layers. If you're not sure 
 - `errors.py` — `safe_error()` — the exception-sanitizer for API responses.
 - `stores/` — 21 store mixins (including `box_lifecycle_store.py` for first-class exceptions + outcomes). See below.
 
-### `clearledgr/core/stores/` — database mixins
+### `solden/core/stores/` — database mixins
 
 Each mixin handles one domain's SQL. `SoldenDB` inherits all of them; read/write methods get grouped by domain naturally.
 
@@ -104,7 +104,7 @@ Each mixin handles one domain's SQL. `SoldenDB` inherits all of them; read/write
 - `pipeline_store.py` — Pipeline views + box_links.
 - Others: `ap_runtime_store`, `auth_store`, `dispute_store`, `override_window_store`, `policy_store`, `recon_store`, `webhook_store`.
 
-### `clearledgr/services/` — business logic (50+ modules)
+### `solden/services/` — business logic (50+ modules)
 
 Top offenders to know:
 
@@ -126,7 +126,7 @@ Top offenders to know:
 - `webhook_delivery.py` — outbound webhook subscriptions + delivery.
 - `report_export.py` — AP aging / vendor spend / posting status reports.
 
-### `clearledgr/integrations/` — ERP connectors
+### `solden/integrations/` — ERP connectors
 
 - `erp_router.py` — dispatcher. Picks QB/Xero/NS/SAP per-org. `ERPConnection` dataclass. Refresh-token lock.
 - `erp_quickbooks.py`, `erp_xero.py`, `erp_netsuite.py`, `erp_sap.py` — one file per ERP.
@@ -134,15 +134,15 @@ Top offenders to know:
 - `erp_rate_limiter.py` — per-ERP rate limiting.
 - `oauth.py` — shared OAuth helpers.
 
-### `clearledgr/workflows/` — named workflow handlers
+### `solden/workflows/` — named workflow handlers
 
 - `gmail_activities.py` — `classify_email`, `match_bank_feed`, `match_erp` — the pieces the planning engine composes.
 
-### `clearledgr/di/` — dependency injection container
+### `solden/di/` — dependency injection container
 
 - `container.py` — service singletons (audit, llm, exception router, sap adapter).
 
-### `clearledgr/templates/` — server-rendered HTML
+### `solden/templates/` — server-rendered HTML
 
 - Jinja2 templates for the vendor portal (the only server-rendered HTML surface).
 
@@ -277,7 +277,7 @@ Every step between `_pre_write` and `_post_write` is guarded. The audit row exis
                                                  └──────────┘   └────────────┘
 ```
 
-State machine is in `clearledgr/core/ap_states.py`. `VALID_TRANSITIONS` is the dict of allowed edges. `transition_or_raise` is the one-line enforcement. The same shape exists for vendor onboarding in `vendor_onboarding_states.py`.
+State machine is in `solden/core/ap_states.py`. `VALID_TRANSITIONS` is the dict of allowed edges. `transition_or_raise` is the one-line enforcement. The same shape exists for vendor onboarding in `vendor_onboarding_states.py`.
 
 ---
 
@@ -326,15 +326,15 @@ These are the interfaces where layers meet. Changing any of these is a breaking 
 
 These exist in code but are off by default in V1:
 
-- `FEATURE_TEAMS_ENABLED=false` → `clearledgr/api/teams_invoices.py` routes don't register.
-- `FEATURE_OUTLOOK_ENABLED=false` → `clearledgr/api/outlook_routes.py` + `clearledgr/services/outlook_autopilot.py` gated.
+- `FEATURE_TEAMS_ENABLED=false` → `solden/api/teams_invoices.py` routes don't register.
+- `FEATURE_OUTLOOK_ENABLED=false` → `solden/api/outlook_routes.py` + `solden/services/outlook_autopilot.py` gated.
 - `commission-clawback-spec.md` — frozen; Box type not registered yet. V1.2 clawback event types are in the enum but have no planners — `DeterministicPlanningEngine` raises and records a `box_exceptions` row if a producer fires one early.
 - KYC + open-banking providers in vendor portal — stubbed until contracts signed. See `services/vendor_onboarding_lifecycle.py` for the stub boundaries.
 
 Retired in the 2026-04-21 drift cleanup (history lives in ADR 011 if you write one):
 
 - `AgentPlanningEngine` (Claude tool-use loop) — replaced by `DeterministicPlanningEngine`. Deck promise: rules decide, LLM describes.
-- `clearledgr/core/skills/` (APSkill, CompoundSkill, ReconSkill) — dead code; all actions now dispatch via `CoordinationEngine._handlers`.
+- `solden/core/skills/` (APSkill, CompoundSkill, ReconSkill) — dead code; all actions now dispatch via `CoordinationEngine._handlers`.
 - Env vars `AGENT_PLANNING_LOOP`, `AGENT_LEGACY_FALLBACK_ON_ERROR`, `AGENT_RUNTIME_MODEL` — removed.
 - `APDecisionService` Claude call path — retired; the 10-step rule cascade in `_compute_routing_decision` is now the single source of routing truth.
 

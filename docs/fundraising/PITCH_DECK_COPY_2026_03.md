@@ -9,7 +9,7 @@ Target raise:
 - $15M cap target
 
 Use this as the actual slide copy draft, not just a structural outline.
-For the slide-ready version, use [`PITCH_DECK_PRESENTATION_DRAFT_2026_03.md`](/Users/mombalam/Desktop/Solden.v1/docs/fundraising/PITCH_DECK_PRESENTATION_DRAFT_2026_03.md).
+For the slide-ready version, use [`PITCH_DECK_PRESENTATION_DRAFT_2026_03.md`](PITCH_DECK_PRESENTATION_DRAFT_2026_03.md).
 
 ## Slide 1 - Title
 

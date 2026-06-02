@@ -4,7 +4,7 @@ This document captures the AP v1 backend contracts used by embedded operator sur
 
 It is aligned with the canonical doctrine and launch-gate requirements in:
 
-- `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
+- `PLAN.md`
 
 ## Scope
 
@@ -185,7 +185,7 @@ This keeps both approval surfaces aligned when duplicate, late, or superseded de
 
 This document references the canonical AP state machine in:
 
-- `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
+- `PLAN.md`
 
 ### Core enforcement rules
 1. Clients may request actions, not arbitrary state assignments.
@@ -282,7 +282,7 @@ AP v1 GA requires audit completeness as a launch gate (see `PLAN.md`).
 
 This repository still contains legacy and experimental routes (including reconciliation- and Sheets-related paths). They may appear in OpenAPI docs, but they are not the canonical AP v1 workflow contract unless explicitly referenced in:
 
-- `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
+- `PLAN.md`
 - this document
 
 When there is a conflict:

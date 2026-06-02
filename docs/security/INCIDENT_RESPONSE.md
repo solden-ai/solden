@@ -37,7 +37,7 @@ business day for S3.
 | Auth failure burst | Application logs (`RequestLoggingMiddleware`) | > 50 401/403 from one IP / 5 min |
 | Health endpoint failing | External uptime monitor | 3 consecutive `/health` failures |
 | Anomalous DB activity | psycopg connection pool metrics | Pool exhaustion > 30s |
-| Vulnerability disclosure | `security@clearledgr.com` mailbox + GitHub Security Advisories | Any inbound report |
+| Vulnerability disclosure | `security@soldenai.com` mailbox + GitHub Security Advisories | Any inbound report |
 | Sub-processor incident | Vendor notification email | Any inbound notice |
 
 ## Response — first 60 minutes
@@ -92,7 +92,7 @@ business day for S3.
 
 ## Contacts
 
-- **Security reports**: `security@clearledgr.com`
+- **Security reports**: `security@soldenai.com`
 - **Customer comms during S1**: the affected tenant's `Owner` email
   (on file from signup).
 - **Regulatory authority**: per applicable GDPR supervisory authority

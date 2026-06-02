@@ -16,7 +16,7 @@ Status: `in_progress`
 
 ```bash
 PYTHONPATH=. pytest -q tests/test_e2e_ap_flow.py
-cd /Users/mombalam/Desktop/Solden.v1/ui/gmail-extension
+cd ui/gmail-extension
 npm run test:e2e-auth:evidence -- --release-id ap-v1-2026-02-25-pilot-rc1 --profile-dir "$HOME/.clearledgr-gmail-e2e-profile"
 ```
 
@@ -24,7 +24,7 @@ npm run test:e2e-auth:evidence -- --release-id ap-v1-2026-02-25-pilot-rc1 --prof
 
 - `tests/test_e2e_ap_flow.py`: `6 passed`
 - Authenticated Gmail runtime evidence: `2 passed`, report generated at:
-  - `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/GMAIL_RUNTIME_E2E.md`
+  - `docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/GMAIL_RUNTIME_E2E.md`
 
 ## Remaining for L01 DONE
 

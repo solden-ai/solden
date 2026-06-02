@@ -34,7 +34,7 @@ Bill (record view)  │  │ Standard │  │ Solden (subtab)│  │
                     with bill_id + account_id + JWT
                               │ fetch (Bearer JWT)
                               ▼
-                    api.clearledgr.com
+                    api.soldenai.com
                     GET /extension/ap-items/by-netsuite-bill/{id}?account_id=…
                               │ verify HMAC, lookup by erp_reference
                               ▼
@@ -147,7 +147,7 @@ For each tenant:
 1. Generate a strong shared secret (e.g. `openssl rand -base64 48`).
 2. Add it to the tenant's NetSuite custom record (one record per account):
    - Customization → Lists, Records & Fields → Record Types → Solden Settings → New
-   - Field `custrecord_cl_api_base`: `https://api.clearledgr.com`
+   - Field `custrecord_cl_api_base`: `https://api.soldenai.com`
    - Field `custrecord_cl_bundle_secret`: paste the secret
    - Field `custrecord_cl_org_id`: paste the tenant's Solden org_id (used in outbound webhook URL)
 3. Add the same secret to Solden's `erp_connections.credentials.webhook_secret` for that org. The same field is reused for both the panel JWT (read direction) and the outbound webhook signature (write direction).
@@ -167,16 +167,16 @@ For each tenant:
 ## Backend dependencies
 
 ### Read direction
-- **New endpoint** `GET /extension/ap-items/by-netsuite-bill/{ns_internal_id}?account_id=…` — implemented in [`clearledgr/api/netsuite_panel.py`](../../clearledgr/api/netsuite_panel.py).
+- **New endpoint** `GET /extension/ap-items/by-netsuite-bill/{ns_internal_id}?account_id=…` — implemented in [`solden/api/netsuite_panel.py`](../../solden/api/netsuite_panel.py).
 - **CORS regex** allows `https://<account>.app.netsuite.com` — see [`main.py`](../../main.py) `_resolve_cors_policy`.
 - **Strict-profile allowlist** includes the new dynamic path — see `STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS` in `main.py`.
 - **Approve / Reject / Request-info actions** call the existing `POST /extension/submit-for-approval`, `POST /extension/reject-invoice`, `POST /extension/route-low-risk-approval` endpoints. No new action routes.
 
 ### Write direction
-- **Existing endpoint reused:** `POST /erp/webhooks/netsuite/{org_id}` in [`clearledgr/api/erp_webhooks.py`](../../clearledgr/api/erp_webhooks.py). Verifies HMAC signature against `erp_connections.credentials.webhook_secret`, records audit, then calls the dispatcher.
-- **New dispatcher:** [`clearledgr/services/erp_webhook_dispatch.py`](../../clearledgr/services/erp_webhook_dispatch.py) — routes `vendorbill.create / .update / .paid / .delete` to handlers that create or advance the AP item Box. Idempotent on `erp_reference == ns_internal_id`.
+- **Existing endpoint reused:** `POST /erp/webhooks/netsuite/{org_id}` in [`solden/api/erp_webhooks.py`](../../solden/api/erp_webhooks.py). Verifies HMAC signature against `erp_connections.credentials.webhook_secret`, records audit, then calls the dispatcher.
+- **New dispatcher:** [`solden/services/erp_webhook_dispatch.py`](../../solden/services/erp_webhook_dispatch.py) — routes `vendorbill.create / .update / .paid / .delete` to handlers that create or advance the AP item Box. Idempotent on `erp_reference == ns_internal_id`.
 - **State machine bypass:** ERP-native bills enter the Box state machine at `posted_to_erp` (the bill is already in the ERP — Solden is tracking, not creating) or `needs_approval` (if NetSuite has a payment hold). `closed` on payment events.
-- **Slack approval routing:** [`clearledgr/services/erp_native_approval.py`](../../clearledgr/services/erp_native_approval.py). When a bill enters at `needs_approval`, posts a Slack card with Approve / Reject & void buttons.
+- **Slack approval routing:** [`solden/services/erp_native_approval.py`](../../solden/services/erp_native_approval.py). When a bill enters at `needs_approval`, posts a Slack card with Approve / Reject & void buttons.
   - **Approve** calls NetSuite REST API to clear `paymentHold`, then walks the Box `approved → ready_to_post → posted_to_erp`.
   - **Reject & void** calls NetSuite's `!transform/void` action (with PATCH `{voided: true}` fallback for accounts that don't expose the transform), then walks the Box `rejected → closed`. Bill stays visible in NetSuite for audit, GL impact reverses cleanly, no manual cleanup.
   - **Per-amount routing:** reads `settings_json.approval_thresholds` (same shape the email-arrival path uses). Each threshold can specify a `channel`, a list of `approver_targets[].slack_user_id`, and optional `vendors` / `entities` filters. The bill's amount picks the right threshold; matched approvers are mentioned at the top of the card so Slack pings them directly.

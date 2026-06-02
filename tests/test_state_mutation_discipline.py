@@ -29,7 +29,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SOURCE_ROOT = REPO_ROOT / "clearledgr"
+SOURCE_ROOT = REPO_ROOT / "solden"
 
 # Files that legitimately ``UPDATE ap_items`` — none of them mutate the
 # ``state`` column outside ``update_ap_item``.

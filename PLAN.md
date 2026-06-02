@@ -635,9 +635,9 @@ This matrix prevents contradictions across strategy, backlog, and assessment doc
 4. `docs/GA_LAUNCH_READINESS_TRACKER.md` must be treated as a dated report and cite the `PLAN.md` version/assumptions it assessed.
 
 ### 10.3 Current cross-doc notes (as of 2026-02-25)
-1. `/Users/mombalam/Desktop/Solden.v1/docs/GA_LAUNCH_READINESS_TRACKER.md` is a point-in-time readiness assessment and must be interpreted against this `PLAN.md` revision.
+1. `docs/GA_LAUNCH_READINESS_TRACKER.md` is a point-in-time readiness assessment and must be interpreted against this `PLAN.md` revision.
 2. Findings in dated readiness docs are valuable as engineering risk inputs, but those documents are **not** the canonical source for AP v1 doctrine or launch definitions.
-3. `/Users/mombalam/Desktop/Solden.v1/TODO_BACKLOG.md` and `/Users/mombalam/Desktop/Solden.v1/VISION.md` should be interpreted as execution and strategy inputs aligned to this `PLAN.md`.
+3. `TODO_BACKLOG.md` and `VISION.md` should be interpreted as execution and strategy inputs aligned to this `PLAN.md`.
 
 ### 10.4 Terminology normalization (mandatory)
 To avoid scope drift and false completion claims, all future docs and tickets must distinguish:

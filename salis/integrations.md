@@ -10,7 +10,7 @@ Per-surface playbook. What each third-party system expects, how we talk to it, w
 
 **What it is:** the customer's inbox. We see the invoice, we show the sidebar, we write draft replies, we apply labels. Everything the AP manager does with their day happens here.
 
-**How we connect:** OAuth with the user's Google account. Scopes listed in [`clearledgr/services/gmail_api.py`](../clearledgr/services/gmail_api.py):
+**How we connect:** OAuth with the user's Google account. Scopes listed in [`solden/services/gmail_api.py`](../solden/services/gmail_api.py):
 
 - `https://www.googleapis.com/auth/gmail.modify` — read, write drafts, modify labels.
 - `https://www.googleapis.com/auth/gmail.send` — send replies.
@@ -22,7 +22,7 @@ Tokens live in the `gmail_tokens` table, encrypted at rest with the `TOKEN_ENCRY
 **Inbound path (new email arrives):**
 
 1. Gmail notifies Google Pub/Sub with the mailbox's history ID.
-2. Pub/Sub pushes to `POST /gmail/push` ([`clearledgr/api/gmail_webhooks.py`](../clearledgr/api/gmail_webhooks.py)). OIDC JWT verification gates the route — only Google can call it.
+2. Pub/Sub pushes to `POST /gmail/push` ([`solden/api/gmail_webhooks.py`](../solden/api/gmail_webhooks.py)). OIDC JWT verification gates the route — only Google can call it.
 3. The handler enqueues an `email_received` event onto the coordination runtime's queue.
 4. The planning engine + coordination engine take over. End result: an `ap_item` row in state `received`, classified, extracted, with validation gate + AP routing decision applied.
 
@@ -56,7 +56,7 @@ Tokens live in the `gmail_tokens` table, encrypted at rest with the `TOKEN_ENCRY
 
 **Inbound (user clicks a button):**
 
-1. Slack sends a signed interactive-action payload to `POST /slack/events` ([`clearledgr/api/slack_invoices.py`](../clearledgr/api/slack_invoices.py)).
+1. Slack sends a signed interactive-action payload to `POST /slack/events` ([`solden/api/slack_invoices.py`](../solden/api/slack_invoices.py)).
 2. `slack_verify.py` checks the HMAC-SHA256 signature using the signing secret.
 3. Lookup `channel_threads` by the Slack message ID to find the Box.
 4. Dispatch an intent (`approve_invoice`, `reject_invoice`, `request_info_from_vendor`) — this enqueues an event, which the runtime plans + executes.
@@ -81,12 +81,12 @@ Tokens live in the `gmail_tokens` table, encrypted at rest with the `TOKEN_ENCRY
 
 | ERP | Auth | Connector file |
 |---|---|---|
-| QuickBooks Online | OAuth2, company_id in URL | `clearledgr/integrations/erp_quickbooks.py` |
-| Xero | OAuth2, tenant_id header | `clearledgr/integrations/erp_xero.py` |
-| NetSuite | Token-based auth (TBA) | `clearledgr/integrations/erp_netsuite.py` |
-| SAP S/4HANA | OAuth2 + CSRF token | `clearledgr/integrations/erp_sap.py` |
+| QuickBooks Online | OAuth2, company_id in URL | `solden/integrations/erp_quickbooks.py` |
+| Xero | OAuth2, tenant_id header | `solden/integrations/erp_xero.py` |
+| NetSuite | Token-based auth (TBA) | `solden/integrations/erp_netsuite.py` |
+| SAP S/4HANA | OAuth2 + CSRF token | `solden/integrations/erp_sap.py` |
 
-All four go through [`clearledgr/integrations/erp_router.py`](../clearledgr/integrations/erp_router.py). The router picks the connector by `ERPConnection.erp_type` and calls the right `post_bill_to_<erp>` function.
+All four go through [`solden/integrations/erp_router.py`](../solden/integrations/erp_router.py). The router picks the connector by `ERPConnection.erp_type` and calls the right `post_bill_to_<erp>` function.
 
 **Outbound (posting a bill):**
 
@@ -121,7 +121,7 @@ All four go through [`clearledgr/integrations/erp_router.py`](../clearledgr/inte
 
 **What it is:** the only unauthenticated HTML surface. When we need KYC docs or bank details from a vendor, we email them a magic link. They click it, land on the portal, submit the info. No login.
 
-**Entry point:** `POST /portal/onboard/{token}/submit` → [`clearledgr/api/vendor_portal.py`](../clearledgr/api/vendor_portal.py).
+**Entry point:** `POST /portal/onboard/{token}/submit` → [`solden/api/vendor_portal.py`](../solden/api/vendor_portal.py).
 
 **Auth:** magic-link tokens in `onboarding_token_store`. Tokens are single-use, scoped to one vendor session, expire in 7 days.
 
@@ -133,7 +133,7 @@ All four go through [`clearledgr/integrations/erp_router.py`](../clearledgr/inte
 - Invalid input → 400 with per-field errors.
 - Vendor submits the wrong workflow step's data → silently accepted, ignored (vendors retry with the right form).
 
-**Templates:** Jinja2 in `clearledgr/templates/`. Server-rendered HTML only — no frontend framework. Kept simple because vendors will view this on mobile browsers of wildly varying capability.
+**Templates:** Jinja2 in `solden/templates/`. Server-rendered HTML only — no frontend framework. Kept simple because vendors will view this on mobile browsers of wildly varying capability.
 
 ---
 
@@ -144,7 +144,7 @@ All four go through [`clearledgr/integrations/erp_router.py`](../clearledgr/inte
 - `services/kyc_provider.py` — interface; `MockKYCProvider` returns a canned success response.
 - `services/open_banking_provider.py` — interface; `MockOpenBankingProvider` returns a canned verification result.
 
-The vendor onboarding lifecycle events (`KYC_CHECK_COMPLETED`, `OPEN_BANKING_VERIFICATION_COMPLETED`) have planners wired ([`planning_engine.py:_plan_kyc_check_completed`](../clearledgr/core/planning_engine.py)) but no real producers until we integrate a real provider. When you wire one, the producer call site goes in the provider adapter; everything downstream just works.
+The vendor onboarding lifecycle events (`KYC_CHECK_COMPLETED`, `OPEN_BANKING_VERIFICATION_COMPLETED`) have planners wired ([`planning_engine.py:_plan_kyc_check_completed`](../solden/core/planning_engine.py)) but no real producers until we integrate a real provider. When you wire one, the producer call site goes in the provider adapter; everything downstream just works.
 
 Candidates on the shortlist: Sumsub + Plaid (US), Onfido + TrueLayer (UK/EU). Contract + integration is a Q3 2026 conversation.
 
@@ -154,8 +154,8 @@ Candidates on the shortlist: Sumsub + Plaid (US), Onfido + TrueLayer (UK/EU). Co
 
 `FEATURE_TEAMS_ENABLED=false` and `FEATURE_OUTLOOK_ENABLED=false` by default. The code exists so we can demo to a Microsoft-shop customer, but routes don't register in strict profile.
 
-- Teams: `clearledgr/api/teams_invoices.py` + `services/teams_api.py`. Adaptive Cards posted via Graph API. Inbound callbacks via a Teams bot webhook.
-- Outlook: `clearledgr/api/outlook_routes.py` + `services/outlook_autopilot.py`. Outlook Mail API + webhooks equivalent.
+- Teams: `solden/api/teams_invoices.py` + `services/teams_api.py`. Adaptive Cards posted via Graph API. Inbound callbacks via a Teams bot webhook.
+- Outlook: `solden/api/outlook_routes.py` + `services/outlook_autopilot.py`. Outlook Mail API + webhooks equivalent.
 
 Both paths go through the same `CoordinationEngine` — the surface is just a different adapter. If a customer needs it, flip the flag, deploy, and the routes register.
 
@@ -167,9 +167,9 @@ Both paths go through the same `CoordinationEngine` — the surface is just a di
 
 **Schema:** `webhook_subscriptions(id, organization_id, url, event_types, secret, is_active, description, created_at, updated_at)`.
 
-**Management:** `POST /webhooks`, `GET /webhooks`, `DELETE /webhooks/{id}`, `POST /webhooks/{id}/test` — all in [`clearledgr/api/workspace_shell.py`](../clearledgr/api/workspace_shell.py). Admin/owner role gated.
+**Management:** `POST /webhooks`, `GET /webhooks`, `DELETE /webhooks/{id}`, `POST /webhooks/{id}/test` — all in [`solden/api/workspace_shell.py`](../solden/api/workspace_shell.py). Admin/owner role gated.
 
-**Delivery:** [`clearledgr/services/webhook_delivery.py`](../clearledgr/services/webhook_delivery.py). `emit_webhook_event` looks up all subscriptions matching the `event_type`, POSTs the payload with an HMAC signature derived from the subscriber's secret. Fire-and-forget with async retry via `notification_queue` on failure.
+**Delivery:** [`solden/services/webhook_delivery.py`](../solden/services/webhook_delivery.py). `emit_webhook_event` looks up all subscriptions matching the `event_type`, POSTs the payload with an HMAC signature derived from the subscriber's secret. Fire-and-forget with async retry via `notification_queue` on failure.
 
 **Event catalog (customer-facing):**
 

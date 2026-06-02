@@ -6,7 +6,7 @@ Author: Mo
 
 ## Context
 
-The vendor portal (`clearledgr/api/vendor_portal.py`) is the **only unauthenticated surface in the product that accepts user input.** Every other input-accepting surface is gated by an authenticated JWT; the portal is gated only by a magic-link token that carries its own per-vendor scope.
+The vendor portal (`solden/api/vendor_portal.py`) is the **only unauthenticated surface in the product that accepts user input.** Every other input-accepting surface is gated by an authenticated JWT; the portal is gated only by a magic-link token that carries its own per-vendor scope.
 
 That means a vendor (who is not a Solden customer — they're the customer's vendor) submits:
 
@@ -32,7 +32,7 @@ The threat surface is narrow but real:
 
 ## Decision
 
-**Every portal form field goes through a field-specific validator in `clearledgr/core/portal_input.py` before reaching the store.**
+**Every portal form field goes through a field-specific validator in `solden/core/portal_input.py` before reaching the store.**
 
 Each validator does:
 
@@ -86,7 +86,7 @@ Each validator does:
 
 ## Reference
 
-- `clearledgr/core/portal_input.py` — the validator module.
-- `clearledgr/api/vendor_portal.py:230-316` — where the validators are called inline during `submit_kyc`.
-- `clearledgr/api/vendor_portal.py:356-412` — same for `submit_bank_details`.
+- `solden/core/portal_input.py` — the validator module.
+- `solden/api/vendor_portal.py:230-316` — where the validators are called inline during `submit_kyc`.
+- `solden/api/vendor_portal.py:356-412` — same for `submit_bank_details`.
 - `tests/test_portal_input_validation.py` — the 38-test regression fence.

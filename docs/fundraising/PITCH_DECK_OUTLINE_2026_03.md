@@ -1,6 +1,6 @@
 # Solden Pitch Deck Outline
 
-Note: working slide copy lives in [`PITCH_DECK_COPY_2026_03.md`](/Users/mombalam/Desktop/Solden.v1/docs/fundraising/PITCH_DECK_COPY_2026_03.md), and the slide-ready draft lives in [`PITCH_DECK_PRESENTATION_DRAFT_2026_03.md`](/Users/mombalam/Desktop/Solden.v1/docs/fundraising/PITCH_DECK_PRESENTATION_DRAFT_2026_03.md). This file remains the structural outline.
+Note: working slide copy lives in [`PITCH_DECK_COPY_2026_03.md`](PITCH_DECK_COPY_2026_03.md), and the slide-ready draft lives in [`PITCH_DECK_PRESENTATION_DRAFT_2026_03.md`](PITCH_DECK_PRESENTATION_DRAFT_2026_03.md). This file remains the structural outline.
 
 Date: 2026-03-23
 

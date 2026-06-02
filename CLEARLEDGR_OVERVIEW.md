@@ -68,7 +68,7 @@ Each workflow earns the data and trust to run the next. The Box model generalize
 ## Contact
 
 **Mo Mbalam** · CEO & Co-founder
-mo@clearledgr.com · +31 6 18 84 81 96 · clearledgr.com
+mo@soldenai.com · +31 6 18 84 81 96 · soldenai.com
 
 Solden Technologies Ltd. · Registered in England & Wales
 
@@ -82,4 +82,4 @@ Solden Technologies Ltd. · Registered in England & Wales
 
 Solden is raising a €2M pre-seed round on a €18M post-money SAFE cap. The round funds the team to seed-ready milestones: first paying customer live (Q3 2026), ten paying customers (Q1 2027), commission clawback V1.2 in production with Booking.com, and €1M ARR with the AR module scoped from six months of AP data (Q2 2027).
 
-The round is the minimum capital required to build the platform to a clean seed story. Investor contact: mo@clearledgr.com.
+The round is the minimum capital required to build the platform to a clean seed story. Investor contact: mo@soldenai.com.

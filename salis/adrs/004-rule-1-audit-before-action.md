@@ -18,7 +18,7 @@ The naive "log after you act" pattern — log it when it succeeds, log the failu
 
 **Rule 1: every agent action writes its timeline entry BEFORE it executes.**
 
-Implemented at `clearledgr/core/coordination_engine.py:375` (`_pre_write`):
+Implemented at `solden/core/coordination_engine.py:375` (`_pre_write`):
 
 1. The engine writes an `agent_action:{name}:executing` audit row with the action's full parameters.
 2. Only after that row commits does it dispatch to the handler.
@@ -50,6 +50,6 @@ State-transitioning methods (e.g., `transition_onboarding_session_state`) follow
 
 ## Reference
 
-Primary source: `clearledgr/core/coordination_engine.py:375` (`_pre_write`) and `clearledgr/core/coordination_engine.py:73` (`_Rule1PreWriteFailed`).
-State+audit atomicity reference implementation: `clearledgr/core/stores/vendor_store.py:1785` (`transition_onboarding_session_state`) — copies state UPDATE + audit INSERT into one transaction.
+Primary source: `solden/core/coordination_engine.py:375` (`_pre_write`) and `solden/core/coordination_engine.py:73` (`_Rule1PreWriteFailed`).
+State+audit atomicity reference implementation: `solden/core/stores/vendor_store.py:1785` (`transition_onboarding_session_state`) — copies state UPDATE + audit INSERT into one transaction.
 Regression fence: `tests/test_box_invariants.py`.

@@ -140,13 +140,13 @@ Redis is missing. See CC7.4 in [CONTROLS.md](CONTROLS.md).
 
 **Q: How are production secrets stored?**
 Railway environment variables (encrypted at rest, role-gated access).
-No secrets in source control. `clearledgr/core/secrets.py:require_secret()`
+No secrets in source control. `solden/core/secrets.py:require_secret()`
 fails closed in production if a required secret is missing.
 
 **Q: Logging + monitoring?**
 Structured request logging via `RequestLoggingMiddleware`. Sentry for
 errors with PII scrubbing applied at the SDK boundary
-(`build_sentry_before_send` in `clearledgr/core/sentry_config.py`).
+(`build_sentry_before_send` in `solden/core/sentry_config.py`).
 
 **Q: Incident response plan?**
 Yes. See [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md). 72-hour breach
@@ -206,4 +206,4 @@ contracted retention window.
 
 ## Contact
 
-For questions not covered here, email `security@clearledgr.com`.
+For questions not covered here, email `security@soldenai.com`.

@@ -416,7 +416,7 @@ async function notifyProspectEmail(lead) {
 //
 // The marketing site shows an "agent activity" ribbon in the hero.
 // In production we'd subscribe to a sandbox tenant on the real
-// product (`api.clearledgr.com/api/workspace/dashboard/stream`).
+// product (`api.soldenai.com/api/workspace/dashboard/stream`).
 // Until that's wired, we synthesize a believable demo loop here
 // so the page feels live in production. Each connected client
 // gets a personal SSE stream; the server emits one frame every

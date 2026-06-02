@@ -23,7 +23,7 @@ Recommended baseline:
 ## 2. Prepare authenticated Gmail profile
 
 1. On the runner host, create a dedicated profile directory (example):
-   - `/opt/clearledgr/gmail-e2e-profile`
+   - `/opt/solden/gmail-e2e-profile`
 2. Launch Chrome/Chromium once with that profile.
 3. Sign in to the controlled Gmail test account.
 4. Confirm Gmail inbox loads successfully from that profile.
@@ -51,9 +51,9 @@ Repository -> Settings -> Secrets and variables -> Actions:
 
 ```bash
 gh auth login -h github.com
-gh secret set GMAIL_E2E_PROFILE_DIR --repo clearledgr/Clearledgr-AP --body "/opt/clearledgr/gmail-e2e-profile"
-gh variable set GMAIL_E2E_URL --repo clearledgr/Clearledgr-AP --body "https://mail.google.com/mail/u/0/#inbox"
-gh variable set GMAIL_E2E_TIMEOUT_MS --repo clearledgr/Clearledgr-AP --body "180000"
+gh secret set GMAIL_E2E_PROFILE_DIR --repo solden/Clearledgr-AP --body "/opt/solden/gmail-e2e-profile"
+gh variable set GMAIL_E2E_URL --repo solden/Clearledgr-AP --body "https://mail.google.com/mail/u/0/#inbox"
+gh variable set GMAIL_E2E_TIMEOUT_MS --repo solden/Clearledgr-AP --body "180000"
 ```
 
 ## 4. Validate before first nightly run
@@ -78,7 +78,7 @@ From runner host:
 cd /path/to/Clearledgr-AP/ui/gmail-extension
 npm ci
 npx playwright install chromium
-GMAIL_E2E_PROFILE_DIR=/opt/clearledgr/gmail-e2e-profile npm run test:e2e-runner:preflight
+GMAIL_E2E_PROFILE_DIR=/opt/solden/gmail-e2e-profile npm run test:e2e-runner:preflight
 ```
 
 ## 6. Failure handling

@@ -23,7 +23,7 @@ The obvious implementation is a dedicated `idempotency_responses` table. We cons
 - `payload_json.response` = the cached response body
 - `box_id` + `box_type` = the action's Box context, or a synthetic `api_action` shell for endpoints without a Box
 
-Helper module: `clearledgr/core/idempotency.py` — `load_idempotent_response`, `save_idempotent_response`, `resolve_idempotency_key`.
+Helper module: `solden/core/idempotency.py` — `load_idempotent_response`, `save_idempotent_response`, `resolve_idempotency_key`.
 
 Wired into 8 action endpoints:
 - `POST /extension/post-to-erp`
@@ -68,6 +68,6 @@ Wired into 8 action endpoints:
 
 ## Reference
 
-Primary surface: `clearledgr/core/idempotency.py`, `clearledgr/core/stores/ap_store.py:1648` (`append_audit_event` with idempotency pre-check).
+Primary surface: `solden/core/idempotency.py`, `solden/core/stores/ap_store.py:1648` (`append_audit_event` with idempotency pre-check).
 Regression fence: `tests/test_endpoint_idempotency.py` (11 tests, helper-level + endpoint-level).
 Design note: header wins over body field (Stripe convention). See `resolve_idempotency_key`.

@@ -9,14 +9,14 @@ AP is the current wedge, not the full product boundary.
 
 Use these documents as source of truth:
 
-1. `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
-2. `/Users/mombalam/Desktop/Solden.v1/docs/HOW_IT_WORKS.md`
-3. `/Users/mombalam/Desktop/Solden.v1/docs/V1_EMBEDDED_WORKER_EXPERIENCE.md`
-4. `/Users/mombalam/Desktop/Solden.v1/docs/V1_BACKEND_CONTRACTS.md`
-5. `/Users/mombalam/Desktop/Solden.v1/docs/API_REFERENCE.md`
-6. `/Users/mombalam/Desktop/Solden.v1/docs/WEDGE_QUALITY_SCORECARD.md`
+1. [PLAN.md](PLAN.md)
+2. [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md)
+3. [docs/V1_EMBEDDED_WORKER_EXPERIENCE.md](docs/V1_EMBEDDED_WORKER_EXPERIENCE.md)
+4. [docs/V1_BACKEND_CONTRACTS.md](docs/V1_BACKEND_CONTRACTS.md)
+5. [docs/API_REFERENCE.md](docs/API_REFERENCE.md)
+6. [docs/WEDGE_QUALITY_SCORECARD.md](docs/WEDGE_QUALITY_SCORECARD.md)
 
-If any document conflicts with `/Users/mombalam/Desktop/Solden.v1/PLAN.md`, `PLAN.md` wins.
+If any document conflicts with [PLAN.md](PLAN.md), `PLAN.md` wins.
 
 ## Current Status (2026-03-22)
 
@@ -30,10 +30,10 @@ AP v1 is already implemented as a real product surface in this codebase. The shi
 
 The main remaining gap to launch is not core product implementation. It is live-environment proof and operating discipline: staging/sandbox verification, deployment/config freeze, post-launch monitoring ownership, and continued product polish.
 
-Use this README plus `/Users/mombalam/Desktop/Solden.v1/docs/GA_LAUNCH_READINESS_TRACKER.md` for current product and launch posture. Treat `/Users/mombalam/Desktop/Solden.v1/TODOS.md` as deferred work only, not as an implementation-completeness ledger.
-For Railway deployment, use `/Users/mombalam/Desktop/Solden.v1/docs/RAILWAY_DEPLOYMENT.md`.
+Use this README plus [docs/GA_LAUNCH_READINESS_TRACKER.md](docs/GA_LAUNCH_READINESS_TRACKER.md) for current product and launch posture. Treat [TODOS.md](TODOS.md) as deferred work only, not as an implementation-completeness ledger.
+For Railway deployment, use [docs/RAILWAY_DEPLOYMENT.md](docs/RAILWAY_DEPLOYMENT.md).
 
-For pilot hardening and wedge-truth evaluation, use `/Users/mombalam/Desktop/Solden.v1/docs/WEDGE_QUALITY_SCORECARD.md` as the operating scorecard for reliability, context-switch reduction, and elimination of approval chasing / ERP re-entry.
+For pilot hardening and wedge-truth evaluation, use [docs/WEDGE_QUALITY_SCORECARD.md](docs/WEDGE_QUALITY_SCORECARD.md) as the operating scorecard for reliability, context-switch reduction, and elimination of approval chasing / ERP re-entry.
 
 ## Product Direction (Locked)
 
@@ -89,7 +89,7 @@ Reason capture is inline and non-blocking (reason sheet); native browser `prompt
 UI hardening guardrails:
 
 1. Extension ships from `dist/inboxsdk-layer.js` only, with CI parity checks that fail on stale or off-doctrine bundle content.
-2. Legacy extension popup/options/demo surfaces are removed from shipped root and archived under `/Users/mombalam/Desktop/Solden.v1/docs/legacy/gmail-extension-ui/`.
+2. Legacy extension popup/options/demo surfaces are removed from shipped root and archived under [docs/legacy/gmail-extension-ui](docs/legacy/gmail-extension-ui).
 3. Work audit copy is backend-owned from `/api/ap/items/{ap_item_id}/audit` (`operator_*` fields); Gmail fallback copy stays generic-safe and does not display raw reason codes.
 4. Gmail extension build/watch now uses Bun locally; `npm run build` and `npm run start` delegate to Bun-backed bundling while preserving audited `dist` parity checks.
 
@@ -130,7 +130,7 @@ Solden runs one core agent runtime and domain skills:
 
 Canonical runtime contracts are implemented in:
 
-- `/Users/mombalam/Desktop/Solden.v1/clearledgr/core/finance_contracts.py`
+- [solden/core/finance_contracts.py](solden/core/finance_contracts.py)
   - `SkillRequest`
   - `SkillResponse`
   - `ActionExecution`
@@ -139,7 +139,7 @@ Canonical runtime contracts are implemented in:
 
 ERP API-first adapter contract is provider-agnostic and shared across NetSuite/QuickBooks/Xero/SAP via:
 
-- `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/erp/contracts.py`
+- [solden/services/erp/contracts.py](solden/services/erp/contracts.py)
   - `ERPBillAdapter.validate(payload)`
   - `ERPBillAdapter.post(organization_id, bill, ...)`
   - `ERPBillAdapter.get_status(organization_id, external_ref)`
@@ -149,24 +149,24 @@ ERP API-first adapter contract is provider-agnostic and shared across NetSuite/Q
 
 ### Backend
 
-- `/Users/mombalam/Desktop/Solden.v1/main.py`
-- `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/invoice_workflow.py`
-- `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/finance_agent_runtime.py`
-- `/Users/mombalam/Desktop/Solden.v1/clearledgr/services/finance_skills/`
-- `/Users/mombalam/Desktop/Solden.v1/clearledgr/api/`
+- [main.py](main.py)
+- [solden/services/invoice_workflow.py](solden/services/invoice_workflow.py)
+- [solden/services/finance_agent_runtime.py](solden/services/finance_agent_runtime.py)
+- [solden/services/finance_skills](solden/services/finance_skills)
+- [solden/api](solden/api)
 
 ### Embedded Surfaces
 
-- Gmail extension: `/Users/mombalam/Desktop/Solden.v1/ui/gmail-extension/`
-- Slack app: `/Users/mombalam/Desktop/Solden.v1/ui/slack/`
+- Gmail extension: [ui/gmail-extension](ui/gmail-extension)
+- Slack app: [ui/slack](ui/slack)
 - Optional workspace shell surface: served from `/workspace` (when enabled), but it is not the canonical daily operator shell
 
 ### Launch and Readiness Docs
 
-- Getting started: `/Users/mombalam/Desktop/Solden.v1/docs/GETTING_STARTED.md`
-- Runbooks: `/Users/mombalam/Desktop/Solden.v1/docs/RUNBOOKS.md`
-- Staging drill runbook: `/Users/mombalam/Desktop/Solden.v1/docs/STAGING_DRILL_RUNBOOK.md`
-- GA evidence process: `/Users/mombalam/Desktop/Solden.v1/docs/GA_READINESS_EVIDENCE_PROCESS.md`
+- Getting started: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
+- Runbooks: [docs/RUNBOOKS.md](docs/RUNBOOKS.md)
+- Staging drill runbook: [docs/STAGING_DRILL_RUNBOOK.md](docs/STAGING_DRILL_RUNBOOK.md)
+- GA evidence process: [docs/GA_READINESS_EVIDENCE_PROCESS.md](docs/GA_READINESS_EVIDENCE_PROCESS.md)
 - Admin Ops APIs:
   - `GET /api/workspace/ops/connector-readiness` (per-connector readiness + blockers for NetSuite/QuickBooks/Xero/SAP)
   - `GET /api/workspace/ops/learning-calibration` (latest tenant calibration snapshot)
@@ -207,7 +207,7 @@ Solden is now deployment-ready for a split Railway topology:
 - managed Postgres
 - Redis strongly recommended
 
-Use `/Users/mombalam/Desktop/Solden.v1/docs/RAILWAY_DEPLOYMENT.md` for the exact env, Slack/Gmail callback URLs, and Gmail extension build command.
+Use [docs/RAILWAY_DEPLOYMENT.md](docs/RAILWAY_DEPLOYMENT.md) for the exact env, Slack/Gmail callback URLs, and Gmail extension build command.
 
 ### 5. Run tests
 
@@ -215,12 +215,12 @@ Tests run against Postgres by default so the prod dialect is exercised in every 
 
 ```bash
 # Option A — you already have a local Postgres running (brew services, Postgres.app, etc.)
-createdb -h localhost -p 5432 clearledgr_test
-TEST_DATABASE_URL="postgresql://localhost:5432/clearledgr_test" pytest -q
+createdb -h localhost -p 5432 solden_test
+TEST_DATABASE_URL="postgresql://localhost:5432/solden_test" pytest -q
 
 # Option B — use docker-compose for infra, point tests at it
 docker-compose up -d db
-TEST_DATABASE_URL="postgresql://clearledgr:clearledgr@localhost:5432/clearledgr" pytest -q
+TEST_DATABASE_URL="postgresql://solden:solden@localhost:5432/solden" pytest -q
 
 # Option C — let the test harness spin a throwaway container per session
 #           (requires Docker daemon; no TEST_DATABASE_URL needed)
@@ -247,7 +247,7 @@ node --test ui/gmail-extension/tests/inboxsdk-layer-ui.test.cjs ui/gmail-extensi
 Optional real-browser Gmail harness:
 
 ```bash
-cd /Users/mombalam/Desktop/Solden.v1/ui/gmail-extension
+cd ui/gmail-extension
 npm run test:browser-harness
 ```
 
@@ -256,14 +256,14 @@ If Playwright/Chromium is unavailable locally, the harness test reports a skip w
 CI-enforced deterministic harness (fails if browser prerequisites are missing):
 
 ```bash
-cd /Users/mombalam/Desktop/Solden.v1/ui/gmail-extension
+cd ui/gmail-extension
 npm run test:browser-harness:ci
 ```
 
 Authenticated Gmail runtime evidence capture (for staging/pilot readiness):
 
 ```bash
-cd /Users/mombalam/Desktop/Solden.v1/ui/gmail-extension
+cd ui/gmail-extension
 npm run test:e2e-auth:evidence -- --release-id ap-v1-2026-03-01-pilot-rc1
 ```
 
@@ -274,13 +274,13 @@ This writes:
 Launch evidence gate check (pilot mode):
 
 ```bash
-python3 /Users/mombalam/Desktop/Solden.v1/scripts/validate_launch_evidence.py --mode pilot --json
+python3 scripts/validate_launch_evidence.py --mode pilot --json
 ```
 
 GitHub workflows:
 - `/.github/workflows/gmail-extension-browser-harness.yml` runs deterministic browser harness on PR/push for extension changes.
 - `/.github/workflows/gmail-runtime-smoke-nightly.yml` runs nightly authenticated Gmail runtime smoke in a controlled self-hosted environment and uploads evidence artifacts.
-- Runner setup/playbook: `/Users/mombalam/Desktop/Solden.v1/docs/GMAIL_RUNTIME_RUNNER_SETUP.md`
+- Runner setup/playbook: [docs/GMAIL_RUNTIME_RUNNER_SETUP.md](docs/GMAIL_RUNTIME_RUNNER_SETUP.md)
 
 ## Phase 7 Release Gate
 
@@ -321,7 +321,7 @@ AP v1 must enforce:
 
 This repo still contains legacy and experimental modules/docs from earlier directions.
 
-They are non-canonical for AP v1 unless explicitly referenced by `/Users/mombalam/Desktop/Solden.v1/PLAN.md`.
+They are non-canonical for AP v1 unless explicitly referenced by [PLAN.md](PLAN.md).
 
 ## License
 

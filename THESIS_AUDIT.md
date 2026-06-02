@@ -185,20 +185,20 @@ These are commitments where the codebase matches the thesis and can be cited as 
 - **Solden Home** (custom route via `sdk.Router.handleCustomRoute`) — [inboxsdk-layer.js:2144](ui/gmail-extension/dist/inboxsdk-layer.js)
 - **NavMenu** (`sdk.NavMenu.addNavItem()`) — [inboxsdk-layer.js:1916-1927](ui/gmail-extension/dist/inboxsdk-layer.js)
 - **Inbox stage labels** (`sdk.Lists.registerThreadRowViewHandler()`) — [inboxsdk-layer.js:888-890](ui/gmail-extension/dist/inboxsdk-layer.js)
-- **Gmail label hierarchy** via Gmail API — [clearledgr/services/gmail_labels.py:23-38](clearledgr/services/gmail_labels.py)
+- **Gmail label hierarchy** via Gmail API — [solden/services/gmail_labels.py:23-38](solden/services/gmail_labels.py)
 - **Kanban pipeline routes** — [inboxsdk-layer.js:2022-2144](ui/gmail-extension/dist/inboxsdk-layer.js)
-- **Confidence model** (95% threshold, per-vendor calibration) — [clearledgr/core/ap_confidence.py](clearledgr/core/ap_confidence.py)
-- **Vendor-level duplicate detection**, 90-day window — [clearledgr/services/cross_invoice_analysis.py:220-246](clearledgr/services/cross_invoice_analysis.py)
-- **Amount range check vs vendor history** — [clearledgr/services/ap_decision.py:71-155](clearledgr/services/ap_decision.py)
-- **PO reference existence check before matching** — [clearledgr/services/purchase_orders.py:527-544](clearledgr/services/purchase_orders.py)
-- **Invoice PDFs not stored** — only `attachment_url` column; no binary blobs — [clearledgr/core/stores/ap_store.py:55](clearledgr/core/stores/ap_store.py)
-- **Timeline as audit trail** — [clearledgr/core/database.py:690](clearledgr/core/database.py) (`audit_events` table)
-- **ERP OAuth tokens Fernet-encrypted** with customer-specific keys — [clearledgr/core/stores/auth_store.py:42-83](clearledgr/core/stores/auth_store.py)
-- **7-year default retention** — [clearledgr/core/org_config.py:113](clearledgr/core/org_config.py) (`data_retention_days: 2555`)
-- **Three subscription tiers defined** with pricing — [clearledgr/services/subscription.py:21-26](clearledgr/services/subscription.py)
-- **Rollback controls API** with TTL — [clearledgr/core/launch_controls.py:80-145](clearledgr/core/launch_controls.py)
-- **Four-step onboarding** persisted to DB — [clearledgr/api/onboarding.py:151-746](clearledgr/api/onboarding.py)
-- **Read Only seat role** exists — [clearledgr/core/auth.py:427](clearledgr/core/auth.py)
+- **Confidence model** (95% threshold, per-vendor calibration) — [solden/core/ap_confidence.py](solden/core/ap_confidence.py)
+- **Vendor-level duplicate detection**, 90-day window — [solden/services/cross_invoice_analysis.py:220-246](solden/services/cross_invoice_analysis.py)
+- **Amount range check vs vendor history** — [solden/services/ap_decision.py:71-155](solden/services/ap_decision.py)
+- **PO reference existence check before matching** — [solden/services/purchase_orders.py:527-544](solden/services/purchase_orders.py)
+- **Invoice PDFs not stored** — only `attachment_url` column; no binary blobs — [solden/core/stores/ap_store.py:55](solden/core/stores/ap_store.py)
+- **Timeline as audit trail** — [solden/core/database.py:690](solden/core/database.py) (`audit_events` table)
+- **ERP OAuth tokens Fernet-encrypted** with customer-specific keys — [solden/core/stores/auth_store.py:42-83](solden/core/stores/auth_store.py)
+- **7-year default retention** — [solden/core/org_config.py:113](solden/core/org_config.py) (`data_retention_days: 2555`)
+- **Three subscription tiers defined** with pricing — [solden/services/subscription.py:21-26](solden/services/subscription.py)
+- **Rollback controls API** with TTL — [solden/core/launch_controls.py:80-145](solden/core/launch_controls.py)
+- **Four-step onboarding** persisted to DB — [solden/api/onboarding.py:151-746](solden/api/onboarding.py)
+- **Read Only seat role** exists — [solden/core/auth.py:427](solden/core/auth.py)
 
 ---
 
@@ -215,8 +215,8 @@ These are the gaps that could cause a production incident or violate the thesis'
 **Resolution:** Phase 1.1 (`ccae27b`) bound the LLM to the deterministic gate via four independent enforcement layers:
 
 1. **Layer 1 — Anthropic tool-use enum constraint.** `APDecisionService._call_claude` now sends a forced `tool_choice` for a `record_ap_decision` tool whose `recommendation` enum is dynamically narrowed to `["needs_info", "escalate", "reject"]` (no `approve`) when the gate has any failing reason code. Claude is structurally prevented from emitting `approve` on a failed gate at the API surface.
-2. **Layer 2 — `enforce_gate_constraint` service clamp.** A pure helper in `clearledgr/services/ap_decision.py` clamps any residual `approve` + failed-gate combo to `escalate`, sets `gate_override=True`, and preserves `original_recommendation` for audit. Runs on all three `decide()` return paths (Claude success, Claude exception → fallback, no-API-key → fallback).
-3. **Layer 3 — Agent planning-loop handlers.** `_handle_get_ap_decision` and `_handle_execute_routing` in `clearledgr/core/skills/ap_skill.py` thread `validation_gate` through, re-evaluate server-side if missing, and apply `enforce_gate_constraint` before building the pre-computed `APDecision`. Closes the Path B (planning loop) bypass.
+2. **Layer 2 — `enforce_gate_constraint` service clamp.** A pure helper in `solden/services/ap_decision.py` clamps any residual `approve` + failed-gate combo to `escalate`, sets `gate_override=True`, and preserves `original_recommendation` for audit. Runs on all three `decide()` return paths (Claude success, Claude exception → fallback, no-API-key → fallback).
+3. **Layer 3 — Agent planning-loop handlers.** `_handle_get_ap_decision` and `_handle_execute_routing` in `solden/core/skills/ap_skill.py` thread `validation_gate` through, re-evaluate server-side if missing, and apply `enforce_gate_constraint` before building the pre-computed `APDecision`. Closes the Path B (planning loop) bypass.
 4. **Layer 4 — Workflow narrow-waist.** `process_new_invoice` re-runs `enforce_gate_constraint` on the resolved decision regardless of which path produced it, and emits an `llm_gate_override_applied` audit event with the pre/post recommendation, reason codes, and actor.
 
 **Verification:** [tests/test_gate_constraint_enforcement.py](tests/test_gate_constraint_enforcement.py) — 23 tests covering the matrix, the prompt, the wire payload, the service, the planning-loop handlers, and the workflow waist.
@@ -229,14 +229,14 @@ These are the gaps that could cause a production incident or violate the thesis'
 
 **Resolution:** Phase 1.4 shipped the full mechanism:
 
-- **New `REVERSED` state** in `clearledgr/core/ap_states.py` with `posted_to_erp → reversed → closed` transitions. `closed` remains terminal; `reversed → posted_to_erp` is structurally forbidden.
+- **New `REVERSED` state** in `solden/core/ap_states.py` with `posted_to_erp → reversed → closed` transitions. `closed` remains terminal; `reversed → posted_to_erp` is structurally forbidden.
 - **`override_windows` table** (migration v11) tracks every open window with `id, ap_item_id, organization_id, erp_reference, erp_type, action_type, posted_at, expires_at, state, slack_channel, slack_message_ts, reversed_at/_by/_reason/_ref, failure_reason`. Composite indexes on `(state, expires_at)` and `(action_type, state, expires_at)` keep the reaper query fast.
-- **`OverrideWindowService`** ([clearledgr/services/override_window.py](clearledgr/services/override_window.py)) owns the lifecycle: `open_window`, `attempt_reversal`, `expire_window`, `is_window_expired`, `time_remaining_seconds`. Reads the configured duration from `settings_json["workflow_controls"]["override_window_minutes"]` as a per-action dict (Phase 1.4 supplement, `4a2e8d7`).
-- **`OverrideWindowObserver`** in [clearledgr/services/state_observers.py](clearledgr/services/state_observers.py) reacts to `posted_to_erp` transitions: opens the window with `action_type="erp_post"`, posts the Slack undo card, persists the message refs.
-- **Background reaper** in [clearledgr/services/agent_background.py](clearledgr/services/agent_background.py) — dedicated 60-second loop with crash supervision. Independent from the main 15-min loop so the reaper can keep cadence tight. App startup runs a one-shot sweep so windows that expired during downtime are cleaned up before normal cadence resumes.
-- **Slack undo card builders** in [clearledgr/services/slack_cards.py](clearledgr/services/slack_cards.py) — pure Block Kit with a danger-styled button + confirm dialog, plus update helpers for the reversed/finalized/failed states.
-- **Slack interactive handler** in [clearledgr/api/slack_invoices.py](clearledgr/api/slack_invoices.py) — `undo_post_*` action_id routes through the canonical contract parser to a new `_handle_undo_post_action` that calls `OverrideWindowService.attempt_reversal` and updates the card to the resulting state.
-- **REST API** `POST /api/ap/items/{ap_item_id}/reverse` in [clearledgr/api/ap_items_action_routes.py](clearledgr/api/ap_items_action_routes.py) for the non-Slack ops path (Gmail sidebar, admin console, CLI). Returns 200 / 410 Gone (expired) / 404 (no window) / 502 (ERP rejected) with structured detail.
+- **`OverrideWindowService`** ([solden/services/override_window.py](solden/services/override_window.py)) owns the lifecycle: `open_window`, `attempt_reversal`, `expire_window`, `is_window_expired`, `time_remaining_seconds`. Reads the configured duration from `settings_json["workflow_controls"]["override_window_minutes"]` as a per-action dict (Phase 1.4 supplement, `4a2e8d7`).
+- **`OverrideWindowObserver`** in [solden/services/state_observers.py](solden/services/state_observers.py) reacts to `posted_to_erp` transitions: opens the window with `action_type="erp_post"`, posts the Slack undo card, persists the message refs.
+- **Background reaper** in [solden/services/agent_background.py](solden/services/agent_background.py) — dedicated 60-second loop with crash supervision. Independent from the main 15-min loop so the reaper can keep cadence tight. App startup runs a one-shot sweep so windows that expired during downtime are cleaned up before normal cadence resumes.
+- **Slack undo card builders** in [solden/services/slack_cards.py](solden/services/slack_cards.py) — pure Block Kit with a danger-styled button + confirm dialog, plus update helpers for the reversed/finalized/failed states.
+- **Slack interactive handler** in [solden/api/slack_invoices.py](solden/api/slack_invoices.py) — `undo_post_*` action_id routes through the canonical contract parser to a new `_handle_undo_post_action` that calls `OverrideWindowService.attempt_reversal` and updates the card to the resulting state.
+- **REST API** `POST /api/ap/items/{ap_item_id}/reverse` in [solden/api/ap_items_action_routes.py](solden/api/ap_items_action_routes.py) for the non-Slack ops path (Gmail sidebar, admin console, CLI). Returns 200 / 410 Gone (expired) / 404 (no window) / 502 (ERP rejected) with structured detail.
 - **Per-action duration tiers** (Phase 1.4 supplement): config dict shape `{"erp_post": 15, "default": 15, "payment_execution": 60, ...}`. Future autonomous actions register their own observers + action_type strings without schema migration.
 
 **Verification:** [tests/test_override_window.py](tests/test_override_window.py) — 52 tests across state machine, store, service lifecycle, per-action duration lookup, observer, reaper (including Slack failure resilience), Slack handler, and REST API HTTP semantics.
@@ -247,7 +247,7 @@ These are the gaps that could cause a production incident or violate the thesis'
 
 **Original gap:** No reversal capability anywhere in the connector layer. Mass failure recovery was impossible by design.
 
-**Resolution:** Phase 1.3 (`bb68ecb`) added a uniform `reverse_bill()` dispatcher in [clearledgr/integrations/erp_router.py](clearledgr/integrations/erp_router.py) plus per-ERP implementations:
+**Resolution:** Phase 1.3 (`bb68ecb`) added a uniform `reverse_bill()` dispatcher in [solden/integrations/erp_router.py](solden/integrations/erp_router.py) plus per-ERP implementations:
 
 - **QuickBooks Online** — soft-delete via `POST /v3/company/{realmId}/bill?operation=delete` with optimistic-locking SyncToken. QBO Bills don't support void (voidable entities are Invoices/Sales Receipts/Bill Payments — not Bills), so delete is the only supported reversal. Stale-token edge case handled transparently: connector refetches via REST GET and retries once.
 - **Xero** — void via `POST /api.xro/2.0/Invoices/{InvoiceID}` with `Status=VOIDED`. "Payment allocated" errors translated to `payment_already_applied`.
@@ -285,7 +285,7 @@ This section was the ship-blocker cluster for enterprise onboarding. Every item 
 - **Detection** — `IbanChangeFreezeService.detect_and_maybe_freeze` runs during invoice validation (check 4c in `invoice_validation.py`). Reads the vendor's current encrypted bank details, diffs field-by-field against the inbound invoice's bank details via `diff_bank_details_field_names` (silence-tolerant — only flags when both sides have a value). Any mismatch triggers an auto-freeze: the pending IBAN is encrypted into `pending_bank_details_encrypted`, `iban_change_pending` flips true, `iban_change_detected_at` is stamped, and `iban_change_verification_state` starts at `pending`.
 - **Hard payment hold** — New check 4d in `invoice_validation.py` adds an `iban_change_pending` blocking reason code to every invoice for a frozen vendor, including invoices that don't themselves involve bank details. No path to bypass without a CFO completing or rejecting the freeze.
 - **Three-factor verification** — `record_factor` persists `email_domain_factor`, `phone_factor`, `sign_off_factor` independently with actor + timestamp. `complete_freeze` fails closed unless all three factors are recorded. `reject_freeze` clears the pending details and writes a `iban_change_freeze_rejected` audit event.
-- **CFO-only API** — [clearledgr/api/iban_verification.py](clearledgr/api/iban_verification.py) exposes 6 endpoints: GET status, POST factor recording (×3), POST complete, POST reject. Every mutation requires `require_cfo`. Cross-tenant access blocked via `_assert_same_org`.
+- **CFO-only API** — [solden/api/iban_verification.py](solden/api/iban_verification.py) exposes 6 endpoints: GET status, POST factor recording (×3), POST complete, POST reject. Every mutation requires `require_cfo`. Cross-tenant access blocked via `_assert_same_org`.
 - **Plaintext-free audit** — Every audit event (`iban_change_freeze_started`, `iban_change_factor_recorded`, `iban_change_freeze_lifted`, `iban_change_freeze_rejected`) carries the vendor name + field names + actor + factor code, never the IBAN value itself.
 - **Derived `iban_verified`** — The vendor KYC API (#19) computes `iban_verified = bool(bank_details_encrypted) AND NOT iban_change_pending` at read time — no duplicate source of truth, no stale "verified" flag lingering through a freeze.
 
@@ -299,7 +299,7 @@ This section was the ship-blocker cluster for enterprise onboarding. Every item 
 
 **Resolution:** Phase 2.1.a shipped a pure-helper tokenisation layer plus a hard-cutover migration:
 
-- **[clearledgr/core/stores/bank_details.py](clearledgr/core/stores/bank_details.py)** — new helper module with `BANK_DETAIL_FIELDS`, `normalize_bank_details`, `encrypt_bank_details`, `decrypt_bank_details`, `mask_bank_details`, `diff_bank_details_field_names`. Encryption uses the same Fernet key derivation as `_SoldenDBBase._encrypt_secret` / `_decrypt_secret`. Masking produces `GB82 **** **** **** 5432` (IBAN), `**-**-00` (sort code), `A*** T****** L**` (holder name).
+- **[solden/core/stores/bank_details.py](solden/core/stores/bank_details.py)** — new helper module with `BANK_DETAIL_FIELDS`, `normalize_bank_details`, `encrypt_bank_details`, `decrypt_bank_details`, `mask_bank_details`, `diff_bank_details_field_names`. Encryption uses the same Fernet key derivation as `_SoldenDBBase._encrypt_secret` / `_decrypt_secret`. Masking produces `GB82 **** **** **** 5432` (IBAN), `**-**-00` (sort code), `A*** T****** L**` (holder name).
 - **Migration v13** — adds `bank_details_encrypted` columns to both `ap_items` and `vendor_profiles`, backfills from existing `metadata` JSON plaintext, then **strips the plaintext in the same transaction**. No dual-write window.
 - **Store accessors** — `VendorStore` gained `get_vendor_bank_details` (authenticated full read), `get_vendor_bank_details_masked` (default UI read — always masked), `set_vendor_bank_details` (encrypts then writes). `APStore` matches for invoice-scoped bank details.
 - **Silence-tolerant diff** — `diff_bank_details_field_names` only flags fields where both sides have a value, preventing false-positive freezes on first-time bank detail capture. This is the primitive that powers check 4c in the validation gate for IBAN change detection (#5).
@@ -320,13 +320,13 @@ This section was the ship-blocker cluster for enterprise onboarding. Every item 
 | Payment amount ceiling | ✅ Blocking | New `payment_ceiling_exceeded` reason code in `_evaluate_deterministic_validation`. FX-converted to org base currency via `fx_conversion.convert`. Fail-closed on FX outage (`fraud_control_fx_unavailable`). Default $10k USD, configurable per org. |
 | First payment hold | ✅ Blocking | New `first_payment_hold` reason code blocks brand-new vendors (`invoice_count == 0` or no profile) AND dormant vendors (last_invoice_date > configured `first_payment_dormancy_days`, default 180). |
 | Vendor velocity | ✅ Blocking | New `vendor_velocity_exceeded` reason code blocks at the configured `vendor_velocity_max_per_week` (default 10). Single source of truth — `cross_invoice_analysis.py` reads from the same fraud_controls config and uses it for the soft-warning anomaly signal at 70% of the hard max. |
-| Prompt injection rejection | ✅ Blocking | Rewrote `clearledgr/core/prompt_guard.py` as a pure detector. Deleted `sanitize_subject` / `sanitize_email_body` / `sanitize_attachment_text`. New `detect_injection` + `scan_invoice_fields` are called by the validation gate over subject, vendor_name, invoice_text, and line item descriptions. Any positive detection adds a `prompt_injection_detected` reason code with severity error. |
+| Prompt injection rejection | ✅ Blocking | Rewrote `solden/core/prompt_guard.py` as a pure detector. Deleted `sanitize_subject` / `sanitize_email_body` / `sanitize_attachment_text`. New `detect_injection` + `scan_invoice_fields` are called by the validation gate over subject, vendor_name, invoice_text, and line item descriptions. Any positive detection adds a `prompt_injection_detected` reason code with severity error. |
 | Duplicate prevention | ✅ Blocking | Was already partially blocking. The latent gate-severity bug (info-severity codes silently failing the gate) was fixed in the same commit, so duplicate detection now correctly distinguishes blocking from informational matches. |
 
 **Cross-cutting Phase 1.2a wins:**
 
 - **CFO role added** as an additive value on `TokenData.role` (no DB migration needed). New `has_fraud_control_admin` predicate (`{"cfo", "owner"}`) and `require_fraud_control_admin` FastAPI dependency.
-- **`/fraud-controls/{org_id}` API** in [clearledgr/api/fraud_controls.py](clearledgr/api/fraud_controls.py) — GET readable by any org member, PUT requires CFO/owner. Every modification logged to `audit_events` with `event_type=fraud_control_modified` and full before/after diff. Cross-tenant access blocked even for CFOs from other orgs.
+- **`/fraud-controls/{org_id}` API** in [solden/api/fraud_controls.py](solden/api/fraud_controls.py) — GET readable by any org member, PUT requires CFO/owner. Every modification logged to `audit_events` with `event_type=fraud_control_modified` and full before/after diff. Cross-tenant access blocked even for CFOs from other orgs.
 - **Severity-based gate `passed` field fixed.** Pre-Phase-1.2a, `gate["passed"] = len(reason_codes) == 0` meant info-severity codes (e.g. `discount_applied`) silently blocked legitimate invoices. Now `gate["passed"] = not any(r.severity in {error, warning})`. Info reasons are surfaced for telemetry but do not block.
 
 **Verification:** [tests/test_fraud_controls_gate.py](tests/test_fraud_controls_gate.py) — 42 tests across config, gate contributions, severity bug fix, fail-closed handling, CFO API role gating, and end-to-end Phase 1.1 enforcement integration. [tests/test_prompt_guard.py](tests/test_prompt_guard.py) rewritten with 37 tests for the new detector + gate integration.
@@ -348,7 +348,7 @@ This section was the ship-blocker cluster for enterprise onboarding. Every item 
 
 **Resolution:** Phase 2.3 shipped a hard cutover to the thesis taxonomy:
 
-- **`ROLE_RANK` map** in [clearledgr/core/auth.py](clearledgr/core/auth.py): `read_only=10, ap_clerk=20, ap_manager=40, financial_controller=60, cfo=80, owner=100, api=100`. Additive-upward semantics at every predicate.
+- **`ROLE_RANK` map** in [solden/core/auth.py](solden/core/auth.py): `read_only=10, ap_clerk=20, ap_manager=40, financial_controller=60, cfo=80, owner=100, api=100`. Additive-upward semantics at every predicate.
 - **Six new predicates**: `has_read_only`, `has_ap_clerk`, `has_ap_manager`, `has_financial_controller`, `has_cfo`, `has_owner`. Each returns true iff the user's normalized role rank is ≥ the predicate's rank.
 - **Five new FastAPI dependencies**: `require_ap_clerk`, `require_ap_manager`, `require_financial_controller`, `require_cfo`, plus the existing `require_ops_user` / `require_admin_user` rewritten to delegate to the rank map so they keep working through the cutover.
 - **Hard rename**: `require_fraud_control_admin` → `require_cfo` at every call site. No alias. The old name does not exist in the codebase any more.
@@ -364,7 +364,7 @@ This section was the ship-blocker cluster for enterprise onboarding. Every item 
 
 ### 9. ✅ DONE — Micro-deposit bank verification (Phase 3.1.d `f413d0f`) (§9) — zero implementation
 
-Vendor onboarding Bank Verify stage is thesis-critical but entirely absent. No two-deposit orchestration, no vendor confirmation portal, no "IBAN Verified" status marking. [clearledgr/services/vendor_management.py](clearledgr/services/vendor_management.py) has the `BankAccount` dataclass but no workflow.
+Vendor onboarding Bank Verify stage is thesis-critical but entirely absent. No two-deposit orchestration, no vendor confirmation portal, no "IBAN Verified" status marking. [solden/services/vendor_management.py](solden/services/vendor_management.py) has the `BankAccount` dataclass but no workflow.
 
 ### 10. ✅ DONE — Vendor onboarding portal + automation (Phase 3.1 `3f254a3`–`37c14d4`) (§9)
 
@@ -376,7 +376,7 @@ Zero code. Thesis treats mobile approvals as equal pillar alongside the Chrome e
 
 ### 12. ✅ DONE — Conditional digest (2026-04-10 `5fc3122`) (§6.8)
 
-No digest-triggering code in [clearledgr/services/slack_notifications.py](clearledgr/services/slack_notifications.py). Thesis commits to: fire only when there's something to act on; silence = success. Either no digest at all, or noise that gets ignored.
+No digest-triggering code in [solden/services/slack_notifications.py](solden/services/slack_notifications.py). Thesis commits to: fire only when there's something to act on; silence = success. Either no digest at all, or noise that gets ignored.
 
 ### 13. ✅ DONE — Thread toolbar buttons (2026-04-09 `26ced6f`) (§6.5)
 
@@ -404,7 +404,7 @@ Current: basic channel/role routing. Thesis: DMs for personal approvals (not cha
 
 ### 18. ✅ DONE — Box/Pipeline/SavedView (2026-04-11 `08eb9f8`) (§5)
 
-Thesis positions Solden as Streak-like with Boxes, Pipelines, Stages, Columns, Timelines, Saved Views as first-class domain objects. Codebase uses flat `ap_items` table ([clearledgr/core/database.py:618](clearledgr/core/database.py)) with no Box linking structure, no Pipeline concept, no Saved Views.
+Thesis positions Solden as Streak-like with Boxes, Pipelines, Stages, Columns, Timelines, Saved Views as first-class domain objects. Codebase uses flat `ap_items` table ([solden/core/database.py:618](solden/core/database.py)) with no Box linking structure, no Pipeline concept, no Saved Views.
 
 **Scope:** This is a substantial refactor. The fix is to introduce a `boxes` table with polymorphic `box_type` (invoice / vendor_onboarding), a `pipelines` table, and a `box_links` table. Current `ap_items` becomes a view on `boxes WHERE box_type='invoice'`.
 
@@ -418,8 +418,8 @@ Thesis positions Solden as Streak-like with Boxes, Pipelines, Stages, Columns, T
 
 - **Migration v16** adds `registration_number`, `vat_number`, `registered_address`, `director_names` (JSON array), `kyc_completion_date`, `vendor_kyc_updated_at` to `vendor_profiles`.
 - **`VendorStore` accessors**: `get_vendor_kyc`, `update_vendor_kyc` (partial patch with `_KYC_FIELD_NAMES` whitelist), `compute_vendor_ytd_spend` (read-time sum from `ap_items.total_amount` for the requested year). The `_ALLOWED` upsert whitelist is extended with the new columns.
-- **[clearledgr/services/vendor_risk.py](clearledgr/services/vendor_risk.py) — `VendorRiskScoreService.compute()`** returns a `VendorRiskScore` dataclass with score (0–100 clamped), component breakdown, and `computed_at`. Nine weighted components: new vendor (+30), active IBAN freeze (+50), recent bank change (+15), high override rate (+20), KYC missing (+15), KYC stale >365d (+10), missing registration_number / vat_number / director_names (+5 each). The formula is pure Python, no network I/O, no LLM — clients can render explanation tooltips straight from the component list.
-- **[clearledgr/api/vendor_kyc.py](clearledgr/api/vendor_kyc.py)** — two endpoints:
+- **[solden/services/vendor_risk.py](solden/services/vendor_risk.py) — `VendorRiskScoreService.compute()`** returns a `VendorRiskScore` dataclass with score (0–100 clamped), component breakdown, and `computed_at`. Nine weighted components: new vendor (+30), active IBAN freeze (+50), recent bank change (+15), high override rate (+20), KYC missing (+15), KYC stale >365d (+10), missing registration_number / vat_number / director_names (+5 each). The formula is pure Python, no network I/O, no LLM — clients can render explanation tooltips straight from the component list.
+- **[solden/api/vendor_kyc.py](solden/api/vendor_kyc.py)** — two endpoints:
   - **GET `/api/vendors/{vendor_name}/kyc`** returns the full vendor intelligence shape in one call: `kyc` sub-dict + `iban_verified` (derived from `bank_details_encrypted` AND NOT `iban_change_pending`, no stored duplicate) + `iban_verified_at` + `verified_bank_details_masked` + `iban_change_pending` + `ytd_spend` + `ytd_spend_year` + `risk_score`. Any org member can read.
   - **PUT `/api/vendors/{vendor_name}/kyc`** — partial patch via Pydantic `model_fields_set` (distinguishes "clear this" from "don't mention this"), `require_financial_controller` role gate, cross-tenant check, `vendor_kyc_updated` audit event with field names only.
 
@@ -427,7 +427,7 @@ Thesis positions Solden as Streak-like with Boxes, Pipelines, Stages, Columns, T
 
 ### 20. ✅ DONE — Multi-entity (2026-04-10 `e98e670` + `0d8f0ce`) (§3)
 
-[clearledgr/core/stores/entity_store.py](clearledgr/core/stores/entity_store.py) exists with `entities` table. **Missing:** parent account abstraction, cross-entity consolidated view for CFO, per-entity IBAN storage, cross-entity vendor management (single vendor, entity-specific terms).
+[solden/core/stores/entity_store.py](solden/core/stores/entity_store.py) exists with `entities` table. **Missing:** parent account abstraction, cross-entity consolidated view for CFO, per-entity IBAN storage, cross-entity vendor management (single vendor, entity-specific terms).
 
 ### 21. ✅ DONE — Agent Columns (2026-04-11 `d3e3b96`) (§5.5)
 
@@ -443,11 +443,11 @@ No synthetic invoice test suite (target floor 500), no historical replay harness
 
 ### 23. ✅ DONE — Audit trail DID-WHY-NEXT (2026-04-10 `bc004e8`) (§7.6)
 
-[clearledgr/services/audit_trail.py](clearledgr/services/audit_trail.py) has event_type, summary, reasoning. **Missing:** explicit three-field decomposition (raw_extracted_data / rule_applied / conclusion). Auditors cannot reconstruct exactly which rule fired.
+[solden/services/audit_trail.py](solden/services/audit_trail.py) has event_type, summary, reasoning. **Missing:** explicit three-field decomposition (raw_extracted_data / rule_applied / conclusion). Auditors cannot reconstruct exactly which rule fired.
 
 ### 24. ✅ DONE — Model improvement loop (2026-04-11 `558a497`) (§7.9)
 
-[clearledgr/services/correction_learning.py](clearledgr/services/correction_learning.py) and [learning_calibration.py](clearledgr/services/learning_calibration.py) exist. **Missing:** 50-signal minimum gating, vendor-specific extraction rules stored per-vendor, closed-loop validation tracking override rate decrease.
+[solden/services/correction_learning.py](solden/services/correction_learning.py) and [learning_calibration.py](solden/services/learning_calibration.py) exist. **Missing:** 50-signal minimum gating, vendor-specific extraction rules stored per-vendor, closed-loop validation tracking override rate decrease.
 
 ### 25. ✅ DONE — Extraction guardrails (2026-04-11 `9f8482d`) (§7.6)
 
@@ -465,7 +465,7 @@ Three-sentence pattern (§7.1) is not a convention enforced anywhere in code. Sl
 
 ### 27. ✅ DONE — @Mentions escalation (2026-04-11 `dbbb6ee`) (§5.3)
 
-[clearledgr/core/database.py:712](clearledgr/core/database.py) has `pending_notifications` table but no @mention parsing or Gmail↔Slack bridge.
+[solden/core/database.py:712](solden/core/database.py) has `pending_notifications` table but no @mention parsing or Gmail↔Slack bridge.
 
 ### 28. ✅ DONE — Archived users (2026-04-11 `4da2d0a`) (§5.4)
 
@@ -473,11 +473,11 @@ No user deactivation/archive logic. Compliance requirement for financial records
 
 ### 29. ✅ DONE — Onboarding 4 steps (2026-04-11 `61c44ff` + `cf9005a`) (§15)
 
-[clearledgr/api/onboarding.py:374-655](clearledgr/api/onboarding.py) treats Xero/QB and NetSuite/SAP identically. No architectural gate requiring managed implementation for NetSuite/SAP.
+[solden/api/onboarding.py:374-655](solden/api/onboarding.py) treats Xero/QB and NetSuite/SAP identically. No architectural gate requiring managed implementation for NetSuite/SAP.
 
 ### 30. ✅ DONE — Billing UI (2026-04-11 `22aed9c` + `d12c8f0`) (§13)
 
-Subscription API exists in [clearledgr/services/subscription.py](clearledgr/services/subscription.py). No Gmail sidebar integration for upgrade/billing management. Customers cannot manage subscriptions inside Gmail as thesis requires.
+Subscription API exists in [solden/services/subscription.py](solden/services/subscription.py). No Gmail sidebar integration for upgrade/billing management. Customers cannot manage subscriptions inside Gmail as thesis requires.
 
 ---
 

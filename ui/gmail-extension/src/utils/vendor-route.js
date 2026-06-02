@@ -35,7 +35,7 @@ export function resolveVendorRouteName(params = {}, hash = '') {
   if (paramName) return paramName;
 
   const hashText = String(hash || '');
-  const hashMatch = hashText.match(/clearledgr\/vendor\/([^?]+)/);
+  const hashMatch = hashText.match(/(?:solden|clearledgr)\/vendor\/([^?]+)/);
   const hashName = normalizeVendorRouteName(hashMatch?.[1]);
   if (hashName) return hashName;
 

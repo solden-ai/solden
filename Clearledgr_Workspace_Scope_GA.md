@@ -197,7 +197,7 @@ Connect, test, and maintain the integrations. The leader sets up integrations du
 
 Who can do what in the dashboard and across the surfaces.
 
-**Standard role mapping** (canonical thesis taxonomy — see `clearledgr/core/auth.py` for the rank table):
+**Standard role mapping** (canonical thesis taxonomy — see `solden/core/auth.py` for the rank table):
 
 | Dashboard label | Codebase enum | Rank | Permissions surface |
 |---|---|---|---|
@@ -483,7 +483,7 @@ created_at          TIMESTAMPTZ NOT NULL
 
 ## State diagrams
 
-### AP Item lifecycle (canonical — already in `clearledgr/core/ap_states.py`)
+### AP Item lifecycle (canonical — already in `solden/core/ap_states.py`)
 
 ```
                   [received]
@@ -838,7 +838,7 @@ Same structure as above. **Filled in during the build** (each takes ~30 minutes 
 
 ## Contact
 
-Mo Mbalam, CEO — mo@clearledgr.com
-Suleiman Mohammed, CTO — suleiman@clearledgr.com
+Mo Mbalam, CEO — mo@soldenai.com
+Suleiman Mohammed, CTO — suleiman@soldenai.com
 
 For dashboard scope questions or change requests, raise in #product-dashboard on Slack or directly with Suleiman.

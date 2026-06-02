@@ -43,11 +43,11 @@ are all deterministic:
 
 | Concern | Where it lives | What kind of code |
 |---|---|---|
-| What state should the Box move to? | `clearledgr/services/ap_decision.py` | 10-step rule cascade. The docstring says it explicitly: *"rules decide, LLM describes. Claude is **not** called here."* |
-| What actions should run on this Box? | `clearledgr/core/planning_engine.py` | `DeterministicPlanningEngine`. The module header says: *"No Claude calls. Claude is only called WITHIN specific Actions during execution."* |
-| Should this autonomous write run? | `clearledgr/services/finance_agent_governance.py` | Rule-based autonomy-tier check. No model. |
-| Is this transition allowed? | `clearledgr/core/ap_states.py` + `clearledgr/core/bank_match_states.py` | Static `VALID_TRANSITIONS` dict. Hard state machine. |
-| Does this match the policy? | `clearledgr/services/override_window.py`, `clearledgr/services/approval_revert.py` | Time-bounded rule checks. No model. |
+| What state should the Box move to? | `solden/services/ap_decision.py` | 10-step rule cascade. The docstring says it explicitly: *"rules decide, LLM describes. Claude is **not** called here."* |
+| What actions should run on this Box? | `solden/core/planning_engine.py` | `DeterministicPlanningEngine`. The module header says: *"No Claude calls. Claude is only called WITHIN specific Actions during execution."* |
+| Should this autonomous write run? | `solden/services/finance_agent_governance.py` | Rule-based autonomy-tier check. No model. |
+| Is this transition allowed? | `solden/core/ap_states.py` + `solden/core/bank_match_states.py` | Static `VALID_TRANSITIONS` dict. Hard state machine. |
+| Does this match the policy? | `solden/services/override_window.py`, `solden/services/approval_revert.py` | Time-bounded rule checks. No model. |
 
 The LLM, when it runs at all, runs **inside** specific actions —
 extracting fields from an invoice, writing a Slack card narrative,
@@ -69,7 +69,7 @@ Critically:
 * The Plan was already decided before the engine sees it. The
   engine doesn't choose actions; it executes them.
 * The audit funnel (`append_audit_event` in
-  `clearledgr/core/stores/ap_store.py`) is the SAME funnel that
+  `solden/core/stores/ap_store.py`) is the SAME funnel that
   human-driven endpoints write to. Agent writes, operator writes,
   webhook writes — all go through the same Rule-1 pre-write +
   typed-row pattern. There is no "agent path" that bypasses what
@@ -107,17 +107,17 @@ Honest list of what looks orchestrator-shaped if you squint:
 
 ## Reading order if you want to verify
 
-1. `clearledgr/core/ap_states.py` — the state machine.
-2. `clearledgr/core/bank_match_states.py` — the second state
+1. `solden/core/ap_states.py` — the state machine.
+2. `solden/core/bank_match_states.py` — the second state
    machine. Same shape, different domain — manifesto generalization
    proof.
-3. `clearledgr/services/ap_decision.py` — "rules decide, LLM describes."
-4. `clearledgr/core/planning_engine.py` — "No Claude calls."
-5. `clearledgr/core/coordination_engine.py` — dispatcher; read the
+3. `solden/services/ap_decision.py` — "rules decide, LLM describes."
+4. `solden/core/planning_engine.py` — "No Claude calls."
+5. `solden/core/coordination_engine.py` — dispatcher; read the
    module docstring + `_pre_write` to see Rule 1 in action.
-6. `clearledgr/services/override_window.py`,
-   `clearledgr/services/approval_revert.py` — reversibility primitives.
-7. `clearledgr/api/box_export.py` + `docs/BOX_SCHEMA.md` —
+6. `solden/services/override_window.py`,
+   `solden/services/approval_revert.py` — reversibility primitives.
+7. `solden/api/box_export.py` + `docs/BOX_SCHEMA.md` —
    sovereignty / removability primitive.
 
 If you read those in order and still think Solden has a master

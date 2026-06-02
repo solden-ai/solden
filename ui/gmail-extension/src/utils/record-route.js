@@ -35,7 +35,7 @@ export function resolveRecordRouteId(params = {}, hash = '') {
   if (paramId) return paramId;
 
   const hashText = String(hash || '');
-  const hashMatch = hashText.match(/clearledgr\/invoice\/([^?]+)/);
+  const hashMatch = hashText.match(/(?:solden|clearledgr)\/invoice\/([^?]+)/);
   const hashId = normalizeRecordRouteId(hashMatch?.[1]);
   if (hashId) return hashId;
 

@@ -27,8 +27,8 @@ Retire the Claude tool-use planning loop and all supporting abstractions. Demote
 
 Concrete changes, landed 2026-04-21 as commits `98ba1e1` → `94c98eb`:
 
-- **Deleted** `clearledgr/core/agent_runtime.py` (`AgentPlanningEngine`, ~670 LOC).
-- **Deleted** `clearledgr/core/skills/` entirely (`APSkill`, `CompoundSkill`, `ReconSkill`, `FinanceSkill` base — ~2000 LOC).
+- **Deleted** `solden/core/agent_runtime.py` (`AgentPlanningEngine`, ~670 LOC).
+- **Deleted** `solden/core/skills/` entirely (`APSkill`, `CompoundSkill`, `ReconSkill`, `FinanceSkill` base — ~2000 LOC).
 - **Removed** env vars `AGENT_PLANNING_LOOP`, `AGENT_LEGACY_FALLBACK_ON_ERROR`, `AGENT_RUNTIME_MODEL`.
 - **Rewrote** `APDecisionService`: removed the tool-use schema, prompt builder, few-shot examples, `_call_claude`, `_parse_response` (~620 LOC). The 10-step rule cascade is now the single source of routing truth. Claude is not called in the decision path.
 - **Added** drift fences: `TestLLMBoundaryFence` + `TestPlannerActionCoverage` in `test_execution_engine.py` assert exactly 5 actions call the LLM gateway and every planner action has a handler. `test_state_audit_atomicity.py` asserts the `update_ap_item` funnel's UPDATE + audit INSERT commit together or neither.

@@ -2127,7 +2127,7 @@ def slack_manifest_template(
                 "event_subscriptions": {"request_url": f"{app_base}/slack/events"},
                 "interactivity": {"is_enabled": True, "request_url": f"{app_base}/slack/invoices/interactive"},
                 "slash_commands": [
-                    {"command": "/clearledgr", "url": f"{app_base}/slack/commands", "description": "Solden AP"}
+                    {"command": "/solden", "url": f"{app_base}/slack/commands", "description": "Solden AP"}
                 ],
             },
         },

@@ -81,7 +81,7 @@ in a clean BTP trial subaccount with realistic test data:
    S/4HANA. Continue?"). Demonstrates the safety guard.
 6. **BTP cockpit Destination configuration** — showing
    `clearledgr-api` Destination pointing at
-   `https://api.solden.com` with `HTML5.ForwardAuthToken=true`.
+   `https://api.soldenai.com` with `HTML5.ForwardAuthToken=true`.
    Used by the ICC reviewer to validate the install instructions.
 7. **Slack approval card** for an SAP-native invoice — write-
    direction evidence demonstrating the bidirectional integration.

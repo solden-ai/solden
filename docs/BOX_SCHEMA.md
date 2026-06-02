@@ -292,11 +292,11 @@ components remain whole if Solden is removed.
 
 | Concern | Source |
 |---|---|
-| Export endpoint | `clearledgr/api/box_export.py` |
-| Audit funnel (`policy_version`, hash chain, idempotency) | `clearledgr/core/stores/ap_store.py::append_audit_event` |
-| State machine | `clearledgr/core/ap_states.py` |
-| Box type registry | `clearledgr/core/box_registry.py` |
-| Schema migrations | `clearledgr/core/migrations.py` (v83 adds `policy_version`) |
+| Export endpoint | `solden/api/box_export.py` |
+| Audit funnel (`policy_version`, hash chain, idempotency) | `solden/core/stores/ap_store.py::append_audit_event` |
+| State machine | `solden/core/ap_states.py` |
+| Box type registry | `solden/core/box_registry.py` |
+| Schema migrations | `solden/core/migrations.py` (v83 adds `policy_version`) |
 
 ## Changelog
 

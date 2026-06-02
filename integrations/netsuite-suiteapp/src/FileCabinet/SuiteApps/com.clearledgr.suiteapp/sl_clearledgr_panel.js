@@ -6,7 +6,7 @@
  * <meta> tags, and returns the result as text/html. The User Event
  * Script's iframe `src` resolves to this Suitelet.
  *
- * Phase 1-2 (today): no JWT minted; panel calls api.clearledgr.com with
+ * Phase 1-2 (today): no JWT minted; panel calls api.soldenai.com with
  *   a static dev token while the Phase 3 auth path is wired up.
  * Phase 3: HMAC-signs a short-lived JWT (5-min exp) using the shared
  *   secret stored in `customrecord_cl_settings`; embeds in <meta name="cl-token">.
@@ -23,7 +23,7 @@ define(['N/file', 'N/runtime', 'N/log'], (fileMod, runtime, log) => {
     const FILE_CSS = PANEL_FOLDER + '/panel.css';
 
     // Phase 1-2 default; Phase 3 overrides via customrecord_cl_settings.
-    const DEFAULT_API_BASE = 'https://api.clearledgr.com';
+    const DEFAULT_API_BASE = 'https://api.soldenai.com';
     const DEV_TOKEN = 'DEMO_PHASE_2';
 
     function loadFileContents(path) {

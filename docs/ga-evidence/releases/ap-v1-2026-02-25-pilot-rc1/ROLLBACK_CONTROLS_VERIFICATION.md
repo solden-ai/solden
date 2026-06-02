@@ -18,8 +18,8 @@ Status: `done`
 - Automated test suite: `PYTHONPATH=. pytest -q tests/test_e2e_rollback_controls.py tests/test_admin_launch_controls.py`
 - Automated result: `15 passed` on `2026-02-28`
 - Code-level checks:
-  - `/Users/mombalam/Desktop/Solden.v1/tests/test_e2e_rollback_controls.py`
-  - `/Users/mombalam/Desktop/Solden.v1/tests/test_admin_launch_controls.py`
+  - `tests/test_e2e_rollback_controls.py`
+  - `tests/test_admin_launch_controls.py`
 - Staging admin screenshots: `pending`
 - Staging audit traces: `pending`
 - Notes: Complete local-ci baseline established on `2026-02-28`; staging run remains required before setting `Status: done`.

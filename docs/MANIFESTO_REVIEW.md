@@ -78,7 +78,7 @@ generalizes.
   engine a pure consumer/producer; reversibility is structural via `_pre_write`.
   The honest header note — the name predates the manifesto, `ReactiveDispatcher`
   fits better, rename blast radius (100+ callsites) isn't worth it — stays. Strong.
-- **Drift fixed:** (1) line 24 stale package path `clearledgr/core/planning_engine.py`
+- **Drift fixed:** (1) line 24 stale package path `solden/core/planning_engine.py`
   → `solden/core/...`. (2) "No LLM in the loop" read literally was slightly
   overclaimed — the engine *does* invoke the LLM gateway for bounded actions
   (`classify_vendor_reply`, `generate_exception_reason`, email parse). Tightened to
@@ -220,7 +220,7 @@ clean:** zero `execute_payment` / `send_money` / `initiate_payment` / `transfer_
   exports were lingering forever — a data-retention gap on the sovereignty primitive's
   own artifact. **Fixed:** wired it into the hourly background tick
   (`agent_background._run_loop`, `tick % 4 == 0`) and corrected the docstring. Also
-  fixed 2 stale `clearledgr/` path comments in the file header + reaper.
+  fixed 2 stale `solden/` path comments in the file header + reaper.
 - **Note:** the two big orchestration files were invariant-swept (money movement,
   stale paths, deterministic-decision + bounded-LLM call sites), not read line-by-line;
   `ap_decision.py` was read closely. A deeper line read of `finance_agent_runtime.py`
@@ -262,7 +262,7 @@ for the manifesto invariants that matter at the surface, not read line-by-line.
   and external config identifiers (XSUAA audience, launch URL) — same intentionally-
   untouched backend-identifier bucket as env vars + the runtime domain; renaming risks
   orphaning live state / breaking monitoring with no customer-facing benefit. The 24
-  comment-only stale `clearledgr/` path refs are cosmetic; not churned.
+  comment-only stale `solden/` path refs are cosmetic; not churned.
 - **Verdict:** invariants hold; 4 user-visible brand drifts fixed (3 filenames + 1
   Slack emoji) + 1 test updated. Tests: workspace-reports / report-export / slack /
   vendor-activation green. `import main` clean.
@@ -330,7 +330,7 @@ The most sensitive boundary — money movement + the structured-vs-unstructured 
 - **Invariants (from the surfaces sweep) hold:** operator-facing only (zero
   vendor-facing send), no money movement, no LLM vendor name in UI strings.
 - **Drift fixed:** `sap_extension.py` API-doc token example `<clearledgr-jwt>` →
-  `<solden-jwt>`; `slack_invoices.py` comment path `clearledgr/services/...` →
+  `<solden-jwt>`; `slack_invoices.py` comment path `solden/services/...` →
   `solden/services/...` (the file exists there).
 - **Left:** Slack interactive action-ID prefixes `cl_erp_approve_*` / `cl_erp_reject_*`
   (matched by `startswith`, coupled to messages already posted in customers' Slack —
@@ -340,20 +340,20 @@ The most sensitive boundary — money movement + the structured-vs-unstructured 
 
 ---
 
-### Exhaustive stale-`clearledgr/`-path sweep — 31 cosmetic + 1 real bug
-Batch-fixed all 31 comment/docstring `clearledgr/` package-path references →
+### Exhaustive stale-`solden/`-path sweep — 31 cosmetic + 1 real bug
+Batch-fixed all 31 comment/docstring `solden/` package-path references →
 `solden/` (cosmetic; the package was renamed). The sweep was NOT purely cosmetic:
 - **Real bug found:** `slack_digest.py` "See all exceptions" button deep-linked to
-  `https://mail.google.com/mail/u/0/#clearledgr/invoices` — a Gmail label that no
+  `https://mail.google.com/mail/u/0/#solden/invoices` — a Gmail label that no
   longer exists (the rebrand renamed labels to `Solden/Invoice/*`). An operator
   clicking it landed nowhere. **Fixed** with `_gmail_exception_label_url()` that builds
   a Gmail search URL from the canonical label name in `gmail_labels` — so a future
   rename can't silently rot it again.
 - **Left (functional infra identifiers):** `gmail_api.py` GCP Pub/Sub topic default
-  `projects/clearledgr/topics/gmail-push` (env-overridable, real GCP project name);
+  `projects/solden/topics/gmail-push` (env-overridable, real GCP project name);
   the internal `CLEARLEDGR_LABELS` dict *variable name* (its values are already
-  `Solden/...`); Redis keys; `clearledgr.com` runtime domain; `clearledgr_test` DB.
-- **Verdict:** repo is free of stale `clearledgr/` path refs except the one functional
+  `Solden/...`); Redis keys; `soldenai.com` runtime domain; `clearledgr_test` DB.
+- **Verdict:** repo is free of stale `solden/` path refs except the one functional
   GCP default; one broken operator deep-link fixed.
 
 ## Coverage summary (this review pass)

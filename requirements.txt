@@ -1,4 +1,4 @@
-# Clearledgr Backend Dependencies
+# Solden Backend Dependencies
 # ================================
 # For exact pinned versions, see requirements.lock (generated via pip freeze)
 
@@ -8,8 +8,8 @@ gunicorn>=23.0.0
 uvicorn[standard]>=0.27.0
 pydantic>=2.5.0
 python-dotenv>=1.0.1
-# Jinja2 — used by clearledgr/api/vendor_portal.py for the magic-link
-# onboarding pages (the only Clearledgr surface that renders HTML server-side).
+# Jinja2 — used by solden/api/vendor_portal.py for the magic-link
+# onboarding pages (the only Solden surface that renders HTML server-side).
 jinja2>=3.1.0
 
 # HTTP Client
@@ -29,7 +29,7 @@ google-auth-httplib2>=0.2.0
 
 # Database
 # NOTE: sqlalchemy, aiosqlite, alembic removed — not imported anywhere.
-# ClearledgrDB uses sqlite3 (stdlib) and psycopg directly.
+# SoldenDB uses sqlite3 (stdlib) and psycopg directly.
 
 # PDF Processing
 PyPDF2>=3.0.0
@@ -86,23 +86,23 @@ ruff>=0.2.0
 # local iteration: `TEST_DB_ENGINE=sqlite pytest`.
 testcontainers[postgresql]>=4.0.0
 
-# Postgres driver — ClearledgrDB's `use_postgres=True` path only
+# Postgres driver — SoldenDB's `use_postgres=True` path only
 # activates when `psycopg` is importable. Production uses it; tests
-# (post C.1) use it. Without this pin, ClearledgrDB silently falls
+# (post C.1) use it. Without this pin, SoldenDB silently falls
 # back to SQLite — which is what happened when C.1 first shipped
 # and C.2 audit caught.
 psycopg[binary]>=3.1
 # Connection pooling for the Postgres path. Without it, each
 # `connect()` call opens a fresh TCP connection, which is slow and
-# leaks file descriptors under concurrent load. ClearledgrDB uses
+# leaks file descriptors under concurrent load. SoldenDB uses
 # this at database.py:198-230 to build the pool lazily.
 psycopg_pool>=3.2
 
 # SAML 2.0 — pure-Python XML signature verification (Module 6 Pass C
 # SAML SSO). signxml uses cryptography + lxml under the hood and
 # avoids the libxmlsec1 system dependency that python3-saml requires.
-# clearledgr/services/saml_validator.py wraps it with the SAML
-# response checks the spec actually requires for Clearledgr's IdP-
+# solden/services/saml_validator.py wraps it with the SAML
+# response checks the spec actually requires for Solden's IdP-
 # initiated and SP-initiated flows: signature verification against
 # pinned cert, Conditions/Audience/NotOnOrAfter, replay protection.
 signxml>=4.0

@@ -63,7 +63,7 @@ gmail-extension/
 
 - Runtime endpoint and org config are resolved from extension storage + backend bootstrap.
 - Integrations and account management are controlled from `/console` (Workspace Shell).
-- Legacy popup/options/demo assets were moved to `/Users/mombalam/Desktop/Solden.v1/docs/legacy/gmail-extension-ui/` and are not part of the shipped extension UX.
+- Legacy popup/options/demo assets were moved to [../../docs/legacy/gmail-extension-ui](../../docs/legacy/gmail-extension-ui) and are not part of the shipped extension UX.
 
 ## Data Handling
 
@@ -79,7 +79,7 @@ To modify the extension:
 2. Rebuild the shipped Gmail bundle with Bun-backed tooling:
    - `npm run build`
    - `npm run build:prod`
-   - Bun must be installed locally and available on `PATH`, or pointed to via `CLEARLEDGR_BUN_BIN`.
+   - Bun must be installed locally and available on `PATH`, or pointed to via `SOLDEN_BUN_BIN` (`CLEARLEDGR_BUN_BIN` is still accepted as a legacy alias).
 3. Go to `chrome://extensions/`
 4. Click the refresh icon on the Solden extension
 5. Reload Gmail to see changes
@@ -141,7 +141,7 @@ CI and nightly runtime verification:
 - `/.github/workflows/gmail-extension-browser-harness.yml`: deterministic browser harness on PR/push for extension changes.
 - `/.github/workflows/gmail-runtime-smoke-nightly.yml`: nightly authenticated Gmail runtime smoke + evidence artifact upload.
 - Nightly job requires a controlled self-hosted runner with a pre-authenticated Gmail profile path provided via secret `GMAIL_E2E_PROFILE_DIR`.
-- Runner setup guide: `/Users/mombalam/Desktop/Solden.v1/docs/GMAIL_RUNTIME_RUNNER_SETUP.md`.
+- Runner setup guide: [../../docs/GMAIL_RUNTIME_RUNNER_SETUP.md](../../docs/GMAIL_RUNTIME_RUNNER_SETUP.md).
 
 ## Support
 

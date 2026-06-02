@@ -195,26 +195,26 @@ These areas should back the scorecard with code-level evidence:
 
 ### Runtime and workflow correctness
 
-1. [`tests/test_invoice_workflow_runtime_state_transitions.py`](/Users/mombalam/Desktop/Solden.v1/tests/test_invoice_workflow_runtime_state_transitions.py)
-2. [`tests/test_finance_agent_runtime.py`](/Users/mombalam/Desktop/Solden.v1/tests/test_finance_agent_runtime.py)
-3. [`tests/test_e2e_ap_flow.py`](/Users/mombalam/Desktop/Solden.v1/tests/test_e2e_ap_flow.py)
+1. [`tests/test_invoice_workflow_runtime_state_transitions.py`](tests/test_invoice_workflow_runtime_state_transitions.py)
+2. [`tests/test_finance_agent_runtime.py`](tests/test_finance_agent_runtime.py)
+3. [`tests/test_e2e_ap_flow.py`](tests/test_e2e_ap_flow.py)
 
 ### Failed-post and operator surface quality
 
-1. [`tests/test_ap_record_surfaces.py`](/Users/mombalam/Desktop/Solden.v1/tests/test_ap_record_surfaces.py)
-2. [`clearledgr/api/ap_items.py`](/Users/mombalam/Desktop/Solden.v1/clearledgr/api/ap_items.py)
-3. [`clearledgr/services/ap_operator_audit.py`](/Users/mombalam/Desktop/Solden.v1/clearledgr/services/ap_operator_audit.py)
+1. [`tests/test_ap_record_surfaces.py`](tests/test_ap_record_surfaces.py)
+2. [`solden/api/ap_items.py`](solden/api/ap_items.py)
+3. [`solden/services/ap_operator_audit.py`](solden/services/ap_operator_audit.py)
 
 ### Approval execution quality
 
-1. [`tests/test_channel_approval_contract.py`](/Users/mombalam/Desktop/Solden.v1/tests/test_channel_approval_contract.py)
-2. [`clearledgr/api/slack_invoices.py`](/Users/mombalam/Desktop/Solden.v1/clearledgr/api/slack_invoices.py)
-3. [`clearledgr/api/teams_invoices.py`](/Users/mombalam/Desktop/Solden.v1/clearledgr/api/teams_invoices.py)
+1. [`tests/test_channel_approval_contract.py`](tests/test_channel_approval_contract.py)
+2. [`solden/api/slack_invoices.py`](solden/api/slack_invoices.py)
+3. [`solden/api/teams_invoices.py`](solden/api/teams_invoices.py)
 
 ### Live/pilot evidence
 
-1. [`docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/PILOT_E2E_EVIDENCE.md`](/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/PILOT_E2E_EVIDENCE.md)
-2. [`docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md`](/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md)
+1. [`docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/PILOT_E2E_EVIDENCE.md`](docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/PILOT_E2E_EVIDENCE.md)
+2. [`docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md`](docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/FAILURE_MODE_MATRIX.md)
 3. real pilot metrics from `Reports`, `Pipeline`, and audit exports
 
 ---

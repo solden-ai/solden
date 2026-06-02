@@ -4,7 +4,7 @@
 
 - **Role:** AP v1 email integration reference
 - **Primary intake surface:** Gmail
-- **Canonical doctrine:** `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
+- **Canonical doctrine:** `PLAN.md`
 
 This document describes how AP-related email intake is handled in the current AP-first product direction.
 
@@ -85,12 +85,12 @@ Key properties:
 
 For runtime validation and incident handling, use:
 
-1. `/Users/mombalam/Desktop/Solden.v1/docs/GETTING_STARTED.md`
-2. `/Users/mombalam/Desktop/Solden.v1/docs/RUNBOOKS.md`
-3. `/Users/mombalam/Desktop/Solden.v1/docs/STAGING_DRILL_RUNBOOK.md`
+1. `docs/GETTING_STARTED.md`
+2. `docs/RUNBOOKS.md`
+3. `docs/STAGING_DRILL_RUNBOOK.md`
 
 ## Related Contracts
 
-1. `/Users/mombalam/Desktop/Solden.v1/docs/V1_BACKEND_CONTRACTS.md`
-2. `/Users/mombalam/Desktop/Solden.v1/docs/API_REFERENCE.md`
-3. `/Users/mombalam/Desktop/Solden.v1/docs/HOW_IT_WORKS.md`
+1. `docs/V1_BACKEND_CONTRACTS.md`
+2. `docs/API_REFERENCE.md`
+3. `docs/HOW_IT_WORKS.md`

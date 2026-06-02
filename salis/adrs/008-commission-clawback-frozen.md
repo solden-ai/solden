@@ -56,7 +56,7 @@ When you're ready to un-freeze clawback:
 1. Re-read `commission-clawback-spec.md`. Has it drifted from how the codebase actually works?
 2. Confirm Booking.com SAP SD sandbox access. If not available, there's no point un-freezing.
 3. Register `clawback_case` in `box_registry.py`.
-4. Add `ClawbackState` enum + `VALID_TRANSITIONS` dict in `clearledgr/core/clawback_states.py`.
+4. Add `ClawbackState` enum + `VALID_TRANSITIONS` dict in `solden/core/clawback_states.py`.
 5. Add a clawback skill to the planning engine.
 6. Add a clawback webhook adapter for SAP SD events.
 7. Update DESIGN_THESIS.md to reflect clawback as live V2, not planned V1.1.

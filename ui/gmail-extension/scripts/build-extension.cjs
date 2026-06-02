@@ -14,7 +14,7 @@ const DIST_ROOT = path.join(EXTENSION_ROOT, 'dist');
 const BUILD_ROOT = path.join(EXTENSION_ROOT, 'build');
 const BUILD_DIST_ROOT = path.join(BUILD_ROOT, 'dist');
 const FINGERPRINT_PATH = path.join(DIST_ROOT, 'inboxsdk-layer.meta.json');
-const BUN_BIN = process.env.CLEARLEDGR_BUN_BIN || 'bun';
+const BUN_BIN = process.env.SOLDEN_BUN_BIN || process.env.CLEARLEDGR_BUN_BIN || 'bun';
 const BUILD_DEBUG = process.env.CLEARLEDGR_BUILD_DEBUG === '1';
 const BUILD_DEBUG_FILE = String(process.env.CLEARLEDGR_BUILD_DEBUG_FILE || '').trim();
 const UNPACKED_STATIC_FILES = ['manifest.json', 'background.js', 'queue-manager.js', 'route-capture.js'];
@@ -214,7 +214,7 @@ function runBundler(configFile) {
   });
   if (result.error) {
     if (result.error.code === 'ENOENT') {
-      throw new Error(`Bun is required for extension builds. Install bun or set CLEARLEDGR_BUN_BIN to a valid Bun binary.`);
+      throw new Error(`Bun is required for extension builds. Install bun or set SOLDEN_BUN_BIN to a valid Bun binary.`);
     }
     throw result.error;
   }

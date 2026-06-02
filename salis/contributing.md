@@ -60,7 +60,7 @@ Copy-paste scaffolds for the work you'll do most.
 
 Example: you want to add `notify_accounting` — a new DET action that posts to an accounting Slack channel when an invoice crosses a threshold.
 
-1. Add the handler in [`clearledgr/core/coordination_engine.py`](../clearledgr/core/coordination_engine.py):
+1. Add the handler in [`solden/core/coordination_engine.py`](../solden/core/coordination_engine.py):
 
     ```python
     async def _handle_notify_accounting(self, params, box_id, ctx):
@@ -101,7 +101,7 @@ Example: you want `expense_claim` alongside `ap_item` and `vendor_onboarding_ses
 1. Create a source table + state machine:
 
     ```python
-    # clearledgr/core/expense_claim_states.py
+    # solden/core/expense_claim_states.py
     class ExpenseClaimState(str, Enum):
         SUBMITTED = "submitted"
         APPROVED = "approved"
@@ -110,7 +110,7 @@ Example: you want `expense_claim` alongside `ap_item` and `vendor_onboarding_ses
     VALID_TRANSITIONS = {...}
     ```
 
-2. Add a schema migration to [`clearledgr/core/migrations.py`](../clearledgr/core/migrations.py):
+2. Add a schema migration to [`solden/core/migrations.py`](../solden/core/migrations.py):
 
     ```python
     @migration(44, "Expense claim source table")
@@ -125,7 +125,7 @@ Example: you want `expense_claim` alongside `ap_item` and `vendor_onboarding_ses
         """)
     ```
 
-3. Register with `BoxRegistry` in [`clearledgr/core/box_registry.py`](../clearledgr/core/box_registry.py):
+3. Register with `BoxRegistry` in [`solden/core/box_registry.py`](../solden/core/box_registry.py):
 
     ```python
     register(BoxType(
@@ -138,7 +138,7 @@ Example: you want `expense_claim` alongside `ap_item` and `vendor_onboarding_ses
     ))
     ```
 
-4. Write a store mixin in `clearledgr/core/stores/expense_claim_store.py` — cover `create_<type>`, `get_<type>`, `update_<type>` with the same atomicity pattern `ap_store.py:update_ap_item` uses. Compose it into `SoldenDB` in `clearledgr/core/database.py`.
+4. Write a store mixin in `solden/core/stores/expense_claim_store.py` — cover `create_<type>`, `get_<type>`, `update_<type>` with the same atomicity pattern `ap_store.py:update_ap_item` uses. Compose it into `SoldenDB` in `solden/core/database.py`.
 
 5. The Box lifecycle machinery works for free: exceptions and outcomes are keyed on `(box_type, box_id)`, so `db.raise_box_exception(box_type="expense_claim", box_id=...)` just works. Same for outcomes and the `/api/ap_items/{id}/box` pattern — copy the read route for the new type.
 
@@ -152,9 +152,9 @@ ADR 001 has the philosophy; this section is the mechanics.
 
 Example: you want to support Sage Intacct.
 
-1. Add a connector file: `clearledgr/integrations/erp_intacct.py` with functions `post_bill_to_intacct(connection, payload)`, `get_payment_status_from_intacct(...)`, etc. Mirror `erp_quickbooks.py` for the shape.
+1. Add a connector file: `solden/integrations/erp_intacct.py` with functions `post_bill_to_intacct(connection, payload)`, `get_payment_status_from_intacct(...)`, etc. Mirror `erp_quickbooks.py` for the shape.
 
-2. Add fields to `ERPConnection` dataclass in [`clearledgr/integrations/erp_router.py`](../clearledgr/integrations/erp_router.py) if Intacct needs auth data not already covered.
+2. Add fields to `ERPConnection` dataclass in [`solden/integrations/erp_router.py`](../solden/integrations/erp_router.py) if Intacct needs auth data not already covered.
 
 3. Extend `erp_router.post_bill` dispatch:
 
@@ -163,9 +163,9 @@ Example: you want to support Sage Intacct.
         return await post_bill_to_intacct(connection, payload)
     ```
 
-4. Add HMAC verification in `clearledgr/core/erp_webhook_verify.py` and a webhook route in `clearledgr/api/erp_webhooks.py`.
+4. Add HMAC verification in `solden/core/erp_webhook_verify.py` and a webhook route in `solden/api/erp_webhooks.py`.
 
-5. Add the OAuth callback in `clearledgr/api/erp_oauth.py` if OAuth; otherwise credentials-only setup lives in `clearledgr/api/erp_connections.py`.
+5. Add the OAuth callback in `solden/api/erp_oauth.py` if OAuth; otherwise credentials-only setup lives in `solden/api/erp_connections.py`.
 
 6. Add integration tests: mock the Intacct API, assert correct payload shape, auth refresh on 401, rate-limit handling, the whole failure matrix.
 
@@ -175,13 +175,13 @@ Example: you want to support Sage Intacct.
 
 ### Add a new event type
 
-1. Add to the enum in [`clearledgr/core/events.py`](../clearledgr/core/events.py):
+1. Add to the enum in [`solden/core/events.py`](../solden/core/events.py):
 
     ```python
     MY_NEW_EVENT = "my_new_event"
     ```
 
-2. Add a planner in [`clearledgr/core/planning_engine.py`](../clearledgr/core/planning_engine.py):
+2. Add a planner in [`solden/core/planning_engine.py`](../solden/core/planning_engine.py):
 
     ```python
     def _plan_my_new_event(self, event, box_state):
@@ -196,7 +196,7 @@ Example: you want to support Sage Intacct.
 
 The `box.exception_raised` / `box.exception_resolved` / `box.outcome_recorded` webhooks are already emitted by the lifecycle store. If you want to surface a new event:
 
-1. Call `emit_webhook_event(organization_id=..., event_type="my.new.event", payload={...})` from wherever the event happens. [`clearledgr/services/webhook_delivery.py`](../clearledgr/services/webhook_delivery.py).
+1. Call `emit_webhook_event(organization_id=..., event_type="my.new.event", payload={...})` from wherever the event happens. [`solden/services/webhook_delivery.py`](../solden/services/webhook_delivery.py).
 
 2. Customers subscribe to it by including `"my.new.event"` in their `event_types` array when creating the subscription via `POST /webhooks`.
 
@@ -212,12 +212,12 @@ Every file in the repo answers one of three questions:
 - `DESIGN_THESIS.md`, `AGENT_DESIGN_SPECIFICATION.md`, `CLEARLEDGR_MEMO.md`, `commission-clawback-spec.md`, `vendor-onboarding-spec.md`.
 - These are the contracts. If you disagree with them, the conversation is with product/leadership, not a code PR.
 
-**"What does the product do?"** — `clearledgr/` + `ui/`:
-- `clearledgr/core/` — engine, contracts, shared primitives. If it's in `core/`, 3+ services use it.
-- `clearledgr/services/` — one module per business capability. These call `core/` and each other.
-- `clearledgr/integrations/` — per-third-party adapters (four ERPs).
-- `clearledgr/api/` — HTTP routers. Thin translation layer between HTTP and services.
-- `clearledgr/workflows/` — tiny today, reserved for named multi-step flows.
+**"What does the product do?"** — `solden/` + `ui/`:
+- `solden/core/` — engine, contracts, shared primitives. If it's in `core/`, 3+ services use it.
+- `solden/services/` — one module per business capability. These call `core/` and each other.
+- `solden/integrations/` — per-third-party adapters (four ERPs).
+- `solden/api/` — HTTP routers. Thin translation layer between HTTP and services.
+- `solden/workflows/` — tiny today, reserved for named multi-step flows.
 - `ui/gmail-extension/` — the Preact/InboxSDK extension. Built with `npm run build`.
 
 **"Does it work?"** — `tests/`, plus:

@@ -1,8 +1,8 @@
 /**
- * Clearledgr AP — Google Workspace Add-on
+ * Solden AP — Google Workspace Add-on
  * DESIGN_THESIS.md §6.9
  *
- * "The Add-on is for approvals only. It is not a full Clearledgr experience
+ * "The Add-on is for approvals only. It is not a full Solden experience
  * on mobile. An AP Clerk processing invoices needs the full Chrome extension
  * on a desktop. A CFO approving a £200,000 payment from their phone needs
  * the Add-on. Both needs are real. The product serves both without conflating them."
@@ -12,7 +12,10 @@
  * Nothing else. Loads fast, works on a phone, requires no additional auth.
  */
 
-var API_BASE = PropertiesService.getScriptProperties().getProperty('CLEARLEDGR_API_URL') || 'https://api.clearledgr.com';
+var scriptProperties = PropertiesService.getScriptProperties();
+var API_BASE = scriptProperties.getProperty('SOLDEN_API_URL')
+  || scriptProperties.getProperty('CLEARLEDGR_API_URL')
+  || 'https://api.soldenai.com';
 
 // ==================== TRIGGER: Gmail message opened ====================
 
@@ -25,9 +28,9 @@ function onGmailMessage(e) {
   var item = _fetchApItem(messageId, userEmail);
 
   if (!item) {
-    // Not a Clearledgr invoice — show nothing
+    // Not a Solden invoice — show nothing
     return CardService.newCardBuilder()
-      .setHeader(CardService.newCardHeader().setTitle('Clearledgr'))
+      .setHeader(CardService.newCardHeader().setTitle('Solden'))
       .addSection(
         CardService.newCardSection()
           .addWidget(CardService.newTextParagraph().setText('No invoice linked to this email.'))

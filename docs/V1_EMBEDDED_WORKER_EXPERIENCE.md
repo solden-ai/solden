@@ -4,11 +4,11 @@ This document describes the **embedded AP v1 operator experience** across Gmail,
 
 It aligns to the canonical doctrine in:
 
-- `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
+- `PLAN.md`
 
 Related implementation roadmap (post-hardening product-expression work):
 
-- `/Users/mombalam/Desktop/Solden.v1/docs/AGENTIC_UX_V1_5_IMPLEMENTATION_PLAN.md`
+- `docs/AGENTIC_UX_V1_5_IMPLEMENTATION_PLAN.md`
 
 ## Purpose
 

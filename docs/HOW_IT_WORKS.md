@@ -153,4 +153,4 @@ That is what makes Solden operational memory for live back-office work entering 
 
 For the authoritative AP v1 doctrine, contracts, and GA launch gates, see:
 
-- `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
+- `PLAN.md`

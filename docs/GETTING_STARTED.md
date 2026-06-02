@@ -9,7 +9,7 @@ This guide covers the current AP v1 product shape:
 
 For canonical doctrine, contracts, and launch gates, use:
 
-- `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
+- `PLAN.md`
 
 ## Before You Start
 
@@ -73,7 +73,7 @@ Connect the ERP(s) you plan to validate or use:
 
 Note:
 - Connector presence in the repo is not the same as operational readiness.
-- Readiness and parity are governed by `/Users/mombalam/Desktop/Solden.v1/PLAN.md`.
+- Readiness and parity are governed by `PLAN.md`.
 
 ### Step 6: Configure AP policies
 
@@ -148,15 +148,15 @@ Common causes:
 
 ### Canonical references for AP v1 work
 
-- Doctrine / launch gates: `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
-- Backlog / sequencing: `/Users/mombalam/Desktop/Solden.v1/TODO_BACKLOG.md`
-- Strategy / expansion direction: `/Users/mombalam/Desktop/Solden.v1/VISION.md`
-- Point-in-time readiness audit: `/Users/mombalam/Desktop/Solden.v1/docs/GA_LAUNCH_READINESS_TRACKER.md`
+- Doctrine / launch gates: `PLAN.md`
+- Backlog / sequencing: `TODO_BACKLOG.md`
+- Strategy / expansion direction: `VISION.md`
+- Point-in-time readiness audit: `docs/GA_LAUNCH_READINESS_TRACKER.md`
 
 ### Historical MVP framing
 
 The earlier MVP scope doc has been archived:
 
-- `/Users/mombalam/Desktop/Solden.v1/docs/archive/MVP_SCOPE.md`
+- `docs/archive/MVP_SCOPE.md`
 
 It is not the canonical source for AP v1.

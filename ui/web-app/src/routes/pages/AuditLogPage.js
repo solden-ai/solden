@@ -355,7 +355,7 @@ function SiemWebhookForm({ onSubmit, onCancel, busy }) {
         <span>Endpoint URL</span>
         <input
           type="url"
-          placeholder="https://siem.example.com/clearledgr/ingest"
+          placeholder="https://siem.example.com/solden/ingest"
           value=${url}
           onInput=${(e) => setUrl(e.target.value)}
           disabled=${busy}

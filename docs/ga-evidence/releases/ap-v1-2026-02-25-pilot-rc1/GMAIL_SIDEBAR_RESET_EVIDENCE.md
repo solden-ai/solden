@@ -17,9 +17,9 @@ Release: `ap-v1-2026-02-25-pilot-rc1`
   - `artifacts/sidebar-reset-after-work.png`
 
 ## Validation Commands
-- `cd /Users/mombalam/Desktop/Solden.v1/ui/gmail-extension && node --test tests/inboxsdk-layer.integration.test.cjs tests/inboxsdk-layer-ui.test.cjs`
+- `cd ui/gmail-extension && node --test tests/inboxsdk-layer.integration.test.cjs tests/inboxsdk-layer-ui.test.cjs`
   - Result: `26 passed`
-- `cd /Users/mombalam/Desktop/Solden.v1/ui/gmail-extension && npm run build`
+- `cd ui/gmail-extension && npm run build`
   - Result: `webpack build succeeded`
 
 ## Assertions Covered
@@ -30,6 +30,6 @@ Release: `ap-v1-2026-02-25-pilot-rc1`
 
 ## Notes
 - Backend API contracts were unchanged for this UX reset.
-- This evidence file is paired with tracker entries `B15-B19` in `/Users/mombalam/Desktop/Solden.v1/docs/BETA_ALIGNMENT_FIX_TRACKER.md`.
+- This evidence file is paired with tracker entries `B15-B19` in `docs/BETA_ALIGNMENT_FIX_TRACKER.md`.
 - Follow-on closure evidence for `B47-B54` lives in:
-  - `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/UI_UX_HARDENING_CLOSURE_EVIDENCE.md`
+  - `docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/UI_UX_HARDENING_CLOSURE_EVIDENCE.md`

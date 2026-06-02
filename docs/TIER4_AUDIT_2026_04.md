@@ -10,34 +10,34 @@ Total issues: 35 (0 critical, 8 high, 18 medium, 9 low)
 ## I. Giant Files (6 issues)
 
 ### I1. [HIGH] erp_router.py is 4,478 lines with 5 responsibilities
-**File:** `clearledgr/integrations/erp_router.py`
+**File:** `solden/integrations/erp_router.py`
 **What:** Sanitization, OAuth headers, query building (4 ERPs), error extraction, credit/settlement logic, and a Vendor class — all in one file.
 **Impact:** Every ERP change requires reading 4,478 lines. Hard to test one ERP in isolation.
 **Fix:** Split into `erp_router.py` (dispatch only), `erp_query_builders/{qb,xero,netsuite,sap}.py`, `erp_sanitization.py`, `erp_error_handlers.py`.
 
 ### I2. [HIGH] ap_item_service.py is 3,523 lines with 83 functions
-**File:** `clearledgr/services/ap_item_service.py`
+**File:** `solden/services/ap_item_service.py`
 **What:** 83 functions with no class grouping. Mixed concerns: field review (15 functions), confidence scoring, worklist building (600 lines), vendor summaries, upcoming tasks.
 **Impact:** No cohesion. Functions range from 2 to 200 lines. Hard to find anything.
 **Fix:** Split into `ap_field_review.py`, `ap_projection.py` (already partially exists), `ap_vendor_analysis.py`.
 
 ### I3. [MEDIUM] gmail_extension.py is 2,415 lines with 1,000+ lines of Pydantic models
-**File:** `clearledgr/api/gmail_extension.py`
+**File:** `solden/api/gmail_extension.py`
 **What:** 76 functions, 13 Pydantic models, all in one API file.
 **Fix:** Extract Pydantic models to `api/gmail_extension_models.py`.
 
 ### I4. [MEDIUM] workspace_shell.py is 2,086 lines mixing admin/config/GA/health
-**File:** `clearledgr/api/workspace_shell.py`
+**File:** `solden/api/workspace_shell.py`
 **What:** 110 functions covering GA readiness, config, Slack/Teams/Gmail status, health snapshots, and 12 router endpoints.
 **Fix:** Split into `workspace_config.py`, `workspace_health.py`, `workspace_ga_readiness.py`.
 
 ### I5. [MEDIUM] ap_store.py mixin has 74 methods (2,295 lines)
-**File:** `clearledgr/core/stores/ap_store.py`
+**File:** `solden/core/stores/ap_store.py`
 **What:** One mixin class with 74 persistence methods. Part of a 10-mixin inheritance chain that creates ~10,000 lines of "one giant class in disguise."
 **Fix:** Long-term: migrate from mixins to composition (`db.ap.list_items()` instead of `db.list_ap_items()`).
 
 ### I6. [MEDIUM] metrics_store.py mixin has 28 methods (2,177 lines)
-**File:** `clearledgr/core/stores/metrics_store.py`
+**File:** `solden/core/stores/metrics_store.py`
 **What:** KPI/reporting queries that could be a separate service.
 **Fix:** Same as I5 — extract to composition pattern.
 
@@ -51,7 +51,7 @@ Total issues: 35 (0 critical, 8 high, 18 medium, 9 low)
 **Fix:** Delete `ops.py::get_db()` and `erp_router.py::_get_db()`. Update 24 call sites.
 
 ### J2. [HIGH] Mixin-based DB pattern prevents isolated testing
-**File:** `clearledgr/core/database.py`
+**File:** `solden/core/database.py`
 **What:** SoldenDB inherits from 10+ mixins (APStore, AuthStore, VendorStore, etc.). Each mixin assumes `self.connect()` and `self._prepare_sql()` exist. Can't instantiate or test any store in isolation.
 **Impact:** Testing requires the full SoldenDB. Mocking is painful. Adding new queries requires knowing which mixin "owns" them.
 **Fix:** Migrate to composition pattern over time.
@@ -78,7 +78,7 @@ Total issues: 35 (0 critical, 8 high, 18 medium, 9 low)
 ## K. Dead Code & Unused Dependencies (7 issues)
 
 ### K1. [LOW] Dead functions in ap_item_service.py
-**File:** `clearledgr/services/ap_item_service.py`
+**File:** `solden/services/ap_item_service.py`
 **What:** `_sort_vendor_issue_items()` never called. 85+ single-caller functions that could be inlined.
 **Fix:** Remove dead functions. Inline single-callers where they don't add clarity.
 
@@ -164,7 +164,7 @@ Total issues: 35 (0 critical, 8 high, 18 medium, 9 low)
 
 ### M2. [LOW] Conflicting env var defaults
 **What:** Some flags default differently in dev vs prod via runtime checks (`_is_prod`). Logic is scattered across files with no central config module.
-**Fix:** Create `clearledgr/config.py` that centralizes all env var reads with typed defaults and validation.
+**Fix:** Create `solden/config.py` that centralizes all env var reads with typed defaults and validation.
 
 ---
 

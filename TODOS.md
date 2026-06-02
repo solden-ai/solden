@@ -6,9 +6,9 @@ It does not describe overall AP v1 implementation completeness or current launch
 The codebase already includes the core AP v1 product loop: Gmail-first intake/autopilot, Gmail-native work surfaces, Slack/Teams approvals, ERP posting and standard follow-on operations, audit trails, and ops/readiness APIs.
 
 Use these documents for current status instead:
-- `/Users/mombalam/Desktop/Solden.v1/README.md`
-- `/Users/mombalam/Desktop/Solden.v1/docs/GA_LAUNCH_READINESS_TRACKER.md`
-- `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/MANIFEST.md`
+- `README.md`
+- `docs/GA_LAUNCH_READINESS_TRACKER.md`
+- `docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/MANIFEST.md`
 
 ## P1 — Security & Reliability
 
@@ -68,7 +68,7 @@ Use these documents for current status instead:
 ## P2 — ERP Follow-On Refactoring
 
 ### ~~Extract circular import into shared module~~ ✓
-- **Status:** Done (2026-03-22) — `_apply_erp_follow_on_result()` and `_refresh_linked_finance_metadata()` now live in `clearledgr/services/erp_follow_on_result.py`, and `erp_api_first.py` imports them directly without the runtime import workaround
+- **Status:** Done (2026-03-22) — `_apply_erp_follow_on_result()` and `_refresh_linked_finance_metadata()` now live in `solden/services/erp_follow_on_result.py`, and `erp_api_first.py` imports them directly without the runtime import workaround
 
 ## P3 — Operational
 

@@ -147,16 +147,16 @@ If your code moves against any of those commitments, you're building the wrong t
 
 | Theme | File(s) |
 |---|---|
-| Box abstraction | `clearledgr/core/box_registry.py`, `clearledgr/core/stores/box_lifecycle_store.py` |
-| AP state machine | `clearledgr/core/ap_states.py` |
-| Vendor onboarding state machine | `clearledgr/core/vendor_onboarding_states.py` |
-| Rules-based routing | `clearledgr/services/ap_decision.py` |
-| Five LLM actions | `clearledgr/core/coordination_engine.py` handlers + `clearledgr/core/llm_gateway.py` |
-| Audit trail | `clearledgr/core/stores/ap_store.py:append_audit_event` (the funnel) |
-| Gmail surface | `clearledgr/api/gmail_*`, `clearledgr/services/gmail_*`, `ui/gmail-extension/` |
-| Slack surface | `clearledgr/api/slack_invoices.py`, `clearledgr/services/slack_*` |
-| ERP surface | `clearledgr/integrations/erp_*` |
-| Customer admin (inside Gmail) | `clearledgr/api/box_exceptions_admin.py`, `ui/gmail-extension/src/routes/pages/ExceptionsPage.js` |
+| Box abstraction | `solden/core/box_registry.py`, `solden/core/stores/box_lifecycle_store.py` |
+| AP state machine | `solden/core/ap_states.py` |
+| Vendor onboarding state machine | `solden/core/vendor_onboarding_states.py` |
+| Rules-based routing | `solden/services/ap_decision.py` |
+| Five LLM actions | `solden/core/coordination_engine.py` handlers + `solden/core/llm_gateway.py` |
+| Audit trail | `solden/core/stores/ap_store.py:append_audit_event` (the funnel) |
+| Gmail surface | `solden/api/gmail_*`, `solden/services/gmail_*`, `ui/gmail-extension/` |
+| Slack surface | `solden/api/slack_invoices.py`, `solden/services/slack_*` |
+| ERP surface | `solden/integrations/erp_*` |
+| Customer admin (inside Gmail) | `solden/api/box_exceptions_admin.py`, `ui/gmail-extension/src/routes/pages/ExceptionsPage.js` |
 
 ---
 

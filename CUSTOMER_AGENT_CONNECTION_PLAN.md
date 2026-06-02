@@ -72,9 +72,9 @@ webhooks, and a Python SDK are all in v1):
 
 ### 1. API key auth (partial)
 
-- `api_keys` table exists ([clearledgr/core/database.py:1299](clearledgr/core/database.py#L1299)).
+- `api_keys` table exists ([solden/core/database.py:1299](solden/core/database.py#L1299)).
 - `db.validate_api_key(api_key)` resolves a key to `{user_id,
-  organization_id, ...}` ([clearledgr/api/deps.py:67](clearledgr/api/deps.py#L67)).
+  organization_id, ...}` ([solden/api/deps.py:67](solden/api/deps.py#L67)).
 - `soft_org_guard` allows API-key callers to pass org enforcement.
 
 **Gaps:**
@@ -89,7 +89,7 @@ webhooks, and a Python SDK are all in v1):
 ### 2. Agent identity in audit chain (partial)
 
 - `audit_events` already has `actor_type TEXT` and `actor_id TEXT`
-  ([clearledgr/core/database.py:1050-1071](clearledgr/core/database.py#L1050)).
+  ([solden/core/database.py:1050-1071](solden/core/database.py#L1050)).
 - `actor_type` values already emitted in the wild: `human`, `user`,
   `agent`, `api`, `system`, `cs_team`, `erp_webhook`, `external_idp`,
   `service`.
@@ -105,7 +105,7 @@ webhooks, and a Python SDK are all in v1):
 ### 3. Public intent endpoint (partial)
 
 - Router exists: `/api/agent/intents/execute` at
-  [clearledgr/api/agent_intents.py:139](clearledgr/api/agent_intents.py#L139).
+  [solden/api/agent_intents.py:139](solden/api/agent_intents.py#L139).
 - Routes through `get_current_user` — JWT-only today; API-key path
   exists in `deps.py` but the intent router itself doesn't use it.
 - Has `/preview` (dry-run) and `/execute` (commit) endpoints. Plus
@@ -123,7 +123,7 @@ webhooks, and a Python SDK are all in v1):
 ### 4. Generic Box read API (missing)
 
 - `BoxSummary` dataclass exists at
-  [clearledgr/core/box_summary.py](clearledgr/core/box_summary.py) with
+  [solden/core/box_summary.py](solden/core/box_summary.py) with
   `build_box_summary()`. Good primitive — Box-type-agnostic.
 - `/api/workspace/ap-items/{id}/detail` returns the AP-shaped detail
   payload. Workspace-specific.
@@ -213,8 +213,8 @@ Steps 1-5 are shipped to main. Status under each step.
 
 ### Step 1 — Migration: extend api_keys + audit_events **[SHIPPED — commit 30d8fa3a]**
 
-**Files:** [clearledgr/core/migrations.py](clearledgr/core/migrations.py)
-(new migration), [clearledgr/core/database.py](clearledgr/core/database.py)
+**Files:** [solden/core/migrations.py](solden/core/migrations.py)
+(new migration), [solden/core/database.py](solden/core/database.py)
 (schema definitions).
 
 - `api_keys`: add `scopes TEXT` (JSON array stored as text),
@@ -232,8 +232,8 @@ for existing rows. New rows fill them.
 
 ### Step 2 — API key auth dependency for the public surface **[SHIPPED — commit 95c26cbd]**
 
-**Files:** new [clearledgr/api/v1_auth.py](clearledgr/api/v1_auth.py),
-[clearledgr/core/auth.py](clearledgr/core/auth.py) (resolve helper).
+**Files:** new [solden/api/v1_auth.py](solden/api/v1_auth.py),
+[solden/core/auth.py](solden/core/auth.py) (resolve helper).
 
 - New FastAPI dep `require_agent_key(scope: str)` that returns an
   `AgentIdentity` dataclass with `{key_id, organization_id, agent_id,
@@ -249,7 +249,7 @@ for existing rows. New rows fill them.
 
 ### Step 3 — `/v1/intents` router **[SHIPPED — commit 95c26cbd]**
 
-**Files:** new [clearledgr/api/v1_intents.py](clearledgr/api/v1_intents.py),
+**Files:** new [solden/api/v1_intents.py](solden/api/v1_intents.py),
 register in main.py.
 
 - `POST /v1/intents/execute` — same body as the existing
@@ -265,7 +265,7 @@ register in main.py.
 
 ### Step 4 — `/v1/records` router **[SHIPPED — commit 2dc04e2b]**
 
-**Files:** new [clearledgr/api/v1_records.py](clearledgr/api/v1_records.py).
+**Files:** new [solden/api/v1_records.py](solden/api/v1_records.py).
 
 - `GET /v1/records` — list records. Query params: `box_type` (string,
   required), `state` (optional), `cursor` (opaque pagination token),
@@ -279,7 +279,7 @@ register in main.py.
 
 ### Step 5 — `/v1/audit`, `/v1/me`, `/v1/health` (minimum surface) **[SHIPPED — commit 2dc04e2b]**
 
-**Files:** extend [clearledgr/api/v1.py](clearledgr/api/v1.py).
+**Files:** extend [solden/api/v1.py](solden/api/v1.py).
 
 - `GET /v1/health` — no auth.
 - `GET /v1/me` — echo back the caller's `{agent_id, agent_version,
@@ -289,13 +289,13 @@ register in main.py.
 
 ### Step 6 — Box-type-agnostic scope vocab
 
-**Files:** [clearledgr/api/api_keys.py](clearledgr/api/api_keys.py)
+**Files:** [solden/api/api_keys.py](solden/api/api_keys.py)
 (extend `_SCOPE_CATALOG`),
-[clearledgr/api/v1_auth.py](clearledgr/api/v1_auth.py) (accept-either
+[solden/api/v1_auth.py](solden/api/v1_auth.py) (accept-either
 fallback),
-[clearledgr/api/v1_intents.py](clearledgr/api/v1_intents.py) +
-[clearledgr/api/v1_records.py](clearledgr/api/v1_records.py) +
-[clearledgr/api/v1.py](clearledgr/api/v1.py) (switch the scope strings
+[solden/api/v1_intents.py](solden/api/v1_intents.py) +
+[solden/api/v1_records.py](solden/api/v1_records.py) +
+[solden/api/v1.py](solden/api/v1.py) (switch the scope strings
 each route asks for).
 
 - Add `records:read`, `records:write`, `intents:execute`,
@@ -310,7 +310,7 @@ each route asks for).
 ### Step 7 — Idempotency keys on `/v1/intents/execute` ✅ SHIPPED
 
 **Files:** migration 87 added `intent_responses` table;
-[clearledgr/api/v1_idempotency.py](clearledgr/api/v1_idempotency.py)
+[solden/api/v1_idempotency.py](solden/api/v1_idempotency.py)
 holds the helpers; `/v1/intents/execute` wires the four-call
 sequence around `runtime.execute_intent`.
 
@@ -334,10 +334,10 @@ sequence around `runtime.execute_intent`.
 ### Step 8 — Per-key rate limits ✅ SHIPPED
 
 **Files:**
-[clearledgr/api/v1_rate_limit.py](clearledgr/api/v1_rate_limit.py)
+[solden/api/v1_rate_limit.py](solden/api/v1_rate_limit.py)
 holds the counters + typed `RateLimitExceeded` exception;
 `require_agent_key` in
-[clearledgr/api/v1_auth.py](clearledgr/api/v1_auth.py) calls
+[solden/api/v1_auth.py](solden/api/v1_auth.py) calls
 `enforce_v1_rate_limit` after auth + scope pass; `main.py` has the
 typed exception handler that emits the audit row and returns 429.
 
@@ -363,11 +363,11 @@ typed exception handler that emits the audit row and returns 429.
 
 ### Step 9 — Webhooks (`/v1/webhooks/*`) ✅ SHIPPED
 
-**Files:** [clearledgr/api/v1_webhooks.py](clearledgr/api/v1_webhooks.py)
+**Files:** [solden/api/v1_webhooks.py](solden/api/v1_webhooks.py)
 holds the public CRUD. Reuses the battle-tested
-[clearledgr/services/webhook_delivery.py](clearledgr/services/webhook_delivery.py)
+[solden/services/webhook_delivery.py](solden/services/webhook_delivery.py)
 (retry queue, HMAC computation) and
-[clearledgr/core/stores/webhook_store.py](clearledgr/core/stores/webhook_store.py)
+[solden/core/stores/webhook_store.py](solden/core/stores/webhook_store.py)
 (persistence, tenant-pinned reads/writes — migrations 3 + 52
 already shipped the `webhook_subscriptions` + `webhook_deliveries`
 tables).

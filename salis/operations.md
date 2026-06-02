@@ -137,7 +137,7 @@ The payload should have the ERP's error response verbatim (minus the raw body wh
 
 ## Stuck vendor onboarding
 
-Same shape as stuck AP Box, but the states are different. See `clearledgr/core/vendor_onboarding_states.py` for the state machine.
+Same shape as stuck AP Box, but the states are different. See `solden/core/vendor_onboarding_states.py` for the state machine.
 
 Most common cause today: KYC / open-banking provider stubs return instant success, but the actual "real" path isn't wired yet. So any session that would route to those providers is stuck in `kyc` or `bank_verify` waiting for a producer that doesn't exist.
 
@@ -170,7 +170,7 @@ Until we contract with real providers, this is manual intervention — admin cli
 
 Today's story is honest: we have structured logs + Railway's built-in log viewer, plus `/api/ops/monitoring-health` endpoint that returns a set of check results. No alerting pipeline wired to paging — we ship visibility first, alerting later.
 
-**The monitoring endpoint** ([`services/monitoring.py`](../clearledgr/services/monitoring.py)) checks:
+**The monitoring endpoint** ([`services/monitoring.py`](../solden/services/monitoring.py)) checks:
 
 - Redis reachable
 - Postgres reachable

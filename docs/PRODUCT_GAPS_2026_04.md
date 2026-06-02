@@ -119,7 +119,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Priority:** P3
 **Status:** Completed 2026-04-03
 **What was built:**
-- `clearledgr/core/stores/payment_store.py` — payments + payment_events tables
+- `solden/core/stores/payment_store.py` — payments + payment_events tables
 - Payment statuses: ready_for_payment, scheduled, completed, partial, failed, reversed, overdue, closed_by_credit
 - ERP polling (hourly) detects payment completion, reversal, overdue, failure
 - Agent tools: `check_payment_readiness`, `verify_erp_posting` in APSkill
@@ -129,8 +129,8 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Priority:** P2
 **Status:** Completed 2026-04-03
 **What was built:**
-- `clearledgr/services/vendor_communication_templates.py` — 6 templates (missing_po, missing_amount, missing_due_date, bank_details_verification, general_inquiry, followup_reminder)
-- `clearledgr/services/auto_followup.py` — Gmail send capability (gmail.send scope), falls back to draft on 403
+- `solden/services/vendor_communication_templates.py` — 6 templates (missing_po, missing_amount, missing_due_date, bank_details_verification, general_inquiry, followup_reminder)
+- `solden/services/auto_followup.py` — Gmail send capability (gmail.send scope), falls back to draft on 403
 - Response detection: background loop scans vendor reply threads every 30 min, links responses to AP items
 - Follow-up escalation: auto-escalate after configurable days without response
 - HTML sanitization, field truncation for security
@@ -139,7 +139,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Priority:** P2
 **Status:** Completed 2026-04-03 (commit `e49ab0a`)
 **What was built:**
-- `clearledgr/services/exception_resolver.py` — 11 resolution strategies
+- `solden/services/exception_resolver.py` — 11 resolution strategies
 - Strategies: missing_po (auto-resolve via ERP lookup), vendor_not_found (auto-create), amount_anomaly (suggest), duplicate (suggest), vendor_mismatch (fuzzy match), low_confidence (identify fields), erp_sync_mismatch (re-verify then re-post), missing_approval, budget_exceeded, currency_mismatch, payment_terms_violation
 - Background sweep every 45 min for unresolved exceptions
 - Agent tool `resolve_exception` registered in APSkill
@@ -157,7 +157,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Priority:** P3
 **Status:** Completed 2026-04-03 (commit `3ba557d`)
 **What was built:**
-- `clearledgr/services/spend_analysis.py` — SpendAnalysisService with full portfolio analytics
+- `solden/services/spend_analysis.py` — SpendAnalysisService with full portfolio analytics
 - Top vendors by spend, spend by GL category, monthly trends with MoM %, budget utilization, portfolio anomaly detection (spend spikes >50%, new vendors, missing GL mappings)
 - `GET /api/workspace/spend-analysis` endpoint
 - Agent tool `analyze_spending` registered in APSkill
@@ -180,7 +180,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Priority:** P3
 **Status:** Completed 2026-04-03
 **What was built:**
-- `clearledgr/services/ap_aging_report.py` — `APAgingReport` service with 5 aging buckets (current, 1-30, 31-60, 61-90, 90+ days)
+- `solden/services/ap_aging_report.py` — `APAgingReport` service with 5 aging buckets (current, 1-30, 31-60, 61-90, 90+ days)
 - Vendor breakdown per bucket, summary stats (total open, overdue %, vendor count)
 - `GET /api/ap/items/aging` endpoint
 - Filters: only open states (received through posted_to_erp), requires due_date
@@ -203,7 +203,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Priority:** P2
 **Status:** Completed 2026-04-03
 **What was built:**
-- `clearledgr/services/vendor_erp_sync.py` — `sync_vendors_from_erp()` service
+- `solden/services/vendor_erp_sync.py` — `sync_vendors_from_erp()` service
 - Pulls all vendors from ERP (via `list_all_vendors`), upserts to Solden vendor profiles
 - Change detection: new vendors, deactivated vendors, reactivated vendors, payment terms changes
 - ERP-sourced fields stored in profile metadata (vendor_id, email, phone, address, tax_id, currency, balance)
@@ -226,7 +226,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Priority:** P0
 **Status:** Completed 2026-04-03
 **What was built:**
-- `clearledgr/core/stores/entity_store.py` — EntityStore mixin with entities table
+- `solden/core/stores/entity_store.py` — EntityStore mixin with entities table
 - Entity-scoped ERP connections, GL mappings, approval rules
 - Entity routing rules: vendor → entity mapping
 - SAP company_code routing, NetSuite subsidiary routing, QB separate realm per entity
@@ -256,7 +256,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Priority:** P2
 **Status:** Completed 2026-04-03
 **What was built:**
-- `clearledgr/services/report_export.py` — report generation service with CSV serialization
+- `solden/services/report_export.py` — report generation service with CSV serialization
 - 3 report types: `ap_aging` (vendor breakdown by bucket), `vendor_spend` (vendors + GL + trends), `posting_status` (AP items with posting timing)
 - Audit trail already exported via existing `GET /api/ap/items/audit/export`
 - `GET /api/workspace/reports/export?report_type=...&format=csv|json` endpoint
@@ -268,10 +268,10 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Priority:** P2
 **Status:** Completed 2026-04-03
 **What was built:**
-- `clearledgr/services/outlook_api.py` — OutlookAPIClient, OutlookToken, OutlookTokenStore (Fernet-encrypted), Microsoft Graph scopes (Mail.Read, Mail.ReadWrite, Mail.Send)
-- `clearledgr/services/outlook_autopilot.py` — OutlookAutopilot polling loop (mirrors GmailAutopilot), 5-min interval, catch-up rescan on startup, subscription limit checks
-- `clearledgr/services/outlook_email_processor.py` — bridges Outlook messages into existing AP pipeline via process_invoice()
-- `clearledgr/api/outlook_routes.py` — OAuth connect/callback/disconnect, status, webhook (Graph change notifications with validation handshake)
+- `solden/services/outlook_api.py` — OutlookAPIClient, OutlookToken, OutlookTokenStore (Fernet-encrypted), Microsoft Graph scopes (Mail.Read, Mail.ReadWrite, Mail.Send)
+- `solden/services/outlook_autopilot.py` — OutlookAutopilot polling loop (mirrors GmailAutopilot), 5-min interval, catch-up rescan on startup, subscription limit checks
+- `solden/services/outlook_email_processor.py` — bridges Outlook messages into existing AP pipeline via process_invoice()
+- `solden/api/outlook_routes.py` — OAuth connect/callback/disconnect, status, webhook (Graph change notifications with validation handshake)
 - `outlook_autopilot_state` DB table for polling state persistence
 - Wired into app_startup.py (auto-starts alongside Gmail autopilot)
 - Graph subscription support for push notifications (new mail → webhook → next poll picks up)
@@ -294,8 +294,8 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Priority:** P3
 **Status:** Completed 2026-04-03
 **What was built:**
-- `clearledgr/core/stores/webhook_store.py` — WebhookStore mixin with subscription CRUD, wildcard (`*`) event matching
-- `clearledgr/services/webhook_delivery.py` — async delivery with HMAC-SHA256 signing (`X-Solden-Signature`), event emission, retry via existing notification queue
+- `solden/core/stores/webhook_store.py` — WebhookStore mixin with subscription CRUD, wildcard (`*`) event matching
+- `solden/services/webhook_delivery.py` — async delivery with HMAC-SHA256 signing (`X-Solden-Signature`), event emission, retry via existing notification queue
 - `webhook_subscriptions` table (id, org, url, event_types JSON, secret, is_active)
 - 11 event types: invoice.received, .validated, .needs_approval, .approved, .rejected, .ready_to_post, .posted_to_erp, .closed, .needs_info, .failed_post + payment events
 - Auto-emitted on every AP state transition (fire-and-forget post-commit hook in `update_ap_item`)
@@ -345,7 +345,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Priority:** P2
 **Status:** Completed 2026-04-04
 **What was built:**
-- `clearledgr/core/migrations.py` — lightweight migration framework (no Alembic)
+- `solden/core/migrations.py` — lightweight migration framework (no Alembic)
 - `schema_versions` table tracks applied migrations with timestamps
 - `@migration(version, description)` decorator for numbered migrations
 - Runs on startup after initialize(), only applies pending versions
@@ -357,7 +357,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Status:** Completed 2026-04-04
 **What was built:**
 - Sentry SDK integration in `main.py` — opt-in via `SENTRY_DSN` env var, FastAPI + httpx integrations, configurable trace sample rate
-- `clearledgr/services/monitoring.py` — MonitoringService with 5 threshold checks: dead letters, auth failures, stale autopilot, overdue invoices, posting failure rate
+- `solden/services/monitoring.py` — MonitoringService with 5 threshold checks: dead letters, auth failures, stale autopilot, overdue invoices, posting failure rate
 - Alerts emitted to configurable channels (slack, webhook, log) via `MONITOR_ALERT_CHANNELS` env var
 - Critical alerts also captured as Sentry events
 - All thresholds overridable via `MONITOR_THRESHOLD_*` env vars
@@ -382,7 +382,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Priority:** P2
 **Status:** Completed 2026-04-04
 **What was built:**
-- `clearledgr/services/vendor_dedup.py` — VendorDedupService with detect, merge, alias management, and name resolution
+- `solden/services/vendor_dedup.py` — VendorDedupService with detect, merge, alias management, and name resolution
 - Detection: fuzzy matching via existing `vendor_similarity()` (Jaccard + SequenceMatcher), configurable threshold, returns ranked clusters with canonical suggestion (most invoices)
 - Merge: consolidates aliases, reassigns AP items to canonical, deletes duplicate profiles
 - Alias management: add/remove aliases on vendor_aliases JSON array, idempotent
@@ -413,8 +413,8 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Status:** Completed 2026-04-04
 **What was built:**
 - `disputes` table (id, ap_item_id, org, type, status, vendor, description, resolution, timestamps)
-- `clearledgr/core/stores/dispute_store.py` — DisputeStore mixin with full CRUD
-- `clearledgr/services/dispute_service.py` — DisputeService with lifecycle: open → vendor_contacted → response_received → resolved/escalated/closed
+- `solden/core/stores/dispute_store.py` — DisputeStore mixin with full CRUD
+- `solden/services/dispute_service.py` — DisputeService with lifecycle: open → vendor_contacted → response_received → resolved/escalated/closed
 - 8 dispute types: missing_po, wrong_amount, vendor_mismatch, missing_info, duplicate, bank_detail_change, erp_sync_mismatch, other
 - Summary endpoint with counts by status and type
 - Existing background infrastructure already handles: vendor reply detection (30 min scan), auto-escalation, follow-up resend, Slack notifications
@@ -426,7 +426,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Status:** Completed 2026-04-04
 **What was built:**
 - `delegation_rules` table (delegator, delegate, date range, active flag)
-- `clearledgr/services/approval_delegation.py` — DelegationService with rule CRUD, delegate resolution (with date range), approver list resolution, auto-reassignment
+- `solden/services/approval_delegation.py` — DelegationService with rule CRUD, delegate resolution (with date range), approver list resolution, auto-reassignment
 - Date-bounded rules: `starts_at`/`ends_at` for scheduled OOO periods
 - `resolve_approvers()` swaps delegated approvers in any approval list
 - `auto_reassign_pending_approvals()` wired into background approval timeout checks — reassigns pending chains to delegates
@@ -437,7 +437,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Priority:** P2
 **Status:** Completed 2026-04-04
 **What was built:**
-- `clearledgr/services/period_close.py` — PeriodCloseService with full period management
+- `solden/services/period_close.py` — PeriodCloseService with full period management
 - Configurable cutoff dates per org (`close_day_offset` in settings_json, default: 5th of next month)
 - Period lock/unlock: prevents posting invoices dated in locked periods
 - Backdate detection: finds invoices received after cutoff that belong to the prior period
@@ -451,7 +451,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Priority:** P3
 **Status:** Completed 2026-04-04
 **What was built:**
-- `clearledgr/services/vendor_statement_recon.py` — VendorStatementRecon with 4-tier matching strategy
+- `solden/services/vendor_statement_recon.py` — VendorStatementRecon with 4-tier matching strategy
 - Matching: exact reference → partial reference → amount+date proximity (5-day tolerance) → amount-only
 - Output: matched items, amount discrepancies, unmatched on statement, unmatched in Solden
 - Summary: match rate %, totals, difference, counts per category
@@ -463,7 +463,7 @@ Total items: 39 (32 done, 3 N/A, 4 remaining)
 **Priority:** P3
 **Status:** Completed 2026-04-04
 **What was built:**
-- `clearledgr/services/tax_compliance.py` — TaxComplianceService with full Europe/Africa tax support
+- `solden/services/tax_compliance.py` — TaxComplianceService with full Europe/Africa tax support
 - VAT number validation for 27 EU states + UK + Nigeria + Kenya + Ghana + South Africa (regex patterns per country)
 - Standard VAT rates and WHT rates per country
 - Reverse charge detection for intra-EU B2B transactions

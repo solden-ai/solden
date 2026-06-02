@@ -1,6 +1,6 @@
 # Salis — Solden engineering docs
 
-This directory is the engineering handoff for Solden.v1. If you're joining the team, start here.
+This directory is the engineering handoff for Solden. If you're joining the team, start here.
 
 Named "Salis" so we can talk about "the docs" as a thing with an identity, not a folder.
 
@@ -29,14 +29,14 @@ pip install -r requirements.txt
 # 2. Copy env
 cp env.example .env
 # Open .env and at minimum set:
-#   CLEARLEDGR_SECRET_KEY=(any random string for dev)
-#   DATABASE_URL=sqlite:///./clearledgr.db      # dev default, fine
+#   SOLDEN_SECRET_KEY=(any random string for dev)
+#   DATABASE_URL=postgresql://localhost:5432/solden_test
 #   REDIS_URL=redis://localhost:6379/0          # needs a local Redis running
 # Anthropic key is optional for most tests; set ANTHROPIC_API_KEY if you want
 # to exercise real Claude calls locally.
 
 # 3. Run migrations + start the server
-CLEARLEDGR_PROCESS_ROLE=all python main.py
+SOLDEN_PROCESS_ROLE=all python main.py
 # or
 sh scripts/start-api.sh
 ```
@@ -84,7 +84,7 @@ npm test              # runs the extension test suite (100 passing expected)
 ### Full stack with Postgres + Redis (optional)
 
 ```bash
-docker-compose up -d       # Postgres + Redis + API
+docker compose up -d       # Postgres + Redis + API
 ```
 
 Hits the same code paths as Railway prod. Slower iteration than SQLite-local but closer to production.
@@ -122,7 +122,7 @@ Salis is the onboarding layer. The deeper canonical docs live at the repo root:
 | [`../DESIGN_THESIS.md`](../DESIGN_THESIS.md) | Product | The product doctrine. Box-first, coordination-layer identity, the whole §1-§19 thesis. |
 | [`../AGENT_DESIGN_SPECIFICATION.md`](../AGENT_DESIGN_SPECIFICATION.md) | Architecture | The canonical agent architecture. §1-§13. |
 | [`../CLEARLEDGR_MEMO.md`](../CLEARLEDGR_MEMO.md) | CEO | External-facing product identity memo. Read this once for the customer-facing framing. |
-| [`../PLAN.md`](../PLAN.md) | Launch | AP v1 GA launch spec. Treat as historical reference; the current 30-day plan lives in `~/.gstack/projects/clearledgr-Clearledgr-AP/ceo-plans/2026-04-21-path-to-first-customer.md`. |
+| [`../PLAN.md`](../PLAN.md) | Launch | AP v1 GA launch spec. Treat as the launch authority when it conflicts with older planning notes. |
 | [`../TODOS.md`](../TODOS.md) | Engineering | Deferred work ledger. Not an implementation-completeness tracker. |
 | `../commission-clawback-spec.md` | Frozen spec | Second workflow class spec. Frozen pending V1 launch. |
 | `../vendor-onboarding-spec.md` | Engineering | 1500-line engineering spec for vendor onboarding. Implementation shipped; KYC + open-banking providers stubbed. |

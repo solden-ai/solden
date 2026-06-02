@@ -59,7 +59,7 @@ Updated after every user correction per working rules.
 ## Architecture Patterns
 
 ### AP item state machine is the canonical source of truth
-- All state transitions go through `clearledgr/core/ap_states.py`
+- All state transitions go through `solden/core/ap_states.py`
 - Never set `state` directly — always call `transition_or_raise()` or `update_ap_item(state=...)` which validates internally
 
 ### Idempotency keys prevent double-posting

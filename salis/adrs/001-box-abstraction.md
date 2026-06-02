@@ -19,7 +19,7 @@ The product thesis — that finance work needs a persistent home per workflow in
 Promote the Box from doctrine to code.
 
 - A **Box** is a persistent home for one workflow instance.
-- Each Box has a `box_type` (registered in `clearledgr/core/box_registry.py`) and a `box_id`.
+- Each Box has a `box_type` (registered in `solden/core/box_registry.py`) and a `box_id`.
 - Every shared primitive (`audit_events`, `llm_call_log`, `pending_notifications`) is keyed on `(box_id, box_type)`.
 - The first two registered types: `ap_item`, `vendor_onboarding_session`. Clawback comes later as `clawback_case`.
 - Migration v42 drops the `ap_item_id` column on shared primitives after backfilling `box_id` + `box_type`.

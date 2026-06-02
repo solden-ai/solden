@@ -7,12 +7,12 @@
  *    on the Vendor Bill page when the user is viewing or editing an
  *    existing bill. The subtab hosts an iframe that loads our Suitelet,
  *    which serves the panel HTML/JS/CSS and (Phase 3) mints a short-
- *    lived JWT for the panel to call api.clearledgr.com.
+ *    lived JWT for the panel to call api.soldenai.com.
  *    Skipped on `create` (no record id yet) and on `xedit` (inline
  *    edit loads partial records — the iframe would render with stale ids).
  *
  * 2. **Write direction (`afterSubmit`)** — fires an HMAC-signed webhook
- *    to api.clearledgr.com/erp/webhooks/netsuite/<orgId> on every
+ *    to api.soldenai.com/erp/webhooks/netsuite/<orgId> on every
  *    vendor-bill insert/update/delete. This is what makes ERP-arrived
  *    bills (EDI, vendor portal, AP-clerk-typed) visible to Solden
  *    without going through Gmail. The same `bundle_secret` provisioned

@@ -26,7 +26,7 @@ Five things we care about:
 
 **How it's enforced:**
 
-1. `TokenData` dataclass ([`clearledgr/core/auth.py`](../clearledgr/core/auth.py)) carries `organization_id` on every JWT.
+1. `TokenData` dataclass ([`solden/core/auth.py`](../solden/core/auth.py)) carries `organization_id` on every JWT.
 2. `verify_org_access(row_org_id, user)` raises 403 if mismatch.
 3. Store methods take `organization_id` as a required argument. They WHERE-clause every query.
 4. FastAPI dependencies `soft_org_guard` (read) + `hard_org_guard` (write) apply at the route level.
@@ -66,7 +66,7 @@ Five things we care about:
 
 **Rotation story:** see [`operations.md`](./operations.md) → "Rotate secrets."
 
-**Key derivation:** `TOKEN_ENCRYPTION_KEY` raw bytes → SHA-256 hash → base64 url-safe encode → Fernet-compatible key. Implementation in [`clearledgr/core/secrets.py`](../clearledgr/core/secrets.py). `require_secret()` crashes in prod if a required secret is missing; returns a random fallback in dev (with a prominent warning).
+**Key derivation:** `TOKEN_ENCRYPTION_KEY` raw bytes → SHA-256 hash → base64 url-safe encode → Fernet-compatible key. Implementation in [`solden/core/secrets.py`](../solden/core/secrets.py). `require_secret()` crashes in prod if a required secret is missing; returns a random fallback in dev (with a prominent warning).
 
 **Never-in-logs list:**
 
@@ -112,7 +112,7 @@ Role gate is applied in routes: `_require_admin(user)` raises 403 if role isn't 
 
 The five LLM actions (§7.1) all accept untrusted input (email body, vendor reply text, invoice PDF text). We apply layered defense:
 
-1. **Input clipping:** [`core/prompt_guard.py`](../clearledgr/core/prompt_guard.py) limits subject + vendor name + body lengths. Truncates aggressively.
+1. **Input clipping:** [`core/prompt_guard.py`](../solden/core/prompt_guard.py) limits subject + vendor name + body lengths. Truncates aggressively.
 2. **Structured output only:** tool-use schemas are closed-set enums. Claude can't return a free-form "I will ignore all previous instructions and..." string in a routing role — there's no routing role.
 3. **No routing from LLM output:** the `ap_decision.py` rewrite (Phase 4) made this explicit. Claude writes prose. Rules decide.
 4. **Cost cap:** `llm_gateway.py` rate-limits per-org so a prompt-injection that tries to drive up the API bill gets stopped.

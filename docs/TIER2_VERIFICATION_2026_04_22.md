@@ -10,7 +10,7 @@ Context: yesterday's audit produced a list of hypothesized gaps. Today's re-veri
 
 **Status:** closed.
 
-**Finding:** Comprehensive cross-org regression coverage already existed for every major org-scoped resource — AP items, audit events, box exceptions, vendor KYC, vendor domain lock — *except* webhook subscriptions. The route handlers at [clearledgr/api/workspace_shell.py:2060-2134](../clearledgr/api/workspace_shell.py#L2060-L2134) enforce `_resolve_org_id` (raises HTTPException 403 on org mismatch), but that enforcement was untested end-to-end.
+**Finding:** Comprehensive cross-org regression coverage already existed for every major org-scoped resource — AP items, audit events, box exceptions, vendor KYC, vendor domain lock — *except* webhook subscriptions. The route handlers at [solden/api/workspace_shell.py:2060-2134](../solden/api/workspace_shell.py#L2060-L2134) enforce `_resolve_org_id` (raises HTTPException 403 on org mismatch), but that enforcement was untested end-to-end.
 
 **Fix:** `TestWebhookCrossOrgIsolation` added to [tests/test_outgoing_webhooks.py](../tests/test_outgoing_webhooks.py). Four tests cover LIST (with and without query-param spoofing), CREATE (with query-param spoofing), and DELETE (by id on another org's webhook). All assert 403 on cross-org access or strict same-org scoping on valid requests.
 
@@ -21,9 +21,9 @@ Context: yesterday's audit produced a list of hypothesized gaps. Today's re-veri
 **Status:** open. Design input needed before implementation.
 
 **What exists today:**
-- Per-call cost logging at [clearledgr/core/llm_gateway.py:389-449](../clearledgr/core/llm_gateway.py#L389-L449). Every Claude call writes `{organization_id, cost_estimate_usd, input_tokens, output_tokens, action, model}` to the `llm_call_log` table.
-- Monthly per-org aggregation at [clearledgr/services/subscription.py:885-913](../clearledgr/services/subscription.py#L885-L913) — `_get_llm_cost_this_month()` returns call count + total USD since `month_start`. Surfaces in the ops dashboard.
-- Per-action input-token budget at [llm_gateway.py:225-297](../clearledgr/core/llm_gateway.py#L225-L297) — messages are truncated if they exceed the action's token ceiling.
+- Per-call cost logging at [solden/core/llm_gateway.py:389-449](../solden/core/llm_gateway.py#L389-L449). Every Claude call writes `{organization_id, cost_estimate_usd, input_tokens, output_tokens, action, model}` to the `llm_call_log` table.
+- Monthly per-org aggregation at [solden/services/subscription.py:885-913](../solden/services/subscription.py#L885-L913) — `_get_llm_cost_this_month()` returns call count + total USD since `month_start`. Surfaces in the ops dashboard.
+- Per-action input-token budget at [llm_gateway.py:225-297](../solden/core/llm_gateway.py#L225-L297) — messages are truncated if they exceed the action's token ceiling.
 
 **What's missing:** a hard per-workspace monthly cost cap that blocks or throttles Claude calls when hit. Today's posture is observe-only — you can see a workspace burning through budget but nothing stops it.
 
@@ -52,8 +52,8 @@ Context: yesterday's audit produced a list of hypothesized gaps. Today's re-veri
 **What yesterday's audit said:** "No scheduled job invokes `list_orgs_eligible_for_purge` + `purge_organization_data`. Soft-deleted orgs sit past legal-hold indefinitely."
 
 **What the code actually says:**
-- Celery task `purge_soft_deleted_orgs` at [clearledgr/services/celery_tasks.py:332-408](../clearledgr/services/celery_tasks.py#L332-L408) — full GDPR Article 17 flow: calls `list_orgs_eligible_for_purge(legal_hold_days=ORG_LEGAL_HOLD_DAYS)`, iterates eligible orgs, runs `purge_organization_data(org_id)`, stamps `purged_at`, emits `organization_hard_purged` audit event per org.
-- Scheduled daily at [clearledgr/services/celery_app.py:99-108](../clearledgr/services/celery_app.py#L99-L108) (`"purge-soft-deleted-orgs"` entry in `beat_schedule`, `24 * 60 * 60.0` seconds).
+- Celery task `purge_soft_deleted_orgs` at [solden/services/celery_tasks.py:332-408](../solden/services/celery_tasks.py#L332-L408) — full GDPR Article 17 flow: calls `list_orgs_eligible_for_purge(legal_hold_days=ORG_LEGAL_HOLD_DAYS)`, iterates eligible orgs, runs `purge_organization_data(org_id)`, stamps `purged_at`, emits `organization_hard_purged` audit event per org.
+- Scheduled daily at [solden/services/celery_app.py:99-108](../solden/services/celery_app.py#L99-L108) (`"purge-soft-deleted-orgs"` entry in `beat_schedule`, `24 * 60 * 60.0` seconds).
 - Legal-hold window is configurable via `ORG_LEGAL_HOLD_DAYS` env var (default 30).
 - Underlying store methods covered by [tests/test_org_purge.py](../tests/test_org_purge.py) (108 lines, exercises `purge_organization_data` directly with mixed-org fixtures and no-op edge cases).
 
@@ -63,7 +63,7 @@ Context: yesterday's audit produced a list of hypothesized gaps. Today's re-veri
 
 **Status:** open. Scope sketch captured; implementation deferred.
 
-**Finding:** [clearledgr/api/org_config.py:745-776](../clearledgr/api/org_config.py#L745-L776) — `POST /api/organizations/{id}/gdpr/data-export-request` returns a fabricated request ID, status `queued`, and an "estimated 24-hour completion" message. The comment at L767 explicitly says *"would queue a background job"*. There is no background job.
+**Finding:** [solden/api/org_config.py:745-776](../solden/api/org_config.py#L745-L776) — `POST /api/organizations/{id}/gdpr/data-export-request` returns a fabricated request ID, status `queued`, and an "estimated 24-hour completion" message. The comment at L767 explicitly says *"would queue a background job"*. There is no background job.
 
 **Scope sketch for a real implementation:**
 1. New Celery task `export_organization_data(org_id, request_id)` that:
@@ -103,7 +103,7 @@ Not executed this sprint. Scope + stage plan captured in [plans/floofy-napping-r
 
 **Status:** closed.
 
-Systematic survey across `clearledgr/**/*.py + ui/gmail-extension/src/**/*.js` found exactly one real sediment item: a description string in [clearledgr/workflows/ap_workflow.py:98](../clearledgr/workflows/ap_workflow.py) referenced an "API-first with browser-agent fallback" that was removed. Fixed in commit `b7dd51d`.
+Systematic survey across `solden/**/*.py + ui/gmail-extension/src/**/*.js` found exactly one real sediment item: a description string in [solden/workflows/ap_workflow.py:98](../solden/workflows/ap_workflow.py) referenced an "API-first with browser-agent fallback" that was removed. Fixed in commit `b7dd51d`.
 
 Everything else in the sediment survey was either (a) legitimate historical migration records (`LEGACY_STATE_MAP`, `_LEGACY_ROLE_MAP`, `SkillResponse.from_legacy`), (b) sensible fallback patterns (`_fallback_password_context`), or (c) cosmetic-only rename candidates not worth touching (`looksEphemeralStoredHost`, migration function underscore prefixes).
 

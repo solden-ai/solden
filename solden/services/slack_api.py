@@ -214,7 +214,7 @@ class SlackAPIClient:
         Search for messages.
         
         Args:
-            query: Search query (e.g., "from:@clearledgr invoice")
+            query: Search query (e.g., "from:@solden invoice")
             count: Number of results
             sort: Sort by "timestamp" or "score"
         """

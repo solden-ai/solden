@@ -50,7 +50,7 @@ function injectSettingsTab(queueManager) {
   const tab = document.createElement('a');
   tab.id = SETTINGS_TAB_ID;
   tab.className = 'f0';
-  tab.href = '#settings/clearledgr';
+  tab.href = '#settings/solden';
   tab.textContent = 'Solden';
   tab.style.cssText = 'cursor:pointer;';
   tab.addEventListener('click', (e) => {
@@ -62,8 +62,8 @@ function injectSettingsTab(queueManager) {
   });
   tabBar.appendChild(tab);
 
-  // If user navigated directly to #settings/clearledgr, activate our tab
-  if (window.location.hash.includes('settings/clearledgr')) {
+  // If user navigated directly to the Solden tab, activate it.
+  if (window.location.hash.includes('settings/solden') || window.location.hash.includes('settings/clearledgr')) {
     tabBar.querySelectorAll('a').forEach(a => a.classList.remove('f1'));
     tab.classList.add('f1');
     showSettingsContent(queueManager);

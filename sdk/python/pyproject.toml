@@ -31,9 +31,9 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://soldenai.com"
-Documentation = "https://github.com/soldenai/Clearledgr-AP/tree/main/docs/v1"
-Source = "https://github.com/soldenai/Clearledgr-AP/tree/main/sdk/python"
-Changelog = "https://github.com/soldenai/Clearledgr-AP/blob/main/sdk/python/CHANGELOG.md"
+Documentation = "https://github.com/solden-ai/solden/tree/main/docs/v1"
+Source = "https://github.com/solden-ai/solden/tree/main/sdk/python"
+Changelog = "https://github.com/solden-ai/solden/blob/main/sdk/python/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [

@@ -2,7 +2,7 @@
 #
 # This is the 5th Railway service in the Solden project, alongside
 # api / worker / beat / redis. Static SPA + reverse proxy to the api
-# service. Same-origin model: workspace.clearledgr.com serves both the SPA
+# service. Same-origin model: workspace.soldenai.com serves both the SPA
 # and proxies /api, /auth, /v1, /extension, /erp, /portal, /slack,
 # /teams, /outlook, /health to the api service. No CORS, no
 # cookie-domain config required.
@@ -10,13 +10,13 @@
 # Required env vars (set in the Railway service dashboard):
 #   API_TARGET   — full URL of the api service. Use Railway's private
 #                  network for low-latency: http://api.railway.internal:PORT
-#                  Or fall back to the public URL: https://api.clearledgr.com
+#                  Or fall back to the public URL: https://api.soldenai.com
 #   PORT         — Railway-supplied; the server respects this.
 #
 # Optional:
 #   PROXY_LOG=1  — verbose proxy logs (off by default)
 #
-# Custom domain: workspace.clearledgr.com points here once the Railway-issued
+# Custom domain: workspace.soldenai.com points here once the Railway-issued
 # preview URL is confirmed working.
 
 [build]

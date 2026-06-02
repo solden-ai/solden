@@ -62,9 +62,9 @@ The backend does not build separate orchestration systems per surface. It expose
 
 This seam is centered on:
 
-- `clearledgr/core/finance_contracts.py`
-- `clearledgr/services/finance_agent_runtime.py`
-- `clearledgr/services/finance_skills/`
+- `solden/core/finance_contracts.py`
+- `solden/services/finance_agent_runtime.py`
+- `solden/services/finance_skills/`
 
 The runtime owns:
 
@@ -159,7 +159,7 @@ This is the FastAPI application entrypoint. It assembles:
 
 ### 4.2 API layer
 
-- `clearledgr/api/`
+- `solden/api/`
 
 This layer exposes surface-specific and domain-specific API routers, including:
 
@@ -173,7 +173,7 @@ This layer exposes surface-specific and domain-specific API routers, including:
 
 ### 4.3 Service and runtime layer
 
-- `clearledgr/services/`
+- `solden/services/`
 
 This layer contains:
 
@@ -188,7 +188,7 @@ This layer contains:
 
 ### 4.4 Core and persistence
 
-- `clearledgr/core/`
+- `solden/core/`
 
 This layer contains:
 
@@ -262,7 +262,7 @@ The architecture revolves around a canonical finance runtime seam rather than a 
 
 ### 6.1 Runtime contracts
 
-`clearledgr/core/finance_contracts.py` defines the core runtime contracts:
+`solden/core/finance_contracts.py` defines the core runtime contracts:
 
 - `SkillCapabilityManifest`
 - `SkillRequest`
@@ -281,7 +281,7 @@ This is the key mechanism that makes “one finance runtime, multiple finance sk
 
 ### 6.2 FinanceAgentRuntime
 
-`clearledgr/services/finance_agent_runtime.py` provides the tenant-scoped runtime.
+`solden/services/finance_agent_runtime.py` provides the tenant-scoped runtime.
 
 Its responsibilities include:
 
@@ -305,16 +305,16 @@ The runtime currently registers these skill packages:
 
 These live in:
 
-- `clearledgr/services/finance_skills/ap_skill.py`
-- `clearledgr/services/finance_skills/workflow_health_skill.py`
-- `clearledgr/services/finance_skills/vendor_compliance_skill.py`
-- `clearledgr/services/finance_skills/recon_skill.py`
+- `solden/services/finance_skills/ap_skill.py`
+- `solden/services/finance_skills/workflow_health_skill.py`
+- `solden/services/finance_skills/vendor_compliance_skill.py`
+- `solden/services/finance_skills/recon_skill.py`
 
 Not every skill has the same product maturity, but the runtime seam treats them uniformly.
 
 ### 6.4 Agent intent API
 
-The canonical intent API is exposed through `clearledgr/api/agent_intents.py`.
+The canonical intent API is exposed through `solden/api/agent_intents.py`.
 
 Current endpoints include:
 
@@ -362,7 +362,7 @@ The source lives under:
 
 ### 7.3 Gmail extension backend surface
 
-The Gmail extension’s backend surface is exposed from `clearledgr/api/gmail_extension.py` under `/extension`.
+The Gmail extension’s backend surface is exposed from `solden/api/gmail_extension.py` under `/extension`.
 
 Representative endpoints include:
 
@@ -394,7 +394,7 @@ Slack and Teams are integrated as interactive approval surfaces, not primary ope
 
 Slack interactions are exposed from:
 
-- `clearledgr/api/slack_invoices.py`
+- `solden/api/slack_invoices.py`
 
 The key route is:
 
@@ -411,7 +411,7 @@ Slack is used for:
 
 Teams interactions are exposed from:
 
-- `clearledgr/api/teams_invoices.py`
+- `solden/api/teams_invoices.py`
 
 The key route is:
 
@@ -433,7 +433,7 @@ This shared-record model is the basis for:
 
 The workspace shell is the setup and administrative surface.
 
-It is exposed from `clearledgr/api/workspace_shell.py` and serves:
+It is exposed from `solden/api/workspace_shell.py` and serves:
 
 - connection setup
 - Gmail integration state
@@ -449,7 +449,7 @@ The codebase defaults to a local database model and supports truthful durability
 
 ### 10.1 Database layer
 
-`clearledgr/core/database.py` is the core schema and low-level persistence entrypoint.
+`solden/core/database.py` is the core schema and low-level persistence entrypoint.
 
 Important schema families include:
 
@@ -508,7 +508,7 @@ The model is now:
 - mailbox state is tracked independently
 - AP items and finance emails can carry mailbox identity
 
-Key schema additions in `clearledgr/core/database.py`:
+Key schema additions in `solden/core/database.py`:
 
 - `gmail_mailboxes`
 - `gmail_mailbox_state`
@@ -526,7 +526,7 @@ Key fields include:
 
 ### 11.3 Store layer
 
-Mailbox orchestration is surfaced in `clearledgr/core/stores/integration_store.py`.
+Mailbox orchestration is surfaced in `solden/core/stores/integration_store.py`.
 
 Important capabilities include:
 
@@ -541,7 +541,7 @@ This means mailbox orchestration is no longer a design note. It is part of the l
 
 ### 11.4 Workspace health
 
-`clearledgr/api/workspace_shell.py` now computes Gmail status per organization by working from mailbox state rather than pretending Gmail is singular.
+`solden/api/workspace_shell.py` now computes Gmail status per organization by working from mailbox state rather than pretending Gmail is singular.
 
 The Gmail status payload now includes:
 
@@ -555,7 +555,7 @@ This is a real architectural change because it turns Gmail integration health in
 
 ### 11.5 Autopilot
 
-`clearledgr/services/gmail_autopilot.py` now processes mailboxes rather than directly treating raw user tokens as the unit of orchestration.
+`solden/services/gmail_autopilot.py` now processes mailboxes rather than directly treating raw user tokens as the unit of orchestration.
 
 Important runtime facts visible in the code:
 
@@ -612,7 +612,7 @@ Solden uses a shared AP record model that can be resolved from:
 
 This logic is centralized in:
 
-- `clearledgr/core/ap_item_resolution.py`
+- `solden/core/ap_item_resolution.py`
 
 ### 12.2 Mailbox-aware resolution
 
@@ -695,7 +695,7 @@ Once approved and valid, the invoice can be posted to ERP. Audit and state are t
 
 The AP workflow service is implemented in:
 
-- `clearledgr/services/invoice_workflow.py`
+- `solden/services/invoice_workflow.py`
 
 This service owns the critical workflow transitions.
 
@@ -726,8 +726,8 @@ The architecture separates policy and validation concerns rather than burying th
 
 Policy evaluation is handled in services such as:
 
-- `clearledgr/services/policy_compliance.py`
-- `clearledgr/services/invoice_validation.py`
+- `solden/services/policy_compliance.py`
+- `solden/services/invoice_validation.py`
 
 This allows the system to:
 
@@ -954,15 +954,15 @@ For a new engineer trying to understand the system, the best reading order is:
 3. `docs/EMBEDDED_ECOSYSTEM.md`
 4. `docs/HOW_IT_WORKS.md`
 5. `main.py`
-6. `clearledgr/core/finance_contracts.py`
-7. `clearledgr/services/finance_agent_runtime.py`
-8. `clearledgr/services/invoice_workflow.py`
-9. `clearledgr/api/gmail_extension.py`
-10. `clearledgr/api/agent_intents.py`
-11. `clearledgr/core/database.py`
-12. `clearledgr/core/stores/integration_store.py`
-13. `clearledgr/services/gmail_autopilot.py`
-14. `clearledgr/core/ap_item_resolution.py`
+6. `solden/core/finance_contracts.py`
+7. `solden/services/finance_agent_runtime.py`
+8. `solden/services/invoice_workflow.py`
+9. `solden/api/gmail_extension.py`
+10. `solden/api/agent_intents.py`
+11. `solden/core/database.py`
+12. `solden/core/stores/integration_store.py`
+13. `solden/services/gmail_autopilot.py`
+14. `solden/core/ap_item_resolution.py`
 15. `ui/gmail-extension/src/`
 
 ## 23. Summary

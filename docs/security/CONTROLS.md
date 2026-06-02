@@ -14,19 +14,19 @@ Last reviewed: 2026-04-26.
 **Implemented.**
 
 - **Password hashing**: bcrypt via `passlib.CryptContext` —
-  [clearledgr/core/auth.py:137-170](../../clearledgr/core/auth.py#L137-L170)
+  [solden/core/auth.py:137-170](../../solden/core/auth.py#L137-L170)
   (`hash_password` + `verify_password`).
 - **Session cookies**: `HttpOnly=True`, `SameSite=lax`, `Secure` flag
   driven by environment —
-  [clearledgr/api/auth.py:52-84](../../clearledgr/api/auth.py#L52-L84)
+  [solden/api/auth.py:52-84](../../solden/api/auth.py#L52-L84)
   (`_set_workspace_session_cookies`).
 - **OAuth (Google)**: signed-state CSRF, post-callback session issuance
-  in same handler — `clearledgr/api/auth.py` (Google OAuth section).
+  in same handler — `solden/api/auth.py` (Google OAuth section).
 - **OAuth (Microsoft)**: Azure AD v2 multi-tenant, identical state
-  signing — `clearledgr/api/auth.py` (Microsoft OAuth section).
+  signing — `solden/api/auth.py` (Microsoft OAuth section).
 - **Secret management**: `require_secret()` fails closed in production
   if a required secret is missing —
-  [clearledgr/core/secrets.py:22-48](../../clearledgr/core/secrets.py#L22-L48).
+  [solden/core/secrets.py:22-48](../../solden/core/secrets.py#L22-L48).
 
 ## CC6.2 — Logical Access (Authorization)
 
@@ -35,16 +35,16 @@ Last reviewed: 2026-04-26.
 - **Role-based access control**: 7 roles
   (`read_only`, `ap_clerk`, `ap_manager`, `financial_controller`, `cfo`,
   `owner`, `api`) with explicit ranks —
-  [clearledgr/core/auth.py:507-526](../../clearledgr/core/auth.py#L507-L526).
+  [solden/core/auth.py:507-526](../../solden/core/auth.py#L507-L526).
 - **Hierarchical enforcement**: `has_at_least(role, required)` —
-  [clearledgr/core/auth.py:560-565](../../clearledgr/core/auth.py#L560-L565).
+  [solden/core/auth.py:560-565](../../solden/core/auth.py#L560-L565).
 - **Endpoint guards**: `require_ops_user()`, `require_admin_user()`,
   `require_cfo()`, `require_role(allowed_roles)` —
-  [clearledgr/core/auth.py:627-726](../../clearledgr/core/auth.py#L627-L726).
+  [solden/core/auth.py:627-726](../../solden/core/auth.py#L627-L726).
 - **Tenant isolation**: every store query is scoped on
   `organization_id`. AP item update path enforces a column whitelist
   (`_AP_ITEM_ALLOWED_COLUMNS`) before constructing the UPDATE —
-  [clearledgr/core/stores/ap_store.py:57-93](../../clearledgr/core/stores/ap_store.py#L57-L93).
+  [solden/core/stores/ap_store.py:57-93](../../solden/core/stores/ap_store.py#L57-L93).
 
 ## CC6.6 — Logical Access (Network)
 
@@ -75,7 +75,7 @@ Last reviewed: 2026-04-26.
 - **PII scrubbing in error pipeline**: `build_sentry_before_send()`
   redacts vendor names, invoice numbers, bank details, and email body
   before any error report ships —
-  [clearledgr/core/sentry_config.py:102](../../clearledgr/core/sentry_config.py#L102).
+  [solden/core/sentry_config.py:102](../../solden/core/sentry_config.py#L102).
 - **`send_default_pii=False`** on Sentry init —
   [main.py:175-191](../../main.py#L175-L191).
 
@@ -88,12 +88,12 @@ Last reviewed: 2026-04-26.
   are stored as Fernet ciphertext — never plaintext.
 - **Key derivation**: SHA256 hash of `CLEARLEDGR_SECRET_KEY` →
   base64-urlsafe encoded Fernet key —
-  [clearledgr/core/database.py:466-473](../../clearledgr/core/database.py#L466-L473)
+  [solden/core/database.py:466-473](../../solden/core/database.py#L466-L473)
   (`_get_fernet`).
 - **Encrypt/decrypt API**: `_encrypt_secret`/`_decrypt_secret` —
-  [clearledgr/core/database.py:475-482](../../clearledgr/core/database.py#L475-L482).
+  [solden/core/database.py:475-482](../../solden/core/database.py#L475-L482).
 - **Bank-detail encryption boundary**:
-  [clearledgr/core/stores/bank_details.py:215-231](../../clearledgr/core/stores/bank_details.py#L215-L231)
+  [solden/core/stores/bank_details.py:215-231](../../solden/core/stores/bank_details.py#L215-L231)
   (`encrypt_bank_details`).
 - **Postgres-on-Railway** disk encryption is AES-256 at rest by
   default (Railway-managed, documented in their security docs).
@@ -105,13 +105,13 @@ Last reviewed: 2026-04-26.
 - **Append-only audit log**: every state transition writes a row to
   `audit_events`. The table has DB-level triggers that REJECT any
   UPDATE or DELETE —
-  [clearledgr/core/database.py:813-833](../../clearledgr/core/database.py#L813-L833) (DDL),
-  [clearledgr/core/database.py:395-428](../../clearledgr/core/database.py#L395-L428)
+  [solden/core/database.py:813-833](../../solden/core/database.py#L813-L833) (DDL),
+  [solden/core/database.py:395-428](../../solden/core/database.py#L395-L428)
   (`clearledgr_prevent_append_only_mutation` trigger function +
   `trg_audit_events_no_update`/`_no_delete` triggers).
 - **Idempotency**: audit inserts use a UNIQUE `idempotency_key`
   constraint to prevent duplicate event recording —
-  [clearledgr/core/stores/ap_store.py:1733-1779](../../clearledgr/core/stores/ap_store.py#L1733-L1779)
+  [solden/core/stores/ap_store.py:1733-1779](../../solden/core/stores/ap_store.py#L1733-L1779)
   (`append_audit_event`).
 
 ## CC7.3 — Incident Response
@@ -133,11 +133,11 @@ the full plan. Detection signals:
 
 - **Rate-limit middleware** with Redis backend (in-memory fallback in
   dev only):
-  [clearledgr/services/rate_limit.py:278-309](../../clearledgr/services/rate_limit.py#L278-L309)
+  [solden/services/rate_limit.py:278-309](../../solden/services/rate_limit.py#L278-L309)
   (`RateLimitMiddleware`). Default budget: 300 requests / 60 seconds
   per identity.
 - **Production fails closed if Redis is missing** —
-  [clearledgr/services/rate_limit.py:62-75](../../clearledgr/services/rate_limit.py#L62-L75).
+  [solden/services/rate_limit.py:62-75](../../solden/services/rate_limit.py#L62-L75).
 - **CSRF**: `WorkspaceSessionCSRFMiddleware` validates the
   `X-CSRF-Token` header against the `clearledgr_workspace_csrf` cookie
   via `secrets.compare_digest()` for cookie-authenticated mutating
@@ -152,7 +152,7 @@ the full plan. Detection signals:
 - **Dependency updates**: Dependabot watches `pip`, `npm` (web-app +
   extension), and `github-actions` ecosystems —
   [.github/dependabot.yml](../../.github/dependabot.yml).
-- **Migrations**: schema changes ship through `clearledgr/core/migrations.py`
+- **Migrations**: schema changes ship through `solden/core/migrations.py`
   with version tracking in the `schema_versions` table.
 
 ## CC9.2 — Vendor Risk

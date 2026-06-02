@@ -11,24 +11,24 @@ Release: `ap-v1-2026-02-25-pilot-rc1`
 
 ## Capture command
 ```bash
-cd /Users/mombalam/Desktop/Solden.v1/ui/gmail-extension
+cd ui/gmail-extension
 node scripts/capture-ui-hardening-evidence.cjs --release-id ap-v1-2026-02-25-pilot-rc1 --backend-url http://127.0.0.1:8000
 ```
 
 ## Artifacts
 - Work audit expanded:
-  - `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/artifacts/sidebar-work-audit-expanded.png`
+  - `docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/artifacts/sidebar-work-audit-expanded.png`
 - Work auth-required:
-  - `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/artifacts/sidebar-auth-required.png`
+  - `docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/artifacts/sidebar-auth-required.png`
 - Work reason-sheet visible:
-  - `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/artifacts/sidebar-reason-sheet.png`
+  - `docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/artifacts/sidebar-reason-sheet.png`
 - Admin Console setup IA:
-  - `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/artifacts/admin-console-setup.png`
+  - `docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/artifacts/admin-console-setup.png`
 - Admin Console Ops:
-  - `/Users/mombalam/Desktop/Solden.v1/docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/artifacts/admin-console-ops.png`
+  - `docs/ga-evidence/releases/ap-v1-2026-02-25-pilot-rc1/artifacts/admin-console-ops.png`
 
 ## Deterministic test evidence
-- `cd /Users/mombalam/Desktop/Solden.v1/ui/gmail-extension && node --test tests/inboxsdk-layer.integration.test.cjs tests/inboxsdk-layer-ui.test.cjs`
+- `cd ui/gmail-extension && node --test tests/inboxsdk-layer.integration.test.cjs tests/inboxsdk-layer-ui.test.cjs`
   - Result: `21 passed`
 
 ## Notes

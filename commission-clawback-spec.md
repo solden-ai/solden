@@ -1367,7 +1367,7 @@ not as new modules.
   ------------------------------------------ ---------------------------------------------
   **classify_refund_event (LLM)**            Same shape as `classify_email` /
                                              `classify_vendor_response` in
-                                             `clearledgr/core/execution_engine.py`. New
+                                             `solden/core/execution_engine.py`. New
                                              prompt only, new confidence threshold.
 
   **extract_refund_fields (LLM)**            Same shape as `extract_invoice_fields`.
@@ -1387,7 +1387,7 @@ not as new modules.
                                              across the post call.
 
   **post_reversal_entry**                    `post_journal_entry` already exists in
-                                             `clearledgr/integrations/erp_router.py` and
+                                             `solden/integrations/erp_router.py` and
                                              routes to QB / Xero / NetSuite / SAP with
                                              rate limits and retry. Extend, do not
                                              parallel-build. See §13.3.
@@ -1400,7 +1400,7 @@ not as new modules.
                                              and per-ERP native mapping. See §13.4.
 
   **send_slack_clawback_approval**           `build_approval_blocks` in
-                                             `clearledgr/services/slack_api.py` is the
+                                             `solden/services/slack_api.py` is the
                                              block builder; the clawback variant is a
                                              templated wrapper.
 
@@ -1416,7 +1416,7 @@ not as new modules.
                                              `partner_dispute_received` based on
                                              pipeline.
 
-  **Dispute window timer**                   `clearledgr/services/override_window.py`
+  **Dispute window timer**                   `solden/services/override_window.py`
                                              was built with `action_type`
                                              polymorphism for exactly this. Current
                                              types: `erp_post`. Add
@@ -1430,7 +1430,7 @@ not as new modules.
                                              `pipeline_stages` rows per stage in §2.1.
 
   **Audit export**                           `export_audit_trail` endpoint exists in
-                                             `clearledgr/api/ap_items_read_routes.py`.
+                                             `solden/api/ap_items_read_routes.py`.
                                              Returns JSON today; new work is
                                              signing-key, PDF rendering, and filter
                                              support (partner, reason code, amount
@@ -1453,7 +1453,7 @@ engineering line items, not "adapted from existing."
   **Component**                          **Why it's new**
   -------------------------------------- --------------------------------------------
   **SAP SD connector** (booking +        The existing SAP connector
-  commission + rate-schedule lookups)    (`clearledgr/integrations/erp_sap.py`) only
+  commission + rate-schedule lookups)    (`solden/integrations/erp_sap.py`) only
                                          covers FI / AP bill posting and reversal. SD
                                          (Sales & Distribution) via S/4HANA OData is
                                          a distinct surface: different endpoints
@@ -1519,7 +1519,7 @@ engineering line items, not "adapted from existing."
   **Not-found circuit breaker**          The 20% rolling-window pipeline-level
                                          breaker in §6.4 is new. There is an
                                          existing circuit breaker service
-                                         (`clearledgr/services/circuit_breaker.py`)
+                                         (`solden/services/circuit_breaker.py`)
                                          but the commission-record-not-found signal
                                          and workspace-scoped threshold are new
                                          wiring.
@@ -1575,7 +1575,7 @@ dependency with no contractual lever from our side. De-risk it:
 
 **13.3 Extend `post_journal_entry`, do not parallel-build**
 
-`clearledgr/integrations/erp_router.py:518` already has
+`solden/integrations/erp_router.py:518` already has
 `post_journal_entry(organization_id, entry)` that routes to the right
 ERP, enforces rate limits, handles retries, and emits audit events.
 The spec's `post_reversal_entry` is the same function with a different
@@ -1626,7 +1626,7 @@ parsing, even on Xero / QuickBooks.
 
 **13.5 Dispute window piggybacks on OverrideWindowService**
 
-`clearledgr/services/override_window.py` was built with `action_type`
+`solden/services/override_window.py` was built with `action_type`
 polymorphism. Current usage: `"erp_post"`. The clawback dispute window
 from §5.2 is a second `action_type`.
 

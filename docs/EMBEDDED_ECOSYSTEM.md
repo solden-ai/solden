@@ -3,7 +3,7 @@
 ## Status
 
 - **Role:** Product-surface and ecosystem reference
-- **Canonical doctrine:** `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
+- **Canonical doctrine:** [../PLAN.md](../PLAN.md)
 - **Scope here:** AP v1 embedded ecosystem and the broader back-office operational-memory expansion model
 
 ## Ecosystem Summary
@@ -104,9 +104,9 @@ All new skills must inherit:
 
 ## Related Docs
 
-1. `/Users/mombalam/Desktop/Solden.v1/PLAN.md`
-2. `/Users/mombalam/Desktop/Solden.v1/docs/HOW_IT_WORKS.md`
-3. `/Users/mombalam/Desktop/Solden.v1/docs/V1_EMBEDDED_WORKER_EXPERIENCE.md`
-4. `/Users/mombalam/Desktop/Solden.v1/docs/V1_BACKEND_CONTRACTS.md`
-5. `/Users/mombalam/Desktop/Solden.v1/docs/API_REFERENCE.md`
-6. `/Users/mombalam/Desktop/Solden.v1/docs/AGENT_ARCHITECTURE.md`
+1. [../PLAN.md](../PLAN.md)
+2. [HOW_IT_WORKS.md](HOW_IT_WORKS.md)
+3. [V1_EMBEDDED_WORKER_EXPERIENCE.md](V1_EMBEDDED_WORKER_EXPERIENCE.md)
+4. [V1_BACKEND_CONTRACTS.md](V1_BACKEND_CONTRACTS.md)
+5. [API_REFERENCE.md](API_REFERENCE.md)
+6. [AGENT_ARCHITECTURE.md](AGENT_ARCHITECTURE.md)

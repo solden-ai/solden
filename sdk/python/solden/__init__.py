@@ -10,7 +10,7 @@ Quickstart:
 
 The SDK is a thin wrapper around the public REST API. Every method
 maps 1:1 to an endpoint documented at
-https://github.com/soldenai/Clearledgr-AP/tree/main/docs/v1 .
+https://github.com/solden-ai/solden/tree/main/docs/v1 .
 """
 
 from solden._version import __version__

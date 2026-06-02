@@ -1,8 +1,6 @@
 # Solden Development Stack
 # Usage: docker-compose up -d
 
-version: '3.8'
-
 services:
   # Main API server
   api:
@@ -10,10 +8,10 @@ services:
     ports:
       - "8010:8010"
     environment:
-      - CLEARLEDGR_PROCESS_ROLE=web
-      - DATABASE_URL=postgresql://clearledgr:clearledgr@db:5432/clearledgr
+      - SOLDEN_PROCESS_ROLE=web
+      - DATABASE_URL=postgresql://solden:solden@db:5432/solden
       - REDIS_URL=redis://redis:6379/0
-      - CLEARLEDGR_SECRET_KEY=${CLEARLEDGR_SECRET_KEY:-change-this-in-production}
+      - SOLDEN_SECRET_KEY=${SOLDEN_SECRET_KEY:-change-this-in-production}
       - LOG_LEVEL=info
       # ERP OAuth (set in .env)
       - QUICKBOOKS_CLIENT_ID=${QUICKBOOKS_CLIENT_ID:-}
@@ -36,7 +34,7 @@ services:
       - AP_TEMPORAL_ENABLED=${AP_TEMPORAL_ENABLED:-false}
       - AP_TEMPORAL_REQUIRED=${AP_TEMPORAL_REQUIRED:-false}
       - AP_V1_STRICT_SURFACES=${AP_V1_STRICT_SURFACES:-true}
-      - CLEARLEDGR_ENABLE_LEGACY_SURFACES=${CLEARLEDGR_ENABLE_LEGACY_SURFACES:-false}
+      - SOLDEN_ENABLE_LEGACY_SURFACES=${SOLDEN_ENABLE_LEGACY_SURFACES:-false}
       - AP_V1_ALLOW_LEGACY_SURFACES_IN_PRODUCTION=${AP_V1_ALLOW_LEGACY_SURFACES_IN_PRODUCTION:-false}
       - AP_AGENT_AUTONOMOUS_RETRY_ENABLED=${AP_AGENT_AUTONOMOUS_RETRY_ENABLED:-true}
       # Safe default for integration/pilot-style testing; set to true for local exploratory retry behavior.
@@ -64,10 +62,10 @@ services:
     build: .
     command: ["celery", "-A", "solden.services.celery_app", "worker", "-l", "info", "-c", "4"]
     environment:
-      - CLEARLEDGR_PROCESS_ROLE=worker
-      - DATABASE_URL=postgresql://clearledgr:clearledgr@db:5432/clearledgr
+      - SOLDEN_PROCESS_ROLE=worker
+      - DATABASE_URL=postgresql://solden:solden@db:5432/solden
       - REDIS_URL=redis://redis:6379/0
-      - CLEARLEDGR_SECRET_KEY=${CLEARLEDGR_SECRET_KEY:-change-this-in-production}
+      - SOLDEN_SECRET_KEY=${SOLDEN_SECRET_KEY:-change-this-in-production}
       - LOG_LEVEL=info
       - QUICKBOOKS_CLIENT_ID=${QUICKBOOKS_CLIENT_ID:-}
       - QUICKBOOKS_CLIENT_SECRET=${QUICKBOOKS_CLIENT_SECRET:-}
@@ -85,7 +83,7 @@ services:
       - AP_TEMPORAL_ENABLED=${AP_TEMPORAL_ENABLED:-false}
       - AP_TEMPORAL_REQUIRED=${AP_TEMPORAL_REQUIRED:-false}
       - AP_V1_STRICT_SURFACES=${AP_V1_STRICT_SURFACES:-true}
-      - CLEARLEDGR_ENABLE_LEGACY_SURFACES=${CLEARLEDGR_ENABLE_LEGACY_SURFACES:-false}
+      - SOLDEN_ENABLE_LEGACY_SURFACES=${SOLDEN_ENABLE_LEGACY_SURFACES:-false}
       - AP_V1_ALLOW_LEGACY_SURFACES_IN_PRODUCTION=${AP_V1_ALLOW_LEGACY_SURFACES_IN_PRODUCTION:-false}
       - AP_AGENT_AUTONOMOUS_RETRY_ENABLED=${AP_AGENT_AUTONOMOUS_RETRY_ENABLED:-true}
       - AP_AGENT_NON_DURABLE_RETRY_ALLOWED=${AP_AGENT_NON_DURABLE_RETRY_ALLOWED:-false}
@@ -107,9 +105,9 @@ services:
     build: .
     command: ["celery", "-A", "solden.services.celery_app", "beat", "-l", "info"]
     environment:
-      - DATABASE_URL=postgresql://clearledgr:clearledgr@db:5432/clearledgr
+      - DATABASE_URL=postgresql://solden:solden@db:5432/solden
       - REDIS_URL=redis://redis:6379/0
-      - CLEARLEDGR_SECRET_KEY=${CLEARLEDGR_SECRET_KEY:-change-this-in-production}
+      - SOLDEN_SECRET_KEY=${SOLDEN_SECRET_KEY:-change-this-in-production}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     depends_on:
       - redis
@@ -119,9 +117,9 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=clearledgr
-      - POSTGRES_PASSWORD=clearledgr
-      - POSTGRES_DB=clearledgr
+      - POSTGRES_USER=solden
+      - POSTGRES_PASSWORD=solden
+      - POSTGRES_DB=solden
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -132,7 +130,7 @@ services:
     # error on fresh `docker-compose up` and then lazy-init recovered
     # — noisy logs, and a real problem if migrations run at boot.
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U clearledgr -d clearledgr"]
+      test: ["CMD-SHELL", "pg_isready -U solden -d solden"]
       interval: 5s
       timeout: 3s
       retries: 10

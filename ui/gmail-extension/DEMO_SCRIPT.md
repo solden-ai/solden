@@ -14,7 +14,7 @@ This demo shows Solden's AI agents working inside Gmail to automate finance work
 
 **To test locally:**
 ```bash
-cd /Users/mombalam/Desktop/Solden.v1/ui/gmail-extension
+cd ui/gmail-extension
 open sidebar-demo.html
 ```
 
@@ -163,7 +163,7 @@ If something doesn't work as expected:
 ## Files
 
 - `sidebar-demo.html` - The demo sidebar UI
-- Deprecated demo assets were moved to `/Users/mombalam/Desktop/Solden.v1/docs/legacy/gmail-extension-ui/` and are not shipped in the extension package.
+- Deprecated demo assets were moved to [../../docs/legacy/gmail-extension-ui](../../docs/legacy/gmail-extension-ui) and are not shipped in the extension package.
 - `icons/` - Solden logo assets
 
 Good luck!

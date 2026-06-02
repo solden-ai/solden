@@ -5,7 +5,7 @@ Date: 2026-03-25
 This is a working draft for a YC application based on the current Solden story.
 It is optimized for clarity, specificity, and wedge-first framing.
 
-For compressed form-field answers, use [`YC_APPLICATION_SHORT_2026_03.md`](/Users/mombalam/Desktop/Solden.v1/docs/fundraising/YC_APPLICATION_SHORT_2026_03.md).
+For compressed form-field answers, use [`YC_APPLICATION_SHORT_2026_03.md`](YC_APPLICATION_SHORT_2026_03.md).
 
 ## Company
 

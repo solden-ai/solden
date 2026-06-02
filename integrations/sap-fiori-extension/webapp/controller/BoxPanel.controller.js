@@ -22,7 +22,7 @@
  *      so Phase 1's decision_context auto-build records
  *      ui_surface=erp_native_sap on the resulting state_transition
  *      audit row. The Approuter prefix `/clearledgr-api/` resolves to
- *      api.clearledgr.com via the BTP Destination in xs-app.json.
+     *      api.soldenai.com via the BTP Destination in xs-app.json.
  */
 sap.ui.define([
     "sap/ui/core/mvc/Controller",
@@ -284,7 +284,7 @@ sap.ui.define([
         onOpenInSoldenPress: function () {
             const sApItemId = this.getOwnerComponent().getModel("box").getProperty("/ap_item_id");
             if (!sApItemId) return;
-            window.open("https://app.clearledgr.com/ap-items/" + encodeURIComponent(sApItemId), "_blank", "noopener");
+            window.open("https://app.soldenai.com/ap-items/" + encodeURIComponent(sApItemId), "_blank", "noopener");
         },
 
         /* ─── Helpers ───────────────────────────────────────────────── */

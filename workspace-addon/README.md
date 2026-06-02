@@ -26,7 +26,7 @@ One tap. No navigation. No separate app.
 1. Create a Google Cloud project with Gmail Add-on API enabled
 2. Create an Apps Script project linked to the Cloud project
 3. Copy `appsscript.json` and `Code.gs` into the Apps Script editor
-4. Set script property `CLEARLEDGR_API_URL` to your API endpoint
+4. Set script property `SOLDEN_API_URL` to your API endpoint (`CLEARLEDGR_API_URL` is still accepted as a legacy alias)
 5. Deploy as a Gmail Add-on (test deployment first)
 6. Publish to Google Workspace Marketplace for enterprise distribution
 

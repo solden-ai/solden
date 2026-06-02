@@ -77,7 +77,7 @@ Set on Railway api/worker/beat services:
 MICROSOFT_CLIENT_ID=<from O.1, Application (client) ID>
 MICROSOFT_CLIENT_SECRET=<from O.1, Certificates & secrets value>
 MICROSOFT_TENANT_ID=common                # multi-tenant
-OUTLOOK_CONNECT_REDIRECT=https://workspace.clearledgr.com/connections
+OUTLOOK_CONNECT_REDIRECT=https://workspace.soldenai.com/connections
 FEATURE_OUTLOOK_ENABLED=true
 ```
 
@@ -103,7 +103,7 @@ Audit-side checks:
 The add-in is built. To ship it:
 
 1. **Host the static bundle.** Pick one:
-   - Easiest: Railway, alongside the api service. Build the add-in (`cd ui/outlook-addin && npm install && npm run build` — currently the addin's `package.json` only has `dev` and `validate` scripts; if there's no build, the source is plain `taskpane.html` + `src/*.js` and can be served as-is). Serve from `https://app.solden.com/outlook/` (or `https://workspace.clearledgr.com/outlook/`).
+   - Easiest: Railway, alongside the api service. Build the add-in (`cd ui/outlook-addin && npm install && npm run build` — currently the addin's `package.json` only has `dev` and `validate` scripts; if there's no build, the source is plain `taskpane.html` + `src/*.js` and can be served as-is). Serve from `https://app.solden.com/outlook/` (or `https://workspace.soldenai.com/outlook/`).
    - Cleaner: CDN (Cloudflare Pages / Vercel static) so the addin doesn't contend with API workers.
 2. **Update `ui/outlook-addin/manifest.xml`** to point every URL at the hosted location.
 3. **Sideload per-tenant (instant):** Microsoft 365 Admin Center → Integrated apps → Upload custom apps → upload `manifest.xml`. Per-tenant deployment. Instant.
@@ -251,7 +251,7 @@ This sends notification-only cards (Approve / Reject buttons render but don't po
 
 ## What's already shipped (code-side, no further work needed)
 
-- **Backend `_outlook_status_for_org()`** ([workspace_shell.py](../clearledgr/api/workspace_shell.py)) — emits the same shape as the gmail helper so the workspace SPA can treat Gmail and Outlook symmetrically. Returns `disabled_in_v1` when the flag is off.
+- **Backend `_outlook_status_for_org()`** ([workspace_shell.py](../solden/api/workspace_shell.py)) — emits the same shape as the gmail helper so the workspace SPA can treat Gmail and Outlook symmetrically. Returns `disabled_in_v1` when the flag is off.
 - **Outlook included in bootstrap integrations list** — the SPA `bootstrap.integrations` array now has Gmail + Outlook + Slack + Teams + ERP, in that order.
 - **`POST /api/workspace/integrations/outlook/connect/start`** + **`/disconnect`** — workspace-shell wrappers for the canonical `/outlook/connect/start` route, so the SPA can talk to one `/api/workspace/integrations/<provider>/*` API surface across every channel.
 - **Workspace SPA Connections page** — Outlook section with Connect / Disconnect / status row. Teams section now has two install paths (bot via download package, webhook fallback), with clear copy on the trade-off.

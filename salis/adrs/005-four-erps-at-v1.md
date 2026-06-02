@@ -26,7 +26,7 @@ The heuristic is wrong for ERP breadth in AP. Here's why.
 
 4. **Architectural forcing function.** Building four forced a real abstraction: `ERPConnection` dataclass (`erp_router.py:158`), uniform webhook contract (`erp_webhook_verify.py`), shared OAuth helpers (`integrations/oauth.py`). Building one would have let QBO-specific assumptions leak into core paths; the second-ERP refactor would have been painful.
 
-5. **Webhook security uniformity.** Each ERP follows its documented signature standard (QBO's `intuit-signature`, Xero's `x-xero-signature` + ITR handshake, timestamp+HMAC for NetSuite/SAP). Doing all four forced us to write a uniform verifier module (`clearledgr/core/erp_webhook_verify.py`) that future ERPs will plug into. Doing one would have left it as a one-off.
+5. **Webhook security uniformity.** Each ERP follows its documented signature standard (QBO's `intuit-signature`, Xero's `x-xero-signature` + ITR handshake, timestamp+HMAC for NetSuite/SAP). Doing all four forced us to write a uniform verifier module (`solden/core/erp_webhook_verify.py`) that future ERPs will plug into. Doing one would have left it as a one-off.
 
 **Costs:**
 
@@ -52,6 +52,6 @@ Four ERPs is product-promise breadth. Each ERP's bill-post is at AP-v1 scope (no
 
 ## Reference
 
-Primary surface: `clearledgr/integrations/erp_router.py` (dispatcher, `ERPConnection`), `clearledgr/integrations/erp_quickbooks.py`, `erp_xero.py`, `erp_netsuite.py`, `erp_sap.py` (per-ERP implementations).
-Webhook verification: `clearledgr/core/erp_webhook_verify.py`.
+Primary surface: `solden/integrations/erp_router.py` (dispatcher, `ERPConnection`), `solden/integrations/erp_quickbooks.py`, `erp_xero.py`, `erp_netsuite.py`, `erp_sap.py` (per-ERP implementations).
+Webhook verification: `solden/core/erp_webhook_verify.py`.
 Regression fence: `tests/test_erp_webhook_security.py` (34 tests).

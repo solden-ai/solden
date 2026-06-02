@@ -108,7 +108,7 @@ Operational procedures for common failure scenarios and maintenance tasks.
 
 **Cause:** Teams JWT token `iat` claim is > 5 min old (replay protection gate, Gap #1 fix)
 
-**Remedy:** This is expected for delayed deliveries. If Teams is consistently late (> 5 min to deliver), investigate Teams service health or adjust `_MAX_TOKEN_AGE_SECONDS` in `clearledgr/core/teams_verify.py` — do **not** disable the check.
+**Remedy:** This is expected for delayed deliveries. If Teams is consistently late (> 5 min to deliver), investigate Teams service health or adjust `_MAX_TOKEN_AGE_SECONDS` in `solden/core/teams_verify.py` — do **not** disable the check.
 
 ---
 
@@ -188,7 +188,7 @@ Authorization: Bearer <admin-token>
 
 {
   "organization_id": "<org>",
-  "updated_by": "ops@clearledgr.com",
+  "updated_by": "ops@soldenai.com",
   "controls": {
     "ap_processing_enabled": false,
     "slack_actions_enabled": false,
@@ -276,7 +276,7 @@ Audit events are append-only and protected by DB triggers — they cannot be upd
 
 ### Schema migrations
 
-New columns are added via `_ensure_column()` in `clearledgr/core/database.py` — these are backward-compatible and run automatically on startup. No manual migration steps are required for columns added in v1.
+New columns are added via `_ensure_column()` in `solden/core/database.py` — these are backward-compatible and run automatically on startup. No manual migration steps are required for columns added in v1.
 
 ### Backup procedure (SQLite)
 
@@ -319,7 +319,7 @@ Maintain continuous confidence in real Gmail extension runtime behavior and coll
 
 ### Setup and remediation guide
 
-- `/Users/mombalam/Desktop/Solden.v1/docs/GMAIL_RUNTIME_RUNNER_SETUP.md`
+- `docs/GMAIL_RUNTIME_RUNNER_SETUP.md`
 
 _Last updated: 2026-02-28_
 _Owner: Engineering / AP Platform team_

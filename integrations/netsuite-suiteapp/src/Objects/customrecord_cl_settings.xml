@@ -8,7 +8,7 @@
     <allownumberingoverride>F</allownumberingoverride>
     <allowquickadd>F</allowquickadd>
     <allowquicksearch>F</allowquicksearch>
-    <description>Single-row tenant config for the Clearledgr SuiteApp: API base URL + bundle secret used to mint short-lived JWTs for the panel iframe.</description>
+    <description>Single-row tenant config for the Solden SuiteApp: API base URL + bundle secret used to mint short-lived JWTs for the panel iframe.</description>
     <enabledle>F</enabledle>
     <enableemailmerge>F</enableemailmerge>
     <enablekeywords>F</enablekeywords>
@@ -23,7 +23,7 @@
     <includename>T</includename>
     <isinactive>F</isinactive>
     <isordered>F</isordered>
-    <recordname>Clearledgr Settings</recordname>
+    <recordname>Solden Settings</recordname>
     <showcreationdate>F</showcreationdate>
     <showcreationdateonlist>F</showcreationdateonlist>
     <showid>T</showid>
@@ -36,28 +36,28 @@
     <customrecordcustomfields>
         <customrecordcustomfield scriptid="custrecord_cl_api_base">
             <fieldtype>FREEFORMTEXT</fieldtype>
-            <label>Clearledgr API Base URL</label>
-            <defaultvalue>https://api.clearledgr.com</defaultvalue>
+            <label>Solden API Base URL</label>
+            <defaultvalue>https://api.soldenai.com</defaultvalue>
             <displaytype>NORMAL</displaytype>
             <ismandatory>T</ismandatory>
             <maxlength>255</maxlength>
-            <description>Base URL for Clearledgr API. Defaults to api.clearledgr.com; override only for staging or self-hosted deployments.</description>
+            <description>Base URL for Solden API. Defaults to api.soldenai.com; override only for staging or self-hosted deployments.</description>
         </customrecordcustomfield>
         <customrecordcustomfield scriptid="custrecord_cl_bundle_secret">
             <fieldtype>PASSWORD</fieldtype>
-            <label>Clearledgr Bundle Secret</label>
+            <label>Solden Bundle Secret</label>
             <displaytype>NORMAL</displaytype>
             <ismandatory>T</ismandatory>
             <maxlength>255</maxlength>
-            <description>Shared HMAC secret provisioned during onboarding. Used to sign panel JWTs (read direction) AND outbound webhooks (write direction). Treat as sensitive — Clearledgr stores the same value as `webhook_secret` in `erp_connections.credentials` for that tenant.</description>
+            <description>Shared HMAC secret provisioned during onboarding. Used to sign panel JWTs (read direction) AND outbound webhooks (write direction). Treat as sensitive — Solden stores the same value as `webhook_secret` in `erp_connections.credentials` for that tenant.</description>
         </customrecordcustomfield>
         <customrecordcustomfield scriptid="custrecord_cl_org_id">
             <fieldtype>FREEFORMTEXT</fieldtype>
-            <label>Clearledgr Organization ID</label>
+            <label>Solden Organization ID</label>
             <displaytype>NORMAL</displaytype>
             <ismandatory>T</ismandatory>
             <maxlength>128</maxlength>
-            <description>Tenant's Clearledgr org_id. Used by outbound vendor-bill webhooks to address the correct tenant on the Clearledgr side (URL path component). Provisioned during onboarding.</description>
+            <description>Tenant's Solden org_id. Used by outbound vendor-bill webhooks to address the correct tenant on the Solden side (URL path component). Provisioned during onboarding.</description>
         </customrecordcustomfield>
     </customrecordcustomfields>
 </customrecordtype>
