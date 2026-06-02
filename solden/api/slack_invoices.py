@@ -1005,7 +1005,9 @@ async def _process_interactive_payload(
         # No team→org binding — refuse. The Slack signing secret is
         # workspace-shared so a verified signature alone doesn't
         # establish tenancy. Fail closed.
-        _body_hash = hashlib.sha256(body or b"").hexdigest()[:16]
+        _body_hash = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()[:16]
         _audit_callback_event(
             db,
             event_type="channel_callback_unauthorized",
@@ -1071,7 +1073,9 @@ async def _process_interactive_payload(
     # tenant's org (it shouldn't, post-M16 — but pin the invariant),
     # refuse.
     if str(organization_id or "").strip() and str(organization_id) != bound_org:
-        _body_hash = hashlib.sha256(body or b"").hexdigest()[:16]
+        _body_hash = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()[:16]
         _audit_callback_event(
             db,
             event_type="channel_action_invalid",

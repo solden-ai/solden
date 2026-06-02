@@ -1807,3 +1807,42 @@ def test_slack_view_submission_ignores_unknown_callback(monkeypatch, client, db)
     assert resp.status_code == 200
     assert resp.json() == {}
     assert dispatched["called"] is False
+
+
+def test_slack_interactive_unprovisioned_team_fails_closed_with_audit(monkeypatch, client, db):
+    """An interaction from a Slack workspace with no installation row must
+    fail closed (403) AND write the channel_callback_unauthorized audit.
+    Regression guard for the handler-refactor body-hash path."""
+
+    async def _return_body(request):
+        return await request.body()
+
+    monkeypatch.setattr("solden.api.slack_invoices._require_slack_signature", _return_body)
+
+    captured = []
+    original_append = db.append_audit_event
+
+    def _spy(payload):
+        captured.append(dict(payload))
+        return original_append(payload)
+
+    monkeypatch.setattr(db, "append_audit_event", _spy)
+
+    payload = {
+        "type": "block_actions",
+        "user": {"id": "U1"},
+        "team": {"id": "T_NOT_PROVISIONED"},
+        "actions": [{"action_id": "approve_invoice_x", "value": "x"}],
+    }
+    resp = client.post(
+        "/slack/invoices/interactive",
+        content=_slack_form_body(payload),
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "x-slack-request-timestamp": str(int(time.time())),
+        },
+    )
+    assert resp.status_code == 403
+    unauthorized = [e for e in captured if e.get("event_type") == "channel_callback_unauthorized"]
+    assert unauthorized, "no_installation refusal must still write its audit event"
+    assert unauthorized[0].get("reason") == "slack_team_not_provisioned"
