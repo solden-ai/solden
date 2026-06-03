@@ -3,6 +3,7 @@ import { useLocation } from 'wouter-preact';
 import { html } from '../utils/htm.js';
 import { api } from '../api/client.js';
 import { useOrgId } from './BootstrapContext.js';
+import { ACCOUNTS_PAYABLE_ROUTE, accountPayableRecordPath } from '../utils/record-route.js';
 
 /**
  * Command palette (⌘K / Ctrl+K) — table-stakes for any modern admin
@@ -23,7 +24,7 @@ const NAV_ENTRIES = [
   { kind: 'nav', label: 'Home', sub: 'Workspace overview', path: '/', tokens: ['home', 'overview', 'dashboard'] },
   { kind: 'nav', label: 'Activity', sub: 'Recent work activity', path: '/activity', tokens: ['activity', 'live', 'feed', 'agent'] },
   { kind: 'nav', label: 'Exceptions', sub: 'Records the agent escalated for human judgment', path: '/exceptions', tokens: ['exceptions', 'errors', 'blockers', 'review', 'queue', 'attention'] },
-  { kind: 'nav', label: 'Accounts Payable', sub: 'Search and inspect AP records', path: '/records', tokens: ['accounts', 'payable', 'records', 'pipeline', 'invoices', 'ap'] },
+  { kind: 'nav', label: 'Accounts Payable', sub: 'Search and inspect AP records', path: ACCOUNTS_PAYABLE_ROUTE, tokens: ['accounts', 'payable', 'records', 'pipeline', 'invoices', 'ap'] },
   { kind: 'nav', label: 'Procurement', sub: 'Purchase orders + approval workflow', path: '/procurement', tokens: ['procurement', 'purchase', 'po', 'orders'] },
   { kind: 'nav', label: 'Builder', sub: 'Create custom work types', path: '/workflows', tokens: ['workflows', 'builder', 'custom', 'box', 'types', 'spec', 'no-code'] },
   { kind: 'nav', label: 'Vendors', sub: 'Vendor directory', path: '/vendors', tokens: ['vendors', 'suppliers'] },
@@ -115,7 +116,7 @@ export function CommandK() {
           label: item.vendor_name || item.vendor || 'Vendor not extracted',
           sub: [item.invoice_number ? `#${item.invoice_number}` : '', item.state ? item.state.replace(/_/g, ' ') : '']
             .filter(Boolean).join(' · '),
-          path: `/records/${encodeURIComponent(item.id)}`,
+          path: accountPayableRecordPath(item.id),
         }));
         setLiveResults(items);
         setSearchError(false);

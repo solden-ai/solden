@@ -4,9 +4,9 @@ import { usePageProps } from '../../shell/usePageProps.js';
 import { rememberRecordRouteId } from '../../utils/record-route.js';
 
 /**
- * Route adapter for /records/:id — the record detail / intervention
- * surface. Pulls the standard page-prop bundle from `usePageProps`
- * and forwards the URL-supplied record id.
+ * Route adapter for /accounts-payable/:id — the record detail /
+ * intervention surface. Pulls the standard page-prop bundle from
+ * `usePageProps` and forwards the URL-supplied record id.
  */
 export function RecordDetailRoute({ recordId }) {
   // Persist the active record id so a refresh of any page inside the

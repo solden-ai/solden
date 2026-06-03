@@ -1,6 +1,7 @@
 import { useEffect } from 'preact/hooks';
 import { useLocation } from 'wouter-preact';
 import { useBootstrap } from './BootstrapContext.js';
+import { ACCOUNTS_PAYABLE_ROUTE, LEGACY_RECORDS_ROUTE } from '../utils/record-route.js';
 
 /**
  * If the user's org hasn't completed onboarding, redirect into the
@@ -18,8 +19,8 @@ import { useBootstrap } from './BootstrapContext.js';
  *     /terms) so invite-accept flows + public deep links work pre-
  *     bootstrap.
  *
- * Coordination surfaces (/records, /exceptions, /vendors, /activity,
- * /reports, /rules) stay reachable pre-onboarding — the workspace
+ * Coordination surfaces (/accounts-payable, /exceptions, /vendors,
+ * /activity, /reports, /rules) stay reachable pre-onboarding — the workspace
  * owner needs to inspect their own data while the wizard is still
  * incomplete. Empty-state messages do the teaching when there's
  * no data yet.
@@ -39,7 +40,8 @@ const ONBOARDING_PASSTHROUGH = new Set([
   '/health',
   // Coordination surfaces — see header for rationale.
   '/home',
-  '/records',
+  ACCOUNTS_PAYABLE_ROUTE,
+  LEGACY_RECORDS_ROUTE,
   '/exceptions',
   '/vendors',
   '/procurement',

@@ -13,6 +13,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { html } from '../../utils/htm.js';
 import { useAction } from '../route-helpers.js';
 import { AgentActivityRibbon } from '../../components/AgentActivityRibbon.js';
+import { accountsPayablePath } from '../../utils/record-route.js';
 
 const ACTIVITY_LIMIT = 50;
 
@@ -61,7 +62,7 @@ export default function ActivityPage({ api, orgId, onRefresh, navigate }) {
           <button class="btn-secondary btn-sm" onClick=${refresh} disabled=${refreshing}>
             ${refreshing ? 'Refreshing…' : 'Refresh'}
           </button>
-          <button class="btn-primary btn-sm" onClick=${() => navigate?.('/records')}>
+          <button class="btn-primary btn-sm" onClick=${() => navigate?.(accountsPayablePath())}>
             Open Accounts Payable
           </button>
         </div>

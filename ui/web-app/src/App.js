@@ -1,4 +1,4 @@
-import { Router, Route, Switch } from 'wouter-preact';
+import { Redirect, Router, Route, Switch } from 'wouter-preact';
 import { html } from './utils/htm.js';
 import { AppShell } from './shell/AppShell.js';
 import { BootstrapProvider, useBootstrap } from './shell/BootstrapContext.js';
@@ -31,6 +31,9 @@ import { HealthRoute } from './routes/pages/HealthRoute.js';
 import { PlanRoute } from './routes/pages/PlanRoute.js';
 import { ApiKeysRoute } from './routes/pages/ApiKeysRoute.js';
 import { hasCapability } from './utils/capabilities.js';
+import { ACCOUNTS_PAYABLE_ROUTE } from './utils/record-route.js';
+
+const ACCOUNTS_PAYABLE_DETAIL_ROUTE = `${ACCOUNTS_PAYABLE_ROUTE}/:id`;
 
 function CapabilityGate({ capability, children }) {
   const bootstrap = useBootstrap();
@@ -38,6 +41,12 @@ function CapabilityGate({ capability, children }) {
     return html`<${PlaceholderPage} title="Page not found" />`;
   }
   return children;
+}
+
+function LegacyRecordsRedirect({ recordId }) {
+  const search = typeof window !== 'undefined' ? window.location.search : '';
+  const suffix = recordId ? `/${encodeURIComponent(recordId)}` : '';
+  return html`<${Redirect} to=${`${ACCOUNTS_PAYABLE_ROUTE}${suffix}${search}`} replace />`;
 }
 
 export function App() {
@@ -60,7 +69,8 @@ export function App() {
                     <${Route} path="/onboarding"><${OnboardingPage} /><//>
                     <${Route} path="/"><${HomePage} /><//>
                     <${Route} path="/plan"><${PlanRoute} /><//>
-                    <${Route} path="/records"><${RecordsRoute} /><//>
+                    <${Route} path=${ACCOUNTS_PAYABLE_ROUTE}><${RecordsRoute} /><//>
+                    <${Route} path="/records"><${LegacyRecordsRedirect} /><//>
                     <${Route} path="/exceptions"><${ExceptionsRoute} /><//>
                     <${Route} path="/vendors"><${VendorsRoute} /><//>
                     <${Route} path="/procurement">
@@ -88,8 +98,11 @@ export function App() {
                     <${Route} path="/api-keys"><${ApiKeysRoute} /><//>
                     <${Route} path="/health"><${HealthRoute} /><//>
                     <${Route} path="/status"><${StatusPage} /><//>
-                    <${Route} path="/records/:id">
+                    <${Route} path=${ACCOUNTS_PAYABLE_DETAIL_ROUTE}>
                       ${(params) => html`<${RecordDetailRoute} recordId=${params.id} />`}
+                    <//>
+                    <${Route} path="/records/:id">
+                      ${(params) => html`<${LegacyRecordsRedirect} recordId=${params.id} />`}
                     <//>
                     <${Route}><${PlaceholderPage} title="Page not found" /><//>
                   <//>

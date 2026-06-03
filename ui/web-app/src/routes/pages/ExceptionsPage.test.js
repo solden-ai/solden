@@ -45,7 +45,7 @@ describe('ExceptionsPage', () => {
     expect(api.mock.calls.some(([path]) => path === '/api/workspace/exceptions/stats')).toBe(true);
 
     fireEvent.click(screen.getByText(/Acme/));
-    expect(navigate).toHaveBeenCalledWith('/records/AP-1');
+    expect(navigate).toHaveBeenCalledWith('/accounts-payable/AP-1');
   });
 
   it('posts resolves through the workspace exception endpoint when authorized', async () => {

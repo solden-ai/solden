@@ -3,6 +3,7 @@ import { html } from '../utils/htm.js';
 import { BrandMark } from './BrandMark.js';
 import { useBootstrap } from './BootstrapContext.js';
 import { hasCapability } from '../utils/capabilities.js';
+import { ACCOUNTS_PAYABLE_ROUTE } from '../utils/record-route.js';
 
 /**
  * Sidebar nav for the work-in-progress control center.
@@ -23,7 +24,7 @@ export const NAV_ITEMS = [
   { path: '/', label: 'Home', group: 'primary', icon: 'home' },
   { path: '/activity', label: 'Activity', group: 'primary', icon: 'activity' },
   { path: '/exceptions', label: 'Exceptions', group: 'primary', icon: 'alert' },
-  { path: '/records', label: 'Accounts Payable', group: 'workflows', icon: 'file' },
+  { path: ACCOUNTS_PAYABLE_ROUTE, label: 'Accounts Payable', group: 'workflows', icon: 'file' },
   { path: '/procurement', label: 'Procurement', group: 'workflows', icon: 'cart', capability: 'view_procurement' },
   { path: '/workflows', label: 'Builder', group: 'workflows', icon: 'workflow', capability: 'view_workflow_builder' },
   { path: '/vendors', label: 'Vendors', group: 'data', icon: 'users' },

@@ -1,5 +1,6 @@
 import { html } from '../utils/htm.js';
 import { formatRelative } from '../utils/formatters.js';
+import { accountPayableRecordPath } from '../utils/record-route.js';
 
 /**
  * Agent activity ribbon.
@@ -23,7 +24,7 @@ import { formatRelative } from '../utils/formatters.js';
  *   items          shaped rows from /api/workspace/dashboard/recent-activity
  *   live           true while SSE is delivering frames; flips the meta
  *                  label between "Live" and "Recent"
- *   navigate       wouter setter; called with `/records/{box_id}` on
+ *   navigate       wouter setter; called with `/accounts-payable/{box_id}` on
  *                  row click
  *   title          optional override for the section h2 (default
  *                  "Agent activity")
@@ -97,7 +98,7 @@ export function AgentActivityRibbon({
         ${items.map((row) => html`
           <li class=${`cl-home-activity-row cl-home-activity-tone-${row.tone || 'info'}`}
             key=${row.id || `${row.ts}-${row.event_type}`}
-            onClick=${() => row.box_id && navigate?.(`/records/${encodeURIComponent(row.box_id)}`)}
+            onClick=${() => row.box_id && navigate?.(accountPayableRecordPath(row.box_id))}
             role=${row.box_id ? 'button' : undefined}
             tabindex=${row.box_id ? 0 : undefined}>
             <span class=${`cl-home-activity-dot cl-home-activity-dot-${row.tone || 'info'}`} aria-hidden="true"></span>

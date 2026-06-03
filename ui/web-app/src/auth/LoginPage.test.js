@@ -42,14 +42,14 @@ describe('LoginPage', () => {
   });
 
   it('surfaces OAuth callback errors and cleans the URL', async () => {
-    window.history.replaceState({}, '', '/login?auth_error=access_denied&next=%2Frecords');
+    window.history.replaceState({}, '', '/login?auth_error=access_denied&next=%2Faccounts-payable');
     mountLogin();
 
     await waitFor(() => {
       expect(screen.getByText('Sign-in was cancelled. Choose Google or Microsoft to try again.')).toBeTruthy();
     });
 
-    expect(window.location.search).toBe('?next=%2Frecords');
+    expect(window.location.search).toBe('?next=%2Faccounts-payable');
     expect(refreshSession).not.toHaveBeenCalled();
   });
 

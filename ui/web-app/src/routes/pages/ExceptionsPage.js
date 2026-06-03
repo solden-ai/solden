@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'preact/hooks';
 import htm from 'htm';
 import { formatAmount } from '../../utils/formatters.js';
 import { hasBoxCapability } from '../../utils/capabilities.js';
+import { accountPayableRecordPath } from '../../utils/record-route.js';
 
 const html = htm.bind(h);
 
@@ -114,7 +115,7 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
 
   const openRecord = (boxType, boxId) => {
     if (boxType !== 'ap_item' || !boxId || !navigate) return;
-    const target = `/records/${encodeURIComponent(boxId)}`;
+    const target = accountPayableRecordPath(boxId);
     navigate(target);
   };
 

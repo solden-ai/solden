@@ -8,6 +8,7 @@ import { api } from '../../api/client.js';
 import { useBootstrap, useOrgId } from '../../shell/BootstrapContext.js';
 import { formatAmount, formatRelative, displayOrgName } from '../../utils/formatters.js';
 import { AgentActivityRibbon } from '../../components/AgentActivityRibbon.js';
+import { accountsPayablePath } from '../../utils/record-route.js';
 
 /**
  * Workspace Home — work-in-progress control center.
@@ -192,7 +193,7 @@ export function HomePage() {
           sub=${inFlight === 0 ? 'No invoices in progress' : 'Across all open states'}
           tone="brand"
           live=${streamPulse > 0}
-          onClick=${() => navigate('/records')}
+          onClick=${() => navigate(accountsPayablePath())}
         />
         <${StatTile}
           label="Awaiting approval"
@@ -200,7 +201,7 @@ export function HomePage() {
           sub=${awaitingApproval === 0 ? 'No bottleneck' : 'In approver queues'}
           tone=${awaitingApproval > 0 ? 'pending' : 'good'}
           live=${streamPulse > 0}
-          onClick=${() => navigate('/records?scope=approvals')}
+          onClick=${() => navigate(accountsPayablePath('?scope=approvals'))}
         />
         <${StatTile}
           label="Processed this week"
@@ -491,7 +492,7 @@ function ApproverWorkloadStrip({ state, navigate }) {
       <ul class="cl-home-workload-list">
         ${approvers.slice(0, 8).map((a) => html`
           <li class="cl-home-workload-row" key=${a.approver_id}
-            onClick=${() => navigate(`/records?approver=${encodeURIComponent(a.email || a.approver_id)}`)}>
+            onClick=${() => navigate(accountsPayablePath(`?approver=${encodeURIComponent(a.email || a.approver_id)}`))}>
             <div class="cl-home-workload-main">
               <div class="cl-home-workload-name">${a.name || a.email || a.approver_id}</div>
               ${a.email && a.email !== a.name ? html`

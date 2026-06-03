@@ -35,6 +35,7 @@ import {
   getStateLabel,
 } from '../../utils/formatters.js';
 import { hasCapability } from '../../utils/capabilities.js';
+import { accountsPayablePath } from '../../utils/record-route.js';
 
 const html = htm.bind(h);
 
@@ -236,7 +237,7 @@ export default function RecordDetailPage({
   }, [api, orgId, detail, loadDetail, toast, actionBusy]);
 
   const onBack = useCallback(() => {
-    navigate('/records');
+    navigate(accountsPayablePath());
   }, [navigate]);
 
   if (loading && !detail) {

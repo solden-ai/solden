@@ -5,6 +5,7 @@ import { h } from 'preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import htm from 'htm';
 import { hasCapability, integrationByName, humanizeStatus, humanizeMode, useAction, fmtDateTime } from '../route-helpers.js';
+import { accountsPayablePath } from '../../utils/record-route.js';
 
 const html = htm.bind(h);
 const ERP_OPTIONS = [
@@ -135,7 +136,7 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
       oauthBridge.open(payload.auth_url);
       return;
     }
-    navigate?.('/records');
+    navigate?.(accountsPayablePath());
   });
 
   const [connectOutlook, outlookPending] = useAction(async () => {
@@ -148,7 +149,7 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
       oauthBridge.open(payload.auth_url);
       return;
     }
-    navigate?.('/records');
+    navigate?.(accountsPayablePath());
   });
 
   const [disconnectOutlook, outlookDisconnectPending] = useAction(async () => {

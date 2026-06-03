@@ -1,6 +1,18 @@
 import { readLocalStorage, writeLocalStorage } from './formatters.js';
 
 export const ACTIVE_RECORD_ID_STORAGE_KEY = 'solden_active_ap_item_id';
+export const ACCOUNTS_PAYABLE_ROUTE = '/accounts-payable';
+export const LEGACY_RECORDS_ROUTE = '/records';
+
+export function accountsPayablePath(search = '') {
+  const query = String(search || '');
+  return `${ACCOUNTS_PAYABLE_ROUTE}${query && !query.startsWith('?') ? `?${query}` : query}`;
+}
+
+export function accountPayableRecordPath(recordId) {
+  const normalized = normalizeRecordRouteId(recordId);
+  return normalized ? `${ACCOUNTS_PAYABLE_ROUTE}/${encodeURIComponent(normalized)}` : ACCOUNTS_PAYABLE_ROUTE;
+}
 
 function safeDecode(value) {
   const text = String(value || '').trim();
@@ -26,13 +38,14 @@ export function rememberRecordRouteId(recordId) {
 /**
  * SPA navigation: `navigate` here is the wouter-preact location setter
  * (the second tuple element from `useLocation()`), which accepts a
- * path string. The SPA route is `/records/:id` — the listing lives at
- * `/records` and the detail surface at `/records/<id>`.
+ * path string. The SPA route is `/accounts-payable/:id` — the listing
+ * lives at `/accounts-payable` and the detail surface at
+ * `/accounts-payable/<id>`. `/records` is legacy redirect-only.
  */
 export function navigateToRecordDetail(navigate, recordId) {
   const normalized = rememberRecordRouteId(recordId);
   if (!normalized || typeof navigate !== 'function') return false;
-  navigate(`/records/${encodeURIComponent(normalized)}`);
+  navigate(accountPayableRecordPath(normalized));
   return true;
 }
 
@@ -41,7 +54,7 @@ export function resolveRecordRouteId(params = {}, hash = '') {
   if (paramId) return paramId;
 
   const hashText = String(hash || '');
-  const hashMatch = hashText.match(/records\/([^/?#]+)/);
+  const hashMatch = hashText.match(/(?:accounts-payable|records)\/([^/?#]+)/);
   const hashId = normalizeRecordRouteId(hashMatch?.[1]);
   if (hashId) return hashId;
 
