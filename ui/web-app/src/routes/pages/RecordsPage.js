@@ -36,6 +36,7 @@ import {
   createSavedPipelineView,
   getAllPipelineViews,
   getBootstrappedPipelinePreferences,
+  getErpStatus,
   getPersonalPipelineViews,
   getPipelineBlockers,
   getPipelineViewRef,
@@ -87,6 +88,33 @@ const BLOCKER_LABELS = {
   processing: 'Processing issue',
 };
 
+const NEXT_STEP_LABELS = {
+  approve_or_reject: 'Awaiting approver',
+  budget_decision: 'Budget decision',
+  escalate_approval: 'Escalate approval',
+  needs_non_invoice_followup: 'Follow up',
+  none: 'No open step',
+  post_to_erp: 'Post to ERP',
+  request_info: 'Ask for context',
+  resolve_entity_route: 'Choose entity',
+  resolve_non_invoice: 'Classify document',
+  resubmit: 'Review resubmission',
+  retry_post: 'Recover ERP post',
+  review: 'Review record',
+  review_exception: 'Review exception',
+  review_fields: 'Check fields',
+  review_finance_effects: 'Review accounting',
+  route_for_approval: 'Route approval',
+};
+
+const ERP_STATUS_LABELS = {
+  connected: 'Connected',
+  failed: 'Failed',
+  not_connected: 'No ERP',
+  posted: 'Posted',
+  ready: 'Ready',
+};
+
 function recordsEndpoint({
   orgId,
   activeSliceId = 'all_open',
@@ -130,6 +158,58 @@ function StatePill({ state }) {
     bg: '#F1F5F9', text: '#64748B', label: normalized.replace(/_/g, ' ') || 'unknown',
   };
   return html`<span class="cl-records-state" style=${`background:${tone.bg};color:${tone.text}`}>${tone.label}</span>`;
+}
+
+function ErpStatusPill({ item }) {
+  const status = String(getErpStatus(item) || 'unknown').toLowerCase();
+  const label = ERP_STATUS_LABELS[status] || status.replace(/_/g, ' ') || 'Unknown';
+  return html`<span class=${`cl-records-erp is-${status}`}>${label}</span>`;
+}
+
+function compactPersonLabel(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (!raw.includes('@')) return raw;
+  return raw.split('@')[0].replace(/[._-]+/g, ' ').trim() || raw;
+}
+
+function getOwnerLabel(item) {
+  const pending = Array.isArray(item?.approval_pending_assignees)
+    ? item.approval_pending_assignees
+    : [];
+  const owner = (
+    item?.owner_email
+    || item?.owner
+    || item?.assigned_to_email
+    || pending[0]
+    || ''
+  );
+  return compactPersonLabel(owner) || 'Unassigned';
+}
+
+function getOwnerTitle(item) {
+  const pending = Array.isArray(item?.approval_pending_assignees)
+    ? item.approval_pending_assignees
+    : [];
+  return String(
+    item?.owner_email
+    || item?.owner
+    || item?.assigned_to_email
+    || pending[0]
+    || 'Unassigned',
+  );
+}
+
+function getNextStepLabel(item) {
+  const action = String(item?.next_action || '').trim().toLowerCase();
+  if (NEXT_STEP_LABELS[action]) return NEXT_STEP_LABELS[action];
+  if (item?.workflow_paused_reason) return 'Resolve blocker';
+  const state = String(item?.state || '').trim().toLowerCase();
+  if (state === 'needs_info') return 'Ask for context';
+  if (state === 'failed_post') return 'Recover ERP post';
+  if (state === 'needs_approval' || state === 'pending_approval') return 'Awaiting approver';
+  if (state === 'ready_to_post' || state === 'approved') return 'Post to ERP';
+  return 'Inspect record';
 }
 
 function getAmountLabel(item) {
@@ -651,10 +731,12 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
               <span role="columnheader">Vendor</span>
               <span role="columnheader">Reference</span>
               <span role="columnheader" class="cl-records-num">Amount</span>
-              <span role="columnheader">State</span>
+              <span role="columnheader">Owner</span>
+              <span role="columnheader">Next step</span>
               <span role="columnheader">Blocker</span>
               <span role="columnheader">Age</span>
               <span role="columnheader">Due</span>
+              <span role="columnheader">ERP</span>
             </div>
             ${displayed.map((item) => {
               const blockers = getPipelineBlockers(item);
@@ -668,6 +750,7 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
                 || primaryBlocker?.kind
                 || '';
               const due = dueBadge(item.due_date);
+              const ownerTitle = getOwnerTitle(item);
               return html`
                 <button
                   type="button"
@@ -685,7 +768,13 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
                   <span class="cl-records-cell-amount cl-records-num" role="cell">
                     ${getAmountLabel(item)}
                   </span>
-                  <span role="cell"><${StatePill} state=${item.state} /></span>
+                  <span class="cl-records-cell-owner" role="cell" title=${ownerTitle}>
+                    ${getOwnerLabel(item)}
+                  </span>
+                  <span class="cl-records-cell-next" role="cell">
+                    <span class="cl-records-next-label">${getNextStepLabel(item)}</span>
+                    <${StatePill} state=${item.state} />
+                  </span>
                   <span class="cl-records-cell-blocker" role="cell">
                     ${primaryBlocker ? html`
                       <span class="cl-records-blocker">${blockerLabel}</span>
@@ -697,6 +786,9 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
                   </span>
                   <span class="cl-records-cell-due" role="cell">
                     ${due ? html`<span class="cl-records-due" style=${`background:${due.bg};color:${due.color};border-color:${due.border}`}>${due.label}</span>` : html`<span class="muted">—</span>`}
+                  </span>
+                  <span class="cl-records-cell-erp" role="cell">
+                    <${ErpStatusPill} item=${item} />
                   </span>
                 </button>
               `;

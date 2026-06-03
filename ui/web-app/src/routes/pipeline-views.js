@@ -48,53 +48,62 @@ function buildDefaultFilters() {
 
 export const PIPELINE_STARTER_VIEWS = [
   {
-    id: 'approval_chase',
-    name: 'Approval chase',
-    description: 'Longest-waiting approvals first.',
+    id: 'high_value_blocked',
+    name: 'High-value blocked',
+    description: 'Invoices over 10k that are stopped by an exception or blocker.',
+    snapshot: {
+      activeSliceId: 'blocked_exception',
+      viewMode: 'table',
+      sortCol: 'amount',
+      sortDir: 'desc',
+      filters: {
+        ...buildDefaultFilters(),
+        amount: 'over_10k',
+      },
+    },
+  },
+  {
+    id: 'waiting_over_3d',
+    name: 'Waiting >3 days',
+    description: 'Approvals that have been waiting more than three days.',
     snapshot: {
       activeSliceId: 'waiting_on_approval',
       viewMode: 'table',
       sortCol: 'approval_wait',
       sortDir: 'desc',
-      filters: buildDefaultFilters(),
+      filters: {
+        ...buildDefaultFilters(),
+        approvalAge: 'over_3d',
+      },
     },
   },
   {
-    id: 'urgent_due',
-    name: 'Urgent due',
-    description: 'Invoices due soon with nearest due dates first.',
+    id: 'failed_erp_post',
+    name: 'Failed ERP post',
+    description: 'Invoices that need ERP recovery before the agent can continue.',
     snapshot: {
-      activeSliceId: 'due_soon',
+      activeSliceId: 'failed_post',
       viewMode: 'table',
-      sortCol: 'due_date',
-      sortDir: 'asc',
-      filters: buildDefaultFilters(),
-    },
-  },
-  {
-    id: 'posting_watch',
-    name: 'Posting watch',
-    description: 'Highest-value approved invoices ready for ERP posting.',
-    snapshot: {
-      activeSliceId: 'ready_to_post',
-      viewMode: 'table',
-      sortCol: 'amount',
+      sortCol: 'updated_at',
       sortDir: 'desc',
-      filters: buildDefaultFilters(),
+      filters: {
+        ...buildDefaultFilters(),
+        erpStatus: 'failed',
+      },
     },
   },
   {
-    id: 'exception_triage',
-    name: 'Exception triage',
-    description: 'Blocked invoices ordered by queue age.',
+    id: 'missing_context',
+    name: 'Missing context',
+    description: 'Invoices waiting on vendor, field, or document context.',
     snapshot: {
-      activeSliceId: 'blocked_exception',
+      activeSliceId: 'needs_info',
       viewMode: 'table',
       sortCol: 'queue_age',
       sortDir: 'desc',
       filters: {
         ...buildDefaultFilters(),
-        blocker: 'all',
+        blocker: 'info',
       },
     },
   },
@@ -278,7 +287,7 @@ function normalizePipelineViewRef(value) {
 }
 
 function defaultPinnedViewRefs() {
-  return ['starter:approval_chase', 'starter:urgent_due'];
+  return ['starter:waiting_over_3d', 'starter:high_value_blocked'];
 }
 
 function sanitizeCustomViews(customViews = []) {

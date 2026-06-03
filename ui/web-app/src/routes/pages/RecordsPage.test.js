@@ -21,6 +21,9 @@ function item(id, vendor = `Vendor ${id}`) {
     amount: 1200,
     currency: 'USD',
     state: 'needs_approval',
+    owner_email: 'jane.finance@acme.com',
+    next_action: 'approve_or_reject',
+    erp_status: 'connected',
     created_at: '2026-06-01T10:00:00Z',
     updated_at: '2026-06-01T10:00:00Z',
   };
@@ -128,6 +131,86 @@ describe('RecordsPage', () => {
       const matching = recordsCallUrls(api).some((path) => {
         const url = parseUrl(path);
         return url.searchParams.get('q') === 'Acme' && url.searchParams.get('offset') === '0';
+      });
+      expect(matching).toBe(true);
+    });
+  });
+
+  it('renders owner, next step, blocker, age, due, and ERP status in rows', async () => {
+    const row = {
+      ...item('ERP-1', 'Acme Recovery'),
+      state: 'failed_post',
+      next_action: 'retry_post',
+      erp_status: 'failed',
+      pipeline_blockers: [{ kind: 'erp', type: 'posting_failed', title: 'ERP issue' }],
+    };
+    const api = vi.fn(async (path) => {
+      if (String(path).startsWith('/api/workspace/records')) {
+        return {
+          items: [row],
+          total: 1,
+          limit: 50,
+          offset: 0,
+          has_more: false,
+          slice_counts: { all: 1, all_open: 1, blocked_exception: 1, overdue: 0 },
+        };
+      }
+      return {};
+    });
+
+    render(h(RecordsPage, {
+      api,
+      bootstrap: {},
+      orgId: 'org-test',
+      userEmail: 'ops@soldenai.com',
+      toast: () => {},
+      navigate: () => {},
+    }));
+
+    await screen.findByText('Acme Recovery');
+    expect(screen.getByText('jane finance')).toBeTruthy();
+    expect(screen.getByText('Recover ERP post')).toBeTruthy();
+    expect(screen.getByText('ERP not connected')).toBeTruthy();
+    expect(screen.getByText('Failed')).toBeTruthy();
+  });
+
+  it('applies operational starter views through server query params', async () => {
+    const api = vi.fn(async (path) => {
+      if (String(path).startsWith('/api/workspace/records')) {
+        return {
+          items: [],
+          total: 0,
+          limit: 50,
+          offset: Number(parseUrl(path).searchParams.get('offset') || 0),
+          has_more: false,
+          slice_counts: { all: 0, all_open: 0, blocked_exception: 0, overdue: 0 },
+        };
+      }
+      return {};
+    });
+
+    render(h(RecordsPage, {
+      api,
+      bootstrap: {},
+      orgId: 'org-test',
+      userEmail: 'ops@soldenai.com',
+      toast: () => {},
+      navigate: () => {},
+    }));
+
+    await screen.findByText('No records');
+    fireEvent.click(screen.getByRole('button', { name: /^Views/ }));
+    fireEvent.click(screen.getByText('High-value blocked'));
+
+    await waitFor(() => {
+      const matching = recordsCallUrls(api).some((path) => {
+        const url = parseUrl(path);
+        return (
+          url.searchParams.get('active_slice_id') === 'blocked_exception'
+          && url.searchParams.get('amount') === 'over_10k'
+          && url.searchParams.get('sort_col') === 'amount'
+          && url.searchParams.get('sort_dir') === 'desc'
+        );
       });
       expect(matching).toBe(true);
     });
