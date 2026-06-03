@@ -62,7 +62,7 @@ export default function ActivityPage({ api, orgId, onRefresh, navigate }) {
             ${refreshing ? 'Refreshing…' : 'Refresh'}
           </button>
           <button class="btn-primary btn-sm" onClick=${() => navigate?.('/records')}>
-            Open records
+            Open Accounts Payable
           </button>
         </div>
       </header>

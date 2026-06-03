@@ -13,7 +13,7 @@ describe('SidebarNav grouping', () => {
     mount();
     expect(screen.getByText('WORKFLOWS')).toBeTruthy();
     expect(screen.getByText('DATA')).toBeTruthy();
-    expect(screen.getByText('Records')).toBeTruthy();
+    expect(screen.getByText('Accounts Payable')).toBeTruthy();
     expect(screen.queryByText('Procurement')).toBeNull();
     expect(screen.queryByText('Builder')).toBeNull();
     // Reference surfaces.

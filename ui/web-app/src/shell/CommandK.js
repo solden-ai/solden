@@ -23,7 +23,7 @@ const NAV_ENTRIES = [
   { kind: 'nav', label: 'Home', sub: 'Workspace overview', path: '/', tokens: ['home', 'overview', 'dashboard'] },
   { kind: 'nav', label: 'Activity', sub: 'Recent work activity', path: '/activity', tokens: ['activity', 'live', 'feed', 'agent'] },
   { kind: 'nav', label: 'Exceptions', sub: 'Records the agent escalated for human judgment', path: '/exceptions', tokens: ['exceptions', 'errors', 'blockers', 'review', 'queue', 'attention'] },
-  { kind: 'nav', label: 'Records', sub: 'Search and inspect AP records', path: '/records', tokens: ['records', 'pipeline', 'invoices', 'ap'] },
+  { kind: 'nav', label: 'Accounts Payable', sub: 'Search and inspect AP records', path: '/records', tokens: ['accounts', 'payable', 'records', 'pipeline', 'invoices', 'ap'] },
   { kind: 'nav', label: 'Procurement', sub: 'Purchase orders + approval workflow', path: '/procurement', tokens: ['procurement', 'purchase', 'po', 'orders'] },
   { kind: 'nav', label: 'Builder', sub: 'Create custom work types', path: '/workflows', tokens: ['workflows', 'builder', 'custom', 'box', 'types', 'spec', 'no-code'] },
   { kind: 'nav', label: 'Vendors', sub: 'Vendor directory', path: '/vendors', tokens: ['vendors', 'suppliers'] },

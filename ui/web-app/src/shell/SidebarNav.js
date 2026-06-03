@@ -9,11 +9,11 @@ import { hasCapability } from '../utils/capabilities.js';
  *
  * Four groups, ordered by what the operator does here:
  *   primary   — live work in progress (Home, Activity, Exceptions)
- *   workflows — the box types the operator works in (Records; later gated surfaces)
+ *   workflows — the box types the operator works in (Accounts Payable; later gated surfaces)
  *   data      — reference + read-only surfaces (Vendors, Reports, Audit log)
  *   admin     — policy + identity + render-target config (Rules, Connections, API keys, Settings)
  *
- * Records / Procurement / Builder are the workflow surfaces (box types the
+ * Accounts Payable / Procurement / Builder are the workflow surfaces (box types the
  * system tracks), so they group under WORKFLOWS, not DATA. DATA is for the
  * reference surfaces: the vendor directory, reporting, and the audit log.
  * (The /workflows page is the no-code builder, labeled "Builder" here so the
@@ -23,7 +23,7 @@ export const NAV_ITEMS = [
   { path: '/', label: 'Home', group: 'primary', icon: 'home' },
   { path: '/activity', label: 'Activity', group: 'primary', icon: 'activity' },
   { path: '/exceptions', label: 'Exceptions', group: 'primary', icon: 'alert' },
-  { path: '/records', label: 'Records', group: 'workflows', icon: 'file' },
+  { path: '/records', label: 'Accounts Payable', group: 'workflows', icon: 'file' },
   { path: '/procurement', label: 'Procurement', group: 'workflows', icon: 'cart', capability: 'view_procurement' },
   { path: '/workflows', label: 'Builder', group: 'workflows', icon: 'workflow', capability: 'view_workflow_builder' },
   { path: '/vendors', label: 'Vendors', group: 'data', icon: 'users' },

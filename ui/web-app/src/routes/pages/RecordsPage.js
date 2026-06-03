@@ -1,5 +1,5 @@
 /**
- * Records — read-only directory of AP records.
+ * Accounts Payable — read-only directory of AP records.
  *
  * The workspace is the coordination-layer control center, not a workflow
  * desktop. This page lets the operator search, filter, and open any
@@ -264,7 +264,7 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
       const data = await api(recordsEndpoint(orgId, 500));
       setItems(Array.isArray(data?.items) ? data.items : []);
       setNavState(readPipelineNavigation(pipelineScope));
-      toast('Records refreshed.', 'success');
+      toast('Accounts Payable refreshed.', 'success');
     } catch {
       toast('Could not refresh records.', 'error');
     } finally {
@@ -399,7 +399,7 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
     <div class="cl-records">
       <header class="cl-records-head">
         <div>
-          <h1 class="cl-records-title">Records</h1>
+          <h1 class="cl-records-title">Accounts Payable</h1>
           <p class="cl-records-sub">
             Search, filter, and inspect AP records. Approvals happen in Slack and Teams;
             vendor follow-up in Gmail. Open a record to see the agent's reasoning, audit
@@ -421,7 +421,7 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
             class="btn-secondary btn-sm"
             onClick=${doRefresh}
             disabled=${refreshing}
-            aria-label="Refresh records">
+            aria-label="Refresh accounts payable records">
             ${refreshing ? 'Refreshing…' : 'Refresh'}
           </button>
         </div>
@@ -486,7 +486,7 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
             <p class="muted">Try clearing filters or switching scope.</p>
             <button class="btn-secondary btn-sm" onClick=${resetFiltersAndSearch}>Reset</button>
           </div>`
-        : html`<div class="cl-records-table" role="table" aria-label="Records">
+        : html`<div class="cl-records-table" role="table" aria-label="Accounts payable records">
             <div class="cl-records-row cl-records-row-header" role="row">
               <span role="columnheader">Vendor</span>
               <span role="columnheader">Reference</span>

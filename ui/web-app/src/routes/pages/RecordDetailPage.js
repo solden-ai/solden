@@ -255,8 +255,8 @@ export default function RecordDetailPage({
   return html`
     <div class="cl-record-detail">
       <header class="cl-record-detail-topbar">
-        <button class="cl-record-back" onClick=${onBack} aria-label="Back to records">
-          ← Records
+        <button class="cl-record-back" onClick=${onBack} aria-label="Back to Accounts Payable">
+          ← Accounts Payable
         </button>
         <span class="cl-record-detail-id">${item.id}</span>
       </header>
@@ -361,7 +361,7 @@ function ErrorState({ message, onRetry, onBack }) {
       <p class="cl-record-detail-error-message">${message}</p>
       <div class="cl-record-detail-error-actions">
         <button class="btn btn-primary" onClick=${onRetry}>Try again</button>
-        <button class="btn btn-secondary" onClick=${onBack}>Back to records</button>
+        <button class="btn btn-secondary" onClick=${onBack}>Back to Accounts Payable</button>
       </div>
     </div>
   `;
