@@ -2,15 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { useLocation } from 'wouter-preact';
 import { html } from '../utils/htm.js';
 import { api } from '../api/client.js';
-import { useOrgId } from './BootstrapContext.js';
-import { ACCOUNTS_PAYABLE_ROUTE, accountPayableRecordPath } from '../utils/record-route.js';
+import { useBootstrap, useOrgId } from './BootstrapContext.js';
+import { accountPayableRecordPath } from '../utils/record-route.js';
+import { getCommandNavEntries } from './workspaceNavigation.js';
 
 /**
  * Command palette (⌘K / Ctrl+K) — table-stakes for any modern admin
  * SPA. Combines navigation with live AP/vendor search:
  *
- *   - Static nav entries (Pipeline, Vendors, Onboarding, etc.) that
- *     fuzzy-match against the user's query
+ *   - Shared workspace nav entries that fuzzy-match against the user's query
  *   - Live results from the existing /api/ap/items/search and
  *     /api/vendors/summary endpoints (debounced 200ms)
  *   - ↑/↓ to traverse, Enter to activate, Esc to close
@@ -19,25 +19,6 @@ import { ACCOUNTS_PAYABLE_ROUTE, accountPayableRecordPath } from '../utils/recor
  * page. Keyboard listener registers globally; opening/closing is
  * idempotent.
  */
-
-const NAV_ENTRIES = [
-  { kind: 'nav', label: 'Home', sub: 'Workspace overview', path: '/', tokens: ['home', 'overview', 'dashboard'] },
-  { kind: 'nav', label: 'Activity', sub: 'Recent work activity', path: '/activity', tokens: ['activity', 'live', 'feed', 'agent'] },
-  { kind: 'nav', label: 'Exceptions', sub: 'Records the agent escalated for human judgment', path: '/exceptions', tokens: ['exceptions', 'errors', 'blockers', 'review', 'queue', 'attention'] },
-  { kind: 'nav', label: 'Accounts Payable', sub: 'Search and inspect AP records', path: ACCOUNTS_PAYABLE_ROUTE, tokens: ['accounts', 'payable', 'records', 'pipeline', 'invoices', 'ap'] },
-  { kind: 'nav', label: 'Procurement', sub: 'Purchase orders + approval workflow', path: '/procurement', tokens: ['procurement', 'purchase', 'po', 'orders'] },
-  { kind: 'nav', label: 'Builder', sub: 'Create custom work types', path: '/workflows', tokens: ['workflows', 'builder', 'custom', 'box', 'types', 'spec', 'no-code'] },
-  { kind: 'nav', label: 'Vendors', sub: 'Vendor directory', path: '/vendors', tokens: ['vendors', 'suppliers'] },
-  { kind: 'nav', label: 'Reports', sub: 'Volume, agent performance, cycle, exceptions, vendor quality', path: '/reports', tokens: ['reports', 'analytics', 'metrics'] },
-  { kind: 'nav', label: 'Audit log', sub: 'Append-only governance trail', path: '/audit', tokens: ['audit', 'history', 'governance'] },
-  { kind: 'nav', label: 'Approval rules', sub: 'Configure approval routing', path: '/rules', tokens: ['rules', 'policy', 'approval'] },
-  { kind: 'nav', label: 'Connections', sub: 'ERP, Slack, Teams, Gmail', path: '/connections', tokens: ['connections', 'integrations', 'erp', 'slack', 'teams', 'gmail'] },
-  { kind: 'nav', label: 'API keys', sub: 'Service account access and rotation', path: '/api-keys', tokens: ['api', 'keys', 'tokens', 'agent', 'identity'] },
-  { kind: 'nav', label: 'Settings', sub: 'Company, users, policies, billing', path: '/settings', tokens: ['settings', 'config', 'preferences', 'billing'] },
-  { kind: 'nav', label: 'Plan', sub: 'Subscription, usage, billing', path: '/plan', tokens: ['plan', 'billing', 'subscription'] },
-  { kind: 'nav', label: 'Status', sub: 'Operational health', path: '/status', tokens: ['status', 'health', 'uptime', 'incidents'] },
-  { kind: 'nav', label: 'Onboarding', sub: 'Setup wizard', path: '/onboarding', tokens: ['onboarding', 'setup', 'wizard'] },
-];
 
 function fuzzyScore(query, item) {
   if (!query) return 1;
@@ -60,6 +41,7 @@ function fuzzyScore(query, item) {
 
 export function CommandK() {
   const [, navigate] = useLocation();
+  const bootstrap = useBootstrap();
   const orgId = useOrgId();
 
   const [open, setOpen] = useState(false);
@@ -131,15 +113,16 @@ export function CommandK() {
   }, [query, open, orgId]);
 
   const ranked = useMemo(() => {
+    const navEntries = getCommandNavEntries(bootstrap);
     const all = [
-      ...NAV_ENTRIES.map((entry) => ({ ...entry, score: fuzzyScore(query, entry) })),
+      ...navEntries.map((entry) => ({ ...entry, score: fuzzyScore(query, entry) })),
       ...liveResults.map((entry) => ({ ...entry, score: 1.5 })),
     ];
     return all
       .filter((entry) => entry.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 8);
-  }, [query, liveResults]);
+  }, [bootstrap, query, liveResults]);
 
   useEffect(() => {
     if (activeIdx >= ranked.length) setActiveIdx(0);
