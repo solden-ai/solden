@@ -27,6 +27,8 @@ _ERP_DISPLAY_NAMES: Dict[str, str] = {
     "xero": "Xero",
     "netsuite": "NetSuite",
     "sap": "SAP B1",
+    "sage_intacct": "Sage Intacct",
+    "sage_accounting": "Sage Accounting",
 }
 
 

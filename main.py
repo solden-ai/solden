@@ -495,6 +495,7 @@ STRICT_PROFILE_ALLOWED_EXACT_PATHS = {
     # OAuth callbacks required for ERP admin connect flows.
     "/erp/quickbooks/callback",
     "/erp/xero/callback",
+    "/erp/sage-accounting/callback",
     # Per-tenant GL account mapping read/write — Settings page edits
     # the org's settings_json["gl_account_map"] to translate vendor +
     # category → ERP GL account. Read on every Settings render; write
@@ -693,6 +694,7 @@ STRICT_PROFILE_ALLOWED_WORKSPACE_PATHS = {
     "/api/workspace/subscription/plan",
     "/api/workspace/integrations/erp/connect/netsuite",
     "/api/workspace/integrations/erp/connect/sap",
+    "/api/workspace/integrations/erp/connect/sage-intacct",
     "/api/workspace/integrations/erp/connect/start",
     "/api/workspace/integrations/gmail/connect/start",
     "/api/workspace/integrations/slack/channel",
@@ -1772,6 +1774,7 @@ app.include_router(outlook_router)
 if STRICT_PROFILE_ACTIVE:
     from solden.api.erp_connections import (
         quickbooks_callback,
+        sage_accounting_callback,
         xero_callback,
         get_gl_account_map,
         update_gl_account_map,
@@ -1785,6 +1788,12 @@ if STRICT_PROFILE_ACTIVE:
     app.add_api_route(
         "/erp/xero/callback",
         xero_callback,
+        methods=["GET"],
+        tags=["ERP Connections"],
+    )
+    app.add_api_route(
+        "/erp/sage-accounting/callback",
+        sage_accounting_callback,
         methods=["GET"],
         tags=["ERP Connections"],
     )

@@ -14,6 +14,8 @@ The heuristic is wrong for ERP breadth in AP. Here's why.
 
 **Ship four ERPs at V1: QuickBooks Online, Xero, NetSuite, SAP.** Each is wired at AP-v1 scope (auth + bill post + webhook verification + refresh).
 
+**2026-06-03 update:** this ADR remains the historical V1-breadth decision. The current active connector scope has expanded to six ERP families: QuickBooks Online, Xero, NetSuite, SAP, Sage Intacct, and Sage Business Cloud Accounting. Sage bill posting, field mapping, connection setup, health checks, vendor/account reads, and payment-status reads are wired; Sage credit application and settlement writes remain manual until sandbox validation.
+
 ## Consequences
 
 **Wins:**
@@ -52,6 +54,6 @@ Four ERPs is product-promise breadth. Each ERP's bill-post is at AP-v1 scope (no
 
 ## Reference
 
-Primary surface: `solden/integrations/erp_router.py` (dispatcher, `ERPConnection`), `solden/integrations/erp_quickbooks.py`, `erp_xero.py`, `erp_netsuite.py`, `erp_sap.py` (per-ERP implementations).
+Primary surface: `solden/integrations/erp_router.py` (dispatcher, `ERPConnection`), `solden/integrations/erp_quickbooks.py`, `erp_xero.py`, `erp_netsuite.py`, `erp_sap.py`, `erp_sage_intacct.py`, `erp_sage_accounting.py` (per-ERP implementations).
 Webhook verification: `solden/core/erp_webhook_verify.py`.
 Regression fence: `tests/test_erp_webhook_security.py` (34 tests).

@@ -278,7 +278,12 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         # reaching through the Gmail-extension paths (/api/workspace/records,
         # /exceptions, /exceptions/stats, /exceptions/{id}/resolve). Net surface
         # +1 after the post-AP gating in b8cc0451. Cap 460 -> 461.
-        assert len(paths) <= 461
+        # 2026-06-03: Sage support added one workspace credential endpoint
+        # and one OAuth callback. The same pass reconciled the already-mounted
+        # ERP ops paths that this strict-surface test was undercounting:
+        # /api/workspace/integrations/erp/test plus dynamic test/rotation
+        # paths. Cap 461 -> 467.
+        assert len(paths) <= 467
         assert not any(path.startswith("/config/") for path in paths)
         assert "/erp/status/{organization_id}" not in paths
         assert "/erp/quickbooks/connect" not in paths
@@ -286,10 +291,15 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         assert "/api/workspace/vendor-intelligence/bootstrap" not in paths
         # Slack manifest is a valid integration endpoint
         assert "/api/workspace/integrations/slack/manifest" in paths
+        assert "/api/workspace/integrations/erp/connect/sage-intacct" in paths
+        assert "/api/workspace/integrations/erp/test" in paths
+        assert "/api/workspace/integrations/erp/{erp_type}/test" in paths
+        assert "/api/workspace/integrations/erp/{erp_type}/rotate-credentials" in paths
         assert "/marketplace/apps" not in paths
         # OAuth callbacks remain available for admin ERP install flows.
         assert "/erp/quickbooks/callback" in paths
         assert "/erp/xero/callback" in paths
+        assert "/erp/sage-accounting/callback" in paths
         assert set(_strict_profile_allowed_prefixes()) == {
             "/v1",
             "/static",

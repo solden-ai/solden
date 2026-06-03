@@ -862,7 +862,7 @@ export function getDecisionSummary(item, budgetContext) {
   if ((state === 'approved' || state === 'ready_to_post' || state === 'failed_post') && erpUnavailable && !erpConnected) {
     return {
       title: 'ERP not connected',
-      detail: 'Connect QuickBooks, Xero, NetSuite, or SAP before Solden can post this invoice.',
+      detail: 'Connect a supported ERP before Solden can post this invoice.',
       tone: 'warning',
     };
   }

@@ -312,7 +312,7 @@ export function getWorkStateNotice(state, documentType = 'invoice', item = null)
     return 'Waiting on approval. Solden is monitoring this request and will remind or escalate if it slips.';
   }
   if ((normalized === 'approved' || normalized === 'ready_to_post' || normalized === 'failed_post') && !hasErpPostingConnection(item)) {
-    return 'ERP is not connected. Connect QuickBooks, Xero, NetSuite, or SAP before Solden can post this invoice.';
+    return 'ERP is not connected. Connect a supported ERP before Solden can post this invoice.';
   }
   if (normalized === 'approved') {
     return 'Approval received. Solden is preparing the posting step.';

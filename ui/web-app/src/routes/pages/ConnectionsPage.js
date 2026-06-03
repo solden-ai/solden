@@ -13,6 +13,8 @@ const ERP_OPTIONS = [
   { value: 'xero', label: 'Xero' },
   { value: 'netsuite', label: 'NetSuite' },
   { value: 'sap', label: 'SAP' },
+  { value: 'sage_intacct', label: 'Sage Intacct' },
+  { value: 'sage_accounting', label: 'Sage Accounting' },
 ];
 
 function getErpOptionLabel(value) {
@@ -475,7 +477,7 @@ function ERPConnectionCard({
     <${ApprovalSurfaceCard}
       title="ERP posting connection"
       status=${erp.status || (erp.connected ? 'connected' : 'disconnected')}
-      detail="Choose the ERP Solden should post into. OAuth ERPs open a connect flow; NetSuite and SAP finish here with credentials."
+      detail="Choose the ERP Solden should post into. OAuth ERPs open a connect flow; credential-based ERPs finish here with credentials."
     >
       <div class="secondary-inline-actions">
         <select value=${erpType} onChange=${(event) => setErpType(event.target.value)} disabled=${!canManageConnections || erpConnectPending || erpSubmitPending} style="min-width:170px">
@@ -810,7 +812,14 @@ function FieldMappingPanel({ api, orgId, erpType, erpConnected, canManage, toast
   };
 
   const erpLabel = (() => {
-    const map = { netsuite: 'NetSuite', sap: 'SAP', quickbooks: 'QuickBooks', xero: 'Xero' };
+    const map = {
+      netsuite: 'NetSuite',
+      sap: 'SAP',
+      quickbooks: 'QuickBooks',
+      xero: 'Xero',
+      sage_intacct: 'Sage Intacct',
+      sage_accounting: 'Sage Accounting',
+    };
     return map[erpKey] || (erpKey ? erpKey.charAt(0).toUpperCase() + erpKey.slice(1) : 'ERP');
   })();
 
@@ -853,7 +862,7 @@ function FieldMappingPanel({ api, orgId, erpType, erpConnected, canManage, toast
         <div class="secondary-empty" style="padding:8px 0">
           ${supportedErps.includes(erpKey)
             ? `No custom fields are mapped for ${erpLabel} yet.`
-            : `Custom field mapping is not available for ${erpLabel}. Switch ERP above to configure NetSuite or SAP.`}
+            : `Custom field mapping is not available for ${erpLabel}. Switch ERP above to configure a supported ERP.`}
         </div>
       ` : null}
 
@@ -1104,7 +1113,7 @@ function ConnectionHealthPanel({ api, orgId }) {
                     </div>`;
                   })()}
                 </div>
-                ${(['quickbooks', 'xero', 'netsuite', 'sap']).includes(String(row.integration_type || '').toLowerCase()) ? html`
+                ${(['quickbooks', 'xero', 'netsuite', 'sap', 'sage_intacct', 'sage_accounting']).includes(String(row.integration_type || '').toLowerCase()) ? html`
                   <div class="cl-conn-health-tile-actions">
                     <button class="btn-ghost btn-sm"
                       onClick=${() => onTestErp(String(row.integration_type).toLowerCase())}

@@ -646,6 +646,33 @@ class TestERPConnectorStrategyBuildRoutePlan:
         assert plan["api_supported"] is True
         assert plan["primary_mode"] == "api"
 
+    def test_sage_connectors_support_post_bill_api(self):
+        """Sage connectors are API-first for AP bill posting."""
+        strategy = ERPConnectorStrategy()
+        for erp_type in ("sage_intacct", "sage_accounting"):
+            plan = strategy.build_route_plan(
+                erp_type=erp_type,
+                connection_present=True,
+                action="post_bill",
+            )
+            assert plan["erp_type"] == erp_type
+            assert plan["api_supported"] is True
+            assert plan["primary_mode"] == "api"
+
+    def test_sage_connectors_keep_credit_and_settlement_manual(self):
+        """Sage cash-side writes stay manual until sandbox validation."""
+        strategy = ERPConnectorStrategy()
+        for erp_type in ("sage_intacct", "sage_accounting"):
+            for action in ("apply_credit", "apply_settlement"):
+                plan = strategy.build_route_plan(
+                    erp_type=erp_type,
+                    connection_present=True,
+                    action=action,
+                )
+                assert plan["erp_type"] == erp_type
+                assert plan["api_supported"] is False
+                assert plan["primary_mode"] == "manual_review"
+
     def test_unknown_action_falls_back_gracefully(self):
         """Unknown action defaults to api_supported=False."""
         strategy = ERPConnectorStrategy()

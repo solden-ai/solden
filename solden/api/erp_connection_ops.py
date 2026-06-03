@@ -18,6 +18,8 @@ Two surfaces:
         SAP B1      — GET /b1s/v1/CompanyService_GetCompanyInfo (or
                        /BusinessPartners?$top=1 as a fallback)
         SAP S/4HANA — GET API_BUSINESS_PARTNER/A_BusinessPartner?$top=1
+        Sage Intacct — XML readByQuery GLACCOUNT pagesize=1
+        Sage Accounting — GET /businesses
 
   * ``POST /api/workspace/integrations/erp/{erp_type}/rotate-credentials``
       Replaces secrets on the existing ERPConnection without losing
@@ -47,7 +49,7 @@ router = APIRouter(
 )
 
 
-_SUPPORTED_ERPS = ("quickbooks", "xero", "netsuite", "sap")
+_SUPPORTED_ERPS = ("quickbooks", "xero", "netsuite", "sap", "sage_intacct", "sage_accounting")
 
 
 # ── Test connection ────────────────────────────────────────────────
@@ -199,11 +201,54 @@ async def _test_sap(connection) -> Dict[str, Any]:
     }
 
 
+async def _test_sage_intacct(connection) -> Dict[str, Any]:
+    from solden.integrations.erp_sage_intacct import test_connection_sage_intacct
+
+    return await test_connection_sage_intacct(connection)
+
+
+async def _test_sage_accounting(connection) -> Dict[str, Any]:
+    if not connection.access_token:
+        return {"ok": False, "detail": "missing_token"}
+    from solden.core.http_client import get_http_client
+
+    base_url = str(connection.base_url or "https://api.accounting.sage.com/v3.1").rstrip("/")
+    headers = {
+        "Authorization": f"Bearer {connection.access_token}",
+        "Accept": "application/json",
+    }
+    business_id = getattr(connection, "business_id", None) or getattr(connection, "tenant_id", None)
+    if business_id:
+        headers["X-Business"] = str(business_id)
+    client = get_http_client()
+    response = await client.get(
+        f"{base_url}/businesses",
+        headers=headers,
+        timeout=15,
+    )
+    if response.status_code == 401:
+        return {"ok": False, "detail": "token_expired", "needs_reauth": True}
+    if response.status_code >= 400:
+        return {"ok": False, "detail": f"http_{response.status_code}"}
+    body = response.json() or {}
+    businesses = body.get("businesses") or body.get("$items") or []
+    first = businesses[0] if businesses else {}
+    return {
+        "ok": True,
+        "response_summary": {
+            "business_id": (first or {}).get("id") or business_id,
+            "business_name": (first or {}).get("name") or (first or {}).get("displayed_as"),
+        },
+    }
+
+
 _TEST_DISPATCH = {
     "quickbooks": _test_quickbooks,
     "xero": _test_xero,
     "netsuite": _test_netsuite,
     "sap": _test_sap,
+    "sage_intacct": _test_sage_intacct,
+    "sage_accounting": _test_sage_accounting,
 }
 
 
@@ -300,6 +345,13 @@ class _RotateBody(BaseModel):
     token_secret: Optional[str] = None
     webhook_secret: Optional[str] = None   # any
     subsidiary_id: Optional[str] = None    # NetSuite OneWorld
+    sender_id: Optional[str] = None        # Sage Intacct
+    sender_password: Optional[str] = None
+    company_id: Optional[str] = None
+    user_id: Optional[str] = None
+    user_password: Optional[str] = None
+    location_id: Optional[str] = None
+    business_id: Optional[str] = None      # Sage Accounting
 
 
 class RotateResult(BaseModel):
@@ -346,6 +398,8 @@ def rotate_erp_credentials(
         "realm_id", "tenant_id", "base_url", "company_code",
         "account_id", "consumer_key", "consumer_secret",
         "token_id", "token_secret", "webhook_secret", "subsidiary_id",
+        "sender_id", "sender_password", "company_id", "user_id",
+        "user_password", "location_id", "business_id",
     ):
         new_value = getattr(body, field_name, None)
         if new_value is not None:

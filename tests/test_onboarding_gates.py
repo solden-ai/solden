@@ -129,6 +129,6 @@ class TestERPErrorClassification:
     def test_all_erp_types_have_remediation_links(self):
         # Every supported ERP must have a remediation link mapped so
         # the error copy can always show "where to fix it".
-        for erp in ("quickbooks", "xero", "netsuite", "sap"):
+        for erp in ("quickbooks", "xero", "netsuite", "sap", "sage_intacct", "sage_accounting"):
             result = _classify_erp_connect_error(erp, Exception("401"))
             assert result["remediation_link"], f"{erp} missing remediation_link"

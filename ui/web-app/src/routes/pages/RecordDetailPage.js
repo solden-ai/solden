@@ -170,6 +170,8 @@ const ERP_NAMES = {
   xero: 'Xero',
   netsuite: 'NetSuite',
   sap: 'SAP',
+  sage_intacct: 'Sage Intacct',
+  sage_accounting: 'Sage Accounting',
 };
 
 function formatErpName(erpType) {

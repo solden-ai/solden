@@ -1241,7 +1241,7 @@ class TeamInviteCreateRequest(BaseModel):
 
 class ERPConnectStartRequest(BaseModel):
     organization_id: Optional[str] = None
-    erp_type: str = Field(..., pattern="^(quickbooks|xero|netsuite|sap)$")
+    erp_type: str = Field(..., pattern="^(quickbooks|xero|netsuite|sap|sage_intacct|sage_accounting)$")
 
 
 class SAPConnectSubmitRequest(BaseModel):
@@ -1258,6 +1258,17 @@ class NetSuiteConnectSubmitRequest(BaseModel):
     consumer_secret: str = Field(..., min_length=1, max_length=256)
     token_id: str = Field(..., min_length=1, max_length=256)
     token_secret: str = Field(..., min_length=1, max_length=256)
+
+
+class SageIntacctConnectSubmitRequest(BaseModel):
+    organization_id: Optional[str] = None
+    sender_id: str = Field(..., min_length=1, max_length=128)
+    sender_password: str = Field(..., min_length=1, max_length=256)
+    company_id: str = Field(..., min_length=1, max_length=128)
+    user_id: str = Field(..., min_length=1, max_length=128)
+    user_password: str = Field(..., min_length=1, max_length=256)
+    base_url: Optional[str] = Field(default=None, max_length=512)
+    location_id: Optional[str] = Field(default=None, max_length=128)
 
 
 class GmailConnectStartRequest(BaseModel):
@@ -1350,7 +1361,7 @@ async def get_admin_bootstrap(
     outlook_connected = _is_connected("outlook")
     inbox_connected = gmail_connected or outlook_connected
     erp_connected = _is_connected("erp") or any(
-        _is_connected(n) for n in ("quickbooks", "xero", "netsuite", "sap")
+        _is_connected(n) for n in ("quickbooks", "xero", "netsuite", "sap", "sage_intacct", "sage_accounting")
     )
     slack_or_teams_connected = _is_connected("slack") or _is_connected("teams")
     has_ap_policy = bool((org_settings or {}).get("ap_policy") or (org_settings or {}).get("workflow_controls"))
@@ -2195,6 +2206,29 @@ def erp_connect_start(
             "help_text": "Use a least-privilege integration account with API access to the SAP OData base URL.",
         }
 
+    if erp_type == "sage_intacct":
+        return {
+            "erp_type": "sage_intacct",
+            "method": "form",
+            "fields": [
+                {"name": "sender_id", "label": "Sender ID", "type": "text", "required": True},
+                {"name": "sender_password", "label": "Sender Password", "type": "password", "required": True},
+                {"name": "company_id", "label": "Company ID", "type": "text", "required": True},
+                {"name": "user_id", "label": "User ID", "type": "text", "required": True},
+                {"name": "user_password", "label": "User Password", "type": "password", "required": True},
+                {
+                    "name": "base_url",
+                    "label": "XML Gateway URL",
+                    "type": "text",
+                    "placeholder": "https://api.intacct.com/ia/xml/xmlgw.phtml",
+                    "required": False,
+                },
+                {"name": "location_id", "label": "Location ID", "type": "text", "required": False},
+            ],
+            "submit_url": "/api/workspace/integrations/erp/connect/sage-intacct",
+            "help_text": "Use a least-privilege Sage Intacct web-services user with vendor, AP bill, GL account, and payment-status read/write access.",
+        }
+
     # OAuth-based ERPs (QuickBooks, Xero). State is stored in the
     # erp_oauth_states DB table (migration v10) via _save_oauth_state,
     # not the old in-memory _oauth_states dict (removed when it moved
@@ -2203,6 +2237,8 @@ def erp_connect_start(
         _save_oauth_state,
         QUICKBOOKS_CLIENT_ID, QUICKBOOKS_REDIRECT_URI, QUICKBOOKS_AUTH_URL,
         XERO_CLIENT_ID, XERO_REDIRECT_URI, XERO_AUTH_URL,
+        SAGE_ACCOUNTING_CLIENT_ID, SAGE_ACCOUNTING_REDIRECT_URI,
+        SAGE_ACCOUNTING_AUTH_URL, SAGE_ACCOUNTING_SCOPES,
     )
     from urllib.parse import urlencode as _urlencode
 
@@ -2250,6 +2286,23 @@ def erp_connect_start(
             "state": state,
         }
         return {"erp_type": "xero", "method": "oauth", "auth_url": f"{XERO_AUTH_URL}?{_urlencode(params)}"}
+
+    if erp_type == "sage_accounting":
+        if not SAGE_ACCOUNTING_CLIENT_ID:
+            return {
+                "erp_type": "sage_accounting",
+                "method": "not_configured",
+                "reason": "sage_accounting_client_id_missing",
+                "message": "Sage Accounting isn't set up on this deployment yet. You can connect it later from Connections.",
+            }
+        params = {
+            "client_id": SAGE_ACCOUNTING_CLIENT_ID,
+            "redirect_uri": SAGE_ACCOUNTING_REDIRECT_URI,
+            "response_type": "code",
+            "scope": SAGE_ACCOUNTING_SCOPES,
+            "state": state,
+        }
+        return {"erp_type": "sage_accounting", "method": "oauth", "auth_url": f"{SAGE_ACCOUNTING_AUTH_URL}?{_urlencode(params)}"}
 
 
 @router.post("/integrations/erp/connect/sap")
@@ -2306,6 +2359,56 @@ async def connect_sap(
         "success": True,
         "organization_id": org_id,
         "erp_type": "sap",
+        "base_url": base_url,
+    }
+
+
+@router.post("/integrations/erp/connect/sage-intacct")
+async def connect_sage_intacct(
+    request: SageIntacctConnectSubmitRequest,
+    user: TokenData = Depends(get_current_user),
+):
+    _require_admin(user)
+    org_id = _resolve_org_id(user, request.organization_id)
+    base_url = str(request.base_url or "https://api.intacct.com/ia/xml/xmlgw.phtml").strip()
+    if not base_url.startswith("https://"):
+        raise HTTPException(status_code=422, detail="invalid_sage_intacct_base_url")
+
+    from solden.integrations.erp_router import ERPConnection, set_erp_connection, test_connection_sage_intacct
+
+    connection = ERPConnection(
+        type="sage_intacct",
+        sender_id=request.sender_id,
+        sender_password=request.sender_password,
+        company_id=request.company_id,
+        user_id=request.user_id,
+        user_password=request.user_password,
+        base_url=base_url,
+        location_id=(request.location_id or None),
+    )
+
+    try:
+        outcome = await test_connection_sage_intacct(connection)
+        if not outcome.get("ok"):
+            from solden.api.erp_connections import _classify_erp_connect_error
+            classified = _classify_erp_connect_error(
+                "sage_intacct",
+                Exception(outcome.get("detail") or "sage_intacct_connection_test_failed"),
+            )
+            raise HTTPException(status_code=400, detail=classified)
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        from solden.api.erp_connections import _classify_erp_connect_error
+        classified = _classify_erp_connect_error("sage_intacct", exc)
+        raise HTTPException(status_code=400, detail=classified) from exc
+
+    set_erp_connection(org_id, connection)
+
+    return {
+        "success": True,
+        "organization_id": org_id,
+        "erp_type": "sage_intacct",
         "base_url": base_url,
     }
 
@@ -5076,7 +5179,7 @@ def _emit_field_mapping_audit(
 
 @router.get("/erp/field-mappings")
 async def get_erp_field_mappings(
-    erp_type: str = Query(..., description="netsuite | sap | quickbooks | xero"),
+    erp_type: str = Query(..., description="netsuite | sap | quickbooks | xero | sage_intacct | sage_accounting"),
     organization_id: Optional[str] = Query(default=None),
     user: TokenData = Depends(get_current_user),
 ):

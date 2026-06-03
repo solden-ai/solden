@@ -36,7 +36,14 @@ def format_error_message(
     Returns {"summary": ..., "detail": ..., "resolution": ...}
     following the DID-WHY-NEXT pattern for errors.
     """
-    erp_display = {"quickbooks": "QuickBooks", "xero": "Xero", "netsuite": "NetSuite", "sap": "SAP"}.get(
+    erp_display = {
+        "quickbooks": "QuickBooks",
+        "xero": "Xero",
+        "netsuite": "NetSuite",
+        "sap": "SAP",
+        "sage_intacct": "Sage Intacct",
+        "sage_accounting": "Sage Accounting",
+    }.get(
         (erp_type or "").lower(), erp_type or "ERP"
     )
 

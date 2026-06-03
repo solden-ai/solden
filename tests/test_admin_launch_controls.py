@@ -180,6 +180,46 @@ def test_admin_erp_connect_start_supports_netsuite_form(client, db):
     }.issubset(field_names)
 
 
+def test_admin_erp_connect_start_supports_sage_intacct_form(client, db):
+    response = client.post(
+        "/api/workspace/integrations/erp/connect/start",
+        json={"organization_id": "org-test", "erp_type": "sage_intacct"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["erp_type"] == "sage_intacct"
+    assert payload["method"] == "form"
+    assert payload["submit_url"] == "/api/workspace/integrations/erp/connect/sage-intacct"
+    field_names = {field["name"] for field in payload.get("fields", [])}
+    assert {
+        "sender_id",
+        "sender_password",
+        "company_id",
+        "user_id",
+        "user_password",
+        "base_url",
+        "location_id",
+    }.issubset(field_names)
+
+
+def test_admin_erp_connect_start_supports_sage_accounting_oauth(client, db, monkeypatch):
+    monkeypatch.setattr("solden.api.erp_connections.SAGE_ACCOUNTING_CLIENT_ID", "sage-client")
+    monkeypatch.setattr("solden.api.erp_connections.SAGE_ACCOUNTING_REDIRECT_URI", "https://api.example.com/erp/sage-accounting/callback")
+    monkeypatch.setattr("solden.api.erp_connections.SAGE_ACCOUNTING_AUTH_URL", "https://sage.example.com/oauth2/auth")
+    monkeypatch.setattr("solden.api.erp_connections.SAGE_ACCOUNTING_SCOPES", "full_access")
+
+    response = client.post(
+        "/api/workspace/integrations/erp/connect/start",
+        json={"organization_id": "org-test", "erp_type": "sage_accounting"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["erp_type"] == "sage_accounting"
+    assert payload["method"] == "oauth"
+    assert "https://sage.example.com/oauth2/auth" in payload["auth_url"]
+    assert "client_id=sage-client" in payload["auth_url"]
+
+
 def test_admin_connect_netsuite_persists_connection(client, db, monkeypatch):
     async def _fake_get_netsuite_accounts(_connection):
         return [{"id": "2000", "name": "Accounts Payable"}]
@@ -252,6 +292,41 @@ def test_admin_connect_sap_persists_connection(client, db, monkeypatch):
     erp = next(item for item in payload["integrations"] if item["name"] == "erp")
     assert erp["connected"] is True
     assert any((row.get("erp_type") == "sap") for row in erp.get("connections", []))
+
+
+def test_admin_connect_sage_intacct_persists_connection(client, db, monkeypatch):
+    async def _fake_test_connection(_connection):
+        return {"ok": True, "response_summary": {"account_seen": "6000"}}
+
+    monkeypatch.setattr(
+        "solden.integrations.erp_router.test_connection_sage_intacct",
+        _fake_test_connection,
+    )
+
+    connect = client.post(
+        "/api/workspace/integrations/erp/connect/sage-intacct",
+        json={
+            "organization_id": "org-test",
+            "sender_id": "sender",
+            "sender_password": "sender-secret",
+            "company_id": "company",
+            "user_id": "web-user",
+            "user_password": "web-secret",
+            "base_url": "https://api.intacct.com/ia/xml/xmlgw.phtml",
+            "location_id": "100",
+        },
+    )
+    assert connect.status_code == 200, connect.text
+    payload = connect.json()
+    assert payload["success"] is True
+    assert payload["erp_type"] == "sage_intacct"
+
+    integrations = client.get("/api/workspace/integrations?organization_id=org-test")
+    assert integrations.status_code == 200
+    payload = integrations.json()
+    erp = next(item for item in payload["integrations"] if item["name"] == "erp")
+    assert erp["connected"] is True
+    assert any((row.get("erp_type") == "sage_intacct") for row in erp.get("connections", []))
 
 
 def test_admin_teams_webhook_config_and_test(client, db, monkeypatch):

@@ -74,7 +74,7 @@ No financial write is at the mercy of model judgment. The LLM's output never bra
 The current scope:
 
 - **Accounts payable full lifecycle** — invoice received in Gmail, extracted, validated, routed for approval (Slack), posted to ERP, payment confirmation polled, reconciled.
-- **Four ERPs** — QuickBooks Online, Xero, NetSuite, SAP S/4HANA.
+- **Six ERP connector families** — QuickBooks Online, Xero, NetSuite, SAP S/4HANA, Sage Intacct, and Sage Business Cloud Accounting.
 - **Gmail as the work surface** — MV3 Chrome extension, seven InboxSDK injection points.
 - **Slack as the decision surface** — approval cards, exception cards, digest summaries.
 - **Vendor portal** — magic-link unauthenticated HTML for KYC + bank details submission.
@@ -91,7 +91,8 @@ Flagged off or explicitly out of scope for V1:
 - **Outlook** — `FEATURE_OUTLOOK_ENABLED=false`. Same story. V1.1.
 - **Commission clawback** — second workflow class. Spec frozen pending V1 launch. V1.2.
 - **KYC + open-banking providers** — stubbed; adapters in place, real provider integration pending contracts. Q3 2026.
-- **Additional ERPs** (Sage Intacct, MYOB, others) — per-customer if they ask, not pre-built.
+- **Additional ERPs** (MYOB, Oracle, Microsoft Dynamics, others) — per-customer if they ask, not pre-built.
+- **Sage cash-side writes** — Sage Intacct and Sage Business Cloud Accounting bill posting is wired; credit application and settlement writes stay manual until sandbox validation.
 - **Temporal** — we ripped it out (migration v32). The deterministic planning + coordination engines + Redis Streams event queue are the durable runtime. No workflow engine abstraction.
 - **Payment execution** — we coordinate payment, we don't execute it. ERPs + banks own the money movement. See ADR 006.
 

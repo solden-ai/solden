@@ -78,7 +78,7 @@ Every file in the repo belongs to one of these three layers. If you're not sure 
 - `events.py` — AgentEventType enum + AgentEvent dataclass.
 - `llm_gateway.py` — Anthropic client + cost + call log.
 - `idempotency.py` — API-layer idempotency helper.
-- `erp_webhook_verify.py` — HMAC verification for all four ERPs.
+- `erp_webhook_verify.py` — HMAC verification for ERP webhooks.
 - `portal_auth.py`, `portal_input.py` — magic-link auth + vendor-portal input validation.
 - `migrations.py` — schema migrations (currently v43).
 - `database.py` — `SoldenDB` — the database singleton (composes store mixins).
@@ -128,8 +128,8 @@ Top offenders to know:
 
 ### `solden/integrations/` — ERP connectors
 
-- `erp_router.py` — dispatcher. Picks QB/Xero/NS/SAP per-org. `ERPConnection` dataclass. Refresh-token lock.
-- `erp_quickbooks.py`, `erp_xero.py`, `erp_netsuite.py`, `erp_sap.py` — one file per ERP.
+- `erp_router.py` — dispatcher. Picks QuickBooks/Xero/NetSuite/SAP/Sage per org. `ERPConnection` dataclass. Refresh-token lock.
+- `erp_quickbooks.py`, `erp_xero.py`, `erp_netsuite.py`, `erp_sap.py`, `erp_sage_intacct.py`, `erp_sage_accounting.py` — one file per ERP family.
 - `erp_sanitization.py` — shared sanitization.
 - `erp_rate_limiter.py` — per-ERP rate limiting.
 - `oauth.py` — shared OAuth helpers.
@@ -312,7 +312,7 @@ These are the interfaces where layers meet. Changing any of these is a breaking 
    The event enum. Every event the planning engine can react to. Adding an event type = adding to the enum + `_plan_<type>` in `planning_engine.py`.
 
 4. **`ERPConnection` dataclass** (`erp_router.py:158`)
-   Uniform across all four ERPs. When adding a new ERP, add the fields to this dataclass; `_erp_connection_from_row` handles the DB round-trip.
+   Uniform across the active ERP connector set. When adding a new ERP, add the fields to this dataclass; `_erp_connection_from_row` handles the DB round-trip.
 
 5. **ERP webhook contract** (`erp_webhook_verify.py`)
    Per-ERP signature verification functions. Adding a new ERP webhook = adding a verifier + a route in `erp_webhooks.py`.

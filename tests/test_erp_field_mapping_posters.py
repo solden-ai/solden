@@ -573,3 +573,148 @@ async def test_xero_sets_transaction_url_to_solden_workspace_link(monkeypatch):
     expected_url = "https://workspace.soldenai.com/accounts-payable/AP%20Xero%2F1"
     assert captured["body"]["Invoices"][0]["Url"] == expected_url
     assert result["solden_record_url"] == expected_url
+
+
+# ---------------------------------------------------------------------------
+# Sage Intacct poster
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_sage_intacct_stamps_solden_link_and_custom_fields(monkeypatch):
+    from xml.etree import ElementTree as ET
+
+    from solden.integrations.erp_sage_intacct import post_bill_to_sage_intacct
+
+    monkeypatch.setenv("APP_BASE_URL", "https://workspace.soldenai.com")
+    bill = Bill(
+        vendor_id="V001",
+        vendor_name="Acme",
+        amount=500.0,
+        invoice_number="INV-SAGE-1",
+        invoice_date="2026-04-29",
+        line_items=[{"description": "Service", "amount": 500.0, "department": "D10"}],
+    )
+    connection = SimpleNamespace(
+        sender_id="sender",
+        sender_password="sender-secret",
+        company_id="company",
+        user_id="user",
+        user_password="user-secret",
+        base_url="https://api.intacct.com/ia/xml/xmlgw.phtml",
+        location_id=None,
+    )
+    captured: dict = {}
+
+    class _Resp:
+        status_code = 200
+        text = """<?xml version="1.0" encoding="UTF-8"?>
+<response>
+  <operation>
+    <result>
+      <status>success</status>
+      <data>
+        <APBILL>
+          <RECORDNO>9001</RECORDNO>
+          <RECORDID>INV-SAGE-1</RECORDID>
+        </APBILL>
+      </data>
+    </result>
+  </operation>
+</response>"""
+
+    async def _fake_post(url, content=None, **kwargs):
+        captured["url"] = url
+        captured["content"] = content
+        return _Resp()
+
+    fake_client = MagicMock()
+    fake_client.post = AsyncMock(side_effect=_fake_post)
+
+    with patch("solden.integrations.erp_sage_intacct.get_http_client", return_value=fake_client):
+        result = await post_bill_to_sage_intacct(
+            connection,
+            bill,
+            field_mappings={"department_field": "DEPT_OVERRIDE"},
+            custom_fields={"SOLDEN_STATE": "approved", "SOLDEN_BOX_ID": "ap-sage-1"},
+            ap_item_id="AP Sage/1",
+        )
+
+    root = ET.fromstring(captured["content"])
+    assert root.findtext(".//APBILL/VENDORID") == "V001"
+    assert root.findtext(".//APBILL/RECORDID") == "INV-SAGE-1"
+    assert "https://workspace.soldenai.com/accounts-payable/AP%20Sage%2F1" in root.findtext(".//APBILL/DESCRIPTION")
+    assert root.findtext(".//APBILL/SOLDEN_STATE") == "approved"
+    assert root.findtext(".//APBILL/SOLDEN_BOX_ID") == "ap-sage-1"
+    assert root.findtext(".//APBILLITEM/DEPT_OVERRIDE") == "D10"
+    assert result["bill_id"] == "9001"
+    assert result["solden_record_url"] == "https://workspace.soldenai.com/accounts-payable/AP%20Sage%2F1"
+
+
+# ---------------------------------------------------------------------------
+# Sage Accounting poster
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_sage_accounting_stamps_solden_link_in_purchase_invoice_notes(monkeypatch):
+    from solden.integrations.erp_sage_accounting import post_bill_to_sage_accounting
+
+    monkeypatch.setenv("APP_BASE_URL", "https://workspace.soldenai.com")
+    bill = Bill(
+        vendor_id="contact-1",
+        vendor_name="Acme",
+        amount=500.0,
+        invoice_number="INV-SA-1",
+        invoice_date="2026-04-29",
+        description="Original memo",
+    )
+    connection = SimpleNamespace(
+        access_token="sage-token",
+        refresh_token="sage-refresh",
+        business_id="biz-1",
+        base_url="https://api.accounting.sage.com/v3.1",
+    )
+    captured: dict = {}
+
+    class _Resp:
+        status_code = 201
+        def json(self):
+            return {"purchase_invoice": {"id": "pi-1", "reference": "INV-SA-1"}}
+
+    class _GetResp:
+        status_code = 200
+        def json(self):
+            return {"purchase_invoices": []}
+
+    async def _fake_post(url, json=None, headers=None, **kwargs):
+        captured["url"] = url
+        captured["body"] = json
+        captured["headers"] = headers
+        return _Resp()
+
+    fake_client = MagicMock()
+    fake_client.get = AsyncMock(return_value=_GetResp())
+    fake_client.post = AsyncMock(side_effect=_fake_post)
+
+    with patch("solden.integrations.erp_sage_accounting.get_http_client", return_value=fake_client):
+        result = await post_bill_to_sage_accounting(
+            connection,
+            bill,
+            gl_map={"expenses": "ledger-6000"},
+            custom_fields={"solden_state": "approved", "solden_box_id": "ap-sage-accounting-1"},
+            idempotency_key="post-ap-sage-accounting-1",
+            ap_item_id="AP Sage Accounting/1",
+        )
+
+    invoice = captured["body"]["purchase_invoice"]
+    expected_url = "https://workspace.soldenai.com/accounts-payable/AP%20Sage%20Accounting%2F1"
+    assert captured["headers"]["X-Business"] == "biz-1"
+    assert captured["headers"]["X-Idempotency-Key"] == "post-ap-sage-accounting-1"
+    assert invoice["contact_id"] == "contact-1"
+    assert invoice["invoice_lines"][0]["ledger_account_id"] == "ledger-6000"
+    assert "Original memo" in invoice["notes"]
+    assert f"Solden: {expected_url}" in invoice["notes"]
+    assert "solden_state=approved" in invoice["notes"]
+    assert result["bill_id"] == "pi-1"
+    assert result["solden_record_url"] == expected_url

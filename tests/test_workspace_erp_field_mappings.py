@@ -125,10 +125,20 @@ def test_get_returns_catalog_for_netsuite(client_factory):
 
 def test_get_returns_catalog_for_each_supported_erp(client_factory):
     client = client_factory(_admin_user)
-    for erp_type in ("netsuite", "sap", "quickbooks", "xero"):
+    for erp_type in ("netsuite", "sap", "quickbooks", "xero", "sage_intacct", "sage_accounting"):
         resp = client.get(f"/api/workspace/erp/field-mappings?erp_type={erp_type}&organization_id=org-test")
         assert resp.status_code == 200, erp_type
         assert len(resp.json()["catalog"]) >= 2
+
+
+def test_get_returns_sage_intacct_catalog(client_factory):
+    client = client_factory(_admin_user)
+    resp = client.get("/api/workspace/erp/field-mappings?erp_type=sage_intacct&organization_id=org-test")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "sage_intacct" in body["supported_erps"]
+    keys = {entry["key"] for entry in body["catalog"]}
+    assert {"state_field", "box_id_field", "department_field", "location_field"} <= keys
 
 
 def test_get_unsupported_erp_returns_400(client_factory):

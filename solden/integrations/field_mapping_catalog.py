@@ -32,6 +32,10 @@ _NETSUITE_FIELD_RE = re.compile(r"^[a-z][a-z0-9_]{1,49}$")
 # SAP S/4 custom fields are conventionally upper-snake; some standard
 # fields (CostCenter, ProfitCenter) are CamelCase. Allow either.
 _SAP_FIELD_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{1,49}$")
+# Sage Intacct custom fields and dimension aliases are commonly
+# uppercase, but customer fields can be mixed-case. Keep the same
+# safe XML-field envelope the Intacct poster can stamp directly.
+_SAGE_INTACCT_FIELD_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{1,63}$")
 # QB / Xero use display names or short codes — keep permissive.
 _GENERIC_FIELD_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_\.\-]{1,79}$")
 
@@ -243,6 +247,118 @@ CATALOG: Dict[str, Tuple[FieldMapping, ...]] = {
             default="",
             pattern=_GENERIC_FIELD_RE,
             category="dimension",
+        ),
+    ),
+    "sage_intacct": (
+        FieldMapping(
+            key="state_field",
+            label="State mirror field",
+            description="Sage Intacct APBILL custom field that mirrors the Solden AP state.",
+            default="SOLDEN_STATE",
+            pattern=_SAGE_INTACCT_FIELD_RE,
+            category="workflow",
+        ),
+        FieldMapping(
+            key="box_id_field",
+            label="Box ID field",
+            description="Sage Intacct APBILL custom field for the Solden Box id.",
+            default="SOLDEN_BOX_ID",
+            pattern=_SAGE_INTACCT_FIELD_RE,
+            category="identity",
+        ),
+        FieldMapping(
+            key="approver_field",
+            label="Final approver field",
+            description="Sage Intacct APBILL custom field for the final approver email.",
+            default="SOLDEN_APPROVER",
+            pattern=_SAGE_INTACCT_FIELD_RE,
+            category="workflow",
+        ),
+        FieldMapping(
+            key="correlation_id_field",
+            label="Agent correlation field",
+            description="Sage Intacct APBILL custom field for the Solden agent correlation id.",
+            default="SOLDEN_CORRELATION_ID",
+            pattern=_SAGE_INTACCT_FIELD_RE,
+            category="workflow",
+        ),
+        FieldMapping(
+            key="department_field",
+            label="Department dimension",
+            description="Sage Intacct bill-line department field.",
+            default="DEPARTMENTID",
+            pattern=_SAGE_INTACCT_FIELD_RE,
+            category="dimension",
+        ),
+        FieldMapping(
+            key="location_field",
+            label="Location dimension",
+            description="Sage Intacct bill-line location field.",
+            default="LOCATIONID",
+            pattern=_SAGE_INTACCT_FIELD_RE,
+            category="dimension",
+        ),
+        FieldMapping(
+            key="project_field",
+            label="Project dimension",
+            description="Sage Intacct bill-line project field.",
+            default="PROJECTID",
+            pattern=_SAGE_INTACCT_FIELD_RE,
+            category="dimension",
+        ),
+        FieldMapping(
+            key="class_field",
+            label="Class dimension",
+            description="Sage Intacct bill-line class field.",
+            default="CLASSID",
+            pattern=_SAGE_INTACCT_FIELD_RE,
+            category="dimension",
+        ),
+        FieldMapping(
+            key="cost_center_field",
+            label="Cost center dimension",
+            description="Sage Intacct bill-line cost-center field.",
+            default="COSTCENTERID",
+            pattern=_SAGE_INTACCT_FIELD_RE,
+            category="dimension",
+        ),
+    ),
+    "sage_accounting": (
+        FieldMapping(
+            key="state_field",
+            label="State marker",
+            description=(
+                "Workflow marker to append to Sage Accounting purchase "
+                "invoice notes because Sage Accounting has no first-class "
+                "purchase-invoice custom-field API."
+            ),
+            default="solden_state",
+            pattern=_GENERIC_FIELD_RE,
+            category="workflow",
+        ),
+        FieldMapping(
+            key="box_id_field",
+            label="Box ID marker",
+            description="Solden Box id marker appended to purchase invoice notes.",
+            default="solden_box_id",
+            pattern=_GENERIC_FIELD_RE,
+            category="identity",
+        ),
+        FieldMapping(
+            key="approver_field",
+            label="Final approver marker",
+            description="Final approver marker appended to purchase invoice notes.",
+            default="solden_approver",
+            pattern=_GENERIC_FIELD_RE,
+            category="workflow",
+        ),
+        FieldMapping(
+            key="correlation_id_field",
+            label="Agent correlation marker",
+            description="Agent correlation marker appended to purchase invoice notes.",
+            default="solden_correlation_id",
+            pattern=_GENERIC_FIELD_RE,
+            category="workflow",
         ),
     ),
 }

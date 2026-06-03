@@ -85,6 +85,13 @@ def _seed_erp_connection(org: str, *, erp_type: str, **fields) -> None:
         token_id=fields.get("token_id"),
         token_secret=fields.get("token_secret"),
         webhook_secret=fields.get("webhook_secret"),
+        sender_id=fields.get("sender_id"),
+        sender_password=fields.get("sender_password"),
+        company_id=fields.get("company_id"),
+        user_id=fields.get("user_id"),
+        user_password=fields.get("user_password"),
+        location_id=fields.get("location_id"),
+        business_id=fields.get("business_id"),
     )
     set_erp_connection(org, conn)
 
@@ -215,6 +222,76 @@ def test_erp_test_sap_s4hana_routes_to_api_business_partner(db, client_erp_ops):
     assert "API_BUSINESS_PARTNER" in captured[0]["url"]
 
 
+def test_erp_test_sage_intacct_success(db, client_erp_ops):
+    _seed_erp_connection(
+        "orgA",
+        erp_type="sage_intacct",
+        base_url="https://api.intacct.com/ia/xml/xmlgw.phtml",
+        sender_id="sender",
+        sender_password="sender-secret",
+        company_id="company",
+        user_id="user",
+        user_password="user-secret",
+    )
+    captured: list = []
+
+    class FakeResp:
+        status_code = 200
+        text = """<?xml version="1.0" encoding="UTF-8"?>
+<response>
+  <operation>
+    <result>
+      <status>success</status>
+      <data>
+        <GLACCOUNT>
+          <ACCOUNTNO>6000</ACCOUNTNO>
+          <TITLE>Expenses</TITLE>
+        </GLACCOUNT>
+      </data>
+    </result>
+  </operation>
+</response>"""
+
+    async def fake_post(url, content=None, headers=None, timeout=None, **kwargs):
+        captured.append({"url": url, "content": content, "headers": headers})
+        return FakeResp()
+
+    with patch(
+        "solden.core.http_client.get_http_client",
+        return_value=SimpleNamespace(post=fake_post),
+    ):
+        resp = client_erp_ops.post(
+            "/api/workspace/integrations/erp/sage_intacct/test",
+        )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["response_summary"]["account_seen"] == "6000"
+    assert "xmlgw.phtml" in captured[0]["url"]
+    assert b"<senderid>sender</senderid>" in captured[0]["content"]
+
+
+def test_erp_test_sage_accounting_success(db, client_erp_ops):
+    _seed_erp_connection(
+        "orgA",
+        erp_type="sage_accounting",
+        access_token="sage-token",
+        business_id="biz-1",
+    )
+    captured: list = []
+    body = {"businesses": [{"id": "biz-1", "name": "Acme Books"}]}
+    with _patch_http_get(captured, 200, body):
+        resp = client_erp_ops.post(
+            "/api/workspace/integrations/erp/sage_accounting/test",
+        )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["response_summary"]["business_name"] == "Acme Books"
+    assert "businesses" in captured[0]["url"]
+    assert captured[0]["headers"]["X-Business"] == "biz-1"
+
+
 def test_erp_test_emits_audit(db, client_erp_ops):
     _seed_erp_connection("orgA", erp_type="quickbooks", realm_id="9999")
     body = {"CompanyInfo": {"CompanyName": "X", "Country": "US"}}
@@ -273,6 +350,31 @@ def test_erp_rotate_quickbooks_partial(db, client_erp_ops):
     assert "refresh_token" in data["fields_updated"]
     # realm_id stays unchanged
     assert "realm_id" not in data["fields_updated"]
+
+
+def test_erp_rotate_sage_intacct_credentials(db, client_erp_ops):
+    _seed_erp_connection(
+        "orgA",
+        erp_type="sage_intacct",
+        base_url="https://api.intacct.com/ia/xml/xmlgw.phtml",
+        sender_id="old-sender",
+        sender_password="old-secret",
+        company_id="old-company",
+        user_id="old-user",
+        user_password="old-user-secret",
+    )
+    resp = client_erp_ops.post(
+        "/api/workspace/integrations/erp/sage_intacct/rotate-credentials",
+        json={
+            "sender_id": "new-sender",
+            "sender_password": "new-secret",
+            "company_id": "new-company",
+            "user_password": "new-user-secret",
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    fields = set(resp.json()["fields_updated"])
+    assert {"sender_id", "sender_password", "company_id", "user_password"} <= fields
 
 
 def test_erp_rotate_audit_does_not_log_secret_values(db, client_erp_ops):

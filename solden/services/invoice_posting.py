@@ -663,7 +663,8 @@ class InvoicePostingMixin:
             )
             # Wave 1 / A2 — auditor-traceable JE id. Each ERP adapter
             # surfaces ``erp_journal_entry_id`` on success (see
-            # erp_quickbooks / erp_xero / erp_netsuite / erp_sap). For
+            # erp_quickbooks / erp_xero / erp_netsuite / erp_sap /
+            # erp_sage_intacct / erp_sage_accounting). For
             # QBO + NetSuite the JE id coincides with the bill id by
             # the ERP's data model; for SAP B1 + Xero it's a distinct
             # value retrieved from the create response or via a

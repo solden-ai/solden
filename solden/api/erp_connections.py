@@ -52,6 +52,8 @@ _ERP_REMEDIATION_LINKS = {
     "xero": "https://go.xero.com/Settings/ConnectedApps",
     "netsuite": "https://system.netsuite.com/app/login/secure/enterpriseselectrole.nl",
     "sap": "https://help.sap.com/docs/SAP_S4HANA_CLOUD/authorization",
+    "sage_intacct": "https://www.intacct.com/ia/acct/login.phtml",
+    "sage_accounting": "https://app.sageone.com",
 }
 
 
@@ -104,7 +106,7 @@ def _classify_erp_connect_error(erp_type: str, exc: Exception) -> Dict[str, Any]
     if any(tok in text for tok in ("scope", "oauth scope", "invalid_scope")):
         return {
             "code": "erp_missing_scope",
-            "missing_permission": "OAuth scope (com.intuit.quickbooks.accounting / accounting.transactions / bills.read bills.write)",
+            "missing_permission": "OAuth scope (accounting read/write for AP bills, vendors, contacts, and ledger accounts)",
             "remediation_link": remediation_link,
             "message": (
                 f"The {erp_type} OAuth consent did not grant all the "
@@ -230,6 +232,23 @@ XERO_CLIENT_SECRET = os.getenv("XERO_CLIENT_SECRET", "")
 XERO_REDIRECT_URI = os.getenv("XERO_REDIRECT_URI", "http://localhost:8010/erp/xero/callback")
 XERO_AUTH_URL = "https://login.xero.com/identity/connect/authorize"
 XERO_TOKEN_URL = "https://identity.xero.com/connect/token"
+
+# Sage Business Cloud Accounting OAuth
+SAGE_ACCOUNTING_CLIENT_ID = os.getenv("SAGE_ACCOUNTING_CLIENT_ID", "")
+SAGE_ACCOUNTING_CLIENT_SECRET = os.getenv("SAGE_ACCOUNTING_CLIENT_SECRET", "")
+SAGE_ACCOUNTING_REDIRECT_URI = os.getenv(
+    "SAGE_ACCOUNTING_REDIRECT_URI",
+    "http://localhost:8010/erp/sage-accounting/callback",
+)
+SAGE_ACCOUNTING_AUTH_URL = os.getenv(
+    "SAGE_ACCOUNTING_AUTH_URL",
+    "https://www.sageone.com/oauth2/auth/central",
+)
+SAGE_ACCOUNTING_TOKEN_URL = os.getenv(
+    "SAGE_ACCOUNTING_TOKEN_URL",
+    "https://oauth.accounting.sage.com/token",
+)
+SAGE_ACCOUNTING_SCOPES = os.getenv("SAGE_ACCOUNTING_SCOPES", "full_access")
 
 # NetSuite (TBA - Token Based Auth, no OAuth flow needed)
 NETSUITE_ACCOUNT_ID = os.getenv("NETSUITE_ACCOUNT_ID", "")
@@ -441,7 +460,7 @@ async def get_connection_status(
     result = {
         "organization_id": org_id,
         "connections": {},
-        "available_erps": ["quickbooks", "xero", "netsuite", "sap"],
+        "available_erps": ["quickbooks", "xero", "netsuite", "sap", "sage_intacct", "sage_accounting"],
     }
     
     for conn in connections:
@@ -747,6 +766,116 @@ async def xero_callback(
     )
 
 
+@router.get("/sage-accounting/callback")
+async def sage_accounting_callback(
+    code: str = Query(None),
+    state: str = Query(None),
+    error: str = Query(None),
+):
+    """Handle Sage Business Cloud Accounting OAuth callback."""
+    if error:
+        logger.error("Sage Accounting OAuth error: %s", error)
+        return _popup_close_response("sage_accounting", success=False, detail=error)
+
+    if not state:
+        return _popup_close_response("sage_accounting", success=False, detail="invalid_state")
+
+    state_data = _pop_oauth_state(state)
+    if state_data is None:
+        return _popup_close_response("sage_accounting", success=False, detail="invalid_state")
+    created = state_data.get("created_at", "")
+    if created:
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(created)).total_seconds()
+        if age > 900:
+            return _popup_close_response("sage_accounting", success=False, detail="state_expired")
+    organization_id = state_data["organization_id"]
+
+    if not code:
+        return _popup_close_response(
+            "sage_accounting",
+            success=False,
+            organization_id=organization_id,
+            detail="missing_code",
+        )
+
+    if not SAGE_ACCOUNTING_CLIENT_ID or not SAGE_ACCOUNTING_CLIENT_SECRET:
+        logger.error("Sage Accounting token exchange: client_id/secret not configured")
+        return _popup_close_response(
+            "sage_accounting",
+            success=False,
+            organization_id=organization_id,
+            detail="token_exchange_failed:missing_credentials",
+        )
+
+    try:
+        client = get_http_client()
+        response = await client.post(
+            SAGE_ACCOUNTING_TOKEN_URL,
+            data={
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": SAGE_ACCOUNTING_REDIRECT_URI,
+            },
+            auth=(SAGE_ACCOUNTING_CLIENT_ID, SAGE_ACCOUNTING_CLIENT_SECRET),
+            headers={"Accept": "application/json"},
+        )
+        if response.status_code >= 400:
+            logger.error(
+                "Sage Accounting token exchange failed: status=%s redirect_uri=%s",
+                response.status_code, SAGE_ACCOUNTING_REDIRECT_URI,
+            )
+            return _popup_close_response(
+                "sage_accounting",
+                success=False,
+                organization_id=organization_id,
+                detail=f"token_exchange_failed:http_{response.status_code}",
+            )
+        tokens = response.json()
+    except Exception as exc:
+        logger.error(
+            "Sage Accounting token exchange raised %s: %s",
+            type(exc).__name__, exc,
+        )
+        return _popup_close_response(
+            "sage_accounting",
+            success=False,
+            organization_id=organization_id,
+            detail=f"token_exchange_failed:{type(exc).__name__}",
+        )
+
+    access_token = tokens.get("access_token")
+    business_id = (
+        tokens.get("business_id")
+        or tokens.get("tenant_id")
+        or tokens.get("x_business_id")
+    )
+    if not business_id and access_token:
+        try:
+            from solden.integrations.erp_sage_accounting import discover_sage_accounting_business_id
+
+            business_id = await discover_sage_accounting_business_id(access_token)
+        except Exception as exc:
+            logger.warning("Failed to discover Sage Accounting business id: %s", exc)
+
+    connection = ERPConnection(
+        type="sage_accounting",
+        client_id=SAGE_ACCOUNTING_CLIENT_ID,
+        client_secret=SAGE_ACCOUNTING_CLIENT_SECRET,
+        access_token=access_token,
+        refresh_token=tokens.get("refresh_token"),
+        tenant_id=business_id,
+        business_id=business_id,
+    )
+
+    set_erp_connection(organization_id, connection)
+
+    logger.info("Sage Accounting connected for org %s", organization_id)
+
+    return _popup_close_response(
+        "sage_accounting", success=True, organization_id=organization_id
+    )
+
+
 @router.post("/xero/disconnect")
 async def xero_disconnect(
     request: DisconnectRequest,
@@ -909,15 +1038,9 @@ async def get_chart_of_accounts(
     if not connection:
         raise HTTPException(status_code=404, detail="No ERP connected")
     
-    accounts = []
-    
-    if connection.type == "quickbooks":
-        accounts = await _get_quickbooks_accounts(connection)
-    elif connection.type == "xero":
-        accounts = await _get_xero_accounts(connection)
-    elif connection.type == "netsuite":
-        from solden.integrations.erp_router import get_netsuite_accounts
-        accounts = await get_netsuite_accounts(connection)
+    from solden.integrations.erp_router import get_chart_of_accounts as _router_get_chart_of_accounts
+
+    accounts = await _router_get_chart_of_accounts(org_id, force_refresh=True)
     
     return {
         "organization_id": org_id,

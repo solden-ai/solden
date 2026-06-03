@@ -119,7 +119,7 @@ def _sap_connection(**overrides) -> ERPConnection:
 
 
 def test_default_account_map_has_expenses_for_all_erps():
-    for erp in ("quickbooks", "xero", "netsuite", "sap"):
+    for erp in ("quickbooks", "xero", "netsuite", "sap", "sage_intacct", "sage_accounting"):
         assert "expenses" in DEFAULT_ACCOUNT_MAP[erp], f"{erp} missing 'expenses' key"
 
 
@@ -132,6 +132,8 @@ def test_get_account_code_falls_back_to_default():
     assert get_account_code("xero", "expenses") == "400"
     assert get_account_code("netsuite", "expenses") == "67"
     assert get_account_code("sap", "expenses") == "6000"
+    assert get_account_code("sage_intacct", "expenses") == "6000"
+    assert get_account_code("sage_accounting", "expenses") == "5000"
 
 
 def test_get_org_gl_map_returns_empty_for_unknown_org(db):

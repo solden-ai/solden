@@ -6,6 +6,7 @@ Routes journal entries to the appropriate ERP system:
 - Xero (popular in Europe/Africa/Australia)
 - NetSuite (mid-market to enterprise, very popular in Africa)
 - SAP (enterprise)
+- Sage Intacct and Sage Accounting
 
 This is REAL integration, not mocked.
 
@@ -153,13 +154,43 @@ from solden.integrations.erp_sap import (  # noqa: F401, E402
     list_all_vendors_sap,
 )
 
+# ---------------------------------------------------------------------------
+# Re-export Sage Intacct functions
+# ---------------------------------------------------------------------------
+from solden.integrations.erp_sage_intacct import (  # noqa: F401, E402
+    post_to_sage_intacct,
+    post_bill_to_sage_intacct,
+    create_vendor_sage_intacct,
+    find_vendor_sage_intacct,
+    find_bill_sage_intacct,
+    get_payment_status_sage_intacct,
+    get_chart_of_accounts_sage_intacct,
+    list_all_vendors_sage_intacct,
+    test_connection_sage_intacct,
+)
+
+# ---------------------------------------------------------------------------
+# Re-export Sage Business Cloud Accounting functions
+# ---------------------------------------------------------------------------
+from solden.integrations.erp_sage_accounting import (  # noqa: F401, E402
+    post_to_sage_accounting,
+    refresh_sage_accounting_token,
+    post_bill_to_sage_accounting,
+    create_vendor_sage_accounting,
+    find_vendor_sage_accounting,
+    find_bill_sage_accounting,
+    get_payment_status_sage_accounting,
+    get_chart_of_accounts_sage_accounting,
+    list_all_vendors_sage_accounting,
+)
+
 
 # ==================== Shared Dataclasses ====================
 
 @dataclass
 class ERPConnection:
     """Connection details for an ERP system."""
-    type: str  # "quickbooks", "xero", "netsuite", "sap"
+    type: str  # "quickbooks", "xero", "netsuite", "sap", "sage_intacct", "sage_accounting"
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
     access_token: Optional[str] = None
@@ -176,6 +207,17 @@ class ERPConnection:
     token_id: Optional[str] = None  # NetSuite token ID
     token_secret: Optional[str] = None  # NetSuite token secret
     subsidiary_id: Optional[str] = None  # NetSuite OneWorld subsidiary internal ID
+
+    # Sage Intacct specific
+    sender_id: Optional[str] = None
+    sender_password: Optional[str] = None
+    company_id: Optional[str] = None
+    user_id: Optional[str] = None
+    user_password: Optional[str] = None
+    location_id: Optional[str] = None
+
+    # Sage Accounting specific
+    business_id: Optional[str] = None
 
     # Inbound webhook shared secret (per-tenant). QBO calls this the
     # "verifier token"; Xero calls it the "webhook key"; NetSuite and
@@ -217,6 +259,13 @@ def _erp_connection_from_row(conn: Dict[str, Any]) -> ERPConnection:
         token_id=creds.get('token_id'),
         token_secret=creds.get('token_secret'),
         subsidiary_id=creds.get('subsidiary_id'),
+        sender_id=creds.get('sender_id'),
+        sender_password=creds.get('sender_password'),
+        company_id=creds.get('company_id'),
+        user_id=creds.get('user_id'),
+        user_password=creds.get('user_password'),
+        location_id=creds.get('location_id'),
+        business_id=creds.get('business_id'),
         webhook_secret=creds.get('webhook_secret'),
     )
 
@@ -494,6 +543,20 @@ def set_erp_connection(organization_id: str, connection: ERPConnection):
         credentials['subsidiary_id'] = connection.subsidiary_id
     if connection.webhook_secret:
         credentials['webhook_secret'] = connection.webhook_secret
+    if connection.sender_id:
+        credentials['sender_id'] = connection.sender_id
+    if connection.sender_password:
+        credentials['sender_password'] = connection.sender_password
+    if connection.company_id:
+        credentials['company_id'] = connection.company_id
+    if connection.user_id:
+        credentials['user_id'] = connection.user_id
+    if connection.user_password:
+        credentials['user_password'] = connection.user_password
+    if connection.location_id:
+        credentials['location_id'] = connection.location_id
+    if connection.business_id:
+        credentials['business_id'] = connection.business_id
 
     db.save_erp_connection(
         organization_id=organization_id,
@@ -553,7 +616,7 @@ async def post_journal_entry(
     """
     Post journal entry to the organization's ERP.
 
-    Automatically routes to QuickBooks, Xero, NetSuite, or SAP based on org settings.
+    Automatically routes to the connected ERP based on org settings.
     """
     connection = get_erp_connection(organization_id)
 
@@ -574,6 +637,10 @@ async def post_journal_entry(
         return await post_to_netsuite(connection, entry)
     elif connection.type == "sap":
         return await post_to_sap(connection, entry)
+    elif connection.type == "sage_intacct":
+        return await post_to_sage_intacct(connection, entry)
+    elif connection.type == "sage_accounting":
+        return await post_to_sage_accounting(connection, entry)
     else:
         return {"status": "error", "reason": f"Unknown ERP type: {connection.type}"}
 
@@ -622,6 +689,26 @@ DEFAULT_ACCOUNT_MAP = {
         "expenses": "6000",  # General Expenses (default AP invoice GL account)
         "vat_input": "1576",   # SAP standard input VAT
         "vat_output": "3806",  # SAP standard output VAT
+    },
+    "sage_intacct": {
+        "cash": "1000",
+        "accounts_receivable": "1100",
+        "accounts_payable": "2000",
+        "payment_fees": "6200",
+        "revenue": "4000",
+        "expenses": "6000",
+        "vat_input": "1410",
+        "vat_output": "2410",
+    },
+    "sage_accounting": {
+        "cash": "1000",
+        "accounts_receivable": "1100",
+        "accounts_payable": "2100",
+        "payment_fees": "7900",
+        "revenue": "4000",
+        "expenses": "5000",
+        "vat_input": "INPUT",
+        "vat_output": "OUTPUT",
     },
 }
 
@@ -1276,6 +1363,33 @@ async def post_bill(
                 field_mappings=field_mappings, custom_fields=custom_fields,
                 idempotency_key=idempotency_key,
             )
+    elif connection.type == "sage_intacct":
+        result = await post_bill_to_sage_intacct(
+            connection, bill, gl_map=gl_map,
+            field_mappings=field_mappings, custom_fields=custom_fields,
+            idempotency_key=idempotency_key,
+            organization_id=organization_id, ap_item_id=ap_item_id,
+        )
+    elif connection.type == "sage_accounting":
+        result = await post_bill_to_sage_accounting(
+            connection, bill, gl_map=gl_map,
+            field_mappings=field_mappings, custom_fields=custom_fields,
+            idempotency_key=idempotency_key,
+            organization_id=organization_id, ap_item_id=ap_item_id,
+        )
+        if isinstance(result, dict) and result.get("needs_reauth"):
+            new_token = await refresh_with_dedupe(
+                organization_id=organization_id, erp_type="sage_accounting",
+                connection=connection, refresh_fn=refresh_sage_accounting_token,
+            )
+            if new_token:
+                set_erp_connection(organization_id, connection)
+                result = await post_bill_to_sage_accounting(
+                    connection, bill, gl_map=gl_map,
+                    field_mappings=field_mappings, custom_fields=custom_fields,
+                    idempotency_key=idempotency_key,
+                    organization_id=organization_id, ap_item_id=ap_item_id,
+                )
     else:
         result = {"status": "error", "erp": connection.type, "reason": f"Unknown ERP type: {connection.type}"}
 
@@ -1865,6 +1979,10 @@ async def create_vendor(
         return await create_vendor_netsuite(connection, vendor)
     elif connection.type == "sap":
         return await create_vendor_sap(connection, vendor)
+    elif connection.type == "sage_intacct":
+        return await create_vendor_sage_intacct(connection, vendor)
+    elif connection.type == "sage_accounting":
+        return await create_vendor_sage_accounting(connection, vendor)
     else:
         return {"status": "error", "reason": f"Unknown ERP type: {connection.type}"}
 
@@ -1893,6 +2011,10 @@ async def find_vendor(
         return await find_vendor_netsuite(connection, name, email)
     elif connection.type == "sap":
         return await find_vendor_sap(connection, name, email)
+    elif connection.type == "sage_intacct":
+        return await find_vendor_sage_intacct(connection, name, email)
+    elif connection.type == "sage_accounting":
+        return await find_vendor_sage_accounting(connection, name, email)
 
     return None
 
@@ -1948,6 +2070,8 @@ _BILL_FINDERS = {
     "xero": find_bill_xero,
     "netsuite": find_bill_netsuite,
     "sap": find_bill_sap,
+    "sage_intacct": find_bill_sage_intacct,
+    "sage_accounting": find_bill_sage_accounting,
 }
 
 _VENDOR_FINDERS = {
@@ -1955,6 +2079,8 @@ _VENDOR_FINDERS = {
     "xero": find_vendor_xero,
     "netsuite": find_vendor_netsuite,
     "sap": find_vendor_sap,
+    "sage_intacct": find_vendor_sage_intacct,
+    "sage_accounting": find_vendor_sage_accounting,
 }
 
 
@@ -2257,6 +2383,8 @@ _PAYMENT_STATUS_LOOKUPS = {
     "xero": get_payment_status_xero,
     "netsuite": get_payment_status_netsuite,
     "sap": get_payment_status_sap,
+    "sage_intacct": get_payment_status_sage_intacct,
+    "sage_accounting": get_payment_status_sage_accounting,
 }
 
 
@@ -2309,6 +2437,11 @@ async def get_bill_payment_status(
                     organization_id=organization_id, erp_type="xero",
                     connection=connection, refresh_fn=refresh_xero_token,
                 ))
+            elif erp_type == "sage_accounting":
+                refreshed = bool(await refresh_with_dedupe(
+                    organization_id=organization_id, erp_type="sage_accounting",
+                    connection=connection, refresh_fn=refresh_sage_accounting_token,
+                ))
             if refreshed:
                 set_erp_connection(organization_id, connection)
                 result = await lookup(connection, erp_reference)
@@ -2328,6 +2461,8 @@ _CHART_OF_ACCOUNTS_FETCHERS = {
     "xero": get_chart_of_accounts_xero,
     "netsuite": get_chart_of_accounts_netsuite,
     "sap": get_chart_of_accounts_sap,
+    "sage_intacct": get_chart_of_accounts_sage_intacct,
+    "sage_accounting": get_chart_of_accounts_sage_accounting,
 }
 
 # Default cache TTL: 24 hours (in seconds)
@@ -2466,6 +2601,8 @@ _VENDOR_LIST_FETCHERS = {
     "xero": list_all_vendors_xero,
     "netsuite": list_all_vendors_netsuite,
     "sap": list_all_vendors_sap,
+    "sage_intacct": list_all_vendors_sage_intacct,
+    "sage_accounting": list_all_vendors_sage_accounting,
 }
 
 # PO list fetchers. NetSuite and SAP will 404 until their PO listers

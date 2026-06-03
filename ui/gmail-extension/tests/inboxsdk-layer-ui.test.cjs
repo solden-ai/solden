@@ -125,7 +125,7 @@ test('work-surface primary action map matches the current Gmail execution doctri
       erp_connector_available: false,
       erp_status: 'not_connected',
     }),
-    'ERP is not connected. Connect QuickBooks, Xero, NetSuite, or SAP before Solden can post this invoice.',
+    'ERP is not connected. Connect a supported ERP before Solden can post this invoice.',
   );
   assert.equal(canRejectWorkItem('needs_approval', 'viewer'), false);
   assert.equal(needsEntityRouting({ entity_routing_status: 'needs_review' }, 'validated'), true);
@@ -408,4 +408,3 @@ test('full-page Gmail routes collapse the thread sidebar rail while active', () 
   assert.equal(source.includes("if (!hash.includes('clearledgr/')) {"), true);
   assert.equal(source.includes('void setSidebarPanelOpen(true);'), true);
 });
-

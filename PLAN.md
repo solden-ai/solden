@@ -399,9 +399,9 @@ Behavioral requirements:
 ## 6. ERP Support Contract (Phased: GA Connector Set)
 
 ### 6.1 Supported ERP list for AP v1
-- **v1 Pilot → v1 GA connector scope:** **NetSuite, QuickBooks, Xero, SAP** (each adapter is API-first with optional gated browser fallback where policy allows).
+- **v1 Pilot → v1 GA connector scope:** **NetSuite, QuickBooks, Xero, SAP, Sage Intacct, Sage Business Cloud Accounting** (each adapter is API-first for bill posting, with optional gated browser fallback where policy allows).
 - **Connector enablement rule:** each ERP is enabled independently only after readiness gates pass for that connector/tenant scope.
-- **Post‑GA expansions:** additional ERPs beyond this set as separate, versioned adapters.
+- **Post-GA expansions:** additional ERPs beyond this set as separate, versioned adapters.
 
 ### 6.2 Definition of “supported” (per ERP)
 “Supported” does **not** mean “connector exists.” It means:

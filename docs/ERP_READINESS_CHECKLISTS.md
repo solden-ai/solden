@@ -86,7 +86,7 @@ who ran the test, not the requester.  Collected evidence should be committed to
 
 ## GA Gate Summary
 
-All four ERPs must have **all 8 items ✅** before GA can be declared (PLAN.md §6.8, §7.8).
+Each active ERP connector must have **all 8 items ✅** before GA can be declared (PLAN.md §6.8, §7.8).
 
 Current status:
 | ERP | Items ✅ | Items ⚠️ | Items ❌ | GA-ready? |
@@ -95,5 +95,7 @@ Current status:
 | Xero | 0 / 8 | 0 | 8 | ❌ No |
 | NetSuite | 0 / 8 | 0 | 8 | ❌ No |
 | SAP | 0 / 8 | 3 | 5 | ❌ No |
+| Sage Intacct | 0 / 8 | 1 | 7 | ❌ No |
+| Sage Business Cloud Accounting | 0 / 8 | 1 | 7 | ❌ No |
 
-_Last updated: 2026-02-25_
+_Last updated: 2026-06-03_

@@ -308,7 +308,7 @@ function getBlockers(item, state, budgetContext, documentType = 'invoice') {
   }
 
   if ((state === 'approved' || state === 'ready_to_post') && !exceptionReason && !hasErpPostingConnection(item)) {
-    add('erp_setup', 'ERP is not connected', 'Connect QuickBooks, Xero, NetSuite, or SAP before Solden can post this invoice.');
+    add('erp_setup', 'ERP is not connected', 'Connect a supported ERP before Solden can post this invoice.');
   }
 
   if (state === 'failed_post' && !exceptionReason) {
@@ -317,7 +317,7 @@ function getBlockers(item, state, budgetContext, documentType = 'invoice') {
       hasErpPostingConnection(item) ? 'ERP posting failed' : 'ERP is not connected',
       hasErpPostingConnection(item)
         ? 'Retry the ERP post or review the connector response.'
-        : 'Connect QuickBooks, Xero, NetSuite, or SAP before Solden can post this invoice.',
+        : 'Connect a supported ERP before Solden can post this invoice.',
     );
   }
 

@@ -291,8 +291,17 @@ function SetupPage({ bootstrap, orgId, onNav, onRefresh }) {
   const policyOk = policyConfig && Object.keys(policyConfig).length > 0;
   const allReady = gmailOk && slackOk && teamsOk && erpOk && channelOk && policyOk;
   const erpType = erp.erp_type || '';
+  const erpLabels = {
+    quickbooks: 'QuickBooks',
+    xero: 'Xero',
+    netsuite: 'NetSuite',
+    sap: 'SAP',
+    sage_intacct: 'Sage Intacct',
+    sage_accounting: 'Sage Accounting',
+  };
   const [nsVisible, setNsVisible] = useState(false);
   const [sapVisible, setSapVisible] = useState(false);
+  const [sageIntacctVisible, setSageIntacctVisible] = useState(false);
 
   const [connectGmail, gmailPending] = useAction(async () => {
     const p = await api('/api/workspace/integrations/gmail/connect/start', { method: 'POST', body: JSON.stringify({ organization_id: orgId, redirect_path: `/workspace?org=${encodeURIComponent(orgId)}&page=integrations` }) });
@@ -325,6 +334,20 @@ function SetupPage({ bootstrap, orgId, onNav, onRefresh }) {
     const g = id => document.getElementById(id)?.value?.trim() || '';
     await api('/api/workspace/integrations/erp/connect/sap', { method: 'POST', body: JSON.stringify({ organization_id: orgId, base_url: g('sap-base-url'), username: g('sap-username'), password: g('sap-password') }) });
     toast('SAP connected!'); setSapVisible(false); onRefresh();
+  });
+  const [connectSageIntacct, sageIntacctPending] = useAction(async () => {
+    const g = id => document.getElementById(id)?.value?.trim() || '';
+    await api('/api/workspace/integrations/erp/connect/sage-intacct', { method: 'POST', body: JSON.stringify({
+      organization_id: orgId,
+      sender_id: g('sage-intacct-sender-id'),
+      sender_password: g('sage-intacct-sender-password'),
+      company_id: g('sage-intacct-company-id'),
+      user_id: g('sage-intacct-user-id'),
+      user_password: g('sage-intacct-user-password'),
+      base_url: g('sage-intacct-base-url'),
+      location_id: g('sage-intacct-location-id'),
+    }) });
+    toast('Sage Intacct connected!'); setSageIntacctVisible(false); onRefresh();
   });
   const [launch, launchPending] = useAction(async () => {
     await api('/api/workspace/onboarding/step', { method: 'POST', body: JSON.stringify({ organization_id: orgId, step: 5 }) });
@@ -375,10 +398,10 @@ function SetupPage({ bootstrap, orgId, onNav, onRefresh }) {
     <div class="panel"><h3>Connect your accounting software</h3>
       <p class="muted">Where should Solden post approved invoices?</p>
       <div class="connector-grid connector-grid-3">
-        ${['quickbooks', 'xero'].map(t => html`
+        ${['quickbooks', 'xero', 'sage_accounting'].map(t => html`
           <div class="connector-card ${erpOk && erpType === t ? 'done' : ''}">
-            <div class="connector-header"><strong>${t.charAt(0).toUpperCase() + t.slice(1)}</strong>${erpOk && erpType === t ? statusBadge(true) : ''}</div>
-            <p class="muted">${t === 'quickbooks' ? 'QuickBooks Online via OAuth.' : 'Xero via OAuth.'}</p>
+            <div class="connector-header"><strong>${erpLabels[t]}</strong>${erpOk && erpType === t ? statusBadge(true) : ''}</div>
+            <p class="muted">${t === 'quickbooks' ? 'QuickBooks Online via OAuth.' : t === 'xero' ? 'Xero via OAuth.' : 'Sage Accounting via OAuth.'}</p>
             ${erpOk && erpType === t ? html`<p class="connector-detail">Connected</p>` : html`<button class="connector-btn" onClick=${() => connectErp(t)}>Connect</button>`}
           </div>
         `)}
@@ -391,6 +414,11 @@ function SetupPage({ bootstrap, orgId, onNav, onRefresh }) {
           <div class="connector-header"><strong>SAP</strong>${erpOk && erpType === 'sap' ? statusBadge(true) : ''}</div>
           <p class="muted">SAP via service-account credentials.</p>
           ${erpOk && erpType === 'sap' ? html`<p class="connector-detail">Connected</p>` : html`<button class="connector-btn" onClick=${() => setSapVisible(true)}>Setup</button>`}
+        </div>
+        <div class="connector-card ${erpOk && erpType === 'sage_intacct' ? 'done' : ''}">
+          <div class="connector-header"><strong>Sage Intacct</strong>${erpOk && erpType === 'sage_intacct' ? statusBadge(true) : ''}</div>
+          <p class="muted">Sage Intacct XML Web Services credentials.</p>
+          ${erpOk && erpType === 'sage_intacct' ? html`<p class="connector-detail">Connected</p>` : html`<button class="connector-btn" onClick=${() => setSageIntacctVisible(true)}>Setup</button>`}
         </div>
       </div>
       ${nsVisible && html`<div class="netsuite-form-panel"><h4>NetSuite Credentials</h4>
@@ -415,6 +443,21 @@ function SetupPage({ bootstrap, orgId, onNav, onRefresh }) {
         <div class="row mt-10">
           <button class="connector-btn" onClick=${connectSap} disabled=${sapPending}>${sapPending ? 'Testing...' : 'Test & Connect'}</button>
           <button class="alt" onClick=${() => setSapVisible(false)}>Cancel</button>
+        </div>
+      </div>`}
+      ${sageIntacctVisible && html`<div class="netsuite-form-panel"><h4>Sage Intacct Credentials</h4>
+        <div class="form-grid">
+          <label>Sender ID</label><input id="sage-intacct-sender-id" type="text" />
+          <label>Sender Password</label><input id="sage-intacct-sender-password" type="password" />
+          <label>Company ID</label><input id="sage-intacct-company-id" type="text" />
+          <label>User ID</label><input id="sage-intacct-user-id" type="text" />
+          <label>User Password</label><input id="sage-intacct-user-password" type="password" />
+          <label>XML Gateway URL</label><input id="sage-intacct-base-url" type="text" placeholder="https://api.intacct.com/ia/xml/xmlgw.phtml" />
+          <label>Location ID</label><input id="sage-intacct-location-id" type="text" />
+        </div>
+        <div class="row mt-10">
+          <button class="connector-btn" onClick=${connectSageIntacct} disabled=${sageIntacctPending}>${sageIntacctPending ? 'Testing...' : 'Test & Connect'}</button>
+          <button class="alt" onClick=${() => setSageIntacctVisible(false)}>Cancel</button>
         </div>
       </div>`}
     </div>
@@ -448,7 +491,7 @@ function SetupPage({ bootstrap, orgId, onNav, onRefresh }) {
       <div class="readiness-list">
         <div class="readiness-item">${checkMark(gmailOk)} Gmail connected</div>
         <div class="readiness-item">${checkMark(slackOk)} Slack connected</div>
-        <div class="readiness-item">${checkMark(erpOk)} Accounting software (${erpType ? erpType.charAt(0).toUpperCase() + erpType.slice(1) : 'none yet'})</div>
+        <div class="readiness-item">${checkMark(erpOk)} Accounting software (${erpType ? (erpLabels[erpType] || erpType) : 'none yet'})</div>
         <div class="readiness-item">${checkMark(channelOk)} Approval channel set</div>
         <div class="readiness-item">${checkMark(policyOk)} Approval rules reviewed</div>
       </div>
