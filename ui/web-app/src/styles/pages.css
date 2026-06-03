@@ -5393,6 +5393,31 @@
   margin-bottom: 12px;
 }
 
+.cl-exceptions-pagination {
+  min-height: 52px;
+  padding: 10px 18px;
+  border-top: 1px solid var(--cl-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cl-exceptions-page-count {
+  font-family: var(--cl-font-mono);
+  font-size: 12px;
+  color: var(--cl-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-exceptions-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .cl-exceptions-side {
   display: flex;
   flex-direction: column;
@@ -5508,6 +5533,19 @@
     align-items: flex-start;
     min-width: 0;
     margin-left: 18px;
+  }
+
+  .cl-exceptions-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cl-exceptions-page-controls {
+    width: 100%;
+  }
+
+  .cl-exceptions-page-controls > * {
+    flex: 1 1 auto;
   }
 }
 

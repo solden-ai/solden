@@ -446,6 +446,161 @@ class BoxLifecycleStore:
             return []
         return [_decode_row(r) for r in rows]
 
+    def list_unresolved_exceptions_page(
+        self,
+        organization_id: str,
+        *,
+        box_type: Optional[str] = None,
+        severity: Optional[str] = None,
+        exception_type: Optional[str] = None,
+        q: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """Paginated organization-wide unresolved-exception queue.
+
+        Workspace surfaces need a truthful queue, not "first N then
+        client-filter". Filters are applied before count/slice and rows
+        are ordered by semantic severity, raise time, and id so offsets
+        are deterministic.
+        """
+        self.initialize()
+        safe_limit = max(1, min(int(limit or 50), 10000))
+        safe_offset = max(0, int(offset or 0))
+
+        base_sql = (
+            "FROM box_exceptions be "
+            "LEFT JOIN ap_items ai "
+            "ON be.box_type = 'ap_item' "
+            "AND ai.id = be.box_id "
+            "AND ai.organization_id = be.organization_id "
+        )
+        where = [
+            "be.organization_id = %s",
+            "be.resolved_at IS NULL",
+        ]
+        params: List[Any] = [organization_id]
+        if box_type:
+            where.append("be.box_type = %s")
+            params.append(box_type)
+        if severity:
+            where.append("be.severity = %s")
+            params.append(severity)
+        if exception_type:
+            where.append("be.exception_type = %s")
+            params.append(exception_type)
+        query = str(q or "").strip()
+        if query:
+            pattern = f"%{query}%"
+            where.append(
+                "("
+                "be.box_id ILIKE %s OR "
+                "be.box_type ILIKE %s OR "
+                "be.exception_type ILIKE %s OR "
+                "be.reason ILIKE %s OR "
+                "be.metadata_json ILIKE %s OR "
+                "ai.vendor_name ILIKE %s OR "
+                "ai.invoice_number ILIKE %s OR "
+                "ai.subject ILIKE %s"
+                ")"
+            )
+            params.extend([pattern] * 8)
+
+        where_sql = " AND ".join(where)
+        order_sql = (
+            "ORDER BY CASE be.severity "
+            "WHEN 'critical' THEN 0 "
+            "WHEN 'high' THEN 1 "
+            "WHEN 'medium' THEN 2 "
+            "WHEN 'low' THEN 3 "
+            "ELSE 99 END, be.raised_at ASC, be.id ASC"
+        )
+        count_sql = f"SELECT COUNT(*) AS total {base_sql} WHERE {where_sql}"
+        list_sql = (
+            f"SELECT be.* {base_sql} WHERE {where_sql} "
+            f"{order_sql} LIMIT %s OFFSET %s"
+        )
+
+        try:
+            with self.connect() as conn:
+                cur = conn.cursor()
+                cur.execute(count_sql, tuple(params))
+                count_row = cur.fetchone()
+                total = int((count_row or {}).get("total", 0))
+                cur.execute(list_sql, tuple([*params, safe_limit, safe_offset]))
+                rows = cur.fetchall()
+        except Exception as exc:
+            logger.warning(
+                "[BoxLifecycleStore] list unresolved exception page failed: %s",
+                exc,
+            )
+            return {
+                "items": [],
+                "total": 0,
+                "limit": safe_limit,
+                "offset": safe_offset,
+                "has_more": False,
+            }
+
+        items = [_decode_row(r) for r in rows]
+        return {
+            "items": items,
+            "total": total,
+            "limit": safe_limit,
+            "offset": safe_offset,
+            "has_more": safe_offset + len(items) < total,
+        }
+
+    def unresolved_exception_stats(
+        self,
+        organization_id: str,
+    ) -> Dict[str, Any]:
+        """Uncapped unresolved-exception counts for workspace summaries."""
+        self.initialize()
+        sql = (
+            "SELECT severity, exception_type, box_type, COUNT(*) AS count "
+            "FROM box_exceptions "
+            "WHERE organization_id = %s AND resolved_at IS NULL "
+            "GROUP BY severity, exception_type, box_type"
+        )
+        by_severity: Dict[str, int] = {
+            "low": 0,
+            "medium": 0,
+            "high": 0,
+            "critical": 0,
+        }
+        by_type: Dict[str, int] = {}
+        by_box_type: Dict[str, int] = {}
+        total = 0
+        try:
+            with self.connect() as conn:
+                cur = conn.cursor()
+                cur.execute(sql, (organization_id,))
+                rows = cur.fetchall()
+        except Exception as exc:
+            logger.warning(
+                "[BoxLifecycleStore] unresolved exception stats failed: %s",
+                exc,
+            )
+            rows = []
+
+        for row in rows:
+            count = int(row.get("count") or 0)
+            total += count
+            severity = str(row.get("severity") or "medium")
+            exception_type = str(row.get("exception_type") or "unknown")
+            box_type = str(row.get("box_type") or "unknown")
+            by_severity[severity] = by_severity.get(severity, 0) + count
+            by_type[exception_type] = by_type.get(exception_type, 0) + count
+            by_box_type[box_type] = by_box_type.get(box_type, 0) + count
+
+        return {
+            "total_unresolved": total,
+            "by_severity": by_severity,
+            "by_type": by_type,
+            "by_box_type": by_box_type,
+        }
+
     # ------------------------------------------------------------------
     # Outcomes
     # ------------------------------------------------------------------

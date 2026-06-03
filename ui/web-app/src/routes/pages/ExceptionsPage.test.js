@@ -19,6 +19,10 @@ describe('ExceptionsPage', () => {
       }
       if (String(path).startsWith('/api/workspace/exceptions')) {
         return {
+          total: 1,
+          limit: 50,
+          offset: 0,
+          has_more: false,
           items: [{
             id: 'exc-1',
             box_type: 'ap_item',
@@ -42,7 +46,11 @@ describe('ExceptionsPage', () => {
     await waitFor(() => {
       expect(screen.getByText(/Acme/)).toBeTruthy();
     });
-    expect(api.mock.calls.some(([path]) => path === '/api/workspace/exceptions')).toBe(true);
+    expect(api.mock.calls.some(([path]) => (
+      String(path).startsWith('/api/workspace/exceptions?')
+      && String(path).includes('limit=50')
+      && String(path).includes('offset=0')
+    ))).toBe(true);
     expect(api.mock.calls.some(([path]) => path === '/api/workspace/exceptions/stats')).toBe(true);
 
     fireEvent.click(screen.getByText(/Acme/));
@@ -61,33 +69,43 @@ describe('ExceptionsPage', () => {
         };
       }
       if (String(path).startsWith('/api/workspace/exceptions')) {
+        const url = new URL(String(path), 'http://workspace.test');
+        const workType = url.searchParams.get('box_type') || '';
+        const allItems = [
+          {
+            id: 'exc-ap',
+            box_type: 'ap_item',
+            box_id: 'AP-1',
+            severity: 'high',
+            exception_type: 'po_mismatch',
+            box_summary: { vendor_name: 'Northstar', invoice_number: 'INV-1' },
+          },
+          {
+            id: 'exc-po',
+            box_type: 'purchase_order',
+            box_id: 'PO-8',
+            severity: 'medium',
+            exception_type: 'approval_wait',
+            box_summary: { vendor_name: 'Atlas', po_number: 'PO-8' },
+          },
+          {
+            id: 'exc-vendor',
+            box_type: 'vendor_onboarding_session',
+            box_id: 'VOS-1',
+            severity: 'medium',
+            exception_type: 'bank_detail_review',
+            metadata: { vendor_name: 'Aurora Systems' },
+          },
+        ];
+        const items = workType
+          ? allItems.filter((item) => item.box_type === workType)
+          : allItems;
         return {
-          items: [
-            {
-              id: 'exc-ap',
-              box_type: 'ap_item',
-              box_id: 'AP-1',
-              severity: 'high',
-              exception_type: 'po_mismatch',
-              box_summary: { vendor_name: 'Northstar', invoice_number: 'INV-1' },
-            },
-            {
-              id: 'exc-po',
-              box_type: 'purchase_order',
-              box_id: 'PO-8',
-              severity: 'medium',
-              exception_type: 'approval_wait',
-              box_summary: { vendor_name: 'Atlas', po_number: 'PO-8' },
-            },
-            {
-              id: 'exc-vendor',
-              box_type: 'vendor_onboarding_session',
-              box_id: 'VOS-1',
-              severity: 'medium',
-              exception_type: 'bank_detail_review',
-              metadata: { vendor_name: 'Aurora Systems' },
-            },
-          ],
+          items,
+          total: items.length,
+          limit: 50,
+          offset: 0,
+          has_more: false,
         };
       }
       return {};
@@ -102,8 +120,12 @@ describe('ExceptionsPage', () => {
     expect(screen.getAllByText('Vendor Onboarding').length).toBeGreaterThan(0);
 
     fireEvent.change(screen.getByLabelText('Work type'), { target: { value: 'purchase_order' } });
-    expect(screen.getByText(/Atlas/)).toBeTruthy();
+    await waitFor(() => expect(screen.getByText(/Atlas/)).toBeTruthy());
     expect(screen.queryByText(/Northstar/)).toBeNull();
+    expect(api.mock.calls.some(([path]) => (
+      String(path).startsWith('/api/workspace/exceptions?')
+      && String(path).includes('box_type=purchase_order')
+    ))).toBe(true);
 
     fireEvent.click(screen.getByRole('button', { name: 'Open procurement' }));
     expect(navigate).toHaveBeenCalledWith('/procurement');
@@ -119,6 +141,10 @@ describe('ExceptionsPage', () => {
       }
       if (String(path).startsWith('/api/workspace/exceptions')) {
         return {
+          total: 1,
+          limit: 50,
+          offset: 0,
+          has_more: false,
           items: [{
             id: 'exc-1',
             box_type: 'ap_item',
@@ -173,6 +199,10 @@ describe('ExceptionsPage', () => {
       }
       if (String(path).startsWith('/api/workspace/exceptions')) {
         return {
+          total: 1,
+          limit: 50,
+          offset: 0,
+          has_more: false,
           items: [{
             id: 'exc-1',
             box_type: 'ap_item',
@@ -198,5 +228,66 @@ describe('ExceptionsPage', () => {
 
     await waitFor(() => screen.getByText(/Acme/));
     expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
+  });
+
+  it('requests server pages and moves through paginated results', async () => {
+    const pageOne = Array.from({ length: 50 }, (_, index) => ({
+      id: `exc-page-1-${index}`,
+      box_type: 'ap_item',
+      box_id: `AP-${index}`,
+      severity: 'medium',
+      exception_type: 'approval_wait',
+      box_summary: {
+        vendor_name: index === 0 ? 'First page vendor' : `Vendor ${index}`,
+        invoice_number: `INV-${index}`,
+      },
+    }));
+    const pageTwo = Array.from({ length: 25 }, (_, index) => ({
+      id: `exc-page-2-${index}`,
+      box_type: 'ap_item',
+      box_id: `AP-${index + 50}`,
+      severity: 'low',
+      exception_type: 'approval_wait',
+      box_summary: {
+        vendor_name: index === 0 ? 'Second page vendor' : `Later Vendor ${index}`,
+        invoice_number: `INV-${index + 50}`,
+      },
+    }));
+    const api = vi.fn(async (path) => {
+      if (String(path).startsWith('/api/workspace/exceptions/stats')) {
+        return {
+          total_unresolved: 75,
+          by_severity: { medium: 50, low: 25 },
+          by_type: { approval_wait: 75 },
+          by_box_type: { ap_item: 75 },
+        };
+      }
+      if (String(path).startsWith('/api/workspace/exceptions')) {
+        const url = new URL(String(path), 'http://workspace.test');
+        const offset = Number(url.searchParams.get('offset') || 0);
+        const items = offset >= 50 ? pageTwo : pageOne;
+        return {
+          items,
+          total: 75,
+          limit: 50,
+          offset,
+          has_more: offset < 50,
+        };
+      }
+      return {};
+    });
+
+    render(h(ExceptionsPage, { api, navigate: () => {} }));
+
+    await waitFor(() => expect(screen.getByText(/First page vendor/)).toBeTruthy());
+    expect(screen.getAllByText('Showing 1-50 of 75').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+    await waitFor(() => expect(screen.getByText(/Second page vendor/)).toBeTruthy());
+    expect(screen.getAllByText('Showing 51-75 of 75').length).toBeGreaterThan(0);
+    expect(api.mock.calls.some(([path]) => (
+      String(path).startsWith('/api/workspace/exceptions?')
+      && String(path).includes('offset=50')
+    ))).toBe(true);
   });
 });

@@ -6,6 +6,7 @@ import { accountPayableRecordPath } from '../../utils/record-route.js';
 
 const SEVERITIES = ['critical', 'high', 'medium', 'low'];
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
+const PAGE_SIZE = 50;
 
 function humanizeExceptionType(code) {
   if (!code) return 'Exception raised';
@@ -140,25 +141,49 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
   const [workTypeFilter, setWorkTypeFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [query, setQuery] = useState('');
+  const [pageOffset, setPageOffset] = useState(0);
+  const [pageMeta, setPageMeta] = useState({
+    total: 0,
+    limit: PAGE_SIZE,
+    offset: 0,
+    hasMore: false,
+  });
   const [resolveDialog, setResolveDialog] = useState(null);
 
   const load = useCallback(async () => {
     if (!api) return;
     try {
       const params = new URLSearchParams();
+      params.set('limit', String(PAGE_SIZE));
+      params.set('offset', String(pageOffset));
       if (severityFilter) params.set('severity', severityFilter);
+      if (workTypeFilter) params.set('box_type', workTypeFilter);
+      if (typeFilter) params.set('exception_type', typeFilter);
+      if (query.trim()) params.set('q', query.trim());
       const suffix = params.toString();
       const [listRes, statsRes] = await Promise.all([
         api(`/api/workspace/exceptions${suffix ? `?${suffix}` : ''}`),
         api('/api/workspace/exceptions/stats'),
       ]);
-      setItems(Array.isArray(listRes?.items) ? listRes.items : []);
+      const nextItems = Array.isArray(listRes?.items) ? listRes.items : [];
+      const nextTotal = Number(listRes?.total ?? listRes?.count ?? nextItems.length) || 0;
+      if (pageOffset > 0 && nextTotal > 0 && nextItems.length === 0) {
+        setPageOffset(Math.max(0, pageOffset - PAGE_SIZE));
+        return;
+      }
+      setItems(nextItems);
+      setPageMeta({
+        total: nextTotal,
+        limit: Number(listRes?.limit || PAGE_SIZE),
+        offset: Number(listRes?.offset || pageOffset),
+        hasMore: Boolean(listRes?.has_more),
+      });
       setStats(statsRes || null);
       setError(null);
     } catch (exc) {
       setError(String(exc?.message || exc));
     }
-  }, [api, severityFilter]);
+  }, [api, pageOffset, query, severityFilter, typeFilter, workTypeFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -172,31 +197,16 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
     [stats, allItems],
   );
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return allItems
-      .filter((row) => !workTypeFilter || String(row.box_type || '') === workTypeFilter)
-      .filter((row) => !typeFilter || String(row.exception_type || '') === typeFilter)
-      .filter((row) => {
-        if (!q) return true;
-        const haystack = [
-          rowHeadline(row),
-          humanizeWorkType(row.box_type),
-          humanizeExceptionType(row.exception_type),
-          rowReason(row),
-          row.box_id,
-          row.severity,
-        ].join(' ').toLowerCase();
-        return haystack.includes(q);
-      })
-      .slice()
-      .sort((a, b) => {
-        const sa = SEVERITY_ORDER[a.severity] ?? 99;
-        const sb = SEVERITY_ORDER[b.severity] ?? 99;
-        if (sa !== sb) return sa - sb;
-        return String(a.raised_at || '').localeCompare(String(b.raised_at || ''));
-      });
-  }, [allItems, query, typeFilter, workTypeFilter]);
+  const visibleItems = useMemo(() => (
+    allItems.slice().sort((a, b) => {
+      const sa = SEVERITY_ORDER[a.severity] ?? 99;
+      const sb = SEVERITY_ORDER[b.severity] ?? 99;
+      if (sa !== sb) return sa - sb;
+      const raised = String(a.raised_at || '').localeCompare(String(b.raised_at || ''));
+      if (raised !== 0) return raised;
+      return String(a.id || '').localeCompare(String(b.id || ''));
+    })
+  ), [allItems]);
 
   const totalUnresolved = Number(stats?.total_unresolved ?? allItems.length ?? 0);
   const highPressure = Number(stats?.by_severity?.critical || 0) + Number(stats?.by_severity?.high || 0);
@@ -204,12 +214,47 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
   const oldest = oldestWait(allItems);
   const activeFilterCount = [severityFilter, workTypeFilter, typeFilter, query.trim()].filter(Boolean).length;
   const isLoading = items === null;
+  const totalMatching = Number(pageMeta.total || 0);
+  const pageStart = totalMatching && visibleItems.length ? Number(pageMeta.offset || 0) + 1 : 0;
+  const pageEnd = totalMatching && visibleItems.length ? Number(pageMeta.offset || 0) + visibleItems.length : 0;
+  const hasPreviousPage = Number(pageMeta.offset || 0) > 0;
+  const hasNextPage = Boolean(pageMeta.hasMore) || pageEnd < totalMatching;
 
   const resetFilters = () => {
     setSeverityFilter('');
     setWorkTypeFilter('');
     setTypeFilter('');
     setQuery('');
+    setPageOffset(0);
+  };
+
+  const updateSeverityFilter = (value) => {
+    setSeverityFilter(value);
+    setPageOffset(0);
+  };
+
+  const updateWorkTypeFilter = (value) => {
+    setWorkTypeFilter(value);
+    setPageOffset(0);
+  };
+
+  const updateTypeFilter = (value) => {
+    setTypeFilter(value);
+    setPageOffset(0);
+  };
+
+  const updateQuery = (value) => {
+    setQuery(value);
+    setPageOffset(0);
+  };
+
+  const goPreviousPage = () => {
+    setPageOffset((current) => Math.max(0, current - PAGE_SIZE));
+  };
+
+  const goNextPage = () => {
+    if (!hasNextPage) return;
+    setPageOffset((current) => current + PAGE_SIZE);
   };
 
   const openResolveDialog = (exceptionId) => setResolveDialog({ id: exceptionId, note: '' });
@@ -276,7 +321,7 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
               <div class="cl-exceptions-toolbar-main">
                 <label class="cl-exceptions-filter">
                   <span>Severity</span>
-                  <select value=${severityFilter} onChange=${(event) => setSeverityFilter(event.target.value)}>
+                  <select value=${severityFilter} onChange=${(event) => updateSeverityFilter(event.target.value)}>
                     <option value="">All</option>
                     ${SEVERITIES.map((severity) => html`
                       <option key=${severity} value=${severity}>${severity}</option>
@@ -285,7 +330,7 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
                 </label>
                 <label class="cl-exceptions-filter">
                   <span>Work type</span>
-                  <select value=${workTypeFilter} onChange=${(event) => setWorkTypeFilter(event.target.value)}>
+                  <select value=${workTypeFilter} onChange=${(event) => updateWorkTypeFilter(event.target.value)}>
                     <option value="">All</option>
                     ${workTypeOptions.map((option) => html`
                       <option key=${option.key} value=${option.key}>${option.label}</option>
@@ -294,7 +339,7 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
                 </label>
                 <label class="cl-exceptions-filter">
                   <span>Exception</span>
-                  <select value=${typeFilter} onChange=${(event) => setTypeFilter(event.target.value)}>
+                  <select value=${typeFilter} onChange=${(event) => updateTypeFilter(event.target.value)}>
                     <option value="">All</option>
                     ${typeOptions.map((option) => html`
                       <option key=${option.key} value=${option.key}>${option.label}</option>
@@ -306,7 +351,7 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
                 <span>Search</span>
                 <input
                   value=${query}
-                  onInput=${(event) => setQuery(event.target.value)}
+                  onInput=${(event) => updateQuery(event.target.value)}
                   placeholder="Vendor, reference, reason"
                 />
               </label>
@@ -315,7 +360,11 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
             <div class="cl-exceptions-list-head">
               <h2>Open exceptions</h2>
               <div class="cl-exceptions-list-meta">
-                ${isLoading ? 'Loading' : `${filtered.length} shown`}
+                ${isLoading
+                  ? 'Loading'
+                  : totalMatching
+                    ? `Showing ${pageStart}-${pageEnd} of ${totalMatching}`
+                    : '0 shown'}
                 ${activeFilterCount ? html`
                   <button class="cl-exceptions-reset" onClick=${resetFilters}>Reset filters</button>
                 ` : null}
@@ -324,7 +373,7 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
 
             ${isLoading
               ? html`<div class="cl-exceptions-empty">Loading exceptions...</div>`
-              : filtered.length === 0
+              : visibleItems.length === 0
                 ? html`
                     <div class="cl-exceptions-empty">
                       <div class="cl-exceptions-empty-title">No exceptions match the current filters.</div>
@@ -333,7 +382,7 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
                   `
                 : html`
                     <ul class="cl-exceptions-list">
-                      ${filtered.map((row) => {
+                      ${visibleItems.map((row) => {
                         const detail = rowDetail(row);
                         const reason = rowReason(row);
                         const target = exceptionTarget(row);
@@ -388,6 +437,26 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
                       })}
                     </ul>
                   `}
+
+            ${!isLoading && totalMatching > Number(pageMeta.limit || PAGE_SIZE) ? html`
+              <div class="cl-exceptions-pagination" aria-label="Exceptions pagination">
+                <div class="cl-exceptions-page-count">
+                  ${pageStart}-${pageEnd} of ${totalMatching}
+                </div>
+                <div class="cl-exceptions-page-controls">
+                  <button
+                    class="btn-secondary btn-sm"
+                    disabled=${!hasPreviousPage}
+                    onClick=${goPreviousPage}
+                  >Previous</button>
+                  <button
+                    class="btn-secondary btn-sm"
+                    disabled=${!hasNextPage}
+                    onClick=${goNextPage}
+                  >Next</button>
+                </div>
+              </div>
+            ` : null}
           </div>
         </div>
 
@@ -400,20 +469,20 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
               count: Number(stats?.by_severity?.[severity] || 0),
             }))}
             active=${severityFilter}
-            onSelect=${(key) => setSeverityFilter(key === severityFilter ? '' : key)}
+            onSelect=${(key) => updateSeverityFilter(key === severityFilter ? '' : key)}
             tone="severity"
           />
           <${BreakdownPanel}
             title="By work type"
             items=${workTypeOptions}
             active=${workTypeFilter}
-            onSelect=${(key) => setWorkTypeFilter(key === workTypeFilter ? '' : key)}
+            onSelect=${(key) => updateWorkTypeFilter(key === workTypeFilter ? '' : key)}
           />
           <${BreakdownPanel}
             title="By exception"
             items=${typeOptions.slice(0, 8)}
             active=${typeFilter}
-            onSelect=${(key) => setTypeFilter(key === typeFilter ? '' : key)}
+            onSelect=${(key) => updateTypeFilter(key === typeFilter ? '' : key)}
           />
         </aside>
       </section>
