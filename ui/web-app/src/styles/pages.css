@@ -5012,6 +5012,505 @@
   border-radius: var(--cl-radius-sm);
 }
 
+/* Exceptions page */
+.cl-exceptions-page {
+  max-width: 1240px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cl-exceptions-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.cl-exceptions-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+  margin-bottom: 6px;
+}
+
+.cl-exceptions-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.cl-exceptions-sub {
+  margin: 0;
+  color: var(--cl-ink-secondary);
+  font-size: 14px;
+  max-width: 680px;
+}
+
+.cl-exceptions-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cl-exceptions-alert {
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--cl-warning) 8%, var(--cl-surface));
+  border: 1px solid color-mix(in srgb, var(--cl-warning) 24%, transparent);
+  border-radius: var(--cl-radius-sm);
+  color: var(--cl-warning);
+  font-size: 13px;
+}
+
+.cl-exceptions-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cl-exceptions-summary-cell {
+  min-height: 88px;
+  padding: 14px 16px 12px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cl-exceptions-summary-cell-brand {
+  border-color: color-mix(in srgb, var(--cl-teal-500) 25%, transparent);
+}
+
+.cl-exceptions-summary-cell-warn {
+  border-color: color-mix(in srgb, var(--cl-warning) 30%, transparent);
+}
+
+.cl-exceptions-summary-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+}
+
+.cl-exceptions-summary-value {
+  font-size: 26px;
+  line-height: 1.1;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-exceptions-summary-cell-warn .cl-exceptions-summary-value {
+  color: var(--cl-warning);
+}
+
+.cl-exceptions-summary-cell-good .cl-exceptions-summary-value {
+  color: var(--cl-teal-600);
+}
+
+.cl-exceptions-summary-sub {
+  font-size: 12px;
+  color: var(--cl-ink-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-exceptions-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.cl-exceptions-panel,
+.cl-exceptions-breakdown {
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  overflow: hidden;
+}
+
+.cl-exceptions-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.45fr);
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.cl-exceptions-toolbar-main {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cl-exceptions-filter,
+.cl-exceptions-search {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cl-exceptions-filter span,
+.cl-exceptions-search span {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+}
+
+.cl-exceptions-filter select,
+.cl-exceptions-search input {
+  height: 34px;
+  width: 100%;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  background: var(--cl-surface);
+  color: var(--cl-ink-primary);
+  font: inherit;
+  font-size: 13px;
+  padding: 0 10px;
+}
+
+.cl-exceptions-filter select:focus,
+.cl-exceptions-search input:focus {
+  outline: 2px solid var(--cl-teal-500);
+  outline-offset: 1px;
+  border-color: var(--cl-teal-500);
+}
+
+.cl-exceptions-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.cl-exceptions-list-head h2,
+.cl-exceptions-breakdown h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.cl-exceptions-list-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--cl-ink-muted);
+  font-size: 12px;
+}
+
+.cl-exceptions-reset {
+  border: 0;
+  background: transparent;
+  color: var(--cl-teal-600);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0;
+}
+
+.cl-exceptions-list,
+.cl-exceptions-breakdown-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cl-exceptions-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--cl-border);
+  transition: background 0.08s;
+}
+
+.cl-exceptions-row:last-child {
+  border-bottom: 0;
+}
+
+.cl-exceptions-row-clickable {
+  cursor: pointer;
+}
+
+.cl-exceptions-row-clickable:hover {
+  background: var(--cl-bg);
+}
+
+.cl-exceptions-row-clickable:focus-visible,
+.cl-exceptions-breakdown-row:focus-visible,
+.cl-exceptions-reset:focus-visible {
+  outline: 2px solid var(--cl-teal-500);
+  outline-offset: 2px;
+}
+
+.cl-exceptions-row-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cl-exceptions-row-copy {
+  min-width: 0;
+}
+
+.cl-exceptions-row-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-exceptions-row-meta {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--cl-ink-muted);
+}
+
+.cl-exceptions-row-reason {
+  margin-left: 18px;
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--cl-ink-secondary);
+}
+
+.cl-exceptions-row-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 128px;
+}
+
+.cl-exceptions-row-amount {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-exceptions-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.cl-exceptions-severity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 7px;
+  flex: none;
+  background: var(--cl-ink-muted);
+}
+
+.cl-exceptions-severity-dot-critical,
+.cl-exceptions-pill-critical {
+  background: color-mix(in srgb, var(--cl-danger) 12%, var(--cl-surface));
+  color: var(--cl-danger);
+}
+
+.cl-exceptions-severity-dot-critical {
+  background: var(--cl-danger);
+}
+
+.cl-exceptions-severity-dot-high,
+.cl-exceptions-pill-high {
+  background: color-mix(in srgb, var(--cl-danger) 9%, var(--cl-surface));
+  color: var(--cl-danger);
+}
+
+.cl-exceptions-severity-dot-high {
+  background: var(--cl-danger);
+}
+
+.cl-exceptions-severity-dot-medium,
+.cl-exceptions-pill-medium {
+  background: color-mix(in srgb, var(--cl-warning) 12%, var(--cl-surface));
+  color: var(--cl-warning);
+}
+
+.cl-exceptions-severity-dot-medium {
+  background: var(--cl-warning);
+}
+
+.cl-exceptions-severity-dot-low,
+.cl-exceptions-pill-low {
+  background: var(--cl-bg);
+  color: var(--cl-ink-secondary);
+}
+
+.cl-exceptions-severity-dot-low {
+  background: var(--cl-ink-muted);
+}
+
+.cl-exceptions-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.cl-exceptions-empty {
+  padding: 38px 24px;
+  text-align: center;
+  color: var(--cl-ink-secondary);
+  font-size: 13px;
+}
+
+.cl-exceptions-empty-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+  margin-bottom: 12px;
+}
+
+.cl-exceptions-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cl-exceptions-breakdown {
+  padding: 14px 16px 16px;
+}
+
+.cl-exceptions-breakdown-list {
+  margin-top: 12px;
+}
+
+.cl-exceptions-breakdown-row {
+  width: 100%;
+  min-height: 34px;
+  border: 0;
+  border-radius: var(--cl-radius-sm);
+  background: transparent;
+  color: var(--cl-ink-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 8px;
+  text-align: left;
+}
+
+.cl-exceptions-breakdown-row:hover,
+.cl-exceptions-breakdown-row.is-active {
+  background: var(--cl-bg);
+}
+
+.cl-exceptions-breakdown-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--cl-ink-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
+}
+
+.cl-exceptions-breakdown-count {
+  flex: none;
+  font-family: var(--cl-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+}
+
+.cl-exceptions-breakdown-empty {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--cl-ink-muted);
+}
+
+@media (max-width: 1080px) {
+  .cl-exceptions-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-exceptions-side {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 880px) {
+  .cl-exceptions-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cl-exceptions-toolbar,
+  .cl-exceptions-toolbar-main,
+  .cl-exceptions-side {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .cl-exceptions-head {
+    align-items: stretch;
+  }
+
+  .cl-exceptions-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-exceptions-actions,
+  .cl-exceptions-row-actions {
+    width: 100%;
+  }
+
+  .cl-exceptions-actions > *,
+  .cl-exceptions-row-actions > * {
+    flex: 1 1 auto;
+  }
+
+  .cl-exceptions-row {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-exceptions-row-title {
+    white-space: normal;
+  }
+
+  .cl-exceptions-row-side {
+    align-items: flex-start;
+    min-width: 0;
+    margin-left: 18px;
+  }
+}
+
 /* HomePage activity + status extras */
 .cl-home-activity-tone-success { color: var(--cl-teal-600); }
 .cl-home-activity-tone-warning { color: #B45309; }

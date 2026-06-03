@@ -1,23 +1,27 @@
-import { h } from 'preact';
-import { useState, useEffect, useCallback } from 'preact/hooks';
-import htm from 'htm';
+import { useState, useEffect, useCallback, useMemo } from 'preact/hooks';
+import { html } from '../../utils/htm.js';
 import { formatAmount } from '../../utils/formatters.js';
 import { hasBoxCapability } from '../../utils/capabilities.js';
 import { accountPayableRecordPath } from '../../utils/record-route.js';
 
-const html = htm.bind(h);
-
+const SEVERITIES = ['critical', 'high', 'medium', 'low'];
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
-const SEVERITY_COLORS = {
-  critical: '#B91C1C',
-  high: '#DC2626',
-  medium: '#A16207',
-  low: '#6B7280',
-};
 
 function humanizeExceptionType(code) {
   if (!code) return 'Exception raised';
   return String(code).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function humanizeWorkType(code) {
+  const token = String(code || '').trim().toLowerCase();
+  const labels = {
+    ap_item: 'Accounts Payable',
+    purchase_order: 'Procurement',
+    vendor_onboarding_session: 'Vendor Onboarding',
+    bank_match: 'Bank Reconciliation',
+  };
+  if (!token) return 'Record';
+  return labels[token] || token.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function formatTimeAgo(iso) {
@@ -27,27 +31,104 @@ function formatTimeAgo(iso) {
     if (Number.isNaN(d.getTime())) return '';
     const hours = Math.floor((Date.now() - d.getTime()) / 3600000);
     if (hours < 1) return 'just now';
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 24) return `${hours}h`;
     const days = Math.floor(hours / 24);
-    return `${days}d ago`;
+    return `${days}d`;
   } catch { return ''; }
 }
 
-function rowHeadline(row) {
+function rowHeadline(row = {}) {
   const summary = row.box_summary || {};
-  const vendor = row.vendor_name || row.vendor || summary.vendor_name;
-  const invoice = summary.invoice_number;
-  if (vendor && invoice) return `${vendor} — ${invoice}`;
+  const metadata = row.metadata || {};
+  const vendor = row.vendor_name || row.vendor || summary.vendor_name || metadata.vendor_name;
+  const reference = summary.invoice_number || summary.reference || summary.po_number || summary.bill_number || row.box_id;
+  if (vendor && reference) return `${vendor} - ${reference}`;
   if (vendor) return vendor;
-  if (invoice) return invoice;
-  // No enrichable signal — fall back to a short id rather than the
-  // full UUID so the row stays scannable.
-  const id = String(row.box_id || '');
-  // ``box_type`` is internal vocabulary; surface "Record" to the
-  // operator instead. The id stays so the row is still uniquely
-  // identifiable when nothing else extracted.
-  const idLabel = id.length > 14 ? `${id.slice(0, 14)}…` : id;
-  return `Record · ${idLabel}`;
+  if (reference) return `${humanizeWorkType(row.box_type)} - ${String(reference).slice(0, 18)}`;
+  return 'Record not summarized';
+}
+
+function rowDetail(row = {}) {
+  const summary = row.box_summary || {};
+  const amountLabel = (summary.amount != null && summary.amount !== '')
+    ? formatAmount(summary.amount, summary.currency)
+    : '';
+  return {
+    workType: humanizeWorkType(row.box_type),
+    type: humanizeExceptionType(row.exception_type),
+    age: formatTimeAgo(row.raised_at),
+    amount: amountLabel,
+  };
+}
+
+function rowReason(row = {}) {
+  const reason = String(row.reason || '').trim();
+  const suggested = String(row.metadata?.suggested_action || '').trim();
+  const code = String(row.exception_type || '').toLowerCase();
+  if (suggested) return suggested;
+  if (reason && reason.toLowerCase() !== code) return reason;
+  return '';
+}
+
+function exceptionTarget(row = {}) {
+  if (row.box_type === 'ap_item' && row.box_id) {
+    return { path: accountPayableRecordPath(row.box_id), label: 'Open record' };
+  }
+  if ((row.synthetic || row.box_type === 'vendor_onboarding_session') && row.metadata?.vendor_name) {
+    return { path: `/vendors/${encodeURIComponent(row.metadata.vendor_name)}`, label: 'Open vendor' };
+  }
+  if (row.box_type === 'purchase_order') {
+    return { path: '/procurement', label: 'Open procurement' };
+  }
+  return null;
+}
+
+function canResolveException(row, bootstrap) {
+  if (!row || row.synthetic || row.box_type !== 'ap_item') return false;
+  return hasBoxCapability(bootstrap, 'ap_item', 'approve_invoice');
+}
+
+function optionCount(stats, bucket, key, fallbackItems, fallbackSelector) {
+  const value = stats?.[bucket]?.[key];
+  if (value !== undefined && value !== null) return Number(value) || 0;
+  return fallbackItems.filter((row) => fallbackSelector(row) === key).length;
+}
+
+function buildOptions(stats, items, bucket, selector, humanize) {
+  const keys = new Set(Object.keys(stats?.[bucket] || {}));
+  for (const row of items) {
+    const key = selector(row);
+    if (key) keys.add(key);
+  }
+  return Array.from(keys)
+    .filter(Boolean)
+    .map((key) => ({
+      key,
+      label: humanize(key),
+      count: optionCount(stats, bucket, key, items, selector),
+    }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
+function oldestWait(items) {
+  let oldestMs = 0;
+  let oldestIso = '';
+  for (const row of items || []) {
+    const t = new Date(row.raised_at || '').getTime();
+    if (!Number.isFinite(t)) continue;
+    const ageMs = Date.now() - t;
+    if (ageMs > oldestMs) {
+      oldestMs = ageMs;
+      oldestIso = row.raised_at;
+    }
+  }
+  return oldestIso ? formatTimeAgo(oldestIso) : '';
+}
+
+function activateOnKey(event, activate) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  activate?.();
 }
 
 export default function ExceptionsPage({ api, navigate, bootstrap }) {
@@ -56,19 +137,22 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
   const [error, setError] = useState(null);
   const [resolvingId, setResolvingId] = useState(null);
   const [severityFilter, setSeverityFilter] = useState('');
-  const [resolveDialog, setResolveDialog] = useState(null); // { id, note } | null
+  const [workTypeFilter, setWorkTypeFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [query, setQuery] = useState('');
+  const [resolveDialog, setResolveDialog] = useState(null);
 
   const load = useCallback(async () => {
     if (!api) return;
     try {
       const params = new URLSearchParams();
       if (severityFilter) params.set('severity', severityFilter);
-      const query = params.toString();
+      const suffix = params.toString();
       const [listRes, statsRes] = await Promise.all([
-        api(`/api/workspace/exceptions${query ? `?${query}` : ''}`),
+        api(`/api/workspace/exceptions${suffix ? `?${suffix}` : ''}`),
         api('/api/workspace/exceptions/stats'),
       ]);
-      setItems(listRes?.items || []);
+      setItems(Array.isArray(listRes?.items) ? listRes.items : []);
       setStats(statsRes || null);
       setError(null);
     } catch (exc) {
@@ -78,26 +162,70 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const openResolveDialog = (exceptionId) => {
-    setResolveDialog({ id: exceptionId, note: '' });
+  const allItems = Array.isArray(items) ? items : [];
+  const workTypeOptions = useMemo(
+    () => buildOptions(stats, allItems, 'by_box_type', (row) => String(row.box_type || ''), humanizeWorkType),
+    [stats, allItems],
+  );
+  const typeOptions = useMemo(
+    () => buildOptions(stats, allItems, 'by_type', (row) => String(row.exception_type || ''), humanizeExceptionType),
+    [stats, allItems],
+  );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return allItems
+      .filter((row) => !workTypeFilter || String(row.box_type || '') === workTypeFilter)
+      .filter((row) => !typeFilter || String(row.exception_type || '') === typeFilter)
+      .filter((row) => {
+        if (!q) return true;
+        const haystack = [
+          rowHeadline(row),
+          humanizeWorkType(row.box_type),
+          humanizeExceptionType(row.exception_type),
+          rowReason(row),
+          row.box_id,
+          row.severity,
+        ].join(' ').toLowerCase();
+        return haystack.includes(q);
+      })
+      .slice()
+      .sort((a, b) => {
+        const sa = SEVERITY_ORDER[a.severity] ?? 99;
+        const sb = SEVERITY_ORDER[b.severity] ?? 99;
+        if (sa !== sb) return sa - sb;
+        return String(a.raised_at || '').localeCompare(String(b.raised_at || ''));
+      });
+  }, [allItems, query, typeFilter, workTypeFilter]);
+
+  const totalUnresolved = Number(stats?.total_unresolved ?? allItems.length ?? 0);
+  const highPressure = Number(stats?.by_severity?.critical || 0) + Number(stats?.by_severity?.high || 0);
+  const workTypesAffected = workTypeOptions.filter((item) => item.count > 0).length;
+  const oldest = oldestWait(allItems);
+  const activeFilterCount = [severityFilter, workTypeFilter, typeFilter, query.trim()].filter(Boolean).length;
+  const isLoading = items === null;
+
+  const resetFilters = () => {
+    setSeverityFilter('');
+    setWorkTypeFilter('');
+    setTypeFilter('');
+    setQuery('');
   };
 
+  const openResolveDialog = (exceptionId) => setResolveDialog({ id: exceptionId, note: '' });
   const cancelResolveDialog = () => setResolveDialog(null);
 
   const submitResolveDialog = async () => {
     if (!api || !resolveDialog?.id) return;
-    const exceptionId = resolveDialog.id;
     const note = String(resolveDialog.note || '').trim();
-    // Rationale is required server-side; re-guard here so no future caller
-    // path (keyboard-enter, programmatic submit) can POST an empty note.
     if (!note) return;
+    const exceptionId = resolveDialog.id;
     setResolveDialog(null);
     setResolvingId(exceptionId);
     try {
       await api(`/api/workspace/exceptions/${exceptionId}/resolve`, {
         method: 'POST',
-        body: JSON.stringify({ resolution_note: note }),
-        headers: { 'Content-Type': 'application/json' },
+        body: { resolution_note: note },
       });
       await load();
     } catch (exc) {
@@ -107,170 +235,264 @@ export default function ExceptionsPage({ api, navigate, bootstrap }) {
     }
   };
 
-  const openVendor = (vendorName) => {
-    if (!vendorName || !navigate) return;
-    const target = `/vendors/${encodeURIComponent(vendorName)}`;
-    navigate(target);
+  const navigateTo = (target) => {
+    if (!target?.path || !navigate) return;
+    navigate(target.path);
   };
-
-  const openRecord = (boxType, boxId) => {
-    if (boxType !== 'ap_item' || !boxId || !navigate) return;
-    const target = accountPayableRecordPath(boxId);
-    navigate(target);
-  };
-
-  const sorted = (items || []).slice().sort((a, b) => {
-    const sa = SEVERITY_ORDER[a.severity] ?? 99;
-    const sb = SEVERITY_ORDER[b.severity] ?? 99;
-    if (sa !== sb) return sa - sb;
-    return String(a.raised_at || '').localeCompare(String(b.raised_at || ''));
-  });
-  const canResolve = hasBoxCapability(bootstrap, 'ap_item', 'approve_invoice');
 
   return html`
-    <div class="secondary-banner ${(stats?.total_unresolved || 0) > 0 ? 'warning' : ''}">
-      <div class="secondary-banner-copy">
-        <h3>${stats?.total_unresolved ? `${stats.total_unresolved} unresolved exception${stats.total_unresolved === 1 ? '' : 's'}` : 'No unresolved exceptions'}</h3>
-        <p class="muted">${stats?.total_unresolved ? 'These records need a human decision before the agent can move them forward.' : 'Every record is moving through its lifecycle cleanly.'}</p>
-      </div>
-    </div>
+    <div class="cl-exceptions-page">
+      <header class="cl-exceptions-head">
+        <div>
+          <div class="cl-exceptions-eyebrow">Exception queue</div>
+          <h1 class="cl-exceptions-title">Work waiting on judgment</h1>
+          <p class="cl-exceptions-sub">
+            Exceptions across every work type that need context, owner action, or proof before the agent can continue.
+          </p>
+        </div>
+        <div class="cl-exceptions-actions">
+          <button class="btn-secondary btn-sm" onClick=${load}>Refresh</button>
+          <button class="btn-primary btn-sm" onClick=${() => navigate?.('/activity')}>Open activity</button>
+        </div>
+      </header>
 
-    ${error ? html`<div class="secondary-note" style="border-left:3px solid var(--red);margin:12px 0">${error}</div>` : null}
+      ${error ? html`
+        <div class="cl-exceptions-alert" role="alert">
+          ${error}
+        </div>
+      ` : null}
 
-    <div class="secondary-shell">
-      <div class="secondary-main">
-        <div class="panel">
-          <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px">
-            <label class="muted" style="font-size:12px">Severity</label>
-            <select value=${severityFilter} onChange=${(e) => setSeverityFilter(e.target.value)} style="padding:4px 6px">
-              <option value="">all</option>
-              <option value="critical">critical</option>
-              <option value="high">high</option>
-              <option value="medium">medium</option>
-              <option value="low">low</option>
-            </select>
-          </div>
-          ${items === null
-            ? html`<div class="secondary-empty">Loading…</div>`
-            : sorted.length === 0
-              ? html`<div class="secondary-empty">No exceptions match the current filters.</div>`
-              : html`<div class="secondary-list" style="margin-top:4px">
-                  ${sorted.map((row) => {
-                    const summary = row.box_summary || {};
-                    const headline = rowHeadline(row);
-                    const typeLabel = humanizeExceptionType(row.exception_type);
-                    // Hide the reason if it's just the code repeated —
-                    // backend falls back to ``reason = exception_code``
-                    // when no human reason was supplied. Showing both
-                    // is noise, so collapse the duplicate.
-                    const reason = String(row.reason || '').trim();
-                    const showReason = reason && reason.toLowerCase() !== String(row.exception_type || '').toLowerCase();
-                    const amountLabel = (summary.amount != null && summary.amount !== '')
-                      ? formatAmount(summary.amount, summary.currency)
-                      : '';
-                    const ageLabel = formatTimeAgo(row.raised_at);
-                    return html`
-                    <div key=${row.id} class="secondary-row" style="flex-direction:column;align-items:stretch;gap:6px;border-left:3px solid ${SEVERITY_COLORS[row.severity] || '#6B7280'};padding:10px 12px;cursor:pointer"
-                      onClick=${() => {
-                        if (row.synthetic) openVendor(row.metadata?.vendor_name);
-                        else openRecord(row.box_type, row.box_id);
-                      }}>
-                      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-                        <div style="min-width:0">
-                          <strong style="font-size:14px">${headline}</strong>
-                          <div class="muted" style="font-size:11px;margin-top:2px">${typeLabel}${amountLabel ? ` · ${amountLabel}` : ''}${ageLabel ? ` · ${ageLabel}` : ''}</div>
-                        </div>
-                        <div style="display:flex;gap:10px;align-items:center;flex-shrink:0" onClick=${(e) => e.stopPropagation()}>
-                          <span class="status-badge" style="color:${SEVERITY_COLORS[row.severity] || '#6B7280'};font-weight:700">${row.severity}</span>
-                          ${row.synthetic
-                            ? html`<button
-                                onClick=${() => openVendor(row.metadata?.vendor_name)}
-                                class="btn-secondary btn-sm"
-                                title="Resolve this signal by advancing the underlying onboarding session.">
-                                View vendor
-                              </button>`
-                            : canResolve ? html`<button
-                                disabled=${resolvingId === row.id}
-                                onClick=${() => openResolveDialog(row.id)}
-                                class="btn-primary btn-sm">
-                                ${resolvingId === row.id ? 'Resolving…' : 'Resolve'}
-                              </button>` : null}
-                        </div>
-                      </div>
-                      ${showReason ? html`<div style="font-size:12px;line-height:1.4">${reason}</div>` : null}
+      <section class="cl-exceptions-summary" aria-label="Exception summary">
+        <${SummaryCell} label="Unresolved" value=${totalUnresolved} sub=${totalUnresolved === 1 ? 'Open exception' : 'Open exceptions'} tone="brand" />
+        <${SummaryCell} label="Critical / high" value=${highPressure} sub=${highPressure ? 'Needs first attention' : 'No severe pressure'} tone=${highPressure ? 'warn' : 'good'} />
+        <${SummaryCell} label="Work types" value=${workTypesAffected || '—'} sub=${workTypesAffected ? 'Affected queues' : 'No affected queues'} />
+        <${SummaryCell} label="Oldest wait" value=${oldest || '—'} sub=${oldest ? 'Waiting for action' : 'No wait'} />
+      </section>
+
+      <section class="cl-exceptions-layout">
+        <div class="cl-exceptions-main">
+          <div class="cl-exceptions-panel">
+            <div class="cl-exceptions-toolbar">
+              <div class="cl-exceptions-toolbar-main">
+                <label class="cl-exceptions-filter">
+                  <span>Severity</span>
+                  <select value=${severityFilter} onChange=${(event) => setSeverityFilter(event.target.value)}>
+                    <option value="">All</option>
+                    ${SEVERITIES.map((severity) => html`
+                      <option key=${severity} value=${severity}>${severity}</option>
+                    `)}
+                  </select>
+                </label>
+                <label class="cl-exceptions-filter">
+                  <span>Work type</span>
+                  <select value=${workTypeFilter} onChange=${(event) => setWorkTypeFilter(event.target.value)}>
+                    <option value="">All</option>
+                    ${workTypeOptions.map((option) => html`
+                      <option key=${option.key} value=${option.key}>${option.label}</option>
+                    `)}
+                  </select>
+                </label>
+                <label class="cl-exceptions-filter">
+                  <span>Exception</span>
+                  <select value=${typeFilter} onChange=${(event) => setTypeFilter(event.target.value)}>
+                    <option value="">All</option>
+                    ${typeOptions.map((option) => html`
+                      <option key=${option.key} value=${option.key}>${option.label}</option>
+                    `)}
+                  </select>
+                </label>
+              </div>
+              <label class="cl-exceptions-search">
+                <span>Search</span>
+                <input
+                  value=${query}
+                  onInput=${(event) => setQuery(event.target.value)}
+                  placeholder="Vendor, reference, reason"
+                />
+              </label>
+            </div>
+
+            <div class="cl-exceptions-list-head">
+              <h2>Open exceptions</h2>
+              <div class="cl-exceptions-list-meta">
+                ${isLoading ? 'Loading' : `${filtered.length} shown`}
+                ${activeFilterCount ? html`
+                  <button class="cl-exceptions-reset" onClick=${resetFilters}>Reset filters</button>
+                ` : null}
+              </div>
+            </div>
+
+            ${isLoading
+              ? html`<div class="cl-exceptions-empty">Loading exceptions...</div>`
+              : filtered.length === 0
+                ? html`
+                    <div class="cl-exceptions-empty">
+                      <div class="cl-exceptions-empty-title">No exceptions match the current filters.</div>
+                      <button class="btn-secondary btn-sm" onClick=${resetFilters}>Reset filters</button>
                     </div>
-                  `;
-                  })}
-                </div>`}
+                  `
+                : html`
+                    <ul class="cl-exceptions-list">
+                      ${filtered.map((row) => {
+                        const detail = rowDetail(row);
+                        const reason = rowReason(row);
+                        const target = exceptionTarget(row);
+                        const canResolve = canResolveException(row, bootstrap);
+                        const activate = () => navigateTo(target);
+                        return html`
+                          <li
+                            key=${row.id || row.exception_id || row.box_id}
+                            class=${`cl-exceptions-row cl-exceptions-row-${row.severity || 'medium'} ${target ? 'cl-exceptions-row-clickable' : ''}`}
+                            onClick=${target ? activate : undefined}
+                            onKeyDown=${target ? (event) => activateOnKey(event, activate) : undefined}
+                            role=${target ? 'button' : undefined}
+                            tabindex=${target ? 0 : undefined}
+                          >
+                            <div class="cl-exceptions-row-main">
+                              <div class="cl-exceptions-row-line">
+                                <span class=${`cl-exceptions-severity-dot cl-exceptions-severity-dot-${row.severity || 'medium'}`} aria-hidden="true"></span>
+                                <div class="cl-exceptions-row-copy">
+                                  <div class="cl-exceptions-row-title">${rowHeadline(row)}</div>
+                                  <div class="cl-exceptions-row-meta">
+                                    ${detail.workType} · ${detail.type}
+                                    ${detail.age ? html` · ${detail.age} waiting` : null}
+                                  </div>
+                                </div>
+                              </div>
+                              ${reason ? html`<div class="cl-exceptions-row-reason">${reason}</div>` : null}
+                            </div>
+                            <div class="cl-exceptions-row-side" onClick=${(event) => event.stopPropagation()}>
+                              ${detail.amount ? html`<div class="cl-exceptions-row-amount">${detail.amount}</div>` : null}
+                              <span class=${`cl-exceptions-pill cl-exceptions-pill-${row.severity || 'medium'}`}>
+                                ${row.severity || 'medium'}
+                              </span>
+                              <div class="cl-exceptions-row-actions">
+                                ${canResolve ? html`
+                                  <button
+                                    class="btn-primary btn-sm"
+                                    disabled=${resolvingId === row.id}
+                                    onClick=${() => openResolveDialog(row.id)}
+                                  >
+                                    ${resolvingId === row.id ? 'Resolving...' : 'Resolve'}
+                                  </button>
+                                ` : null}
+                                ${target ? html`
+                                  <button class="btn-secondary btn-sm" onClick=${() => navigateTo(target)}>
+                                    ${target.label}
+                                  </button>
+                                ` : null}
+                              </div>
+                            </div>
+                          </li>
+                        `;
+                      })}
+                    </ul>
+                  `}
+          </div>
         </div>
-      </div>
 
-      <div class="secondary-side">
-        <div class="panel">
-          <h3 style="margin-top:0">By severity</h3>
-          ${stats && stats.by_severity
-            ? html`<div class="secondary-list" style="margin-top:10px">
-                ${['critical', 'high', 'medium', 'low'].map((sev) => html`
-                  <div key=${sev} class="secondary-row" style="justify-content:space-between">
-                    <span style="color:${SEVERITY_COLORS[sev]};font-weight:600;text-transform:capitalize">${sev}</span>
-                    <strong>${stats.by_severity[sev] || 0}</strong>
-                  </div>
-                `)}
-              </div>`
-            : html`<div class="secondary-empty">No data.</div>`}
-        </div>
+        <aside class="cl-exceptions-side">
+          <${BreakdownPanel}
+            title="By severity"
+            items=${SEVERITIES.map((severity) => ({
+              key: severity,
+              label: severity,
+              count: Number(stats?.by_severity?.[severity] || 0),
+            }))}
+            active=${severityFilter}
+            onSelect=${(key) => setSeverityFilter(key === severityFilter ? '' : key)}
+            tone="severity"
+          />
+          <${BreakdownPanel}
+            title="By work type"
+            items=${workTypeOptions}
+            active=${workTypeFilter}
+            onSelect=${(key) => setWorkTypeFilter(key === workTypeFilter ? '' : key)}
+          />
+          <${BreakdownPanel}
+            title="By exception"
+            items=${typeOptions.slice(0, 8)}
+            active=${typeFilter}
+            onSelect=${(key) => setTypeFilter(key === typeFilter ? '' : key)}
+          />
+        </aside>
+      </section>
 
-        <div class="panel">
-          <h3 style="margin-top:0">By type</h3>
-          ${stats && Object.keys(stats.by_type || {}).length
-            ? html`<div class="secondary-list" style="margin-top:10px">
-                ${Object.entries(stats.by_type).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([t, n]) => html`
-                  <div key=${t} class="secondary-row" style="justify-content:space-between">
-                    <span>${humanizeExceptionType(t)}</span>
-                    <strong>${n}</strong>
-                  </div>
-                `)}
-              </div>`
-            : html`<div class="secondary-empty">No data.</div>`}
+      ${resolveDialog ? html`
+        <div class="cl-modal-overlay" onClick=${cancelResolveDialog}>
+          <div
+            class="cl-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cl-resolve-title"
+            onClick=${(event) => event.stopPropagation()}
+          >
+            <h3 id="cl-resolve-title" class="cl-modal-title">Resolve exception</h3>
+            <div class="cl-modal-body">
+              Add the note that explains why this can leave the queue.
+            </div>
+            <div class="field-row">
+              <label for="cl-resolve-note">Resolution note</label>
+              <textarea
+                id="cl-resolve-note"
+                autofocus
+                value=${resolveDialog.note}
+                onInput=${(event) => setResolveDialog((prev) => ({ ...prev, note: event.target.value }))}
+                placeholder="Vendor confirmed the corrected bank detail."
+              ></textarea>
+            </div>
+            <div class="cl-modal-actions">
+              <button class="btn-secondary btn-sm" onClick=${cancelResolveDialog}>Cancel</button>
+              <button
+                class="btn-primary btn-sm"
+                disabled=${!String(resolveDialog.note || '').trim()}
+                onClick=${submitResolveDialog}
+              >Resolve</button>
+            </div>
+          </div>
         </div>
-      </div>
+      ` : null}
     </div>
+  `;
+}
 
-    ${resolveDialog ? html`
-      <div class="cl-modal-overlay" onClick=${cancelResolveDialog}>
-        <div
-          class="cl-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="cl-resolve-title"
-          onClick=${(e) => e.stopPropagation()}
-        >
-          <h3 id="cl-resolve-title" class="cl-modal-title">Resolve exception</h3>
-          <div class="cl-modal-body">
-            Explain how this was resolved. The note is written to the audit
-            log, visible to other admins, and becomes part of the record's
-            operational history.
-          </div>
-          <div class="field-row">
-            <label for="cl-resolve-note">Resolution note</label>
-            <textarea
-              id="cl-resolve-note"
-              autofocus
-              value=${resolveDialog.note}
-              onInput=${(e) => setResolveDialog((prev) => ({ ...prev, note: e.target.value }))}
-              placeholder="e.g. Vendor confirmed the corrected IBAN; resubmitted invoice."
-            ></textarea>
-          </div>
-          <div class="cl-modal-actions">
-            <button class="btn-secondary btn-sm" onClick=${cancelResolveDialog}>Cancel</button>
-            <button
-              class="btn-primary btn-sm"
-              disabled=${!String(resolveDialog.note || '').trim()}
-              onClick=${submitResolveDialog}
-            >Resolve</button>
-          </div>
-        </div>
-      </div>
-    ` : null}
+function SummaryCell({ label, value, sub, tone = 'neutral' }) {
+  return html`
+    <div class=${`cl-exceptions-summary-cell cl-exceptions-summary-cell-${tone}`}>
+      <div class="cl-exceptions-summary-label">${label}</div>
+      <div class="cl-exceptions-summary-value">${value}</div>
+      <div class="cl-exceptions-summary-sub">${sub}</div>
+    </div>
+  `;
+}
+
+function BreakdownPanel({ title, items, active, onSelect, tone = 'neutral' }) {
+  const visible = (items || []).filter((item) => Number(item.count || 0) > 0);
+  return html`
+    <div class="cl-exceptions-breakdown">
+      <h2>${title}</h2>
+      ${visible.length
+        ? html`
+            <ul class="cl-exceptions-breakdown-list">
+              ${visible.map((item) => html`
+                <li key=${item.key}>
+                  <button
+                    class=${`cl-exceptions-breakdown-row ${active === item.key ? 'is-active' : ''}`}
+                    onClick=${() => onSelect?.(item.key)}
+                  >
+                    <span class="cl-exceptions-breakdown-label">
+                      ${tone === 'severity' ? html`
+                        <span class=${`cl-exceptions-severity-dot cl-exceptions-severity-dot-${item.key}`} aria-hidden="true"></span>
+                      ` : null}
+                      ${item.label}
+                    </span>
+                    <span class="cl-exceptions-breakdown-count">${item.count}</span>
+                  </button>
+                </li>
+              `)}
+            </ul>
+          `
+        : html`<div class="cl-exceptions-breakdown-empty">No data.</div>`}
+    </div>
   `;
 }
