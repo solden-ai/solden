@@ -891,8 +891,8 @@
 
 /* ─── Activity page shell ─────────────────────────────────────────
  * The dedicated /activity route renders the same AgentActivityRibbon
- * shown on Home, with a thin page header above it (title + Refresh +
- * Open Accounts Payable). The ribbon component itself uses `cl-home-activity-*`
+ * shown on Home, with a thin page header and compact stream summary
+ * above it. The ribbon component itself uses `cl-home-activity-*`
  * classes (see top of this file). */
 
 .cl-activity-page {
@@ -927,4 +927,66 @@
 .cl-activity-page-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cl-activity-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cl-activity-summary-cell {
+  min-height: 86px;
+  padding: 14px 16px 12px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cl-activity-summary-cell-brand {
+  border-color: color-mix(in srgb, var(--cl-teal-500) 25%, transparent);
+}
+
+.cl-activity-summary-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+}
+
+.cl-activity-summary-value {
+  font-size: 24px;
+  line-height: 1.1;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-activity-summary-sub {
+  font-size: 12px;
+  color: var(--cl-ink-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 880px) {
+  .cl-activity-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .cl-activity-summary {
+    grid-template-columns: 1fr;
+  }
 }

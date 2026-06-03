@@ -5,15 +5,16 @@
  * ribbon shown on workspace Home, but taller (last ~50 events) and
  * with the ribbon as the page itself rather than one panel of many.
  *
- * Replaces the earlier secondary-banner + stat-card + audit-card
- * design. Stat tiles (pending approval, posted today, etc.) already
- * live on Home; this page is purely "what just happened".
+ * Replaces the earlier AP-shaped stream. This is the full cross-work
+ * log for the workspace: what moved, where it moved, and through
+ * which surface. Home owns the compact control-center stats; Activity
+ * owns the high-signal event trail.
  */
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 import { html } from '../../utils/htm.js';
 import { useAction } from '../route-helpers.js';
 import { AgentActivityRibbon } from '../../components/AgentActivityRibbon.js';
-import { accountsPayablePath } from '../../utils/record-route.js';
+import { formatRelative } from '../../utils/formatters.js';
 
 const ACTIVITY_LIMIT = 50;
 
@@ -48,6 +49,7 @@ export default function ActivityPage({ api, orgId, onRefresh, navigate }) {
 
   const items = (liveActivity?.items)
     || (Array.isArray(state.data?.items) ? state.data.items : []);
+  const summary = useMemo(() => summarizeActivity(items), [items]);
 
   const [refresh, refreshing] = useAction(onRefresh);
 
@@ -55,27 +57,119 @@ export default function ActivityPage({ api, orgId, onRefresh, navigate }) {
     <div class="cl-activity-page">
       <header class="cl-activity-page-head">
         <div>
-          <h1 class="cl-activity-page-title">Activity</h1>
-          <p class="cl-activity-page-sub">Every agent and operator action across your AP records.</p>
+          <h1 class="cl-activity-page-title">Activity stream</h1>
+          <p class="cl-activity-page-sub">Every agent and operator action across work types and connected surfaces.</p>
         </div>
         <div class="cl-activity-page-actions">
           <button class="btn-secondary btn-sm" onClick=${refresh} disabled=${refreshing}>
             ${refreshing ? 'Refreshing…' : 'Refresh'}
           </button>
-          <button class="btn-primary btn-sm" onClick=${() => navigate?.(accountsPayablePath())}>
-            Open Accounts Payable
+          <button class="btn-primary btn-sm" onClick=${() => navigate?.('/exceptions')}>
+            Review exceptions
           </button>
         </div>
       </header>
+
+      <section class="cl-activity-summary" aria-label="Activity stream summary">
+        <${ActivitySummaryCell}
+          label="Actions"
+          value=${items.length}
+          sub=${liveActivity ? 'Live stream connected' : `Last ${ACTIVITY_LIMIT} events`}
+          tone="brand"
+        />
+        <${ActivitySummaryCell}
+          label="Work types"
+          value=${summary.workTypeCount || '—'}
+          sub=${summary.workTypeLabel || 'No work types yet'}
+        />
+        <${ActivitySummaryCell}
+          label="Surfaces"
+          value=${summary.surfaceCount || '—'}
+          sub=${summary.surfaceLabel || 'No surfaces yet'}
+        />
+        <${ActivitySummaryCell}
+          label="Last action"
+          value=${summary.lastAction}
+          sub=${summary.lastSubject}
+        />
+      </section>
 
       <${AgentActivityRibbon}
         state=${state}
         items=${items}
         live=${!!liveActivity}
         navigate=${navigate}
+        title="Activity stream"
         emptyTitle="Nothing has happened yet."
-        emptyDescription="As Solden ingests invoices and your team makes decisions, every action lands here."
+        emptyDescription="As Solden watches inboxes, chat approvals, ERP events, and work-type records, every material action lands here."
       />
     </div>
   `;
+}
+
+function ActivitySummaryCell({ label, value, sub, tone = 'neutral' }) {
+  return html`
+    <div class=${`cl-activity-summary-cell cl-activity-summary-cell-${tone}`}>
+      <div class="cl-activity-summary-label">${label}</div>
+      <div class="cl-activity-summary-value">${value}</div>
+      <div class="cl-activity-summary-sub">${sub}</div>
+    </div>
+  `;
+}
+
+function summarizeActivity(items = []) {
+  const workTypes = new Set();
+  const surfaces = new Set();
+
+  for (const item of items) {
+    const workType = humanizeWorkType(item?.box_type);
+    if (workType) workTypes.add(workType);
+    const surface = humanizeSurface(item?.surface);
+    if (surface) surfaces.add(surface);
+  }
+
+  const first = items[0] || {};
+  return {
+    workTypeCount: workTypes.size,
+    workTypeLabel: summarizeSet(workTypes),
+    surfaceCount: surfaces.size,
+    surfaceLabel: summarizeSet(surfaces),
+    lastAction: first.ts ? formatRelative(first.ts) : '—',
+    lastSubject: first.subject || 'No actions recorded yet',
+  };
+}
+
+function summarizeSet(values) {
+  const list = Array.from(values);
+  if (list.length <= 2) return list.join(', ');
+  return `${list.slice(0, 2).join(', ')} +${list.length - 2}`;
+}
+
+function humanizeWorkType(value) {
+  const token = String(value || '').trim().toLowerCase();
+  if (!token) return '';
+  const labels = {
+    ap_item: 'Accounts Payable',
+    purchase_order: 'Procurement',
+    vendor_onboarding_session: 'Vendor Onboarding',
+    bank_match: 'Bank Reconciliation',
+  };
+  return labels[token] || token.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function humanizeSurface(value) {
+  const token = String(value || '').trim().toLowerCase();
+  if (!token || token === 'agent') return '';
+  const labels = {
+    gmail: 'Gmail',
+    slack: 'Slack',
+    teams: 'Teams',
+    netsuite: 'NetSuite',
+    sap: 'SAP',
+    xero: 'Xero',
+    quickbooks: 'QuickBooks',
+    sage_intacct: 'Sage Intacct',
+    sage_business_cloud: 'Sage Business Cloud',
+  };
+  return labels[token] || token.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
