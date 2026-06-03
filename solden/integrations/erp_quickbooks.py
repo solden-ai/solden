@@ -14,6 +14,7 @@ import httpx
 from solden.core.http_client import get_http_client
 
 from solden.core.money import money_to_float
+from solden.integrations.erp_context_links import build_solden_ap_record_url
 from solden.integrations.erp_sanitization import (
     _build_quickbooks_vendor_credit_lookup_query,
     _build_quickbooks_vendor_lookup_query,
@@ -24,6 +25,13 @@ from solden.integrations.erp_sanitization import (
 logger = logging.getLogger(__name__)
 
 _ERP_TIMEOUT = 30
+_QB_PRIVATE_NOTE_LIMIT = 4000
+
+
+def _append_quickbooks_private_note(existing: Optional[Any], addition: str) -> str:
+    parts = [str(existing or "").strip(), str(addition or "").strip()]
+    note = " | ".join(part for part in parts if part)
+    return note[:_QB_PRIVATE_NOTE_LIMIT]
 
 
 def _quickbooks_headers(connection) -> Dict[str, str]:
@@ -169,6 +177,8 @@ async def post_bill_to_quickbooks(
     field_mappings: Optional[Dict[str, str]] = None,
     custom_fields: Optional[Dict[str, str]] = None,
     idempotency_key: Optional[str] = None,
+    organization_id: Optional[str] = None,
+    ap_item_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Post vendor bill to QuickBooks Online.
@@ -192,6 +202,8 @@ async def post_bill_to_quickbooks(
     if not connection.access_token or not connection.realm_id:
         return {"status": "error", "erp": "quickbooks", "reason": "QuickBooks not properly configured"}
 
+    solden_record_url = build_solden_ap_record_url(ap_item_id)
+
     # Duplicate-post pre-check (mirrors NetSuite/SAP). Intuit's requestid
     # dedupe only spans posts that share the same key — a manual resume
     # after a timeout-that-actually-succeeded posts with a different key
@@ -214,7 +226,7 @@ async def post_bill_to_quickbooks(
             )
             existing_bill = None
         if existing_bill and existing_bill.get("bill_id"):
-            return {
+            result = {
                 "status": "already_posted",
                 "erp": "quickbooks",
                 "bill_id": existing_bill.get("bill_id"),
@@ -222,6 +234,9 @@ async def post_bill_to_quickbooks(
                 "amount": existing_bill.get("amount"),
                 "idempotency_key": idempotency_key,
             }
+            if solden_record_url:
+                result["solden_record_url"] = solden_record_url
+            return result
 
     expense_account = get_account_code("quickbooks", "expenses", gl_map)
 
@@ -234,6 +249,11 @@ async def post_bill_to_quickbooks(
         "PrivateNote": bill.description or f"Invoice from {bill.vendor_name}",
         "Line": [],
     }
+    if solden_record_url:
+        qb_bill["PrivateNote"] = _append_quickbooks_private_note(
+            qb_bill.get("PrivateNote"),
+            f"Solden: {solden_record_url}",
+        )
 
     # Currency — post in the invoice's native currency, not the QB
     # home currency. QB requires Multicurrency to be enabled on the
@@ -317,8 +337,10 @@ async def post_bill_to_quickbooks(
 
     # Set payment terms memo
     if getattr(bill, "payment_terms", None):
-        existing_note = qb_bill.get("PrivateNote", "")
-        qb_bill["PrivateNote"] = f"{existing_note} | Terms: {bill.payment_terms}".strip(" |")
+        qb_bill["PrivateNote"] = _append_quickbooks_private_note(
+            qb_bill.get("PrivateNote"),
+            f"Terms: {bill.payment_terms}",
+        )
 
     # Module 5 Pass C — stamp customer-configured custom fields onto
     # the Bill via QBO's CustomField array. QBO custom fields are
@@ -392,7 +414,7 @@ async def post_bill_to_quickbooks(
         # one column regardless of ERP and the audit chain stays
         # explicit.
         logger.info("Posted Bill to QuickBooks: %s", bill_id)
-        return {
+        result_payload = {
             "status": "success",
             "erp": "quickbooks",
             "bill_id": bill_id,
@@ -400,6 +422,9 @@ async def post_bill_to_quickbooks(
             "sync_token": bill_data.get("SyncToken"),
             "erp_journal_entry_id": (str(bill_id) if bill_id is not None else None),
         }
+        if solden_record_url:
+            result_payload["solden_record_url"] = solden_record_url
+        return result_payload
 
     except httpx.HTTPStatusError as e:
         status_code = e.response.status_code

@@ -397,6 +397,50 @@ async def test_quickbooks_stamps_custom_fields_as_array():
     assert all(entry["Type"] == "StringType" for entry in cf)
 
 
+@pytest.mark.asyncio
+async def test_quickbooks_private_note_includes_solden_workspace_link(monkeypatch):
+    """QBO has no public in-bill panel; keep configured custom fields
+    intact and stamp the universal Solden context in PrivateNote."""
+    from solden.integrations.erp_quickbooks import post_bill_to_quickbooks
+
+    monkeypatch.setenv("APP_BASE_URL", "https://workspace.soldenai.com")
+    bill = Bill(
+        vendor_id="V1", vendor_name="Acme", amount=500.0,
+        invoice_number="INV-1", invoice_date="2026-04-29",
+        description="Original memo", payment_terms="Net 30",
+    )
+    connection = SimpleNamespace(
+        access_token="x", realm_id="realm-1", refresh_token=None,
+    )
+    captured: dict = {}
+
+    class _Resp:
+        status_code = 200
+        def json(self): return {"Bill": {"Id": "100"}}
+        def raise_for_status(self): pass
+
+    async def _fake_post(url, json=None, **kwargs):
+        captured["body"] = json
+        return _Resp()
+
+    fake_client = MagicMock()
+    fake_client.post = AsyncMock(side_effect=_fake_post)
+
+    with patch("solden.integrations.erp_quickbooks.get_http_client", return_value=fake_client):
+        result = await post_bill_to_quickbooks(
+            connection, bill,
+            ap_item_id="AP 123",
+        )
+
+    expected_url = "https://workspace.soldenai.com/accounts-payable/AP%20123"
+    note = captured["body"]["PrivateNote"]
+    assert "Original memo" in note
+    assert f"Solden: {expected_url}" in note
+    assert "Terms: Net 30" in note
+    assert len(note) <= 4000
+    assert result["solden_record_url"] == expected_url
+
+
 # ---------------------------------------------------------------------------
 # Xero poster
 # ---------------------------------------------------------------------------
@@ -482,7 +526,50 @@ async def test_xero_appends_workflow_marker_to_reference():
         )
     ref = captured["body"]["Invoices"][0]["Reference"]
     assert "PO-100" in ref
-    assert "clearledgr:" in ref
+    assert "solden:" in ref
+    assert "clearledgr:" not in ref
     assert "state=approved" in ref
     assert "box_id=ap-xero-1" in ref
     assert len(ref) <= 255
+
+
+@pytest.mark.asyncio
+async def test_xero_sets_transaction_url_to_solden_workspace_link(monkeypatch):
+    """Xero exposes transaction Url as the deep-link bridge back to
+    the Solden operational memory record."""
+    from solden.integrations.erp_xero import post_bill_to_xero
+
+    monkeypatch.setenv("APP_BASE_URL", "https://workspace.soldenai.com")
+    bill = Bill(
+        vendor_id="V1", vendor_name="Acme", amount=500.0,
+        invoice_number="INV-1", invoice_date="2026-04-29",
+    )
+    connection = SimpleNamespace(access_token="x", tenant_id="t-1", refresh_token=None)
+    captured: dict = {}
+
+    class _Resp:
+        status_code = 200
+        def json(self): return {"Invoices": [{"InvoiceID": "X-1", "InvoiceNumber": "INV-1"}]}
+        def raise_for_status(self): pass
+
+    class _JournalResp:
+        status_code = 200
+        def json(self): return {"Journals": []}
+
+    async def _fake_post(url, json=None, **kwargs):
+        captured["body"] = json
+        return _Resp()
+
+    fake_client = MagicMock()
+    fake_client.post = AsyncMock(side_effect=_fake_post)
+    fake_client.get = AsyncMock(return_value=_JournalResp())
+
+    with patch("solden.integrations.erp_xero.get_http_client", return_value=fake_client):
+        result = await post_bill_to_xero(
+            connection, bill,
+            ap_item_id="AP Xero/1",
+        )
+
+    expected_url = "https://workspace.soldenai.com/accounts-payable/AP%20Xero%2F1"
+    assert captured["body"]["Invoices"][0]["Url"] == expected_url
+    assert result["solden_record_url"] == expected_url

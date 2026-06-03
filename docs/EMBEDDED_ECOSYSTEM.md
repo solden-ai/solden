@@ -45,6 +45,13 @@ Primary responsibilities:
 2. return ERP references and posting outcomes
 3. remain source of truth for posted financial records
 
+Implementation by ERP:
+
+1. NetSuite: SuiteApp panel renders Solden operational memory inside the ERP record context.
+2. SAP: Fiori extension renders Solden operational memory inside the ERP record context.
+3. Xero: public APIs do not provide an equivalent in-record embedded panel, so posted ACCPAY invoices carry a `Url` back to the Solden AP record plus `solden:` workflow markers in `Reference` when tenant field mappings request workflow context.
+4. QuickBooks Online: public APIs do not provide an equivalent in-bill embedded panel, so posted Bills carry the Solden AP record link in `PrivateNote` while configured QBO `CustomField` `DefinitionId`s remain tenant-controlled.
+
 ### 4. Admin/Ops surfaces (configuration context)
 
 Primary responsibilities:

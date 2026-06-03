@@ -14,6 +14,7 @@ import httpx
 from solden.core.http_client import get_http_client
 
 from solden.core.money import money_to_float
+from solden.integrations.erp_context_links import build_solden_ap_record_url
 from solden.integrations.erp_sanitization import (
     _build_xero_vendor_lookup_where,
     _escape_query_literal,
@@ -174,6 +175,8 @@ async def post_bill_to_xero(
     field_mappings: Optional[Dict[str, str]] = None,
     custom_fields: Optional[Dict[str, str]] = None,
     idempotency_key: Optional[str] = None,
+    organization_id: Optional[str] = None,
+    ap_item_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Post vendor bill to Xero.
@@ -199,6 +202,7 @@ async def post_bill_to_xero(
     if not connection.access_token or not connection.tenant_id:
         return {"status": "error", "erp": "xero", "reason": "Xero not properly configured"}
 
+    solden_record_url = build_solden_ap_record_url(ap_item_id)
     expense_account = get_account_code("xero", "expenses", gl_map)
 
     # Build Xero Invoice (ACCPAY type = Bill)
@@ -212,6 +216,8 @@ async def post_bill_to_xero(
         "Status": "AUTHORISED",  # Ready for payment
         "LineItems": [],
     }
+    if solden_record_url:
+        xero_bill["Url"] = solden_record_url
 
     # Currency — post in the invoice's native currency. Xero requires
     # the currency to be set up on the organisation; if it isn't, the
@@ -332,8 +338,8 @@ async def post_bill_to_xero(
     # custom-field API on Invoices; the operational compromise is to
     # append the workflow markers to the Reference field, which is
     # 255 chars and surfaces in the Xero UI alongside the bill. Format
-    # is "<vendor po> | clearledgr:<state>:<box_id>" so the existing
-    # po reference (set above) is preserved.
+    # is "<vendor po> | solden:<state>:<box_id>" so the existing po
+    # reference (set above) is preserved.
     if custom_fields:
         marker_parts = []
         for erp_field_id, value in custom_fields.items():
@@ -341,7 +347,7 @@ async def post_bill_to_xero(
                 marker_parts.append(f"{erp_field_id}={value}")
         if marker_parts:
             existing_ref = str(xero_bill.get("Reference") or "").strip()
-            marker = " | clearledgr:" + ";".join(marker_parts)
+            marker = " | solden:" + ";".join(marker_parts)
             new_ref = (existing_ref + marker) if existing_ref else marker.lstrip(" | ")
             # Cap at Xero's 255-char Reference limit so we never bounce
             # the whole bill on a payload-size validation error.
@@ -405,7 +411,7 @@ async def post_bill_to_xero(
                     invoice_id, exc,
                 )
 
-            return {
+            result_payload = {
                 "status": "success",
                 "erp": "xero",
                 "bill_id": invoice_id,
@@ -414,6 +420,9 @@ async def post_bill_to_xero(
                     str(journal_id) if journal_id else None
                 ),
             }
+            if solden_record_url:
+                result_payload["solden_record_url"] = solden_record_url
+            return result_payload
 
         return {"status": "error", "erp": "xero", "reason": "no_invoice_returned"}
 

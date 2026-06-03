@@ -1212,6 +1212,7 @@ async def post_bill(
             connection, bill, gl_map=gl_map,
             field_mappings=field_mappings, custom_fields=custom_fields,
             idempotency_key=idempotency_key,
+            organization_id=organization_id, ap_item_id=ap_item_id,
         )
         if isinstance(result, dict) and result.get("needs_reauth"):
             new_token = await refresh_with_dedupe(
@@ -1224,12 +1225,14 @@ async def post_bill(
                     connection, bill, gl_map=gl_map,
                     field_mappings=field_mappings, custom_fields=custom_fields,
                     idempotency_key=idempotency_key,
+                    organization_id=organization_id, ap_item_id=ap_item_id,
                 )
     elif connection.type == "xero":
         result = await post_bill_to_xero(
             connection, bill, gl_map=gl_map,
             field_mappings=field_mappings, custom_fields=custom_fields,
             idempotency_key=idempotency_key,
+            organization_id=organization_id, ap_item_id=ap_item_id,
         )
         if isinstance(result, dict) and result.get("needs_reauth"):
             new_token = await refresh_with_dedupe(
@@ -1242,6 +1245,7 @@ async def post_bill(
                     connection, bill, gl_map=gl_map,
                     field_mappings=field_mappings, custom_fields=custom_fields,
                     idempotency_key=idempotency_key,
+                    organization_id=organization_id, ap_item_id=ap_item_id,
                 )
     elif connection.type == "netsuite":
         result = await post_bill_to_netsuite(
