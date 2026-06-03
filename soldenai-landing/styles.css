@@ -3403,7 +3403,7 @@ body:not(.theme-dark) .footer-cta {
 
 .ix-logos div {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(9, minmax(0, 1fr));
   border: 1px solid var(--ix-line-2);
   border-radius: 10px;
   background: var(--ix-panel);
