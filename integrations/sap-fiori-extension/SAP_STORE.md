@@ -155,7 +155,7 @@ Once the extension is on SAP Store, customers install via:
 3. After install, the customer admin opens BTP Cockpit:
    - **Service Marketplace → Solden → Configure**.
    - Set the Destination `clearledgr-api` pointing at
-     `https://api.solden.com`.
+     `https://api.soldenai.com`.
    - Assign role collections `Solden Box Panel — Reader` /
      `Approver` to their AP team.
 4. Solden's CSM coordinates the per-tenant XSUAA config

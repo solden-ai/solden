@@ -14,12 +14,12 @@
   <DisplayName DefaultValue="Solden"/>
   <Description DefaultValue="Finance execution agents embedded in Outlook — AP workflows, vendor intelligence, and approvals right inside your inbox."/>
 
-  <IconUrl DefaultValue="https://app.soldenai.com/outlook/assets/icon-64.png"/>
-  <HighResolutionIconUrl DefaultValue="https://app.soldenai.com/outlook/assets/icon-128.png"/>
+  <IconUrl DefaultValue="https://workspace.soldenai.com/outlook/assets/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://workspace.soldenai.com/outlook/assets/icon-128.png"/>
   <SupportUrl DefaultValue="https://soldenai.com/support"/>
 
   <AppDomains>
-    <AppDomain>https://app.soldenai.com</AppDomain>
+    <AppDomain>https://workspace.soldenai.com</AppDomain>
     <AppDomain>https://api.soldenai.com</AppDomain>
     <AppDomain>http://localhost:8010</AppDomain>
   </AppDomains>
@@ -37,7 +37,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://app.soldenai.com/outlook/taskpane.html"/>
+        <SourceLocation DefaultValue="https://workspace.soldenai.com/outlook/taskpane.html"/>
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -95,13 +95,13 @@
 
       <Resources>
         <bt:Images>
-          <bt:Image id="icon16" DefaultValue="https://app.soldenai.com/outlook/assets/icon-16.png"/>
-          <bt:Image id="icon32" DefaultValue="https://app.soldenai.com/outlook/assets/icon-32.png"/>
-          <bt:Image id="icon80" DefaultValue="https://app.soldenai.com/outlook/assets/icon-80.png"/>
+          <bt:Image id="icon16" DefaultValue="https://workspace.soldenai.com/outlook/assets/icon-16.png"/>
+          <bt:Image id="icon32" DefaultValue="https://workspace.soldenai.com/outlook/assets/icon-32.png"/>
+          <bt:Image id="icon80" DefaultValue="https://workspace.soldenai.com/outlook/assets/icon-80.png"/>
         </bt:Images>
         <bt:Urls>
-          <bt:Url id="taskpaneUrl" DefaultValue="https://app.soldenai.com/outlook/taskpane.html"/>
-          <bt:Url id="functionFile" DefaultValue="https://app.soldenai.com/outlook/functions.html"/>
+          <bt:Url id="taskpaneUrl" DefaultValue="https://workspace.soldenai.com/outlook/taskpane.html"/>
+          <bt:Url id="functionFile" DefaultValue="https://workspace.soldenai.com/outlook/functions.html"/>
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="groupLabel" DefaultValue="Solden"/>

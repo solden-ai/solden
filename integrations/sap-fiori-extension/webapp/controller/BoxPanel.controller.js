@@ -284,7 +284,7 @@ sap.ui.define([
         onOpenInSoldenPress: function () {
             const sApItemId = this.getOwnerComponent().getModel("box").getProperty("/ap_item_id");
             if (!sApItemId) return;
-            window.open("https://app.soldenai.com/ap-items/" + encodeURIComponent(sApItemId), "_blank", "noopener");
+            window.open("https://workspace.soldenai.com/accounts-payable/" + encodeURIComponent(sApItemId), "_blank", "noopener");
         },
 
         /* ─── Helpers ───────────────────────────────────────────────── */

@@ -3,7 +3,8 @@
 Two-way bridge between NetSuite and Solden's coordination layer:
 
 * **Read direction** — embeds a Solden panel inside the **Vendor Bill**
-  record showing Box state, timeline, exceptions, and approval actions
+  record showing Box state, owner, waiting reason, next step, timeline,
+  exceptions, and approval actions
   for whatever AP item is linked to that bill (whether it originated
   via Gmail and was posted to NetSuite, or originated in NetSuite and
   was tracked back into Solden — see write direction).
@@ -47,11 +48,11 @@ Bill (record view)  │  │ Standard │  │ Solden (subtab)│  │
 
 | Phase | What it does | Done? | Hours |
 |-------|--------------|-------|-------|
-| 1 (read) | UE script injects "Solden" subtab on Vendor Bill, iframe loads Suitelet | ✅ scaffolded | 2.5 |
-| 2 (read) | Suitelet serves panel HTML/JS/CSS, panel calls Solden API w/ dev token, renders Box state | ✅ scaffolded | 2.5 |
-| 3 (read) | Real per-tenant HMAC JWT auth (Suitelet mints, backend verifies via `webhook_secret` in `erp_connections.credentials`) | ✅ scaffolded | 4 |
-| 1 (write) | UE `afterSubmit` fires signed webhook on bill create/update/paid; backend dispatcher creates/advances/closes Box | ✅ scaffolded | 3 |
-| 2 (write) | Slack approval routing for ERP-native bills with payment holds; remove the hold via NetSuite REST API on approval | ✅ scaffolded | 3 |
+| 1 (read) | UE script injects "Solden" subtab on Vendor Bill, iframe loads Suitelet | ✅ shipped | 2.5 |
+| 2 (read) | Suitelet serves panel HTML/JS/CSS, panel calls Solden API, renders Box state and operational memory | ✅ shipped | 2.5 |
+| 3 (read) | Real per-tenant HMAC JWT auth (Suitelet mints, backend verifies via `webhook_secret` in `erp_connections.credentials`) | ✅ shipped | 4 |
+| 1 (write) | UE `afterSubmit` fires signed webhook on bill create/update/paid; backend IntakeAdapter creates/advances/closes Box | ✅ shipped | 3 |
+| 2 (write) | Slack approval routing for ERP-native bills with payment holds; remove the hold via NetSuite REST API on approval | ✅ shipped | 3 |
 | Audit-trail compose | Panel actions dispatch via dedicated NetSuite endpoints (`/extension/ap-items/by-netsuite-bill/{id}/{approve,reject,request-info}`) so every state_transition audit row records `ui_surface=erp_native_netsuite` (Phase 1 Gap 4 SoR contract) | ✅ shipped | 1 |
 | 4 | SuiteApp marketplace listing | runbook ready | see below |
 
@@ -83,7 +84,7 @@ integrations/netsuite-suiteapp/
     │   └── ui/
     │       ├── panel.html                      # iframe document (templated by Suitelet)
     │       ├── panel.js                        # vanilla-JS panel controller
-    │       └── panel.css                       # mint #00D67E + navy #0A1628 styling
+    │       └── panel.css                       # Solden navy + teal styling
     └── Objects/
         ├── customscript_cl_ue_panel.xml        # UE script + deployment metadata
         ├── customscript_cl_sl_panel.xml        # Suitelet + deployment metadata
@@ -131,27 +132,18 @@ Then in NetSuite:
 2. If no AP item is linked to that bill (the bill wasn't posted by Solden), the panel renders the empty state: *"This Bill was not processed through Solden."*
 3. To get a real linked record: post a bill from Solden to your NetSuite sandbox via the existing `POST /extension/post-to-erp` flow. The `erp_reference` field on the resulting `ap_items` row is the NetSuite bill internal id — that's the linkage.
 
-### Phase 2 (dev) auth
-
-The Suitelet mints `DEMO_PHASE_2` as the Bearer token. The Solden backend accepts it **only** if the env var `NETSUITE_PANEL_DEV_TOKEN=DEMO_PHASE_2` is set on the API service. To enable in dev:
-
-```bash
-railway variables --service api --set "NETSUITE_PANEL_DEV_TOKEN=DEMO_PHASE_2"
-```
-
-**Do not set this in production.** It bypasses real auth.
-
-### Phase 3 (production) auth
+### Panel auth
 
 For each tenant:
 1. Generate a strong shared secret (e.g. `openssl rand -base64 48`).
-2. Add it to the tenant's NetSuite custom record (one record per account):
+2. Store that value in NetSuite API Secrets, then add the Secret reference to the tenant's NetSuite custom record (one record per account):
    - Customization → Lists, Records & Fields → Record Types → Solden Settings → New
    - Field `custrecord_cl_api_base`: `https://api.soldenai.com`
-   - Field `custrecord_cl_bundle_secret`: paste the secret
+   - Field `custrecord_cl_app_base`: `https://workspace.soldenai.com`
+   - Field `custrecord_cl_bundle_secret`: paste the NetSuite API Secret script ID or SecretKey GUID that points to the shared HMAC secret
    - Field `custrecord_cl_org_id`: paste the tenant's Solden org_id (used in outbound webhook URL)
-3. Add the same secret to Solden's `erp_connections.credentials.webhook_secret` for that org. The same field is reused for both the panel JWT (read direction) and the outbound webhook signature (write direction).
-4. Update `sl_clearledgr_panel.js` to read the secret from `customrecord_cl_settings` and HMAC-sign the JWT (the scaffold currently uses the dev token — see the comment block at the top of that file).
+3. Add the actual shared secret value to Solden's `erp_connections.credentials.webhook_secret` for that org. The same secret value is reused for both the panel JWT (read direction) and the outbound webhook signature (write direction).
+4. Open a Vendor Bill. `sl_clearledgr_panel.js` reads the settings record and HMAC-signs a 15-minute JWT for that bill/account. The backend verifies the JWT signature, expiry, account ID, and bill ID on every panel request.
 
 ---
 
@@ -174,7 +166,7 @@ For each tenant:
 
 ### Write direction
 - **Existing endpoint reused:** `POST /erp/webhooks/netsuite/{org_id}` in [`solden/api/erp_webhooks.py`](../../solden/api/erp_webhooks.py). Verifies HMAC signature against `erp_connections.credentials.webhook_secret`, records audit, then calls the dispatcher.
-- **New dispatcher:** [`solden/services/erp_webhook_dispatch.py`](../../solden/services/erp_webhook_dispatch.py) — routes `vendorbill.create / .update / .paid / .delete` to handlers that create or advance the AP item Box. Idempotent on `erp_reference == ns_internal_id`.
+- **Intake dispatcher:** [`solden/services/intake_adapter.py`](../../solden/services/intake_adapter.py) + [`solden/integrations/erp_netsuite_intake_adapter.py`](../../solden/integrations/erp_netsuite_intake_adapter.py) — routes `vendorbill.create / .update / .paid / .delete` to the shared AP pipeline and state-update path. Idempotent on `erp_reference == ns_internal_id`.
 - **State machine bypass:** ERP-native bills enter the Box state machine at `posted_to_erp` (the bill is already in the ERP — Solden is tracking, not creating) or `needs_approval` (if NetSuite has a payment hold). `closed` on payment events.
 - **Slack approval routing:** [`solden/services/erp_native_approval.py`](../../solden/services/erp_native_approval.py). When a bill enters at `needs_approval`, posts a Slack card with Approve / Reject & void buttons.
   - **Approve** calls NetSuite REST API to clear `paymentHold`, then walks the Box `approved → ready_to_post → posted_to_erp`.

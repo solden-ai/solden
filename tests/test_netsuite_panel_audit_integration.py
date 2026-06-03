@@ -9,7 +9,7 @@ endpoints. Each endpoint dispatches the matching runtime intent
 "erp_native_netsuite"`` on the resulting state_transition audit row.
 
 These tests prove that compose end-to-end through the FastAPI layer:
-JWT-equivalent dev-token auth → org resolution via account_id → AP
+Suitelet-equivalent HMAC JWT auth → org resolution via account_id → AP
 item lookup by erp_reference → runtime dispatch → workflow state
 transition → audit row with the expected decision_context shape.
 
@@ -24,9 +24,11 @@ across every render-target surface.
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import json
-import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 import pytest
@@ -37,9 +39,9 @@ from solden.api.netsuite_panel import router as netsuite_panel_router
 from solden.core.database import get_db
 
 
-_TEST_DEV_TOKEN = "test-netsuite-panel-dev-token-9f3c8b"
 _TEST_ACCOUNT_ID = "TSTACCT123"
 _TEST_ORG_ID = "ns-panel-test-org"
+_TEST_PANEL_SECRET = "test-netsuite-panel-secret-9f3c8b"
 
 
 @pytest.fixture()
@@ -50,22 +52,55 @@ def db():
     inst.save_erp_connection(
         organization_id=_TEST_ORG_ID,
         erp_type="netsuite",
-        credentials={"account_id": _TEST_ACCOUNT_ID, "webhook_secret": "unused-in-dev-token-path"},
+        credentials={"account_id": _TEST_ACCOUNT_ID, "webhook_secret": _TEST_PANEL_SECRET},
     )
     return inst
 
 
 @pytest.fixture()
-def panel_client(monkeypatch):
+def panel_client():
     """FastAPI TestClient with the NetSuite panel router mounted and
-    the dev-token auth path enabled. Avoids the JWT-signing dance —
-    the dev token is exactly the contract that ships in Phase 1-2 and
-    is the simplest way to exercise the dispatch path end-to-end.
+    production-equivalent JWT auth. Tests mint the same HS256 shape the
+    Suitelet embeds in the panel.
     """
-    monkeypatch.setenv("NETSUITE_PANEL_DEV_TOKEN", _TEST_DEV_TOKEN)
     app = FastAPI()
     app.include_router(netsuite_panel_router)
     return TestClient(app)
+
+
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+
+
+def _panel_token(
+    *,
+    ns_internal_id: str,
+    account_id: str = _TEST_ACCOUNT_ID,
+    user_email: str = "netsuite-controller@example.com",
+) -> str:
+    now = datetime.now(timezone.utc)
+    header = {"alg": "HS256", "typ": "JWT"}
+    payload = {
+        "iss": "solden-netsuite-suiteapp",
+        "aud": "solden-netsuite-panel",
+        "accountId": account_id,
+        "billId": ns_internal_id,
+        "userEmail": user_email,
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(minutes=15)).timestamp()),
+    }
+    signing_input = ".".join(
+        (
+            _b64url(json.dumps(header, separators=(",", ":")).encode("utf-8")),
+            _b64url(json.dumps(payload, separators=(",", ":")).encode("utf-8")),
+        )
+    )
+    signature = hmac.new(
+        _TEST_PANEL_SECRET.encode("utf-8"),
+        signing_input.encode("ascii"),
+        hashlib.sha256,
+    ).digest()
+    return signing_input + "." + _b64url(signature)
 
 
 def _seed_ap_item_at_needs_approval(
@@ -177,7 +212,7 @@ def test_netsuite_panel_approve_lands_ui_surface_erp_native_netsuite(
         f"/extension/ap-items/by-netsuite-bill/{ns_internal_id}/approve",
         params={"account_id": _TEST_ACCOUNT_ID},
         json={"reason": "approved_in_netsuite_vendor_bill_panel"},
-        headers={"Authorization": f"Bearer {_TEST_DEV_TOKEN}"},
+        headers={"Authorization": f"Bearer {_panel_token(ns_internal_id=ns_internal_id)}"},
     )
     assert response.status_code == 200, response.text
     body = response.json()
@@ -200,9 +235,8 @@ def test_netsuite_panel_approve_lands_ui_surface_erp_native_netsuite(
     decision_context = _payload_decision_context(netsuite_transitions[0])
     assert decision_context.get("ui_surface") == "erp_native_netsuite"
     assert decision_context.get("actor_type") == "user"
-    # Dev-token auth resolves to a synthetic ``netsuite-panel-dev@<account>``
-    # email so the audit row records *some* identity rather than
-    # falling back to "system".
+    # JWT auth carries the NetSuite user's email so the audit row records
+    # the panel actor rather than falling back to "system".
     actor_id = decision_context.get("actor_id") or ""
     assert "netsuite" in actor_id.lower(), f"unexpected actor_id={actor_id!r}"
     # Auto-built fields from the AP item's metadata.
@@ -227,7 +261,7 @@ def test_netsuite_panel_reject_lands_ui_surface_erp_native_netsuite(
         f"/extension/ap-items/by-netsuite-bill/{ns_internal_id}/reject",
         params={"account_id": _TEST_ACCOUNT_ID},
         json={"reason": "duplicate_supplier_invoice"},
-        headers={"Authorization": f"Bearer {_TEST_DEV_TOKEN}"},
+        headers={"Authorization": f"Bearer {_panel_token(ns_internal_id=ns_internal_id)}"},
     )
     assert response.status_code == 200, response.text
 
@@ -257,7 +291,7 @@ def test_netsuite_panel_request_info_lands_ui_surface_erp_native_netsuite(
         f"/extension/ap-items/by-netsuite-bill/{ns_internal_id}/request-info",
         params={"account_id": _TEST_ACCOUNT_ID},
         json={"reason": "missing_purchase_order_match"},
-        headers={"Authorization": f"Bearer {_TEST_DEV_TOKEN}"},
+        headers={"Authorization": f"Bearer {_panel_token(ns_internal_id=ns_internal_id)}"},
     )
     assert response.status_code == 200, response.text
 
@@ -277,9 +311,8 @@ def test_netsuite_panel_action_rejects_unknown_account_id(
     postgres_test_db, db, panel_client
 ):
     """Authentication boundary: an account_id that doesn't map to any
-    active NetSuite ERP connection is rejected with 401 even if the
-    dev token is correct. Without this, a leaked dev token would let
-    a caller approve bills against any tenant.
+    active NetSuite ERP connection is rejected with 401 even if the JWT
+    is otherwise correctly signed.
     """
     ap_item_id = "AP-NSPANEL-AUTH"
     ns_internal_id = "9004"
@@ -291,7 +324,7 @@ def test_netsuite_panel_action_rejects_unknown_account_id(
         f"/extension/ap-items/by-netsuite-bill/{ns_internal_id}/approve",
         params={"account_id": "WRONG_ACCOUNT_ID"},
         json={},
-        headers={"Authorization": f"Bearer {_TEST_DEV_TOKEN}"},
+        headers={"Authorization": f"Bearer {_panel_token(ns_internal_id=ns_internal_id)}"},
     )
     assert response.status_code == 401, response.text
 

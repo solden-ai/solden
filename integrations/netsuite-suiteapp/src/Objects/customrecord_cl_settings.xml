@@ -8,7 +8,7 @@
     <allownumberingoverride>F</allownumberingoverride>
     <allowquickadd>F</allowquickadd>
     <allowquicksearch>F</allowquicksearch>
-    <description>Single-row tenant config for the Solden SuiteApp: API base URL + bundle secret used to mint short-lived JWTs for the panel iframe.</description>
+    <description>Single-row tenant config for the Solden SuiteApp: API base URL + workspace base URL + NetSuite API Secret reference used to mint short-lived JWTs for the panel iframe.</description>
     <enabledle>F</enabledle>
     <enableemailmerge>F</enableemailmerge>
     <enablekeywords>F</enablekeywords>
@@ -43,13 +43,22 @@
             <maxlength>255</maxlength>
             <description>Base URL for Solden API. Defaults to api.soldenai.com; override only for staging or self-hosted deployments.</description>
         </customrecordcustomfield>
-        <customrecordcustomfield scriptid="custrecord_cl_bundle_secret">
-            <fieldtype>PASSWORD</fieldtype>
-            <label>Solden Bundle Secret</label>
+        <customrecordcustomfield scriptid="custrecord_cl_app_base">
+            <fieldtype>FREEFORMTEXT</fieldtype>
+            <label>Solden Workspace Base URL</label>
+            <defaultvalue>https://workspace.soldenai.com</defaultvalue>
             <displaytype>NORMAL</displaytype>
             <ismandatory>T</ismandatory>
             <maxlength>255</maxlength>
-            <description>Shared HMAC secret provisioned during onboarding. Used to sign panel JWTs (read direction) AND outbound webhooks (write direction). Treat as sensitive — Solden stores the same value as `webhook_secret` in `erp_connections.credentials` for that tenant.</description>
+            <description>Base URL for the Solden workspace deep link opened from the NetSuite panel.</description>
+        </customrecordcustomfield>
+        <customrecordcustomfield scriptid="custrecord_cl_bundle_secret">
+            <fieldtype>FREEFORMTEXT</fieldtype>
+            <label>Solden Bundle Secret Reference</label>
+            <displaytype>NORMAL</displaytype>
+            <ismandatory>T</ismandatory>
+            <maxlength>255</maxlength>
+            <description>NetSuite API Secret script ID or SecretKey GUID for the shared HMAC secret provisioned during onboarding. The secret value is stored in NetSuite API Secrets and in Solden's encrypted `erp_connections.credentials.webhook_secret` for verification.</description>
         </customrecordcustomfield>
         <customrecordcustomfield scriptid="custrecord_cl_org_id">
             <fieldtype>FREEFORMTEXT</fieldtype>

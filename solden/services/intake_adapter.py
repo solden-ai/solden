@@ -1,12 +1,11 @@
 """IntakeAdapter protocol — uniform contract for every bill-intake channel.
 
-Architectural gap #1 from the post-Phase-A-E review. Today
-``erp_webhook_dispatch.py`` (NetSuite) and ``sap_webhook_dispatch.py``
-(SAP S/4HANA) carry parallel-but-divergent implementations of the
-same idea: receive a webhook, verify the signature, parse it, enrich
-it, build :class:`InvoiceData`, hand off to the coordination
+Architectural gap #1 from the post-Phase-A-E review. ERP-specific
+webhook handlers used to carry parallel-but-divergent implementations
+of the same idea: receive a webhook, verify the signature, parse it,
+enrich it, build :class:`InvoiceData`, hand off to the coordination
 pipeline. Same shape, different code per channel — and the same
-divergence will multiply with every future channel (Outlook, vendor
+divergence would multiply with every future channel (Outlook, vendor
 portals, EDI gateways, scanned upload, manual entry, additional
 ERPs).
 

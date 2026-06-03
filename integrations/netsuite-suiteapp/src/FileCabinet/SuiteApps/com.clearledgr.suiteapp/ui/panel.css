@@ -1,6 +1,22 @@
 /* Solden panel — embedded inside NetSuite Vendor Bill UI.
-   Brand: mint #00D67E, navy #0A1628. Typography sized to NetSuite's
+   Typography sized to NetSuite's
    default 13px so we visually nest in their chrome rather than stand out. */
+
+:root {
+    --cl-navy: #0A1F44;
+    --cl-teal-500: #18BFB0;
+    --cl-teal-600: #12B3A6;
+    --cl-surface: #FFFFFF;
+    --cl-bg: #FAFAF8;
+    --cl-ink: #0F172A;
+    --cl-ink-secondary: #475569;
+    --cl-ink-muted: #94A3B8;
+    --cl-border: #E2E8F0;
+    --cl-border-hover: #CBD5E1;
+    --cl-success: #16A34A;
+    --cl-warning: #CA8A04;
+    --cl-error: #DC2626;
+}
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; background: transparent; }
@@ -8,7 +24,7 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: 13px;
     line-height: 1.45;
-    color: #0A1628;
+    color: var(--cl-ink);
 }
 
 #cl-root {
@@ -21,7 +37,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid #E5E7EB;
+    border-bottom: 1px solid var(--cl-border);
     padding-bottom: 12px;
     margin-bottom: 16px;
 }
@@ -30,14 +46,14 @@ body {
     display: inline-block;
     width: 18px;
     height: 18px;
-    background: #00D67E;
+    background: var(--cl-teal-500);
     border-radius: 4px;
 }
 .cl-wordmark {
     font-weight: 600;
     font-size: 13px;
     letter-spacing: 0.01em;
-    color: #0A1628;
+    color: var(--cl-navy);
 }
 
 .cl-badge {
@@ -48,18 +64,18 @@ body {
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }
-.cl-badge-loading { background: #F3F4F6; color: #6B7280; }
+.cl-badge-loading { background: #F8FAFC; color: var(--cl-ink-secondary); }
 .cl-badge-state-received,
 .cl-badge-state-validated,
-.cl-badge-state-needs_approval { background: #FEF3C7; color: #92400E; }
+.cl-badge-state-needs_approval { background: #FEFCE8; color: var(--cl-warning); }
 .cl-badge-state-approved,
 .cl-badge-state-ready_to_post,
 .cl-badge-state-posted_to_erp,
-.cl-badge-state-closed { background: #DCFCE7; color: #166534; }
+.cl-badge-state-closed { background: #F0FDF4; color: var(--cl-success); }
 .cl-badge-state-needs_info,
-.cl-badge-state-failed_post { background: #FEE2E2; color: #991B1B; }
+.cl-badge-state-failed_post { background: #FEF2F2; color: var(--cl-error); }
 .cl-badge-state-rejected,
-.cl-badge-state-reversed { background: #E5E7EB; color: #374151; }
+.cl-badge-state-reversed { background: #F8FAFC; color: var(--cl-ink-secondary); }
 
 .cl-section { margin-bottom: 18px; }
 .cl-hidden { display: none; }
@@ -69,7 +85,7 @@ body {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #6B7280;
+    color: var(--cl-ink-secondary);
     margin: 0 0 8px;
 }
 
@@ -84,25 +100,52 @@ body {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #6B7280;
+    color: var(--cl-ink-secondary);
     font-weight: 500;
 }
-.cl-grid dd { margin: 0; font-weight: 500; color: #0A1628; }
+.cl-grid dd { margin: 0; font-weight: 500; color: var(--cl-ink); }
+
+.cl-memory-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 18px;
+    margin: 0;
+    padding: 12px;
+    border: 1px solid var(--cl-border);
+    border-radius: 8px;
+    background: var(--cl-bg);
+}
+.cl-memory-grid > div { min-width: 0; }
+.cl-memory-grid dt {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--cl-ink-secondary);
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+.cl-memory-grid dd {
+    margin: 0;
+    color: var(--cl-ink);
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+.cl-memory-wide { grid-column: 1 / -1; }
 
 .cl-list { list-style: none; padding: 0; margin: 0; }
 .cl-list li {
     padding: 8px 12px;
     background: #FEF2F2;
-    border-left: 3px solid #DC2626;
+    border-left: 3px solid var(--cl-error);
     border-radius: 4px;
     margin-bottom: 6px;
-    color: #991B1B;
+    color: var(--cl-error);
     font-size: 12px;
 }
 .cl-list li.cl-warn {
-    background: #FEF3C7;
-    border-left-color: #D97706;
-    color: #92400E;
+    background: #FEFCE8;
+    border-left-color: var(--cl-warning);
+    color: var(--cl-warning);
 }
 
 .cl-timeline { list-style: none; padding: 0; margin: 0; }
@@ -111,17 +154,17 @@ body {
     gap: 10px;
     padding: 6px 0;
     align-items: baseline;
-    border-bottom: 1px solid #F3F4F6;
+    border-bottom: 1px solid var(--cl-border);
     font-size: 12px;
 }
 .cl-timeline li:last-child { border-bottom: 0; }
 .cl-timeline .cl-time {
     flex: 0 0 auto;
-    color: #6B7280;
+    color: var(--cl-ink-secondary);
     font-variant-numeric: tabular-nums;
     font-size: 11px;
 }
-.cl-timeline .cl-event { flex: 1 1 auto; color: #0A1628; }
+.cl-timeline .cl-event { flex: 1 1 auto; color: var(--cl-ink); }
 
 .cl-actions { display: flex; gap: 8px; }
 .cl-btn {
@@ -133,24 +176,24 @@ body {
     font-weight: 600;
     font-size: 12px;
 }
-.cl-btn-primary { background: #00D67E; color: #0A1628; }
-.cl-btn-primary:hover { background: #00C272; }
+.cl-btn-primary { background: var(--cl-teal-500); color: var(--cl-navy); }
+.cl-btn-primary:hover { background: var(--cl-teal-600); }
 .cl-btn-ghost {
     background: transparent;
-    color: #0A1628;
-    border: 1px solid #D1D5DB;
+    color: var(--cl-ink);
+    border: 1px solid var(--cl-border-hover);
 }
-.cl-btn-ghost:hover { background: #F9FAFB; }
+.cl-btn-ghost:hover { background: #F8FAFC; }
 .cl-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
 
 .cl-footer {
-    border-top: 1px solid #E5E7EB;
+    border-top: 1px solid var(--cl-border);
     padding-top: 10px;
     font-size: 11px;
 }
-.cl-footer a { color: #0A1628; text-decoration: none; font-weight: 500; }
-.cl-footer a:hover { color: #00D67E; }
+.cl-footer a { color: var(--cl-ink); text-decoration: none; font-weight: 500; }
+.cl-footer a:hover { color: var(--cl-teal-600); }
 
 .cl-empty { text-align: center; padding: 24px 0; }
-.cl-error .cl-error-text { color: #991B1B; font-size: 12px; margin: 0 0 10px; }
-.cl-muted { color: #6B7280; font-size: 11px; }
+.cl-error .cl-error-text { color: var(--cl-error); font-size: 12px; margin: 0 0 10px; }
+.cl-muted { color: var(--cl-ink-secondary); font-size: 11px; }

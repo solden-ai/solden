@@ -114,8 +114,7 @@ Update each script's internal references:
 - `customscript_cl_ue_panel` → `customscript_solden_ue_panel`
 - `customrecord_cl_settings` → `customrecord_solden_settings`
 - Custom record fields stay on the `custrecord_cl_*` shape for
-  back-compat with already-installed tenants. New tenants get the
-  `custrecord_solden_*` shape.
+  bundle-contract compatibility with already-installed tenants.
 
 Test locally:
 
@@ -207,12 +206,13 @@ Once the SuiteApp is on the Marketplace, customers install via:
    Bundles**.
 2. Search for "Solden". Click **Install**.
 3. After install, open **Lists → Custom → Solden Settings → New**.
-   - `custrecord_solden_api_base`: `https://api.solden.com`
-   - `custrecord_solden_bundle_secret`: paste from Solden's admin
-     console (one-time generated per tenant).
-   - `custrecord_solden_org_id`: paste the tenant's Solden org ID.
-4. Solden's CSM coordinates the secret provisioning over a screen-
-   share for the first install per customer.
+   - `custrecord_cl_api_base`: `https://api.soldenai.com`
+   - `custrecord_cl_app_base`: `https://workspace.soldenai.com`
+   - `custrecord_cl_bundle_secret`: paste the NetSuite API Secret
+     script ID or SecretKey GUID that points to the shared HMAC secret.
+   - `custrecord_cl_org_id`: paste the tenant's Solden org ID.
+4. Solden stores the actual shared secret value in the tenant's encrypted
+   `erp_connections.credentials.webhook_secret`.
 
 The customer-facing one-pager covering this flow lives at
 <https://soldenai.com/install/netsuite> (post-listing).

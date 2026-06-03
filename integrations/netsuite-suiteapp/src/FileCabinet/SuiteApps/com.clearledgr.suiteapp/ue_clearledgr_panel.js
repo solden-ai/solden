@@ -6,8 +6,8 @@
  * 1. **Read direction (`beforeLoad`)** — renders a "Solden" subtab
  *    on the Vendor Bill page when the user is viewing or editing an
  *    existing bill. The subtab hosts an iframe that loads our Suitelet,
- *    which serves the panel HTML/JS/CSS and (Phase 3) mints a short-
- *    lived JWT for the panel to call api.soldenai.com.
+ *    which serves the panel HTML/JS/CSS and mints a short-lived JWT
+ *    for the panel to call api.soldenai.com.
  *    Skipped on `create` (no record id yet) and on `xedit` (inline
  *    edit loads partial records — the iframe would render with stale ids).
  *
@@ -15,7 +15,7 @@
  *    to api.soldenai.com/erp/webhooks/netsuite/<orgId> on every
  *    vendor-bill insert/update/delete. This is what makes ERP-arrived
  *    bills (EDI, vendor portal, AP-clerk-typed) visible to Solden
- *    without going through Gmail. The same `bundle_secret` provisioned
+ *    without going through Gmail. The same NetSuite API Secret reference
  *    in `customrecord_cl_settings` signs both the panel JWT and these
  *    outbound payloads.
  *
@@ -121,29 +121,28 @@ define(['N/url', 'N/runtime', 'N/search', 'N/https', 'N/crypto', 'N/encode', 'N/
         };
     }
 
-    function hexHmacSha256(secret, message) {
+    function createSecretKey(secretRef) {
+        const attempts = [
+            { secret: secretRef, encoding: encodeMod.Encoding.UTF_8 },
+            { guid: secretRef, encoding: encodeMod.Encoding.UTF_8 },
+        ];
+        for (let i = 0; i < attempts.length; i += 1) {
+            try {
+                return cryptoMod.createSecretKey(attempts[i]);
+            } catch (_) {
+                // Try the next accepted NetSuite secret reference shape.
+            }
+        }
+        throw new Error('Could not load Solden bundle secret as NetSuite SecretKey');
+    }
+
+    function hexHmacSha256(secretRef, message) {
         const hmac = cryptoMod.createHmac({
             algorithm: cryptoMod.HashAlg.SHA256,
-            key: cryptoMod.createSecretKey({ guid: secret, encoding: encodeMod.Encoding.UTF_8 }),
+            key: createSecretKey(secretRef),
         });
         hmac.update({ input: message, inputEncoding: encodeMod.Encoding.UTF_8 });
         return hmac.digest({ outputEncoding: encodeMod.Encoding.HEX });
-    }
-
-    function fallbackHexHmacSha256(secret, message) {
-        // Some sandboxes restrict crypto.createSecretKey to GUID-only secrets;
-        // the fallback uses an N/encode round-trip via raw bytes.
-        try {
-            return hexHmacSha256(secret, message);
-        } catch (_) {
-            // Cheap fallback: rely on N/crypto's `createHash` for raw HMAC by
-            // concatenating secret and message — only for sandboxes; production
-            // deployments should use the GUID-secret path. If both fail, the
-            // outbound HTTP throws and the script simply skips this event.
-            const hash = cryptoMod.createHash({ algorithm: cryptoMod.HashAlg.SHA256 });
-            hash.update({ input: secret + ':' + message, inputEncoding: encodeMod.Encoding.UTF_8 });
-            return hash.digest({ outputEncoding: encodeMod.Encoding.HEX });
-        }
     }
 
     function eventTypeFor(contextType, types) {
@@ -188,7 +187,7 @@ define(['N/url', 'N/runtime', 'N/search', 'N/https', 'N/crypto', 'N/encode', 'N/
         const signed = ts + '.' + body;
         let signature;
         try {
-            signature = fallbackHexHmacSha256(settings.bundleSecret, signed);
+            signature = hexHmacSha256(settings.bundleSecret, signed);
         } catch (err) {
             log.error({ title: 'Solden HMAC sign failed', details: String(err) });
             return;

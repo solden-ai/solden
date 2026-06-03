@@ -87,4 +87,4 @@ curl https://api.soldenai.com/v1/me \
 
 Both `Authorization: Bearer <key>` and `X-API-Key: <key>` are accepted.
 Issue keys from the workspace at
-[/api-keys](https://app.soldenai.com/api-keys).
+[/api-keys](https://workspace.soldenai.com/api-keys).

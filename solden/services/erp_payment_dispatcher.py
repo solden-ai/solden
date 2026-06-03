@@ -15,8 +15,9 @@ Each ERP speaks a different webhook dialect:
     AmountDue=0 are the payment signal; we GET the invoice to read
     Payments[] and AmountPaid.
   * **NetSuite** — SuiteScript pushes the full payment payload
-    (no follow-up call needed). Parser walks the
-    ``vendor_payments`` block.
+    (no follow-up call needed). Parser walks either the
+    ``vendor_payments`` block or a bill-summary ``vendorbill.paid``
+    event.
   * **SAP B1** — no public payment webhook; the polling task in C3e
     walks open AP items and calls a sibling helper to fetch payment
     state from B1.
@@ -42,6 +43,15 @@ from solden.services.payment_tracking import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _float_or_none(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 @dataclass
@@ -412,7 +422,7 @@ def parse_netsuite_payment_payload(
         single = envelope.get("vendor_payment")
         payments = [single] if isinstance(single, dict) else []
     if not isinstance(payments, list):
-        return []
+        payments = []
 
     out: List[ParsedPaymentEvent] = []
     for p in payments:
@@ -441,9 +451,7 @@ def parse_netsuite_payment_payload(
                     "failed" if (is_void or is_failed) else "confirmed"
                 ),
                 settlement_at=p.get("transaction_date") or None,
-                amount=(
-                    float(p["amount"]) if p.get("amount") is not None else None
-                ),
+                amount=_float_or_none(p.get("amount")),
                 currency=p.get("currency_code") or None,
                 method=p.get("payment_method") or None,
                 payment_reference=p.get("reference") or payment_id,
@@ -456,6 +464,47 @@ def parse_netsuite_payment_payload(
                     "ns_status": p.get("status"),
                 },
             ))
+    if out:
+        return out
+
+    event_type = str(envelope.get("event_type") or "").strip().lower()
+    bill = envelope.get("bill") if isinstance(envelope.get("bill"), dict) else {}
+    ns_internal_id = str(bill.get("ns_internal_id") or bill.get("id") or "").strip()
+    status_label = str(bill.get("status_label") or bill.get("status") or "").strip().lower()
+    if ns_internal_id and (
+        event_type == "vendorbill.paid"
+        or ("paid" in status_label and "full" in status_label)
+    ):
+        out.append(ParsedPaymentEvent(
+            payment_id=str(
+                bill.get("payment_id")
+                or bill.get("payment_reference")
+                or f"ns-bill-{ns_internal_id}-paid"
+            ),
+            source="netsuite",
+            erp_bill_reference=ns_internal_id,
+            status="confirmed",
+            settlement_at=(
+                bill.get("paid_at")
+                or bill.get("payment_date")
+                or envelope.get("occurred_at")
+                or bill.get("tran_date")
+            ),
+            amount=_float_or_none(bill.get("amount")),
+            currency=bill.get("currency") or None,
+            method=bill.get("payment_method") or None,
+            payment_reference=(
+                bill.get("payment_reference")
+                or bill.get("transaction_number")
+                or bill.get("tran_id")
+                or f"ns-bill-{ns_internal_id}-paid"
+            ),
+            metadata={
+                "ns_status": bill.get("status_label") or bill.get("status"),
+                "ns_event_type": event_type,
+                "ns_transaction_number": bill.get("transaction_number"),
+            },
+        ))
     return out
 
 

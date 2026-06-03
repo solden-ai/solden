@@ -54,7 +54,7 @@ The instructions below assume the one-app approach (use the same `MICROSOFT_APP_
 - **Supported account types:** Accounts in any organizational directory (multi-tenant) — required so customers in any Microsoft 365 tenant can grant consent.
 - **Redirect URI:**
   - Platform: Web
-  - URL: `https://api.solden.com/outlook/callback`
+  - URL: `https://api.soldenai.com/outlook/callback`
 
 Note the **Application (client) ID** — this is your `MICROSOFT_CLIENT_ID` / `MICROSOFT_APP_ID` / `TEAMS_APP_ID` (all the same value if you took the one-app path).
 
@@ -103,7 +103,7 @@ Audit-side checks:
 The add-in is built. To ship it:
 
 1. **Host the static bundle.** Pick one:
-   - Easiest: Railway, alongside the api service. Build the add-in (`cd ui/outlook-addin && npm install && npm run build` — currently the addin's `package.json` only has `dev` and `validate` scripts; if there's no build, the source is plain `taskpane.html` + `src/*.js` and can be served as-is). Serve from `https://app.solden.com/outlook/` (or `https://workspace.soldenai.com/outlook/`).
+   - Easiest: Railway, alongside the api service. Build the add-in (`cd ui/outlook-addin && npm install && npm run build` — currently the addin's `package.json` only has `dev` and `validate` scripts; if there's no build, the source is plain `taskpane.html` + `src/*.js` and can be served as-is). Serve from `https://workspace.soldenai.com/outlook/`.
    - Cleaner: CDN (Cloudflare Pages / Vercel static) so the addin doesn't contend with API workers.
 2. **Update `ui/outlook-addin/manifest.xml`** to point every URL at the hosted location.
 3. **Sideload per-tenant (instant):** Microsoft 365 Admin Center → Integrated apps → Upload custom apps → upload `manifest.xml`. Per-tenant deployment. Instant.
@@ -133,7 +133,7 @@ Then register an Azure Bot resource that uses this Entra app:
 - **Pricing tier:** F0 (free) is fine for under 10k messages/month
 - **Multi-tenant:** yes
 - **Microsoft App ID:** paste the existing Application (client) ID from O.1 (don't let Azure auto-create — you want the same App ID the manifest references)
-- **Messaging endpoint:** `https://api.solden.com/teams/invoices/interactive`
+- **Messaging endpoint:** `https://api.soldenai.com/teams/invoices/interactive`
 
 After creation, open the bot resource → **Channels** → **Microsoft Teams** → accept the terms. Click **Test in Web Chat** to confirm the endpoint is reachable.
 
@@ -183,7 +183,7 @@ Sideload into Teams:
 
 If any of these fail, check:
 - `MICROSOFT_APP_ID` matches across Entra registration, Bot Framework registration, env, and the manifest in the downloaded `.zip`
-- Messaging endpoint URL is reachable from outside your network (`curl -I https://api.solden.com/healthz` from a phone hotspot)
+- Messaging endpoint URL is reachable from outside your network (`curl -I https://api.soldenai.com/healthz` from a phone hotspot)
 - `FEATURE_TEAMS_ENABLED=true` is on the running process (not just in the env file — restart the app)
 
 ### T.5 Distribute internally vs AppSource
@@ -217,7 +217,7 @@ This sends notification-only cards (Approve / Reject buttons render but don't po
 - Day 1: Build + sideload Teams package (T.3, T.4) — works as soon as Bot Framework reg is live
 
 **Week 1:**
-- Outlook add-in static bundle hosted (O.4) — bring up a `https://app.solden.com/outlook/` route or CDN
+- Outlook add-in static bundle hosted (O.4) — bring up a `https://workspace.soldenai.com/outlook/` route or CDN
 - Outlook add-in sideloaded into Solden's own Microsoft 365 tenant for dogfooding (O.4)
 - Teams bot sideloaded into Solden's own tenant for dogfooding (T.5)
 - First-customer sideload of both (test enterprise tenant)

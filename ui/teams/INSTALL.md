@@ -61,7 +61,7 @@ Framework Channel registration in Azure.
    (don't let Azure auto-create a new one — you want the same App ID
    the manifest references).
 3. After creation, open the bot resource → **Configuration**:
-   - **Messaging endpoint**: `https://api.solden.com/teams/invoices/interactive`
+   - **Messaging endpoint**: `https://api.soldenai.com/teams/invoices/interactive`
      (production) or your staging hostname during the sideload test.
 4. **Channels** tab → add **Microsoft Teams**. Accept the terms.
 5. Confirm the bot is reachable: click **Test in Web Chat**. If your
@@ -69,16 +69,16 @@ Framework Channel registration in Azure.
 
 ### A.4 Domain verification
 
-The messaging endpoint domain (`api.solden.com`) must be reachable
+The messaging endpoint domain (`api.soldenai.com`) must be reachable
 over HTTPS with a valid certificate. The manifest's `validDomains`
 list is enforced by Teams when the bot deep-links to web pages.
 
-If `api.solden.com` is already serving the FastAPI app, you're done.
+If `api.soldenai.com` is already serving the FastAPI app, you're done.
 If it's brand-new, provision the DNS A/CNAME record + TLS cert
 (Caddy/Let's Encrypt or your CDN) and confirm:
 
 ```bash
-curl -I https://api.solden.com/healthz   # expect 200
+curl -I https://api.soldenai.com/healthz   # expect 200
 ```
 
 ---

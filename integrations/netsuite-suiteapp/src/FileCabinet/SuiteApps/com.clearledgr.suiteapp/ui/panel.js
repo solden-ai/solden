@@ -3,9 +3,8 @@
    in <head>, calls Solden's by-netsuite-bill endpoint, and renders
    the Box (state, timeline, exceptions) + action buttons.
 
-   Vanilla JS, no build step. Phase 3 will add JWT-bearer auth; Phase 1-2
-   uses a static dev token issued by the Suitelet so the same code path
-   works once the JWT swap is wired. */
+   Vanilla JS, no build step. The Suitelet issues a short-lived JWT
+   and embeds it as runtime config. */
 (function () {
     'use strict';
 
@@ -18,6 +17,8 @@
         billId: meta('cl-bill-id'),
         accountId: meta('cl-account-id'),
         apiBase: meta('cl-api-base') || 'https://api.soldenai.com',
+        appBase: meta('cl-app-base') || 'https://workspace.soldenai.com',
+        setupState: meta('cl-setup-state') || 'configured',
         token: meta('cl-token') || '',
     };
 
@@ -138,20 +139,31 @@
         show('cl-summary');
     }
 
+    function renderMemory(memory) {
+        if (!memory) {
+            hide('cl-memory');
+            return;
+        }
+        const owner = memory.owner || {};
+        setText('cl-owner', owner.email || memory.owner_label || 'Unassigned');
+        setText('cl-waiting-on', memory.waiting_on || '—');
+        setText('cl-waiting-reason', memory.waiting_reason || '—');
+        setText('cl-next-step', memory.next_step || '—');
+        show('cl-memory');
+    }
+
     function renderDeeplink(apItemId) {
         const link = $('cl-deeplink');
         if (!link) return;
-        const base = (config.apiBase || '').replace(/\/api$/, '').replace(/\/$/, '');
-        // Deep-link target is the customer-facing app, not the API.
-        // We don't know the app domain here — fall back to app.soldenai.com
-        // until Phase 3 surfaces a per-tenant app URL via customrecord_cl_settings.
-        link.href = 'https://app.soldenai.com/ap-items/' + encodeURIComponent(apItemId);
+        const base = (config.appBase || 'https://workspace.soldenai.com').replace(/\/$/, '');
+        link.href = base + '/accounts-payable/' + encodeURIComponent(apItemId);
     }
 
     function renderError(message) {
         $('cl-error-text').textContent = message || 'Something went wrong.';
         show('cl-error');
         hide('cl-summary');
+        hide('cl-memory');
         hide('cl-exceptions-section');
         hide('cl-timeline-section');
         hide('cl-actions');
@@ -160,6 +172,7 @@
     function renderEmpty() {
         show('cl-empty');
         hide('cl-summary');
+        hide('cl-memory');
         hide('cl-exceptions-section');
         hide('cl-timeline-section');
         hide('cl-actions');
@@ -198,6 +211,14 @@
             renderError('Missing bill id — reload the page or contact support.');
             return;
         }
+        if (config.setupState === 'missing_settings') {
+            renderError('Solden settings are not configured in NetSuite.');
+            return;
+        }
+        if (config.setupState === 'auth_error' || !config.token) {
+            renderError('Solden panel authentication is not ready.');
+            return;
+        }
         try {
             const data = await api(
                 '/extension/ap-items/by-netsuite-bill/' + encodeURIComponent(config.billId)
@@ -208,6 +229,7 @@
             //     summary: { vendor_name, amount, currency, invoice_number, due_date } }
             setState(data.state);
             renderSummary(data.summary || {});
+            renderMemory(data.memory || null);
             renderExceptions(data.exceptions || []);
             renderTimeline(data.timeline || []);
             renderActions(data.state);

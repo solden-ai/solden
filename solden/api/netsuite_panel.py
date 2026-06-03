@@ -4,24 +4,15 @@ The SuiteApp under ``integrations/netsuite-suiteapp/`` injects an iframe
 into the NetSuite Vendor Bill record. The iframe loads a Suitelet which
 mints a short-lived HMAC-signed JWT and embeds it in a ``<meta>`` tag.
 The panel JS reads the JWT and calls back here to fetch the Box state
-(state + timeline + exceptions + outcome) for that bill.
+(state + operational memory + timeline + exceptions + outcome) for
+that bill.
 
-Two auth paths are supported:
-
-1. **HMAC-signed JWT (Phase 3, production):** Suitelet signs the panel
-   token with a per-tenant ``panel_secret`` stored in the NetSuite
-   custom record ``customrecord_cl_settings`` AND in the corresponding
-   Solden ``erp_connections.credentials`` row. We verify the
-   signature server-side, check ``exp``, extract claims (``account_id``,
-   ``user_email``, ``bill_id``), and resolve a Solden user.
-
-2. **Dev token (Phase 1-2 bootstrap):** if the env var
-   ``NETSUITE_PANEL_DEV_TOKEN`` is set and the Bearer header matches
-   it exactly, we accept the request and resolve the org via the
-   ``account_id`` query param against ``erp_connections``. Useful for
-   shipping a working demo before the per-tenant secret is provisioned.
-   This path is disabled in production by default — set the env var
-   only in dev/staging.
+Auth is HMAC-signed JWT only: the Suitelet signs the panel token with
+the shared per-tenant secret referenced by ``customrecord_cl_settings``
+and stored in the corresponding Solden ``erp_connections.credentials``
+row. We verify the signature server-side, check ``exp``, cross-check
+``accountId`` / ``billId`` claims, and resolve a Solden user from the
+NetSuite user's email when possible.
 
 The endpoint reuses the existing Box read logic by looking up the AP
 item via ``erp_reference == ns_internal_id`` (the NetSuite bill's
@@ -35,7 +26,6 @@ import hmac
 import hashlib
 import json
 import logging
-import os
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -58,6 +48,170 @@ router = APIRouter(prefix="/extension", tags=["netsuite-panel"])
 # distinguishing NetSuite-rendered approvals from Slack / Teams / web.
 NETSUITE_PANEL_SOURCE_CHANNEL = "erp_native_netsuite"
 _security = HTTPBearer(auto_error=False)
+
+_TERMINAL_STATES = {"closed", "rejected", "reversed"}
+_HUMAN_WAIT_STATES = {"needs_approval", "needs_second_approval", "needs_info", "failed_post"}
+
+
+def _safe_json_dict(value: Any) -> Dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return {}
+        try:
+            parsed = json.loads(text)
+        except (TypeError, json.JSONDecodeError):
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    return {}
+
+
+def _humanize_token(value: Any, fallback: str = "") -> str:
+    token = str(value or "").strip()
+    if not token:
+        return fallback
+    return token.replace("_", " ").replace("-", " ").strip().capitalize()
+
+
+def _first_exception_reason(item: Dict[str, Any], exceptions: list, metadata: Dict[str, Any]) -> str:
+    for value in (
+        item.get("exception_reason"),
+        metadata.get("exception_reason"),
+        metadata.get("needs_info_question"),
+        metadata.get("agent_recovery_reason"),
+    ):
+        text = str(value or "").strip()
+        if text:
+            return text
+    for exc in exceptions or []:
+        if not isinstance(exc, dict):
+            continue
+        for key in ("detail", "message", "description", "reason", "title", "code", "exception_code"):
+            text = str(exc.get(key) or "").strip()
+            if text:
+                return _humanize_token(text)
+    code = item.get("exception_code") or metadata.get("exception_code")
+    return _humanize_token(code)
+
+
+def _last_timeline_event(timeline: list) -> Optional[Dict[str, Any]]:
+    for event in reversed(timeline or []):
+        if isinstance(event, dict):
+            return {
+                "type": event.get("event_type") or event.get("type") or event.get("action"),
+                "summary": event.get("summary") or event.get("message") or event.get("title"),
+                "created_at": event.get("created_at") or event.get("ts") or event.get("timestamp"),
+            }
+    return None
+
+
+def _waiting_on(state: str, owner_email: str) -> str:
+    if owner_email:
+        return owner_email
+    if state in {"awaiting_payment", "payment_in_flight"}:
+        return "ERP / payment rail"
+    if state in _HUMAN_WAIT_STATES:
+        return "Finance team"
+    if state in {"received", "validated", "approved", "ready_to_post"}:
+        return "Solden"
+    if state == "posted_to_erp":
+        return "ERP"
+    if state in _TERMINAL_STATES:
+        return "No one"
+    return "Finance team"
+
+
+def _waiting_reason(
+    *,
+    state: str,
+    item: Dict[str, Any],
+    exceptions: list,
+    metadata: Dict[str, Any],
+    outcome: Optional[Dict[str, Any]],
+) -> str:
+    exception_reason = _first_exception_reason(item, exceptions, metadata)
+    if exception_reason:
+        return exception_reason
+    if outcome and isinstance(outcome, dict):
+        text = str(outcome.get("summary") or outcome.get("reason") or "").strip()
+        if text:
+            return text
+    state_reasons = {
+        "received": "The bill has been received and is waiting for validation.",
+        "validated": "The bill passed validation and is waiting for routing.",
+        "needs_approval": "Approval is required before this bill can move forward.",
+        "needs_second_approval": "A second approval is required by policy.",
+        "needs_info": "More information is required before the bill can move forward.",
+        "approved": "The bill is approved and waiting for ERP posting.",
+        "ready_to_post": "The bill is ready to post to the ERP.",
+        "posted_to_erp": "The bill is posted in NetSuite and waiting for payment tracking.",
+        "awaiting_payment": "The bill is waiting for the ERP or payment rail to confirm payment.",
+        "payment_in_flight": "Payment is in flight and waiting for settlement confirmation.",
+        "payment_executed": "Payment has been confirmed and the record is waiting to close.",
+        "payment_failed": "Payment failed and needs review.",
+        "failed_post": "ERP posting failed and needs review.",
+        "closed": "The record is complete.",
+        "rejected": "The record was rejected.",
+        "reversed": "The ERP post was reversed.",
+    }
+    return state_reasons.get(state, _humanize_token(state, "The record is waiting for the next step."))
+
+
+def _next_step(state: str, owner_email: str) -> str:
+    owner = owner_email or "the assigned owner"
+    next_steps = {
+        "received": "Validate extracted bill fields.",
+        "validated": "Route the bill for approval or request missing context.",
+        "needs_approval": f"{owner} should approve, reject, or request info.",
+        "needs_second_approval": f"{owner} should provide the second approval or reject.",
+        "needs_info": f"{owner} should add the missing information.",
+        "approved": "Post the bill to NetSuite.",
+        "ready_to_post": "Post the bill to NetSuite.",
+        "posted_to_erp": "Wait for payment confirmation or close when paid.",
+        "awaiting_payment": "Wait for payment confirmation.",
+        "payment_in_flight": "Wait for settlement confirmation.",
+        "payment_executed": "Close the record after final audit checks.",
+        "payment_failed": "Review the failed payment and retry, reverse, or close.",
+        "failed_post": f"{owner} should fix the ERP posting issue and retry.",
+        "closed": "No next step.",
+        "rejected": "No next step.",
+        "reversed": "No next step.",
+    }
+    return next_steps.get(state, "Review the timeline and decide the next action.")
+
+
+def _build_operational_memory(
+    *,
+    item: Dict[str, Any],
+    timeline: list,
+    exceptions: list,
+    outcome: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    metadata = _safe_json_dict(item.get("metadata"))
+    state = str(item.get("state") or "").strip().lower()
+    owner_email = str(item.get("owner_email") or metadata.get("owner_email") or "").strip()
+    owner = {
+        "id": item.get("owner_id") or metadata.get("owner_id"),
+        "email": owner_email or None,
+        "assigned_at": item.get("owner_assigned_at") or metadata.get("owner_assigned_at"),
+        "source": item.get("owner_source") or metadata.get("owner_source"),
+    }
+    return {
+        "owner": owner,
+        "owner_label": owner_email or "Unassigned",
+        "waiting_on": _waiting_on(state, owner_email),
+        "waiting_reason": _waiting_reason(
+            state=state,
+            item=item,
+            exceptions=exceptions,
+            metadata=metadata,
+            outcome=outcome,
+        ),
+        "next_step": _next_step(state, owner_email),
+        "last_event": _last_timeline_event(timeline),
+    }
 
 
 # ─── JWT verification ───────────────────────────────────────────────
@@ -89,9 +243,19 @@ def _verify_panel_jwt(token: str, secret: str) -> Optional[Dict[str, Any]]:
         if not hmac.compare_digest(expected, signature):
             logger.warning("netsuite_panel_jwt: signature mismatch")
             return None
+        header = json.loads(_b64url_decode(header_b64))
+        if header.get("alg") != "HS256":
+            logger.warning("netsuite_panel_jwt: unsupported alg=%r", header.get("alg"))
+            return None
         payload = json.loads(_b64url_decode(payload_b64))
     except Exception as exc:  # noqa: BLE001
         logger.warning("netsuite_panel_jwt: decode failed (%s)", exc)
+        return None
+    if payload.get("iss") != "solden-netsuite-suiteapp":
+        logger.warning("netsuite_panel_jwt: invalid iss=%r", payload.get("iss"))
+        return None
+    if payload.get("aud") != "solden-netsuite-panel":
+        logger.warning("netsuite_panel_jwt: invalid aud=%r", payload.get("aud"))
         return None
     exp = payload.get("exp")
     if not isinstance(exp, (int, float)):
@@ -157,34 +321,15 @@ def _resolve_panel_user(
 ) -> TokenData:
     """Validate the panel's auth and resolve to a Solden TokenData.
 
-    Raises HTTPException(401) on any failure. Tries dev-token first
-    (cheap), then JWT (requires DB lookup). Both paths require
-    ``account_id`` to map to an active Solden ``erp_connections``
-    row of type netsuite.
+    Raises HTTPException(401) on any failure. ``account_id`` must map
+    to an active Solden ``erp_connections`` row of type netsuite before
+    the JWT secret can be resolved.
     """
     if credentials is None or not credentials.credentials:
         raise HTTPException(status_code=401, detail="netsuite_panel: missing bearer token")
     token = credentials.credentials.strip()
     db = _get_db()
 
-    # Path A — dev token bootstrap (Phase 1-2)
-    dev_token = os.getenv("NETSUITE_PANEL_DEV_TOKEN", "").strip()
-    if dev_token and hmac.compare_digest(token, dev_token):
-        org_id = _resolve_org_for_account_id(db, account_id)
-        if not org_id:
-            raise HTTPException(
-                status_code=401,
-                detail="netsuite_panel: dev token accepted but account_id has no active NetSuite connection",
-            )
-        return TokenData(
-            user_id="netsuite_panel_dev",
-            email=f"netsuite-panel-dev@{account_id or 'unknown'}",
-            organization_id=org_id,
-            role="netsuite_panel",
-            exp=datetime.now(timezone.utc),
-        )
-
-    # Path B — HMAC-signed JWT (Phase 3)
     org_id = _resolve_org_for_account_id(db, account_id)
     if not org_id:
         raise HTTPException(
@@ -201,15 +346,14 @@ def _resolve_panel_user(
             creds = json.loads(creds)
         except Exception:
             creds = {}
-    # The same `webhook_secret` provisioned for outbound vendor-bill webhooks
-    # signs the panel JWT — single secret in `customrecord_cl_settings`,
-    # rotatable as one unit. If we ever need to rotate independently, split
-    # into `panel_secret` here without touching the SuiteScript side.
+    # The same shared secret value provisioned for outbound vendor-bill
+    # webhooks signs the panel JWT. NetSuite stores an API Secret reference
+    # and Solden stores the actual value encrypted in connection credentials.
     bundle_secret = str((creds or {}).get("webhook_secret") or "").strip()
     if not bundle_secret:
         raise HTTPException(
             status_code=401,
-            detail="netsuite_panel: tenant has no webhook_secret provisioned (Phase 3 setup pending)",
+            detail="netsuite_panel: tenant has no webhook_secret provisioned",
         )
     payload = _verify_panel_jwt(token, bundle_secret)
     if not payload:
@@ -249,8 +393,7 @@ def get_ap_item_by_netsuite_bill(
 ) -> Dict[str, Any]:
     """Return the Solden Box for an AP item linked to a NetSuite bill.
 
-    Auth: requires either a Suitelet-minted HMAC JWT (Phase 3) or the
-    dev-token env-var (Phase 1-2).
+    Auth: requires a Suitelet-minted HMAC JWT.
 
     Lookup: ``erp_reference = ns_internal_id`` against ``ap_items``,
     scoped to the org resolved from ``account_id``.
@@ -306,6 +449,12 @@ def get_ap_item_by_netsuite_bill(
         "box_type": "ap_item",
         "state": item.get("state"),
         "summary": summary,
+        "memory": _build_operational_memory(
+            item=item,
+            timeline=timeline,
+            exceptions=exceptions,
+            outcome=outcome,
+        ),
         "timeline": timeline,
         "exceptions": exceptions,
         "outcome": outcome,

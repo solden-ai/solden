@@ -42,7 +42,8 @@ patterns:
       lazy via the Suitelet.
 - [x] **All HTTPS endpoints in a documented allow-list** (the
       `validDomains`-equivalent for SuiteApps is the bundle-secret-
-      keyed `apiBase` field; only `api.solden.com` resolves).
+      keyed `apiBase` field; only configured `api.soldenai.com` and
+      workspace origins are expected).
 - [x] **`isinactive='F'` filter** on every search of
       `customrecord_cl_settings` (already applied in
       `ue_clearledgr_panel.js:loadSettings`).
@@ -66,7 +67,7 @@ each in a clean sandbox demo tenant with realistic test data:
    Solden") — for a vendor bill that bypassed Solden entirely.
    Demonstrates the SuiteApp degrades gracefully on out-of-scope bills.
 5. **Tenant config record** (`customrecord_cl_settings`) showing the
-   per-account API base + bundle secret + org ID fields blank-but-
+   per-account API base + workspace base + API Secret reference + org ID fields blank-but-
    labelled, demonstrating the install flow.
 6. **Slack approval card** for an ERP-native bill (write-direction
    evidence — a vendor-bill-arrived-in-NetSuite that Solden tracked
@@ -101,8 +102,8 @@ NetSuite's marketplace listing has a strict character budget. Drafts:
 > NetSuite SuiteApp closes the loop between NetSuite (the system of
 > record for the General Ledger) and Solden (the system of record
 > for finance work-in-progress). On every Vendor Bill, the Solden
-> subtab surfaces the Box state, the agent's reasoning, the
-> validation gate verdict, the timeline, and one-click action
+> subtab surfaces the Box state, owner, waiting reason, next step,
+> validation context, the timeline, and one-click action
 > buttons (Approve / Reject / Request info). For ERP-native bills
 > that arrive into NetSuite via EDI, vendor portal, or AP-clerk-
 > typed entry, Solden's afterSubmit hook fires an HMAC-signed
@@ -151,7 +152,7 @@ intervention.
 
 | # | Scenario | Expected | Pass |
 |---|---|---|---|
-| B1 | Open a Vendor Bill **created via Solden's email-arrival flow** (i.e., posted to NetSuite by Solden). Click Solden subtab. | Panel loads in <2s. State badge shows current Solden state (e.g., `posted_to_erp`). Vendor + amount + invoice number match the NetSuite fields. Timeline shows >=1 audit event. Action buttons hidden (post-approval state). | ☐ |
+| B1 | Open a Vendor Bill **created via Solden's email-arrival flow** (i.e., posted to NetSuite by Solden). Click Solden subtab. | Panel loads in <2s. State badge shows current Solden state (e.g., `posted_to_erp`). Vendor + amount + invoice number match the NetSuite fields. Current work shows owner / waiting reason / next step. Timeline shows >=1 audit event. Action buttons hidden (post-approval state). | ☐ |
 | B2 | Open a Vendor Bill that was **NOT processed through Solden** (e.g., a manually-entered bill from before the SuiteApp was installed). Click subtab. | Panel renders the empty state: *"This Bill was not processed through Solden."* No errors in the browser console. No 500 in the Solden API logs. | ☐ |
 | B3 | Open a Vendor Bill where the underlying AP item is at `needs_approval`. | Action buttons (Approve / Reject / Request info) visible. | ☐ |
 | B4 | Click **Approve**. | Panel buttons disabled during dispatch. State badge updates to `approved` within 5s. Solden audit log records `state_transition` with `ui_surface=erp_native_netsuite`. NetSuite payment hold (if any) released via REST. | ☐ |
@@ -168,7 +169,7 @@ intervention.
 |---|---|---|---|
 | W1 | **Create** a new Vendor Bill in NetSuite (without going through Solden). | Solden receives `vendorbill.create` webhook with HMAC signature. New AP item created in `ap_items` with `state=needs_approval` (if NetSuite payment hold) or `posted_to_erp` (no hold). | ☐ |
 | W2 | **Edit** an existing Vendor Bill — change the amount. | Solden receives `vendorbill.update` webhook with both the old and new bill summary. AP item's `amount` updated; audit row records the change. | ☐ |
-| W3 | **Mark a bill paid** in NetSuite (post a Vendor Payment against it). | Solden receives `vendorbill.paid` webhook. AP item state advances to `paid` / `closed` per the Box state machine. | ☐ |
+| W3 | **Mark a bill paid** in NetSuite (post a Vendor Payment against it). | Solden receives `vendorbill.paid` webhook. The payment dispatcher records the payment confirmation from either the `vendor_payments` block or the bill-summary paid event, and the AP item reaches the terminal close path. | ☐ |
 | W4 | **Delete** a Vendor Bill. | Solden receives `vendorbill.delete` webhook. AP item state advances to `closed` (Box marked terminal-not-paid). | ☐ |
 | W5 | Trigger `afterSubmit` for a Vendor Bill where the tenant has **not** provisioned `customrecord_cl_settings`. | UE script logs an audit-level message + skips the webhook silently. NetSuite save is **not** rolled back (must not block the user's save). | ☐ |
 | W6 | Trigger `afterSubmit` when Solden's API is **unreachable** (simulate by pointing `apiBase` at a domain that 502s). | UE script logs an error + does not retry inside the same SuiteScript invocation. NetSuite save still completes. (Solden's webhook-retry queue picks up later.) | ☐ |
@@ -177,9 +178,9 @@ intervention.
 
 | # | Scenario | Expected | Pass |
 |---|---|---|---|
-| C1 | Install the SuiteApp on a fresh tenant. Open a Vendor Bill before creating the `customrecord_cl_settings` row. | Panel renders the empty state (no settings → no API base → fallback). No 500. No exception in the logs. | ☐ |
-| C2 | Create the `customrecord_cl_settings` row with a valid API base + bundle secret + org ID. Open a Vendor Bill. | Panel loads the Box state. JWT validates server-side. Audit log on Solden's side records the read. | ☐ |
-| C3 | Rotate the `bundle_secret` (paste a new value into the custom record + update Solden's `erp_connections.credentials.webhook_secret` simultaneously). Open a Vendor Bill. | Panel still loads — the new secret is picked up on next Suitelet invocation. The previous JWT is rejected with a clear error. | ☐ |
+| C1 | Install the SuiteApp on a fresh tenant. Open a Vendor Bill before creating the `customrecord_cl_settings` row. | Panel renders a setup/authentication error. No 500. No exception in the logs. | ☐ |
+| C2 | Create the `customrecord_cl_settings` row with a valid API base + workspace base + API Secret reference + org ID. Open a Vendor Bill. | Panel loads the Box state. JWT validates server-side. | ☐ |
+| C3 | Rotate the shared secret by updating the NetSuite API Secret value and Solden's `erp_connections.credentials.webhook_secret` together. Open a Vendor Bill. | Panel still loads — the Suitelet signs with the rotated secret on next invocation. The previous JWT is rejected with a clear error. | ☐ |
 
 ---
 
@@ -193,10 +194,10 @@ Oracle's reviewer can move quickly.
 
 | Question | Solden's answer |
 |---|---|
-| Does the SuiteApp store any secrets in client-readable JavaScript? | **No.** All secrets live in `customrecord_cl_settings` (server-side custom record) or environment variables on the Solden API. The panel iframe receives only a short-lived JWT (15-minute TTL) minted server-side by the Suitelet. |
-| What authentication does the SuiteApp use to call back to Solden's API? | HMAC-SHA256 signed JWT minted by the Suitelet using the per-tenant `bundle_secret` from `customrecord_cl_settings`. The same secret signs the outbound `afterSubmit` webhook. JWT carries `accountId`, `billId`, `userEmail` claims with a 15-minute `exp`. |
+| Does the SuiteApp store any secrets in client-readable JavaScript? | **No.** The NetSuite custom record stores only a NetSuite API Secret reference / SecretKey GUID. The actual shared secret value lives in NetSuite API Secrets and in Solden's encrypted ERP connection credentials. The panel iframe receives only a short-lived JWT (15-minute TTL) minted server-side by the Suitelet. |
+| What authentication does the SuiteApp use to call back to Solden's API? | HMAC-SHA256 signed JWT minted by the Suitelet using the per-tenant NetSuite API Secret referenced by `custrecord_cl_bundle_secret`. The same secret signs the outbound `afterSubmit` webhook. JWT carries `accountId`, `billId`, `userEmail` claims with a 15-minute `exp`. |
 | Is the JWT verified server-side on every request? | **Yes.** `solden/api/netsuite_panel.py:_verify_panel_jwt` validates the HMAC signature, the `exp` claim, and cross-checks `accountId`/`billId` claims against the request's path + query params. Rejects otherwise. |
-| What happens if the secret is leaked? | Operator rotates the secret in `customrecord_cl_settings` AND in Solden's `erp_connections.credentials.webhook_secret`. All previously-issued JWTs become invalid (signature mismatch). No replay window beyond the 15-minute JWT TTL. |
+| What happens if the secret is leaked? | Operator rotates the NetSuite API Secret value and Solden's `erp_connections.credentials.webhook_secret`. All previously-issued JWTs become invalid (signature mismatch). No replay window beyond the 15-minute JWT TTL. |
 
 ### C.2 Data handling
 

@@ -7,11 +7,10 @@ Wraps the existing read-direction enrichment in
 :func:`handle_intake_event` dispatch can drive NetSuite intake the
 same way it drives every other channel.
 
-Replaces the channel-specific dispatch logic that previously lived
-in ``services/erp_webhook_dispatch.py``. The dispatch branching
-(create / update / paid / cancelled) now lives in the universal
-handler; this adapter is intake-side only — signature verification,
-envelope parsing, enrichment, state-update derivation.
+Replaces the old channel-specific NetSuite dispatch path. The dispatch
+branching (create / update / paid / cancelled) now lives in the
+universal handler; this adapter is intake-side only — signature
+verification, envelope parsing, enrichment, state-update derivation.
 """
 from __future__ import annotations
 
