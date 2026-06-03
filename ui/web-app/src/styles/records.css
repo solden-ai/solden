@@ -6,6 +6,7 @@
  */
 
 .cl-records {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -13,6 +14,11 @@
   max-width: 1280px;
   margin: 0 auto;
   width: 100%;
+}
+.cl-records *,
+.cl-records *::before,
+.cl-records *::after {
+  box-sizing: border-box;
 }
 
 .cl-records-head {
@@ -134,6 +140,56 @@
   color: #fff;
 }
 
+.cl-records-results-meta {
+  min-height: 36px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 2px;
+  color: var(--ink-muted, #64748B);
+  font-size: 12px;
+}
+.cl-records-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 180px;
+}
+.cl-records-range strong {
+  color: var(--cl-navy);
+  font: 600 13px/1 var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-variant-numeric: tabular-nums;
+}
+.cl-records-updating {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid var(--cl-teal-soft, #DDF7F3);
+  border-radius: 999px;
+  background: #F0FDFA;
+  color: var(--cl-teal-600, #12B3A6);
+  font: 700 10px/1 inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.cl-records-pagination {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cl-records-page-count {
+  font: 500 12px/1 var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-variant-numeric: tabular-nums;
+}
+.cl-records-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* State pill — reused inside the table and the focused-thread row */
 .cl-records-state {
   display: inline-block;
@@ -154,6 +210,10 @@
   border-radius: 10px;
   background: #fff;
   overflow: hidden;
+}
+.cl-records-table.is-updating {
+  opacity: 0.72;
+  pointer-events: none;
 }
 .cl-records-row {
   display: grid;
@@ -432,4 +492,15 @@
   .cl-records-cell-ref { display: none; }
   .cl-records-cell-amount { font-size: 14px; font-weight: 600; }
   .cl-records-cell-age { font-size: 11px; }
+  .cl-records-results-meta,
+  .cl-records-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .cl-records-page-controls {
+    width: 100%;
+  }
+  .cl-records-page-controls button {
+    flex: 1;
+  }
 }

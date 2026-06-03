@@ -148,12 +148,80 @@ def _synthetic_workspace_exceptions(
     return rows
 
 
+_VALID_RECORD_SLICES = {
+    "all",
+    "all_open",
+    "waiting_on_approval",
+    "ready_to_post",
+    "needs_info",
+    "failed_post",
+    "blocked_exception",
+    "due_soon",
+    "overdue",
+}
+_VALID_RECORD_SORTS = {
+    "queue_age",
+    "due_date",
+    "amount",
+    "updated_at",
+    "approval_wait",
+    "priority",
+    "vendor",
+    "state",
+    "invoice",
+}
+_VALID_RECORD_DUE_FILTERS = {"all", "overdue", "due_7d", "no_due"}
+_VALID_RECORD_BLOCKER_FILTERS = {
+    "all",
+    "entity",
+    "approval",
+    "info",
+    "erp",
+    "exception",
+    "confidence",
+    "budget",
+    "po",
+    "processing",
+}
+_VALID_RECORD_AMOUNT_FILTERS = {"all", "under_1k", "1k_10k", "over_10k"}
+_VALID_RECORD_APPROVAL_AGE_FILTERS = {
+    "all",
+    "under_24h",
+    "1d_3d",
+    "over_3d",
+}
+_VALID_RECORD_ERP_STATUS_FILTERS = {
+    "all",
+    "ready",
+    "failed",
+    "connected",
+    "posted",
+    "not_connected",
+}
+
+
+def _normalize_record_param(value: Optional[str], default: str, valid: set[str]) -> str:
+    normalized = str(value or default).strip().lower() or default
+    return normalized if normalized in valid else default
+
+
 @router.get("/records")
 async def list_workspace_records(
     request: Request,
     organization_id: Optional[str] = None,
     entity_id: Optional[str] = None,
-    limit: int = Query(default=200, ge=1, le=1000),
+    active_slice_id: str = Query(default="all_open"),
+    q: Optional[str] = Query(None, description="Search vendor, reference, sender, PO, or record id"),
+    vendor: Optional[str] = Query(None, description="Vendor name filter"),
+    due: str = Query(default="all"),
+    blocker: str = Query(default="all"),
+    amount: str = Query(default="all"),
+    approval_age: str = Query(default="all"),
+    erp_status: str = Query(default="all"),
+    sort_col: str = Query(default="queue_age"),
+    sort_dir: str = Query(default="desc"),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=100000),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """Return the workspace AP record directory payload."""
@@ -171,12 +239,75 @@ async def list_workspace_records(
         pass
 
     db = get_db()
-    items = db.list_ap_items(org_id, entity_id=entity_id, limit=limit, prioritized=True)
+    normalized_slice = _normalize_record_param(
+        active_slice_id,
+        "all_open",
+        _VALID_RECORD_SLICES,
+    )
+    normalized_due = _normalize_record_param(due, "all", _VALID_RECORD_DUE_FILTERS)
+    normalized_blocker = _normalize_record_param(
+        blocker,
+        "all",
+        _VALID_RECORD_BLOCKER_FILTERS,
+    )
+    normalized_amount = _normalize_record_param(amount, "all", _VALID_RECORD_AMOUNT_FILTERS)
+    normalized_approval_age = _normalize_record_param(
+        approval_age,
+        "all",
+        _VALID_RECORD_APPROVAL_AGE_FILTERS,
+    )
+    normalized_erp_status = _normalize_record_param(
+        erp_status,
+        "all",
+        _VALID_RECORD_ERP_STATUS_FILTERS,
+    )
+    normalized_sort_col = _normalize_record_param(
+        sort_col,
+        "queue_age",
+        _VALID_RECORD_SORTS,
+    )
+    normalized_sort_dir = "asc" if str(sort_dir or "").strip().lower() == "asc" else "desc"
+
+    if hasattr(db, "list_ap_items_page"):
+        page = db.list_ap_items_page(
+            org_id,
+            entity_id=entity_id,
+            active_slice_id=normalized_slice,
+            q=q,
+            vendor=vendor,
+            due=normalized_due,
+            blocker=normalized_blocker,
+            amount=normalized_amount,
+            approval_age=normalized_approval_age,
+            erp_status=normalized_erp_status,
+            sort_col=normalized_sort_col,
+            sort_dir=normalized_sort_dir,
+            limit=limit,
+            offset=offset,
+        )
+        raw_items = list(page.get("items") or [])
+        total = int(page.get("total") or 0)
+        has_more = bool(page.get("has_more"))
+    else:
+        raw_items = db.list_ap_items(org_id, entity_id=entity_id, limit=limit, prioritized=True)
+        total = len(raw_items)
+        has_more = False
+
+    items = raw_items
     normalized = build_worklist_items(db, items, build_item=build_worklist_item)
+    if hasattr(db, "ap_record_slice_counts"):
+        slice_counts = db.ap_record_slice_counts(org_id, entity_id=entity_id)
+    else:
+        slice_counts = {}
     return {
         "organization_id": org_id,
         "items": normalized,
-        "total": len(normalized),
+        "total": total,
+        "count": len(normalized),
+        "limit": limit,
+        "offset": offset,
+        "has_more": has_more,
+        "slice_counts": slice_counts,
     }
 
 

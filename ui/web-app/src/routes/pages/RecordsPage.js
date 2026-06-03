@@ -34,7 +34,6 @@ import {
   buildPipelineSliceCounts,
   clearPipelineNavigation,
   createSavedPipelineView,
-  filterPipelineItems,
   getAllPipelineViews,
   getBootstrappedPipelinePreferences,
   getPersonalPipelineViews,
@@ -57,6 +56,8 @@ import {
 } from '../pipeline-views.js';
 
 const html = htm.bind(h);
+
+const RECORDS_PAGE_SIZE = 50;
 
 const STATE_STYLES = {
   needs_approval: { bg: '#FEFCE8', text: '#A16207', label: 'Needs approval' },
@@ -86,11 +87,32 @@ const BLOCKER_LABELS = {
   processing: 'Processing issue',
 };
 
-function recordsEndpoint(orgId, limit = 500) {
+function recordsEndpoint({
+  orgId,
+  activeSliceId = 'all_open',
+  filters = {},
+  limit = RECORDS_PAGE_SIZE,
+  offset = 0,
+  searchQuery = '',
+  sortCol = 'queue_age',
+  sortDir = 'desc',
+}) {
   const params = new URLSearchParams({
     organization_id: orgId,
     limit: String(limit),
+    offset: String(offset),
+    active_slice_id: activeSliceId || 'all_open',
+    sort_col: sortCol || 'queue_age',
+    sort_dir: sortDir || 'desc',
   });
+  const query = String(searchQuery || '').trim();
+  if (query) params.set('q', query);
+  if (filters?.vendor) params.set('vendor', String(filters.vendor).trim());
+  if (filters?.due && filters.due !== 'all') params.set('due', filters.due);
+  if (filters?.blocker && filters.blocker !== 'all') params.set('blocker', filters.blocker);
+  if (filters?.amount && filters.amount !== 'all') params.set('amount', filters.amount);
+  if (filters?.approvalAge && filters.approvalAge !== 'all') params.set('approval_age', filters.approvalAge);
+  if (filters?.erpStatus && filters.erpStatus !== 'all') params.set('erp_status', filters.erpStatus);
   return `/api/workspace/records?${params.toString()}`;
 }
 
@@ -162,6 +184,15 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
   const pipelineScope = useMemo(() => ({ orgId, userEmail }), [orgId, userEmail]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(false);
+  const [pageOffset, setPageOffset] = useState(0);
+  const [pageMeta, setPageMeta] = useState({
+    total: 0,
+    limit: RECORDS_PAGE_SIZE,
+    offset: 0,
+    hasMore: false,
+  });
+  const [serverSliceCounts, setServerSliceCounts] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewPrefs, setViewPrefs] = useState(() => normalizePipelinePreferences({
     ...readPipelinePreferences(pipelineScope),
@@ -176,6 +207,26 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
   const syncReadyRef = useRef(false);
   const syncTimerRef = useRef(null);
   const lastSyncedPrefsRef = useRef('');
+  const hasLoadedRecordsRef = useRef(false);
+  const serializedFilters = JSON.stringify(viewPrefs.filters || {});
+  const recordsUrl = useMemo(() => recordsEndpoint({
+    orgId,
+    activeSliceId: viewPrefs.activeSliceId,
+    filters: viewPrefs.filters,
+    limit: RECORDS_PAGE_SIZE,
+    offset: pageOffset,
+    searchQuery,
+    sortCol: viewPrefs.sortCol,
+    sortDir: viewPrefs.sortDir,
+  }), [
+    orgId,
+    pageOffset,
+    searchQuery,
+    serializedFilters,
+    viewPrefs.activeSliceId,
+    viewPrefs.sortCol,
+    viewPrefs.sortDir,
+  ]);
 
   useEffect(() => {
     setViewPrefs(normalizePipelinePreferences({
@@ -183,6 +234,7 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
       viewMode: 'table',
     }));
     setNavState(readPipelineNavigation(pipelineScope));
+    setPageOffset(0);
   }, [pipelineScope]);
 
   const syncServerPreferences = async (prefs, { silent = true } = {}) => {
@@ -233,13 +285,64 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
     };
   }, [viewPrefs, pipelineScope]);
 
+  const applyRecordsPayload = (data, requestedOffset = pageOffset) => {
+    const nextItems = Array.isArray(data?.items) ? data.items : [];
+    const rawTotal = Number(data?.total ?? nextItems.length);
+    const total = Number.isFinite(rawTotal) ? rawTotal : nextItems.length;
+    if (requestedOffset > 0 && total > 0 && nextItems.length === 0) {
+      setPageOffset(Math.max(0, requestedOffset - RECORDS_PAGE_SIZE));
+      return false;
+    }
+
+    const rawLimit = Number(data?.limit ?? RECORDS_PAGE_SIZE);
+    const rawOffset = Number(data?.offset ?? requestedOffset);
+    setItems(nextItems);
+    setPageMeta({
+      total,
+      limit: Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : RECORDS_PAGE_SIZE,
+      offset: Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0,
+      hasMore: Boolean(data?.has_more),
+    });
+    setServerSliceCounts(
+      data?.slice_counts && typeof data.slice_counts === 'object'
+        ? data.slice_counts
+        : null,
+    );
+    return true;
+  };
+
   useEffect(() => {
-    setLoading(true);
-    api(recordsEndpoint(orgId, 500))
-      .then((data) => setItems(Array.isArray(data?.items) ? data.items : []))
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false));
-  }, [api, orgId]);
+    let cancelled = false;
+    const initialLoad = !hasLoadedRecordsRef.current;
+    if (initialLoad) setLoading(true);
+    setPageLoading(true);
+    api(recordsUrl)
+      .then((data) => {
+        if (cancelled) return;
+        const applied = applyRecordsPayload(data, pageOffset);
+        if (applied) hasLoadedRecordsRef.current = true;
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setItems([]);
+        setPageMeta({
+          total: 0,
+          limit: RECORDS_PAGE_SIZE,
+          offset: pageOffset,
+          hasMore: false,
+        });
+        setServerSliceCounts(null);
+        hasLoadedRecordsRef.current = true;
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setPageLoading(false);
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, recordsUrl, pageOffset]);
 
   const persistPrefs = (nextValue) => {
     const normalized = writePipelinePreferences(pipelineScope, { ...(nextValue || {}), viewMode: 'table' });
@@ -248,6 +351,7 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
   };
 
   const resetFiltersAndSearch = () => {
+    setPageOffset(0);
     setSearchQuery('');
     setViewPrefs(persistPrefs({
       ...viewPrefs,
@@ -259,16 +363,16 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
   };
 
   const [doRefresh, refreshing] = useAction(async () => {
-    setLoading(true);
+    setPageLoading(true);
     try {
-      const data = await api(recordsEndpoint(orgId, 500));
-      setItems(Array.isArray(data?.items) ? data.items : []);
+      const data = await api(recordsUrl);
+      applyRecordsPayload(data, pageOffset);
       setNavState(readPipelineNavigation(pipelineScope));
       toast('Accounts Payable refreshed.', 'success');
     } catch {
       toast('Could not refresh records.', 'error');
     } finally {
-      setLoading(false);
+      setPageLoading(false);
     }
   });
 
@@ -287,15 +391,18 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
     toast(`Saved view "${name}" added.`, 'success');
   });
 
-  const displayed = useMemo(() => filterPipelineItems(items, {
-    activeSliceId: viewPrefs.activeSliceId,
-    filters: viewPrefs.filters,
-    searchQuery,
-    sortCol: viewPrefs.sortCol,
-    sortDir: viewPrefs.sortDir,
-  }), [items, searchQuery, viewPrefs]);
+  const displayed = items;
 
-  const sliceCounts = useMemo(() => buildPipelineSliceCounts(items), [items]);
+  const sliceCounts = useMemo(() => {
+    const fallback = buildPipelineSliceCounts(items);
+    if (!serverSliceCounts) return fallback;
+    const normalized = {};
+    Object.entries(serverSliceCounts).forEach(([key, value]) => {
+      const count = Number(value);
+      normalized[key] = Number.isFinite(count) ? count : 0;
+    });
+    return { ...fallback, ...normalized };
+  }, [items, serverSliceCounts]);
   const starterViews = useMemo(() => getStarterPipelineViews(viewPrefs), [viewPrefs]);
   const personalViews = useMemo(() => getPersonalPipelineViews(viewPrefs), [viewPrefs]);
   const activeSavedView = useMemo(() => getActiveSavedView(viewPrefs), [viewPrefs]);
@@ -324,27 +431,33 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
   const applySlice = (sliceId) => {
     clearPipelineNavigation(pipelineScope);
     setNavState(readPipelineNavigation(pipelineScope));
+    setPageOffset(0);
     setViewPrefs(activatePipelineSlice(pipelineScope, sliceId));
   };
 
   const applySavedView = (view) => {
     clearPipelineNavigation(pipelineScope);
     setNavState(readPipelineNavigation(pipelineScope));
+    setPageOffset(0);
     const next = persistPrefs(view.snapshot);
     setViewPrefs(next);
     setSavedViewName(view.scope === 'user' ? getSavedViewLabel(view) : '');
     toast(`Loaded "${getSavedViewLabel(view)}".`, 'success');
   };
 
-  const updateFilters = (patch) => persistPrefs({
-    ...viewPrefs,
-    filters: {
-      ...viewPrefs.filters,
-      ...(patch || {}),
-    },
-  });
+  const updateFilters = (patch) => {
+    setPageOffset(0);
+    return persistPrefs({
+      ...viewPrefs,
+      filters: {
+        ...viewPrefs.filters,
+        ...(patch || {}),
+      },
+    });
+  };
 
   const updateSort = (nextSortCol) => {
+    setPageOffset(0);
     const nextSortDir = viewPrefs.sortCol === nextSortCol
       ? (viewPrefs.sortDir === 'desc' ? 'asc' : 'desc')
       : (nextSortCol === 'due_date' ? 'asc' : 'desc');
@@ -367,6 +480,7 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
 
   const revealFocusedItem = () => {
     if (!focusedItem) return;
+    setPageOffset(0);
     setSearchQuery('');
     setViewPrefs(persistPrefs({
       ...viewPrefs,
@@ -387,9 +501,23 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
     navigateToRecordDetail(navigate, item.id);
   };
 
-  const currentSliceLabel = PIPELINE_BUILTIN_SLICES
-    .find((slice) => slice.id === viewPrefs.activeSliceId)?.label || 'All open';
-  const currentViewLabel = activeSavedView ? getSavedViewLabel(activeSavedView) : currentSliceLabel;
+  const pageStart = pageMeta.total > 0 ? pageMeta.offset + 1 : 0;
+  const pageEnd = pageMeta.total > 0
+    ? Math.min(pageMeta.offset + displayed.length, pageMeta.total)
+    : 0;
+  const currentPage = pageMeta.total > 0 ? Math.floor(pageMeta.offset / pageMeta.limit) + 1 : 0;
+  const pageCount = pageMeta.total > 0 ? Math.ceil(pageMeta.total / pageMeta.limit) : 0;
+  const canPageBackward = pageMeta.offset > 0 && !pageLoading;
+  const canPageForward = (
+    !pageLoading
+    && (pageMeta.hasMore || pageMeta.offset + displayed.length < pageMeta.total)
+  );
+  const previousPage = () => {
+    setPageOffset(Math.max(0, pageMeta.offset - pageMeta.limit));
+  };
+  const nextPage = () => {
+    setPageOffset(pageMeta.offset + pageMeta.limit);
+  };
 
   if (loading) {
     return html`<div class="panel" style="padding:48px;text-align:center"><p class="muted">Loading records…</p></div>`;
@@ -431,7 +559,10 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
         <input
           placeholder="Search vendor, invoice number, PO, sender…"
           value=${searchQuery}
-          onInput=${(event) => setSearchQuery(event.target.value)}
+          onInput=${(event) => {
+            setPageOffset(0);
+            setSearchQuery(event.target.value);
+          }}
           aria-label="Search records"
         />
       </div>
@@ -480,13 +611,42 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
         })}
       </div>
 
+      <div class="cl-records-results-meta" aria-live="polite">
+        <div class="cl-records-range">
+          <strong>${pageMeta.total === 0 ? 'No records' : `${pageStart}-${pageEnd}`}</strong>
+          <span>${pageMeta.total === 0 ? 'match this view' : `of ${pageMeta.total} records`}</span>
+          ${pageLoading ? html`<span class="cl-records-updating">Updating</span>` : null}
+        </div>
+        <div class="cl-records-pagination">
+          <span class="cl-records-page-count">
+            ${pageMeta.total === 0 ? 'Page 0 of 0' : `Page ${currentPage} of ${pageCount}`}
+          </span>
+          <div class="cl-records-page-controls">
+            <button
+              class="btn-secondary btn-sm"
+              onClick=${previousPage}
+              disabled=${!canPageBackward}
+              aria-label="Previous records page">
+              Prev
+            </button>
+            <button
+              class="btn-secondary btn-sm"
+              onClick=${nextPage}
+              disabled=${!canPageForward}
+              aria-label="Next records page">
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+
       ${displayed.length === 0
         ? html`<div class="cl-records-empty">
             <strong>No records match the current view.</strong>
             <p class="muted">Try clearing filters or switching scope.</p>
             <button class="btn-secondary btn-sm" onClick=${resetFiltersAndSearch}>Reset</button>
           </div>`
-        : html`<div class="cl-records-table" role="table" aria-label="Accounts payable records">
+        : html`<div class=${`cl-records-table ${pageLoading ? 'is-updating' : ''}`} role="table" aria-label="Accounts payable records">
             <div class="cl-records-row cl-records-row-header" role="row">
               <span role="columnheader">Vendor</span>
               <span role="columnheader">Reference</span>

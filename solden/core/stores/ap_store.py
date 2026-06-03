@@ -1613,6 +1613,330 @@ class APStore:
             rows = cur.fetchall()
         return [dict(row) for row in rows]
 
+    def list_ap_items_page(
+        self,
+        organization_id: str,
+        *,
+        entity_id: Optional[str] = None,
+        active_slice_id: str = "all_open",
+        q: Optional[str] = None,
+        vendor: Optional[str] = None,
+        due: str = "all",
+        blocker: str = "all",
+        amount: str = "all",
+        approval_age: str = "all",
+        erp_status: str = "all",
+        sort_col: str = "queue_age",
+        sort_dir: str = "desc",
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """Paginated AP record directory query for workspace surfaces.
+
+        The Accounts Payable page is a directory, not a capped worklist.
+        Apply search/filter/sort before the page slice so saved views
+        and search do not operate on only the first 500 rows.
+        """
+        self.initialize()
+        safe_limit = max(1, min(int(limit or 50), 100))
+        safe_offset = max(0, min(int(offset or 0), 100000))
+        slice_id = str(active_slice_id or "all_open").strip().lower()
+        sort_key = str(sort_col or "queue_age").strip().lower()
+        direction = "ASC" if str(sort_dir or "").strip().lower() == "asc" else "DESC"
+
+        metadata_expr = "(COALESCE(NULLIF(metadata, ''), '{}')::jsonb)"
+        due_expr = "NULLIF(due_date, '')::timestamptz"
+        updated_expr = "COALESCE(NULLIF(updated_at, '')::timestamptz, NULLIF(created_at, '')::timestamptz)"
+        queue_started_expr = (
+            "COALESCE("
+            f"NULLIF({metadata_expr}->>'queue_entered_at', '')::timestamptz, "
+            f"NULLIF({metadata_expr}->>'received_at', '')::timestamptz, "
+            "NULLIF(created_at, '')::timestamptz, "
+            "NULLIF(updated_at, '')::timestamptz"
+            ")"
+        )
+        approval_requested_expr = (
+            "COALESCE("
+            f"NULLIF({metadata_expr}->>'approval_requested_at', '')::timestamptz, "
+            "NULLIF(updated_at, '')::timestamptz, "
+            "NULLIF(created_at, '')::timestamptz"
+            ")"
+        )
+        erp_connector_expr = (
+            "LOWER(COALESCE("
+            f"NULLIF({metadata_expr}->>'erp_connector_available', ''), "
+            f"NULLIF({metadata_expr}->>'erp', ''), "
+            "''"
+            ")) IN ('true', '1', 'yes', 'connected', 'quickbooks', 'xero', 'netsuite', 'sap')"
+        )
+        open_expr = "LOWER(COALESCE(state, '')) NOT IN ('posted_to_erp', 'posted', 'closed', 'rejected')"
+        approval_expr = "LOWER(COALESCE(state, '')) IN ('needs_approval', 'pending_approval')"
+        blocker_exprs = {
+            "approval": approval_expr,
+            "info": "LOWER(COALESCE(state, '')) = 'needs_info'",
+            "erp": "LOWER(COALESCE(state, '')) = 'failed_post'",
+            "exception": (
+                "NULLIF(exception_code, '') IS NOT NULL "
+                "AND LOWER(COALESCE(exception_code, '')) <> 'planner_failed'"
+            ),
+            "confidence": (
+                "COALESCE(confidence, 1) < 0.95 "
+                f"OR LOWER(COALESCE({metadata_expr}->>'requires_field_review', '')) IN ('true', '1', 'yes') "
+                f"OR LOWER(COALESCE({metadata_expr}->>'requires_extraction_review', '')) IN ('true', '1', 'yes') "
+                f"OR (jsonb_typeof({metadata_expr}->'source_conflicts') = 'array' "
+                f"AND jsonb_array_length({metadata_expr}->'source_conflicts') > 0)"
+            ),
+            "budget": (
+                f"LOWER(COALESCE({metadata_expr}->>'budget_status', '')) IN ('critical', 'exceeded') "
+                f"OR LOWER(COALESCE({metadata_expr}->>'status', '')) IN ('critical', 'exceeded') "
+                f"OR LOWER(COALESCE({metadata_expr}->>'budget_requires_decision', '')) IN ('true', '1', 'yes')"
+            ),
+            "entity": (
+                f"LOWER(COALESCE({metadata_expr}->'entity_routing'->>'status', '')) = 'needs_review'"
+            ),
+            "po": (
+                "LOWER(COALESCE(exception_code, '')) LIKE '%%po%%' "
+                "OR (NULLIF(exception_code, '') IS NOT NULL AND NULLIF(po_number, '') IS NULL)"
+            ),
+            "processing": "LOWER(COALESCE(exception_code, '')) = 'planner_failed'",
+        }
+        blocked_expr = (
+            f"{open_expr} AND ("
+            f"{blocker_exprs['entity']} OR "
+            f"{blocker_exprs['exception']} OR "
+            f"{blocker_exprs['confidence']} OR "
+            f"{blocker_exprs['budget']} OR "
+            f"{blocker_exprs['po']} OR "
+            f"{blocker_exprs['erp']} OR "
+            f"{blocker_exprs['processing']}"
+            ")"
+        )
+        due_soon_expr = (
+            f"{open_expr} AND {due_expr} IS NOT NULL "
+            f"AND {due_expr} >= NOW() "
+            f"AND {due_expr} < NOW() + INTERVAL '8 days'"
+        )
+        overdue_expr = f"{open_expr} AND {due_expr} IS NOT NULL AND {due_expr} < NOW()"
+        slice_exprs = {
+            "all": "TRUE",
+            "all_open": open_expr,
+            "waiting_on_approval": approval_expr,
+            "ready_to_post": "LOWER(COALESCE(state, '')) = 'ready_to_post'",
+            "needs_info": "LOWER(COALESCE(state, '')) = 'needs_info'",
+            "failed_post": "LOWER(COALESCE(state, '')) = 'failed_post'",
+            "blocked_exception": blocked_expr,
+            "due_soon": due_soon_expr,
+            "overdue": overdue_expr,
+        }
+        sort_exprs = {
+            "vendor": "LOWER(COALESCE(vendor_name, ''))",
+            "amount": "COALESCE(amount, 0)",
+            "invoice": "LOWER(COALESCE(invoice_number, ''))",
+            "due_date": f"COALESCE({due_expr}, NULLIF(created_at, '')::timestamptz)",
+            "updated_at": updated_expr,
+            "approval_wait": f"EXTRACT(EPOCH FROM (NOW() - {approval_requested_expr}))",
+            "state": "LOWER(COALESCE(state, ''))",
+            "priority": f"COALESCE(NULLIF({metadata_expr}->>'priority_score', '')::double precision, 0)",
+            "queue_age": f"EXTRACT(EPOCH FROM (NOW() - {queue_started_expr}))",
+        }
+
+        where = ["organization_id = %s"]
+        params: List[Any] = [organization_id]
+        if entity_id:
+            where.append("entity_id = %s")
+            params.append(entity_id)
+
+        where.append(slice_exprs.get(slice_id, slice_exprs["all_open"]))
+
+        query = str(q or "").strip()
+        if query:
+            pattern = f"%{query}%"
+            where.append(
+                "("
+                "vendor_name ILIKE %s OR "
+                "invoice_number ILIKE %s OR "
+                "subject ILIKE %s OR "
+                "sender ILIKE %s OR "
+                "po_number ILIKE %s OR "
+                "id ILIKE %s OR "
+                "thread_id ILIKE %s OR "
+                "message_id ILIKE %s OR "
+                "metadata ILIKE %s"
+                ")"
+            )
+            params.extend([pattern] * 9)
+
+        vendor_filter = str(vendor or "").strip()
+        if vendor_filter:
+            where.append("COALESCE(vendor_name, '') ILIKE %s")
+            params.append(f"%{vendor_filter}%")
+
+        due_filter = str(due or "all").strip().lower()
+        if due_filter == "overdue":
+            where.append(f"{due_expr} IS NOT NULL AND {due_expr} < NOW()")
+        elif due_filter == "due_7d":
+            where.append(f"{due_expr} IS NOT NULL AND {due_expr} >= NOW() AND {due_expr} < NOW() + INTERVAL '8 days'")
+        elif due_filter == "no_due":
+            where.append(f"{due_expr} IS NULL")
+
+        blocker_filter = str(blocker or "all").strip().lower()
+        if blocker_filter != "all":
+            expr = blocker_exprs.get(blocker_filter)
+            if expr:
+                where.append(expr)
+
+        amount_filter = str(amount or "all").strip().lower()
+        if amount_filter == "under_1k":
+            where.append("COALESCE(amount, 0) < 1000")
+        elif amount_filter == "1k_10k":
+            where.append("COALESCE(amount, 0) >= 1000 AND COALESCE(amount, 0) <= 10000")
+        elif amount_filter == "over_10k":
+            where.append("COALESCE(amount, 0) > 10000")
+
+        approval_age_filter = str(approval_age or "all").strip().lower()
+        if approval_age_filter != "all":
+            where.append(approval_expr)
+            approval_wait_expr = f"EXTRACT(EPOCH FROM (NOW() - {approval_requested_expr})) / 60"
+            if approval_age_filter == "under_24h":
+                where.append(f"{approval_wait_expr} < 1440")
+            elif approval_age_filter == "1d_3d":
+                where.append(f"{approval_wait_expr} >= 1440 AND {approval_wait_expr} <= 4320")
+            elif approval_age_filter == "over_3d":
+                where.append(f"{approval_wait_expr} > 4320")
+
+        erp_filter = str(erp_status or "all").strip().lower()
+        if erp_filter == "posted":
+            where.append(
+                "LOWER(COALESCE(state, '')) IN ('posted_to_erp', 'posted', 'closed') "
+                "OR NULLIF(erp_reference, '') IS NOT NULL"
+            )
+        elif erp_filter == "failed":
+            where.append("LOWER(COALESCE(state, '')) = 'failed_post'")
+        elif erp_filter == "ready":
+            where.append("LOWER(COALESCE(state, '')) IN ('approved', 'ready_to_post')")
+        elif erp_filter == "connected":
+            where.append(erp_connector_expr)
+        elif erp_filter == "not_connected":
+            where.append(f"NOT ({erp_connector_expr})")
+
+        where_sql = " AND ".join(f"({part})" for part in where)
+        sort_expr = sort_exprs.get(sort_key, sort_exprs["queue_age"])
+        order_sql = f"ORDER BY {sort_expr} {direction} NULLS LAST, {updated_expr} DESC NULLS LAST, id ASC"
+
+        count_sql = f"SELECT COUNT(*) AS total FROM ap_items WHERE {where_sql}"
+        list_sql = (
+            f"SELECT * FROM ap_items WHERE {where_sql} "
+            f"{order_sql} LIMIT %s OFFSET %s"
+        )
+        try:
+            with self.connect() as conn:
+                cur = conn.cursor()
+                cur.execute(count_sql, tuple(params))
+                count_row = cur.fetchone()
+                total = int(
+                    (
+                        count_row.get("total")
+                        if hasattr(count_row, "keys")
+                        else count_row[0] if count_row else 0
+                    )
+                    or 0
+                )
+                cur.execute(list_sql, tuple([*params, safe_limit, safe_offset]))
+                rows = cur.fetchall()
+        except Exception as exc:
+            logger.warning("[APStore] list AP items page failed: %s", exc)
+            return {
+                "items": [],
+                "total": 0,
+                "limit": safe_limit,
+                "offset": safe_offset,
+                "has_more": False,
+            }
+
+        items = [dict(row) for row in rows]
+        return {
+            "items": items,
+            "total": total,
+            "limit": safe_limit,
+            "offset": safe_offset,
+            "has_more": safe_offset + len(items) < total,
+        }
+
+    def ap_record_slice_counts(
+        self,
+        organization_id: str,
+        *,
+        entity_id: Optional[str] = None,
+    ) -> Dict[str, int]:
+        """Return uncapped AP directory counts for the workspace scope pills."""
+        self.initialize()
+        metadata_expr = "(COALESCE(NULLIF(metadata, ''), '{}')::jsonb)"
+        due_expr = "NULLIF(due_date, '')::timestamptz"
+        open_expr = "LOWER(COALESCE(state, '')) NOT IN ('posted_to_erp', 'posted', 'closed', 'rejected')"
+        approval_expr = "LOWER(COALESCE(state, '')) IN ('needs_approval', 'pending_approval')"
+        confidence_expr = (
+            "COALESCE(confidence, 1) < 0.95 "
+            f"OR LOWER(COALESCE({metadata_expr}->>'requires_field_review', '')) IN ('true', '1', 'yes') "
+            f"OR LOWER(COALESCE({metadata_expr}->>'requires_extraction_review', '')) IN ('true', '1', 'yes') "
+            f"OR (jsonb_typeof({metadata_expr}->'source_conflicts') = 'array' "
+            f"AND jsonb_array_length({metadata_expr}->'source_conflicts') > 0)"
+        )
+        exception_expr = (
+            "NULLIF(exception_code, '') IS NOT NULL "
+            "AND LOWER(COALESCE(exception_code, '')) <> 'planner_failed'"
+        )
+        blocked_expr = (
+            f"{open_expr} AND ("
+            "LOWER(COALESCE(state, '')) = 'failed_post' OR "
+            f"{exception_expr} OR "
+            f"{confidence_expr} OR "
+            "LOWER(COALESCE(exception_code, '')) = 'planner_failed' OR "
+            "LOWER(COALESCE(exception_code, '')) LIKE '%%po%%' OR "
+            f"LOWER(COALESCE({metadata_expr}->'entity_routing'->>'status', '')) = 'needs_review' OR "
+            f"LOWER(COALESCE({metadata_expr}->>'budget_status', '')) IN ('critical', 'exceeded')"
+            ")"
+        )
+        where = ["organization_id = %s"]
+        params: List[Any] = [organization_id]
+        if entity_id:
+            where.append("entity_id = %s")
+            params.append(entity_id)
+        where_sql = " AND ".join(f"({part})" for part in where)
+        sql = (
+            "SELECT "
+            "COUNT(*) AS all_count, "
+            f"COUNT(*) FILTER (WHERE {open_expr}) AS all_open, "
+            f"COUNT(*) FILTER (WHERE {approval_expr}) AS waiting_on_approval, "
+            "COUNT(*) FILTER (WHERE LOWER(COALESCE(state, '')) = 'ready_to_post') AS ready_to_post, "
+            "COUNT(*) FILTER (WHERE LOWER(COALESCE(state, '')) = 'needs_info') AS needs_info, "
+            "COUNT(*) FILTER (WHERE LOWER(COALESCE(state, '')) = 'failed_post') AS failed_post, "
+            f"COUNT(*) FILTER (WHERE {blocked_expr}) AS blocked_exception, "
+            f"COUNT(*) FILTER (WHERE {open_expr} AND {due_expr} IS NOT NULL AND {due_expr} >= NOW() AND {due_expr} < NOW() + INTERVAL '8 days') AS due_soon, "
+            f"COUNT(*) FILTER (WHERE {open_expr} AND {due_expr} IS NOT NULL AND {due_expr} < NOW()) AS overdue "
+            f"FROM ap_items WHERE {where_sql}"
+        )
+        try:
+            with self.connect() as conn:
+                cur = conn.cursor()
+                cur.execute(sql, tuple(params))
+                row = cur.fetchone() or {}
+                if row and not hasattr(row, "keys"):
+                    row = dict(zip([desc[0] for desc in cur.description], row))
+        except Exception as exc:
+            logger.warning("[APStore] AP record slice counts failed: %s", exc)
+            row = {}
+        return {
+            "all": int(row.get("all_count") or 0),
+            "all_open": int(row.get("all_open") or 0),
+            "waiting_on_approval": int(row.get("waiting_on_approval") or 0),
+            "ready_to_post": int(row.get("ready_to_post") or 0),
+            "needs_info": int(row.get("needs_info") or 0),
+            "failed_post": int(row.get("failed_post") or 0),
+            "blocked_exception": int(row.get("blocked_exception") or 0),
+            "due_soon": int(row.get("due_soon") or 0),
+            "overdue": int(row.get("overdue") or 0),
+        }
+
     def list_ap_items_all(
         self, organization_id: str, state: Optional[str] = None, limit: int = 1000
     ) -> List[Dict[str, Any]]:
