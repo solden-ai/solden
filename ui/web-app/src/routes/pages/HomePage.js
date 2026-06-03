@@ -6,9 +6,10 @@ import { useLocation } from 'wouter-preact';
 import { html } from '../../utils/htm.js';
 import { api } from '../../api/client.js';
 import { useBootstrap, useOrgId } from '../../shell/BootstrapContext.js';
+import { hasCapability } from '../../utils/capabilities.js';
 import { formatAmount, formatRelative, displayOrgName } from '../../utils/formatters.js';
 import { AgentActivityRibbon } from '../../components/AgentActivityRibbon.js';
-import { accountsPayablePath } from '../../utils/record-route.js';
+import { accountsPayablePath, accountPayableRecordPath } from '../../utils/record-route.js';
 
 /**
  * Workspace Home — work-in-progress control center.
@@ -24,14 +25,15 @@ import { accountsPayablePath } from '../../utils/record-route.js';
  * Page order:
  *   1. Welcome header + primary actions
  *   2. Onboarding banner (only if onboarding incomplete)
- *   3. Agent activity ribbon — the hero. Live SSE stream of agent /
+ *   3. Implementation checklist (only if setup incomplete)
+ *   4. Agent activity ribbon — the hero. Live SSE stream of agent /
  *      operator actions across every render target. The whole page is
  *      organized around this primary surface; everything below is
- *      either context (stats) or follow-up work (exceptions, vendors).
- *   4. Compact stat strip (4 dense tiles, live-pulse indicators)
- *   5. 2-col panels: Exception queue + Top vendors
- *   6. Approver workload
- *   7. System status footer
+ *      either context (stats) or follow-up work (exceptions, work types).
+ *   5. Compact stat strip (4 dense tiles, live-pulse indicators)
+ *   6. 2-col panels: Exception queue + Work by type
+ *   7. Approver workload
+ *   8. System status footer
  *
  * Each panel fetches independently; one slow endpoint never gates
  * the rest. SSE keeps stats / workload / activity live within ~15s.
@@ -76,7 +78,8 @@ export function HomePage() {
   const metrics = useEndpoint(`/api/ap/items/metrics/aggregation?${orgQuery}&vendor_limit=5`, [orgId]);
   const upcoming = useEndpoint(`/api/ap/items/upcoming?${orgQuery}&limit=10`, [orgId]);
   const workload = useEndpoint('/api/workspace/dashboard/approver-workload', [orgId]);
-  const exceptions = useEndpoint('/api/workspace/exceptions?box_type=ap_item&limit=10', [orgId]);
+  const exceptions = useEndpoint('/api/workspace/exceptions?limit=10', [orgId]);
+  const exceptionStats = useEndpoint('/api/workspace/exceptions/stats', [orgId]);
   const activity = useEndpoint('/api/workspace/dashboard/recent-activity?limit=20', [orgId]);
 
   // SSE-pushed live updates: stats, workload, activity. Keeps the
@@ -109,16 +112,14 @@ export function HomePage() {
   const onboardingPending = bootstrap?.onboarding && bootstrap.onboarding.completed === false;
 
   const m = metrics.data?.metrics || metrics.data || {};
-  const totalsByCurrency = m.outstanding_total_by_currency || m.totals_by_currency || {};
-  // No transactions yet → no currency to display. Don't fabricate USD.
-  const primaryCurrency = Object.keys(totalsByCurrency)[0] || '';
 
   const dash = liveDashboard || bootstrap?.dashboard_stats || bootstrap?.dashboard || {};
   const inFlight = Number(dash.in_flight || 0);
   const awaitingApproval = Number(dash.pending_approval || 0);
   const processedWeek = Number(dash.processed_this_week || 0);
   const exceptionCount = Number(
-    exceptions.data?.count
+    exceptionStats.data?.total_unresolved
+    ?? exceptions.data?.count
     ?? m.exceptions_count
     ?? m.exception_count
     ?? 0,
@@ -126,16 +127,24 @@ export function HomePage() {
 
   const exceptionItems = Array.isArray(exceptions.data?.items) ? exceptions.data.items : [];
   const upcomingItems = upcoming.data?.items || upcoming.data?.upcoming || [];
-  const topVendors = m.top_vendors || m.vendors || [];
 
   // Activity ribbon: live SSE feed wins over the initial HTTP fetch.
   const activityItems = (liveActivity?.items)
     || (Array.isArray(activity.data?.items) ? activity.data.items : []);
+  const activityHeroItems = activityItems.slice(0, 8);
 
   // Workload: live SSE wins.
   const workloadState = liveWorkload
     ? { status: 'ready', data: liveWorkload, error: null }
     : workload;
+  const workTypeRows = buildWorkTypeRows({
+    bootstrap,
+    dashboard: dash,
+    exceptionStats: exceptionStats.data,
+    apMetrics: m,
+    inFlight,
+    awaitingApproval,
+  });
 
   const integrations = Array.isArray(bootstrap?.integrations) ? bootstrap.integrations : [];
   const agentLastAction = bootstrap?.dashboard_stats?.last_action_at
@@ -169,7 +178,7 @@ export function HomePage() {
         ? html`
             <aside class="cl-home-onboarding-banner">
               <div>
-                <strong>Setup is in progress.</strong> Complete onboarding to start auto-routing AP.
+                <strong>Setup is in progress.</strong> Complete onboarding to start routing work across your connected surfaces.
               </div>
               <button class="cl-home-btn cl-home-btn-primary" onClick=${() => navigate('/onboarding')}>
                 Resume setup
@@ -182,15 +191,20 @@ export function HomePage() {
 
       <${AgentActivityRibbon}
         state=${activity}
-        items=${activityItems}
+        items=${activityHeroItems}
         live=${!!liveActivity}
-        navigate=${navigate} />
+        navigate=${navigate}
+        variant="hero"
+        title="Live activity"
+        metaSuffix=${activityItems.length > activityHeroItems.length ? `last ${activityHeroItems.length} of ${activityItems.length}` : undefined}
+        emptyTitle="No work has moved yet."
+        emptyDescription="As Solden watches inboxes, chat approvals, ERP events, and work-type records, the live trail appears here." />
 
       <section class="cl-home-stat-strip" aria-label="Work in progress at a glance">
         <${StatTile}
           label="In flight"
           value=${inFlight}
-          sub=${inFlight === 0 ? 'No invoices in progress' : 'Across all open states'}
+          sub=${inFlight === 0 ? 'No work in progress' : 'Across open work states'}
           tone="brand"
           live=${streamPulse > 0}
           onClick=${() => navigate(accountsPayablePath())}
@@ -198,7 +212,7 @@ export function HomePage() {
         <${StatTile}
           label="Awaiting approval"
           value=${awaitingApproval}
-          sub=${awaitingApproval === 0 ? 'No bottleneck' : 'In approver queues'}
+          sub=${awaitingApproval === 0 ? 'No approval bottleneck' : 'Waiting in approval queues'}
           tone=${awaitingApproval > 0 ? 'pending' : 'good'}
           live=${streamPulse > 0}
           onClick=${() => navigate(accountsPayablePath('?scope=approvals'))}
@@ -216,7 +230,7 @@ export function HomePage() {
           sub=${exceptionCount > 0 ? 'Need judgment' : 'Clean'}
           tone=${exceptionCount > 0 ? 'warn' : 'good'}
           live=${streamPulse > 0}
-          onClick=${() => exceptionCount > 0 && navigate('/exceptions')}
+          onClick=${exceptionCount > 0 ? () => navigate('/exceptions') : undefined}
         />
       </section>
 
@@ -231,13 +245,13 @@ export function HomePage() {
             items: exceptionItems,
             renderEmpty: () => html`
               <div class="cl-home-empty">
-                <div class="cl-home-empty-title">${upcomingItems.length === 0 ? 'No invoices yet.' : 'Nothing stuck right now.'}</div>
+                <div class="cl-home-empty-title">${upcomingItems.length === 0 && inFlight === 0 ? 'No tracked work yet.' : 'Nothing waiting for judgment.'}</div>
                 <div class="cl-home-empty-sub">
-                  ${upcomingItems.length === 0
-                    ? "Connect Gmail or your ERP to start ingesting invoices automatically."
-                    : "Every invoice is moving. The agent will surface anything that needs your judgment here."}
+                  ${upcomingItems.length === 0 && inFlight === 0
+                    ? "Connect inbox, chat, or ERP surfaces to start tracking work automatically."
+                    : "Every tracked record is moving. The agent will surface work that needs a human decision here."}
                 </div>
-                ${upcomingItems.length === 0 ? html`
+                ${upcomingItems.length === 0 && inFlight === 0 ? html`
                   <button class="cl-home-btn cl-home-btn-secondary" onClick=${() => navigate('/connections')}>
                     Connect a source
                   </button>
@@ -248,13 +262,17 @@ export function HomePage() {
               <ul class="cl-home-list">
                 ${exceptionItems.slice(0, 8).map((row) => html`
                   <li class="cl-home-row cl-home-row-exception" key=${row.id || row.exception_id || row.box_id}
-                    onClick=${() => navigate(`/exceptions/${encodeURIComponent(row.box_id || row.id || '')}`)}>
+                    onClick=${() => navigate(exceptionTarget(row))}
+                    onKeyDown=${(event) => activateOnKey(event, () => navigate(exceptionTarget(row)))}
+                    role="button"
+                    tabindex="0">
                     <div class="cl-home-row-main">
                       <div class="cl-home-row-vendor">
-                        ${row.vendor_name || row.vendor || row.box_summary?.vendor_name || 'Vendor not extracted'}
+                        ${exceptionHeadline(row)}
                       </div>
                       <div class="cl-home-row-meta">
-                        ${humanizeExceptionType(row.exception_type)}
+                        ${humanizeWorkType(row.box_type)}
+                        · ${humanizeExceptionType(row.exception_type)}
                         ${row.box_summary?.invoice_number ? html` · #${row.box_summary.invoice_number}` : null}
                         ${row.raised_at ? html` · ${exceptionAgeDays(row.raised_at)}d stuck` : null}
                       </div>
@@ -283,36 +301,36 @@ export function HomePage() {
 
         <div class="cl-home-panel">
           <header class="cl-home-panel-header">
-            <h2>Top vendors</h2>
-            <button class="cl-home-link" onClick=${() => navigate('/vendors')}>View all →</button>
+            <h2>Work by type</h2>
+            ${hasCapability(bootstrap, 'view_workflow_builder')
+              ? html`<button class="cl-home-link" onClick=${() => navigate('/workflows')}>Configure →</button>`
+              : null}
           </header>
-          ${renderPanelBody({
-            state: metrics,
-            items: topVendors,
-            renderEmpty: () => html`
-              <div class="cl-home-empty">
-                <div class="cl-home-empty-title">No vendor activity.</div>
-                <div class="cl-home-empty-sub">Vendor rollups appear once invoices flow through.</div>
-              </div>
-            `,
-            renderList: () => html`
-              <ul class="cl-home-list">
-                ${topVendors.slice(0, 5).map((v) => html`
-                  <li class="cl-home-row" key=${v.vendor_name || v.name} onClick=${() => navigate(`/vendors/${encodeURIComponent(v.vendor_name || v.name || '')}`)}>
-                    <div class="cl-home-row-main">
-                      <div class="cl-home-row-vendor">${v.vendor_name || v.name || 'Unknown'}</div>
-                      <div class="cl-home-row-meta">
-                        ${v.invoice_count || v.total_bills || 0} invoice${(v.invoice_count || v.total_bills) === 1 ? '' : 's'}
-                      </div>
-                    </div>
-                    <div class="cl-home-row-right">
-                      <div class="cl-home-row-amount">${fmtCurrency(v.total_amount || v.outstanding_amount || 0, primaryCurrency)}</div>
-                    </div>
-                  </li>
-                `)}
-              </ul>
-            `,
-          })}
+          <ul class="cl-home-worktype-list">
+            ${workTypeRows.map((row) => html`
+              <li
+                class=${`cl-home-worktype-row ${row.path ? 'cl-home-worktype-row-clickable' : ''}`}
+                key=${row.id}
+                onClick=${() => row.path && navigate(row.path)}
+                onKeyDown=${row.path ? (event) => activateOnKey(event, () => navigate(row.path)) : undefined}
+                role=${row.path ? 'button' : undefined}
+                tabindex=${row.path ? 0 : undefined}>
+                <div class="cl-home-worktype-main">
+                  <div class="cl-home-worktype-name">${row.label}</div>
+                  <div class="cl-home-worktype-sub">${row.sub}</div>
+                </div>
+                <div class="cl-home-worktype-right">
+                  ${row.metricValue == null
+                    ? html`<span class=${`cl-home-worktype-state cl-home-worktype-state-${row.tone}`}>${row.state}</span>`
+                    : html`
+                        <span class="cl-home-worktype-count">${row.metricValue}</span>
+                        <span class="cl-home-worktype-count-label">${row.metricLabel}</span>
+                      `}
+                  ${row.detail ? html`<span class=${`cl-home-worktype-detail cl-home-worktype-detail-${row.tone}`}>${row.detail}</span>` : null}
+                </div>
+              </li>
+            `)}
+          </ul>
         </div>
       </section>
 
@@ -401,6 +419,7 @@ function StatTile({ label, value, sub, tone = 'neutral', live = false, onClick }
     <div
       class=${`cl-home-stat cl-home-stat-${tone} ${clickable ? 'cl-home-stat-clickable' : ''}`}
       onClick=${clickable ? onClick : undefined}
+      onKeyDown=${clickable ? (event) => activateOnKey(event, onClick) : undefined}
       role=${clickable ? 'button' : undefined}
       tabindex=${clickable ? 0 : undefined}>
       <div class="cl-home-stat-head">
@@ -469,10 +488,10 @@ function ApproverWorkloadStrip({ state, navigate }) {
           <h2>Approver workload</h2>
           <span class="cl-home-workload-meta">Logistics, not scoring</span>
         </header>
-        <div class="cl-home-empty">
-          <div class="cl-home-empty-title">Nothing waiting on anyone right now.</div>
-          <div class="cl-home-empty-sub">
-            When invoices route to approval, you'll see who has what on their
+          <div class="cl-home-empty">
+            <div class="cl-home-empty-title">Nothing waiting on anyone right now.</div>
+            <div class="cl-home-empty-sub">
+            When work routes to approval, you'll see who has what on their
             plate so you can re-route if someone is out.
           </div>
         </div>
@@ -492,7 +511,10 @@ function ApproverWorkloadStrip({ state, navigate }) {
       <ul class="cl-home-workload-list">
         ${approvers.slice(0, 8).map((a) => html`
           <li class="cl-home-workload-row" key=${a.approver_id}
-            onClick=${() => navigate(accountsPayablePath(`?approver=${encodeURIComponent(a.email || a.approver_id)}`))}>
+            onClick=${() => navigate(accountsPayablePath(`?approver=${encodeURIComponent(a.email || a.approver_id)}`))}
+            onKeyDown=${(event) => activateOnKey(event, () => navigate(accountsPayablePath(`?approver=${encodeURIComponent(a.email || a.approver_id)}`)))}
+            role="button"
+            tabindex="0">
             <div class="cl-home-workload-main">
               <div class="cl-home-workload-name">${a.name || a.email || a.approver_id}</div>
               ${a.email && a.email !== a.name ? html`
@@ -522,6 +544,12 @@ function ageTone(days) {
   if (days >= 5) return 'alert';
   if (days >= 2) return 'warn';
   return 'ok';
+}
+
+function activateOnKey(event, activate) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  activate?.();
 }
 
 
@@ -596,6 +624,41 @@ function humanizeExceptionType(t) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function humanizeWorkType(t) {
+  const s = String(t || '').toLowerCase();
+  if (s === 'ap_item') return 'Accounts Payable';
+  if (s === 'purchase_order') return 'Procurement';
+  if (s === 'vendor_onboarding_session') return 'Vendor Onboarding';
+  if (s === 'bank_match') return 'Bank Reconciliation';
+  if (!s) return 'Record';
+  return s
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function exceptionHeadline(row = {}) {
+  const summary = row.box_summary || {};
+  const vendor = row.vendor_name || row.vendor || summary.vendor_name || row.metadata?.vendor_name;
+  const reference = summary.invoice_number || summary.reference || summary.po_number || row.box_id;
+  if (vendor && reference) return `${vendor} · ${reference}`;
+  if (vendor) return vendor;
+  if (reference) return `${humanizeWorkType(row.box_type)} · ${String(reference).slice(0, 18)}`;
+  return 'Record not summarized';
+}
+
+function exceptionTarget(row = {}) {
+  if (row.box_type === 'ap_item' && row.box_id) {
+    return accountPayableRecordPath(row.box_id);
+  }
+  if (row.synthetic && row.metadata?.vendor_name) {
+    return `/vendors/${encodeURIComponent(row.metadata.vendor_name)}`;
+  }
+  if (row.box_type === 'vendor_onboarding_session' && row.metadata?.vendor_name) {
+    return `/vendors/${encodeURIComponent(row.metadata.vendor_name)}`;
+  }
+  return '/exceptions';
+}
+
 function exceptionAgeDays(raisedAt) {
   if (!raisedAt) return 0;
   const t = new Date(raisedAt).getTime();
@@ -608,4 +671,95 @@ function severityTone(sev) {
   if (s === 'critical' || s === 'high') return 'warn';
   if (s === 'low') return 'good';
   return 'pending';
+}
+
+function safeMetric(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function exceptionCountFor(stats = {}, boxType) {
+  const byBoxType = stats?.by_box_type || {};
+  return safeMetric(byBoxType[boxType]) || 0;
+}
+
+function buildWorkTypeRows({
+  bootstrap,
+  dashboard,
+  exceptionStats,
+  apMetrics,
+  inFlight,
+  awaitingApproval,
+}) {
+  const apExceptions = exceptionCountFor(exceptionStats, 'ap_item');
+  const procurementExceptions = exceptionCountFor(exceptionStats, 'purchase_order');
+  const vendorOnboardingExceptions = exceptionCountFor(exceptionStats, 'vendor_onboarding_session');
+  const procurementOpen = safeMetric(
+    dashboard?.procurement_in_flight
+    ?? dashboard?.purchase_orders_in_flight
+    ?? apMetrics?.purchase_orders_in_flight
+  );
+  const canViewProcurement = hasCapability(bootstrap, 'view_procurement') || procurementExceptions > 0 || procurementOpen !== null;
+  const canViewBuilder = hasCapability(bootstrap, 'view_workflow_builder');
+
+  const rows = [
+    {
+      id: 'ap_item',
+      label: 'Accounts Payable',
+      sub: 'Bills, approvals, ERP posting, payment readiness',
+      metricValue: safeMetric(inFlight) ?? 0,
+      metricLabel: 'open records',
+      detail: apExceptions > 0
+        ? `${apExceptions} exception${apExceptions === 1 ? '' : 's'}`
+        : awaitingApproval > 0
+          ? `${awaitingApproval} approval wait${awaitingApproval === 1 ? '' : 's'}`
+          : 'Moving',
+      tone: apExceptions > 0 ? 'warn' : awaitingApproval > 0 ? 'pending' : 'good',
+      path: accountsPayablePath(),
+    },
+  ];
+
+  if (canViewProcurement) {
+    rows.push({
+      id: 'purchase_order',
+      label: 'Procurement',
+      sub: 'Purchase orders, requester approvals, receiving checks',
+      metricValue: procurementOpen,
+      metricLabel: 'open POs',
+      state: procurementOpen === null ? 'Enabled' : 'Tracking',
+      detail: procurementExceptions > 0
+        ? `${procurementExceptions} exception${procurementExceptions === 1 ? '' : 's'}`
+        : 'Monitored',
+      tone: procurementExceptions > 0 ? 'warn' : 'good',
+      path: '/procurement',
+    });
+  }
+
+  rows.push({
+    id: 'vendor_onboarding_session',
+    label: 'Vendor Onboarding',
+    sub: 'Bank details, tax forms, activation waits',
+    metricValue: vendorOnboardingExceptions,
+    metricLabel: 'open signals',
+    detail: vendorOnboardingExceptions > 0 ? 'Needs review' : 'Monitored',
+    tone: vendorOnboardingExceptions > 0 ? 'warn' : 'good',
+    path: '/vendors',
+  });
+
+  if (canViewBuilder) {
+    rows.push({
+      id: 'custom_work_types',
+      label: 'Custom Work Types',
+      sub: 'Contract reviews, access requests, bank reconciliation',
+      metricValue: null,
+      metricLabel: '',
+      state: 'Builder',
+      detail: 'Ready to configure',
+      tone: 'neutral',
+      path: '/workflows',
+    });
+  }
+
+  return rows;
 }

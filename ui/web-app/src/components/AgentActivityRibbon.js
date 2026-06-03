@@ -24,8 +24,9 @@ import { accountPayableRecordPath } from '../utils/record-route.js';
  *   items          shaped rows from /api/workspace/dashboard/recent-activity
  *   live           true while SSE is delivering frames; flips the meta
  *                  label between "Live" and "Recent"
- *   navigate       wouter setter; called with `/accounts-payable/{box_id}` on
- *                  row click
+ *   navigate       wouter setter; called with the row's record path on click
+ *                  or keyboard activation
+ *   variant        "standard" | "hero"; hero gives Home more presence
  *   title          optional override for the section h2 (default
  *                  "Agent activity")
  *   metaSuffix     optional override for the right-hand meta line.
@@ -38,14 +39,17 @@ export function AgentActivityRibbon({
   items,
   live,
   navigate,
+  variant = 'standard',
   title = 'Agent activity',
   metaSuffix,
   emptyTitle = 'Nothing to show yet.',
-  emptyDescription = "Once invoices flow through, every agent and operator action shows up here in real time. What was decided, where, and when.",
+  emptyDescription = "Once work starts moving, every agent and operator action shows up here in real time. What was decided, where, and when.",
 }) {
+  const sectionClass = `cl-home-activity ${variant === 'hero' ? 'cl-home-activity-hero' : ''}`;
+
   if ((!items || items.length === 0) && state?.status === 'loading') {
     return html`
-      <section class="cl-home-activity">
+      <section class=${sectionClass}>
         <header class="cl-home-activity-head">
           <h2>${title}</h2>
         </header>
@@ -56,7 +60,7 @@ export function AgentActivityRibbon({
 
   if ((!items || items.length === 0) && state?.status === 'error') {
     return html`
-      <section class="cl-home-activity">
+      <section class=${sectionClass}>
         <header class="cl-home-activity-head">
           <h2>${title}</h2>
         </header>
@@ -70,7 +74,7 @@ export function AgentActivityRibbon({
 
   if (!items || items.length === 0) {
     return html`
-      <section class="cl-home-activity">
+      <section class=${sectionClass}>
         <header class="cl-home-activity-head">
           <h2>${title}</h2>
           <span class="cl-home-activity-meta">No actions yet.</span>
@@ -86,7 +90,7 @@ export function AgentActivityRibbon({
   const tail = metaSuffix || `last ${items.length}`;
 
   return html`
-    <section class="cl-home-activity">
+    <section class=${sectionClass}>
       <header class="cl-home-activity-head">
         <h2>${title}</h2>
         <span class="cl-home-activity-meta">
@@ -95,12 +99,16 @@ export function AgentActivityRibbon({
         </span>
       </header>
       <ul class="cl-home-activity-list">
-        ${items.map((row) => html`
+        ${items.map((row) => {
+          const target = activityTarget(row);
+          const activate = () => target && navigate?.(target);
+          return html`
           <li class=${`cl-home-activity-row cl-home-activity-tone-${row.tone || 'info'}`}
             key=${row.id || `${row.ts}-${row.event_type}`}
-            onClick=${() => row.box_id && navigate?.(accountPayableRecordPath(row.box_id))}
-            role=${row.box_id ? 'button' : undefined}
-            tabindex=${row.box_id ? 0 : undefined}>
+            onClick=${activate}
+            onKeyDown=${target ? (event) => activateOnKey(event, activate) : undefined}
+            role=${target ? 'button' : undefined}
+            tabindex=${target ? 0 : undefined}>
             <span class=${`cl-home-activity-dot cl-home-activity-dot-${row.tone || 'info'}`} aria-hidden="true"></span>
             <div class="cl-home-activity-body">
               <div class="cl-home-activity-line">
@@ -118,8 +126,26 @@ export function AgentActivityRibbon({
               </div>
             </div>
           </li>
-        `)}
+        `;
+        })}
       </ul>
     </section>
   `;
+}
+
+function activityTarget(row = {}) {
+  const explicitPath = String(row.record_path || row.path || '').trim();
+  if (explicitPath.startsWith('/')) return explicitPath;
+
+  const boxType = String(row.box_type || '').trim().toLowerCase();
+  if ((!boxType || boxType === 'ap_item') && row.box_id) {
+    return accountPayableRecordPath(row.box_id);
+  }
+  return '';
+}
+
+function activateOnKey(event, activate) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  activate?.();
 }

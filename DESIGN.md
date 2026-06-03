@@ -150,7 +150,7 @@ The Gmail extension keeps its own in-inbox navigation following Streak's grammar
   3. Implementation checklist (only when setup is incomplete)
   4. **Agent activity ribbon (hero)** — live stream of last ~20 agent / operator actions
   5. **Compact stat strip** — 4 tiles: In flight · Awaiting approval · Processed this week · Agent exceptions
-  6. Two-column main panels: Exception queue (1.4fr) + Top vendors (1fr)
+  6. Two-column main panels: Exception queue (1.4fr) + Work by type (1fr)
   7. Approver workload (logistics, not scoring)
   8. System status footer (agent + Gmail + approval surface + ERP)
 - The Workspace Home does **not** carry a horizontal "quick-access cards" strip. Quick navigation lives in the header buttons + the `⌘K` palette. Linear / Vercel / Datadog do not surface a quick-action card row on their landing pages.
@@ -255,3 +255,4 @@ The Gmail extension keeps its own in-inbox navigation following Streak's grammar
 | 2026-05-31 | Positioning sharpened around operational memory | YC-founder market chatter reinforced the same insight: models are no longer the blocker; the hidden blocker is tacit work context trapped in senior people's heads and scattered threads. Solden should not chase a generic "company brain" category. The sharper story is operational memory for live back-office work: a system of record for work in progress that keeps owner, next step, context, blocker, proof, and audit together across the tools where work already happens. |
 | 2026-06-03 | Workspace workflow nav labels name box types | WORK TYPES items should name the workflow / box type the operator is entering, not the generic data object. The AP surface is labeled Accounts Payable; individual rows remain records. `/accounts-payable` is the route; `/records` is not a product route. |
 | 2026-06-03 | Workspace sidebar tightened around operator work | Sidebar grouping changed from WORKFLOWS to WORK TYPES, Admin was reduced to Connections / Approval rules / Settings, and API keys / Plan / Status / Onboarding moved to command-palette or secondary surfaces. The rail may show quiet operational pressure counts for Exceptions and Accounts Payable plus Activity stream presence, but should not become a KPI strip. |
+| 2026-06-03 | Workspace Home broadened beyond AP dashboard | Home is the enterprise control center, not the vendor/AP rollup. The right side panel is Work by type, the exception queue is cross-type, and live activity carries work-type context. Vendor spend belongs on Vendors/AP, not the Home hero surface. |

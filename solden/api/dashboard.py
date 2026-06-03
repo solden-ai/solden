@@ -168,7 +168,10 @@ def _format_ribbon_item(row: Dict[str, Any]) -> Dict[str, Any]:
     # one-line subject, surface tag.
     new_state = str(row.get("new_state") or "").lower()
     prev_state = str(row.get("prev_state") or "").lower()
+    box_type = str(row.get("box_type") or payload.get("box_type") or "").strip()
     box_id = row.get("box_id") or row.get("ap_item_id") or payload.get("ap_item_id") or ""
+    if not box_type and (row.get("ap_item_id") or payload.get("ap_item_id")):
+        box_type = "ap_item"
 
     vendor = (
         payload.get("vendor_name")
@@ -190,7 +193,7 @@ def _format_ribbon_item(row: Dict[str, Any]) -> Dict[str, Any]:
         subject_bits.append(str(box_id))
     if vendor:
         subject_bits.append(f"from {vendor}")
-    subject = " ".join(subject_bits).strip() or "AP item"
+    subject = " ".join(subject_bits).strip() or _box_type_label(box_type)
 
     action_label, tone = _action_label_and_tone(event_type, prev_state, new_state)
 
@@ -210,10 +213,26 @@ def _format_ribbon_item(row: Dict[str, Any]) -> Dict[str, Any]:
         "surface": str(surface).lower(),
         "tone": tone,
         "box_id": box_id or None,
+        "box_type": box_type or None,
         "actor_type": actor_type,
         "actor_label": actor_label,
         "event_type": event_type,
     }
+
+
+def _box_type_label(box_type: str) -> str:
+    token = str(box_type or "").strip().lower()
+    labels = {
+        "ap_item": "Accounts Payable record",
+        "purchase_order": "Procurement record",
+        "vendor_onboarding_session": "Vendor onboarding record",
+        "bank_match": "Bank reconciliation record",
+    }
+    if token in labels:
+        return labels[token]
+    if token:
+        return token.replace("_", " ").title()
+    return "Work record"
 
 
 def _action_label_and_tone(

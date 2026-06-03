@@ -15,7 +15,8 @@ REPORTED_HOME_ENDPOINTS = (
     "/erp/gl-map?organization_id=org_legacy_default",
     "/api/workspace/team/invites?organization_id=org_legacy_default",
     "/api/ap/items/metrics/aggregation?organization_id=org_legacy_default&vendor_limit=5",
-    "/api/workspace/exceptions?box_type=ap_item&limit=10",
+    "/api/workspace/exceptions?limit=10",
+    "/api/workspace/exceptions/stats",
     "/api/workspace/dashboard/recent-activity?limit=20",
 )
 

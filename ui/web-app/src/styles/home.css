@@ -1,8 +1,9 @@
 /* Workspace Home — coordination-layer control center.
  * (DESIGN.md §Workspace Surface Pattern.) Reference hierarchy:
  * Linear, Vercel deployments, Datadog overview, Modal jobs.
- * Order: header → onboarding banner → compact stat strip →
- * agent activity ribbon (hero) → 2-col panels → approver workload
+ * Order: header → onboarding banner → implementation checklist →
+ * agent activity ribbon (hero) → compact stat strip → 2-col panels
+ * → approver workload
  * → system status footer. Real-time SSE keeps stats / workload /
  * activity within ~15s of the agent acting. */
 
@@ -65,10 +66,14 @@
 }
 
 .cl-home-btn-primary {
-  background: var(--cl-navy);
-  color: #fff;
+  background: var(--cl-teal-500);
+  color: var(--cl-navy);
+  border-color: var(--cl-teal-500);
 }
-.cl-home-btn-primary:hover { background: #14233e; }
+.cl-home-btn-primary:hover {
+  background: var(--cl-teal-600);
+  border-color: var(--cl-teal-600);
+}
 
 .cl-home-btn-secondary {
   background: var(--cl-surface);
@@ -77,14 +82,25 @@
 }
 .cl-home-btn-secondary:hover { border-color: var(--cl-ink-muted); }
 
+.cl-home-btn:focus-visible,
+.cl-home-link:focus-visible,
+.cl-home-stat-clickable:focus-visible,
+.cl-home-row[role="button"]:focus-visible,
+.cl-home-activity-row[role="button"]:focus-visible,
+.cl-home-worktype-row-clickable:focus-visible,
+.cl-home-workload-row[role="button"]:focus-visible {
+  outline: 2px solid var(--cl-teal-500);
+  outline-offset: 2px;
+}
+
 .cl-home-onboarding-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: 16px 20px;
-  background: linear-gradient(0deg, rgba(24, 191, 176, 0.05), rgba(24, 191, 176, 0.05)), var(--cl-surface);
-  border: 1px solid rgba(24, 191, 176, 0.2);
+  background: linear-gradient(0deg, color-mix(in srgb, var(--cl-teal-500) 5%, transparent), color-mix(in srgb, var(--cl-teal-500) 5%, transparent)), var(--cl-surface);
+  border: 1px solid color-mix(in srgb, var(--cl-teal-500) 20%, transparent);
   border-radius: var(--cl-radius);
   font-size: 13px;
   color: var(--cl-ink-primary);
@@ -223,15 +239,15 @@
   height: 6px;
   border-radius: 50%;
   background: var(--cl-mint-strong);
-  box-shadow: 0 0 0 0 rgba(24, 191, 176, 0.45);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--cl-teal-500) 45%, transparent);
   animation: cl-home-pulse 2.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   flex-shrink: 0;
 }
 
 @keyframes cl-home-pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(24, 191, 176, 0.45); }
-  60%  { box-shadow: 0 0 0 6px rgba(24, 191, 176, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(24, 191, 176, 0); }
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--cl-teal-500) 45%, transparent); }
+  60%  { box-shadow: 0 0 0 6px color-mix(in srgb, var(--cl-teal-500) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--cl-teal-500) 0%, transparent); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -256,7 +272,7 @@
 .cl-home-stat-good .cl-home-stat-value  { color: var(--cl-mint-strong); }
 .cl-home-stat-warn .cl-home-stat-value  { color: var(--cl-warning); }
 .cl-home-stat-pending .cl-home-stat-value { color: #B45309; }
-.cl-home-stat-brand     { border-color: rgba(24, 191, 176, 0.25); }
+.cl-home-stat-brand { border-color: color-mix(in srgb, var(--cl-teal-500) 25%, transparent); }
 
 
 /* ─── Agent activity ribbon (the hero) ────────────────────────── */
@@ -268,6 +284,11 @@
   overflow: hidden;
 }
 
+.cl-home-activity-hero {
+  border-color: color-mix(in srgb, var(--cl-teal-500) 26%, transparent);
+  box-shadow: 0 1px 0 rgba(10, 31, 68, 0.03);
+}
+
 .cl-home-activity-head {
   display: flex;
   align-items: center;
@@ -276,11 +297,20 @@
   border-bottom: 1px solid var(--cl-border);
 }
 
+.cl-home-activity-hero .cl-home-activity-head {
+  padding: 16px 18px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cl-teal-500) 4.5%, transparent), color-mix(in srgb, var(--cl-teal-500) 0%, transparent));
+}
+
 .cl-home-activity-head h2 {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: -0.01em;
+}
+
+.cl-home-activity-hero .cl-home-activity-head h2 {
+  font-size: 15px;
 }
 
 .cl-home-activity-meta {
@@ -318,6 +348,10 @@
 .cl-home-activity-row:last-child { border-bottom: 0; }
 .cl-home-activity-row:hover { background: var(--cl-bg); }
 
+.cl-home-activity-hero .cl-home-activity-row {
+  padding: 12px 18px;
+}
+
 .cl-home-activity-dot {
   width: 8px;
   height: 8px;
@@ -346,6 +380,10 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--cl-ink-primary);
+}
+
+.cl-home-activity-hero .cl-home-activity-action {
+  font-size: 14px;
 }
 
 .cl-home-activity-subject {
@@ -381,7 +419,7 @@
 }
 
 
-/* Activity + vendors grid */
+/* Exception queue + work-type grid */
 .cl-home-grid {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
@@ -664,8 +702,8 @@
 .cl-home-status {
   margin-top: 24px;
   padding: 16px 20px;
-  background: #FFFFFF;
-  border: 1px solid var(--cl-line);
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
   border-radius: 12px;
 }
 .cl-home-status-head {
@@ -692,8 +730,8 @@
   align-items: flex-start;
   gap: 10px;
   padding: 12px 14px;
-  background: #FAFAFA;
-  border: 1px solid var(--cl-line);
+  background: var(--cl-bg);
+  border: 1px solid var(--cl-border);
   border-radius: 8px;
 }
 .cl-home-status-dot {
@@ -728,11 +766,133 @@
   line-height: 1.4;
 }
 
+.cl-home-worktype-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cl-home-worktype-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--cl-border);
+  transition: background 0.08s;
+}
+
+.cl-home-worktype-row:last-child {
+  border-bottom: 0;
+}
+
+.cl-home-worktype-row-clickable {
+  cursor: pointer;
+}
+
+.cl-home-worktype-row-clickable:hover {
+  background: var(--cl-bg);
+}
+
+.cl-home-worktype-main {
+  min-width: 0;
+}
+
+.cl-home-worktype-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-home-worktype-sub {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--cl-ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-home-worktype-right {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  flex: 0 0 auto;
+  min-width: 88px;
+}
+
+.cl-home-worktype-count {
+  font-family: var(--cl-font-mono);
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-home-worktype-count-label {
+  font-size: 10px;
+  color: var(--cl-ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cl-home-worktype-detail,
+.cl-home-worktype-state {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cl-home-worktype-detail-good,
+.cl-home-worktype-state-good {
+  background: var(--cl-mint-soft);
+  color: var(--cl-mint-strong);
+}
+
+.cl-home-worktype-detail-pending,
+.cl-home-worktype-state-pending {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.cl-home-worktype-detail-warn,
+.cl-home-worktype-state-warn {
+  background: rgba(180, 83, 9, 0.1);
+  color: var(--cl-warning);
+}
+
+.cl-home-worktype-detail-neutral,
+.cl-home-worktype-state-neutral {
+  background: var(--cl-bg);
+  color: var(--cl-ink-secondary);
+}
+
+@media (max-width: 520px) {
+  .cl-home-worktype-row {
+    align-items: flex-start;
+  }
+
+  .cl-home-worktype-sub {
+    white-space: normal;
+  }
+}
+
 
 /* ─── Activity page shell ─────────────────────────────────────────
  * The dedicated /activity route renders the same AgentActivityRibbon
  * shown on Home, with a thin page header above it (title + Refresh +
- * Open pipeline). The ribbon component itself uses `cl-home-activity-*`
+ * Open Accounts Payable). The ribbon component itself uses `cl-home-activity-*`
  * classes (see top of this file). */
 
 .cl-activity-page {
