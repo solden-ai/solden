@@ -2201,6 +2201,13 @@ body:not(.theme-dark) .footer-cta {
   fill: currentColor;
 }
 
+@media (max-width: 960px) {
+  .footer__top {
+    grid-template-columns: 1fr;
+    gap: 44px;
+  }
+}
+
 @media (max-width: 720px) {
   .footer__top {
     grid-template-columns: 1fr;

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <title>Use cases · Solden</title>
-    <meta name="description" content="Work Solden can hold together: AP first, then procurement, contracts, vendor onboarding, access requests, expenses, reconciliation, and more." />
+    <meta name="description" content="Examples of companies that use Solden to keep invoices, approvals, vendor setup, procurement, and back-office work moving across email, chat, ERP, and audit." />
     <meta name="theme-color" content="#F4F8F7" />
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" />
@@ -13,7 +13,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/Geist-Variable.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/GeistMono-Variable.woff2" crossorigin />
-    <link rel="stylesheet" href="/styles.css?v=84" />
+    <link rel="stylesheet" href="/styles.css?v=85" />
     <link rel="stylesheet" href="/pages.css?v=site-sweep-10" />
   </head>
   <body class="theme-manifesto-light theme-subpage-light">
@@ -23,84 +23,128 @@
       <section class="page-cover">
         <div class="shell shell--narrow page-cover__inner">
           <p class="page-cover__eyebrow">Use cases</p>
-          <h1 class="page-cover__title">What you can run on <span class="page-cover__title-accent">Solden</span>.</h1>
+          <h1 class="page-cover__title">Use cases for teams whose work gets stuck between email, chat, and the ERP.</h1>
           <p class="page-cover__sub page-cover__sub--stanza">
-            <span>Bring the work with owners, waits, approvals, and proof.</span>
-            <span>Show us where it lands and where it breaks.</span>
-            <span>Solden keeps it moving.</span>
+            <span>Invoices waiting on managers.</span>
+            <span>Vendor setup waiting on tax and bank details.</span>
+            <span>Purchase requests waiting on budget approval.</span>
           </p>
-          <p class="page-cover__hint">AP is the first shipped proof. The pattern is the same: owner, next step, approval, exception, writeback, and audit across back-office work.</p>
+          <p class="page-cover__hint">Solden helps growing companies keep the owner, next step, blocker, decision, ERP outcome, and audit trail together without asking the team to move into another dashboard.</p>
         </div>
       </section>
 
       <section class="page-section">
         <div class="shell">
-          <p class="section-eyebrow">First shipped proof</p>
-          <div class="usecase-proof">
-            <div class="usecase-proof__copy">
-              <h2 class="usecase-proof__title">Accounts payable shows the shape.</h2>
-              <p class="usecase-proof__body">An invoice lands in email or the ERP. Solden identifies the record, checks the match, routes the approval where the approver already works, writes back when policy allows it, and keeps the trail attached.</p>
-            </div>
-            <dl class="proof-points" aria-label="Accounts payable proof points">
-              <div>
-                <dt>Lands</dt>
-                <dd>Gmail, Slack, Teams, NetSuite, SAP, and the workspace control center.</dd>
-              </div>
-              <div>
-                <dt>Waits</dt>
-                <dd>Owner, approval age, blocker, policy gate, and next action stay visible.</dd>
-              </div>
-              <div>
-                <dt>Breaks</dt>
-                <dd>Missing match, duplicate vendor, policy exception, failed post, or stale approval escalates with evidence.</dd>
-              </div>
-            </dl>
+          <p class="section-eyebrow">Who feels this first</p>
+          <div class="usecases usecases--peer">
+            <article class="usecase">
+              <h3 class="usecase__title">A multi-location retailer or franchise group</h3>
+              <p class="usecase__body">Store managers approve repairs, utilities, inventory, and local vendor bills, but the finance team has to chase approvals across email, chat, and spreadsheets before anything can be posted.</p>
+              <dl class="usecase__signals">
+                <div><dt>Typical pain</dt><dd>Invoices sit because the store owner, PO, or receipt is unclear.</dd></div>
+                <div><dt>Solden helps</dt><dd>Routes approval to the right location owner, tracks the wait, and posts the approved bill to ERP.</dd></div>
+              </dl>
+              <div class="usecase__flow"><span class="usecase__step">invoice arrives</span><span class="usecase__arrow">→</span><span class="usecase__step">store approval</span><span class="usecase__arrow">→</span><span class="usecase__step">controller review</span><span class="usecase__arrow">→</span><span class="usecase__step">ERP post</span></div>
+            </article>
+            <article class="usecase">
+              <h3 class="usecase__title">A construction, logistics, or field-service company</h3>
+              <p class="usecase__body">Subcontractor bills, materials, delivery charges, and change-order invoices need project context before finance can approve them.</p>
+              <dl class="usecase__signals">
+                <div><dt>Typical pain</dt><dd>Finance waits on project managers for job codes, receipts, or proof of work.</dd></div>
+                <div><dt>Solden helps</dt><dd>Keeps the invoice tied to the job, asks the right owner for evidence, and escalates stale waits.</dd></div>
+              </dl>
+              <div class="usecase__flow"><span class="usecase__step">vendor bill</span><span class="usecase__arrow">→</span><span class="usecase__step">job match</span><span class="usecase__arrow">→</span><span class="usecase__step">PM approval</span><span class="usecase__arrow">→</span><span class="usecase__step">ready to pay</span></div>
+            </article>
+            <article class="usecase">
+              <h3 class="usecase__title">A SaaS or professional-services finance team</h3>
+              <p class="usecase__body">Software renewals, contractor invoices, cloud bills, and department spend all need budget context and approval before month-end closes cleanly.</p>
+              <dl class="usecase__signals">
+                <div><dt>Typical pain</dt><dd>The CFO asks what is waiting and nobody can answer without checking five tools.</dd></div>
+                <div><dt>Solden helps</dt><dd>Shows every live invoice, owner, approval age, exception, and ERP posting outcome in one record.</dd></div>
+              </dl>
+              <div class="usecase__flow"><span class="usecase__step">renewal notice</span><span class="usecase__arrow">→</span><span class="usecase__step">budget check</span><span class="usecase__arrow">→</span><span class="usecase__step">department approval</span><span class="usecase__arrow">→</span><span class="usecase__step">audit trail</span></div>
+            </article>
+            <article class="usecase">
+              <h3 class="usecase__title">A nonprofit, school, clinic, or multi-entity operator</h3>
+              <p class="usecase__body">Program spend, grants, reimbursements, vendor onboarding, and entity-specific approvals need a clean record because audit questions arrive months later.</p>
+              <dl class="usecase__signals">
+                <div><dt>Typical pain</dt><dd>Approvals happen informally, proof is scattered, and the audit trail has to be rebuilt later.</dd></div>
+                <div><dt>Solden helps</dt><dd>Preserves who approved, why, what was missing, and what was posted for each entity or program.</dd></div>
+              </dl>
+              <div class="usecase__flow"><span class="usecase__step">request</span><span class="usecase__arrow">→</span><span class="usecase__step">program approval</span><span class="usecase__arrow">→</span><span class="usecase__step">finance check</span><span class="usecase__arrow">→</span><span class="usecase__step">proof retained</span></div>
+            </article>
           </div>
         </div>
       </section>
 
       <section class="page-section page-section--alt">
         <div class="shell">
-          <p class="section-eyebrow">Same operating parts</p>
-          <h2 class="work-parts-head">Every piece of work needs the same things.</h2>
-          <div class="work-parts">
-            <article class="work-part">
-              <span>01</span>
-              <h3>Intake</h3>
-              <p>Turn email, form, ERP, or chat activity into a tracked record.</p>
-            </article>
-            <article class="work-part">
-              <span>02</span>
-              <h3>State</h3>
-              <p>Know exactly where the work sits and what must happen next.</p>
-            </article>
-            <article class="work-part">
-              <span>03</span>
-              <h3>Owner</h3>
-              <p>Keep responsibility attached even when work moves across teams.</p>
-            </article>
-            <article class="work-part">
-              <span>04</span>
-              <h3>Approval</h3>
-              <p>Route decisions into the surfaces where approvers already respond.</p>
-            </article>
-            <article class="work-part">
-              <span>05</span>
-              <h3>Recovery</h3>
-              <p>Escalate stuck work with the evidence needed to unblock it.</p>
-            </article>
-            <article class="work-part">
-              <span>06</span>
-              <h3>Audit</h3>
-              <p>Preserve each transition, decision, and writeback on the record.</p>
-            </article>
+          <p class="section-eyebrow">First shipped proof</p>
+          <div class="usecase-proof">
+            <div class="usecase-proof__copy">
+              <h2 class="usecase-proof__title">Accounts payable is the first place we prove it.</h2>
+              <p class="usecase-proof__body">An invoice lands in email. Solden reads it, checks the vendor and match, finds who has to approve, routes the decision in Slack or Teams, posts the approved bill to the ERP, and keeps the evidence on the record.</p>
+            </div>
+            <dl class="proof-points" aria-label="Accounts payable proof points">
+              <div>
+                <dt>Before</dt>
+                <dd>AP staff chase approvers, search old threads, and re-enter approved bills into the ERP.</dd>
+              </div>
+              <div>
+                <dt>With Solden</dt>
+                <dd>The invoice has one live record with owner, blocker, approval age, policy checks, and ERP status.</dd>
+              </div>
+              <div>
+                <dt>Result</dt>
+                <dd>Finance can answer what is waiting, who owns it, what happens next, and what proof exists.</dd>
+              </div>
+            </dl>
           </div>
         </div>
       </section>
 
       <section class="page-section">
         <div class="shell">
-          <p class="section-eyebrow">Other places Solden helps</p>
+          <p class="section-eyebrow">What Solden does</p>
+          <h2 class="work-parts-head">The same operating pattern works beyond invoices.</h2>
+          <div class="work-parts">
+            <article class="work-part">
+              <span>01</span>
+              <h3>Intake</h3>
+              <p>Turns an email, form, ERP event, or chat request into a tracked record.</p>
+            </article>
+            <article class="work-part">
+              <span>02</span>
+              <h3>State</h3>
+              <p>Shows where the work sits, what changed, and what has to happen next.</p>
+            </article>
+            <article class="work-part">
+              <span>03</span>
+              <h3>Owner</h3>
+              <p>Keeps responsibility attached when work moves across teams and tools.</p>
+            </article>
+            <article class="work-part">
+              <span>04</span>
+              <h3>Approval</h3>
+              <p>Routes decisions to email, Slack, Teams, or the ERP surface already in use.</p>
+            </article>
+            <article class="work-part">
+              <span>05</span>
+              <h3>Recovery</h3>
+              <p>Escalates stale waits, missing evidence, duplicates, and failed ERP posts.</p>
+            </article>
+            <article class="work-part">
+              <span>06</span>
+              <h3>Audit</h3>
+              <p>Preserves every transition, decision, exception, and writeback on the record.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="page-section page-section--alt">
+        <div class="shell">
+          <p class="section-eyebrow">Workflows Solden can hold together</p>
           <div class="usecases usecases--peer">
             <article class="usecase">
               <h3 class="usecase__title">Procurement &amp; purchase orders</h3>
