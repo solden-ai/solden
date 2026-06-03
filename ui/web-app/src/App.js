@@ -1,4 +1,4 @@
-import { Redirect, Router, Route, Switch } from 'wouter-preact';
+import { Router, Route, Switch } from 'wouter-preact';
 import { html } from './utils/htm.js';
 import { AppShell } from './shell/AppShell.js';
 import { BootstrapProvider, useBootstrap } from './shell/BootstrapContext.js';
@@ -43,12 +43,6 @@ function CapabilityGate({ capability, children }) {
   return children;
 }
 
-function LegacyRecordsRedirect({ recordId }) {
-  const search = typeof window !== 'undefined' ? window.location.search : '';
-  const suffix = recordId ? `/${encodeURIComponent(recordId)}` : '';
-  return html`<${Redirect} to=${`${ACCOUNTS_PAYABLE_ROUTE}${suffix}${search}`} replace />`;
-}
-
 export function App() {
   return html`
     <${Router}>
@@ -70,7 +64,6 @@ export function App() {
                     <${Route} path="/"><${HomePage} /><//>
                     <${Route} path="/plan"><${PlanRoute} /><//>
                     <${Route} path=${ACCOUNTS_PAYABLE_ROUTE}><${RecordsRoute} /><//>
-                    <${Route} path="/records"><${LegacyRecordsRedirect} /><//>
                     <${Route} path="/exceptions"><${ExceptionsRoute} /><//>
                     <${Route} path="/vendors"><${VendorsRoute} /><//>
                     <${Route} path="/procurement">
@@ -100,9 +93,6 @@ export function App() {
                     <${Route} path="/status"><${StatusPage} /><//>
                     <${Route} path=${ACCOUNTS_PAYABLE_DETAIL_ROUTE}>
                       ${(params) => html`<${RecordDetailRoute} recordId=${params.id} />`}
-                    <//>
-                    <${Route} path="/records/:id">
-                      ${(params) => html`<${LegacyRecordsRedirect} recordId=${params.id} />`}
                     <//>
                     <${Route}><${PlaceholderPage} title="Page not found" /><//>
                   <//>

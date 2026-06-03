@@ -1,7 +1,7 @@
 import { useEffect } from 'preact/hooks';
 import { useLocation } from 'wouter-preact';
 import { useBootstrap } from './BootstrapContext.js';
-import { ACCOUNTS_PAYABLE_ROUTE, LEGACY_RECORDS_ROUTE } from '../utils/record-route.js';
+import { ACCOUNTS_PAYABLE_ROUTE } from '../utils/record-route.js';
 
 /**
  * If the user's org hasn't completed onboarding, redirect into the
@@ -41,7 +41,6 @@ const ONBOARDING_PASSTHROUGH = new Set([
   // Coordination surfaces — see header for rationale.
   '/home',
   ACCOUNTS_PAYABLE_ROUTE,
-  LEGACY_RECORDS_ROUTE,
   '/exceptions',
   '/vendors',
   '/procurement',

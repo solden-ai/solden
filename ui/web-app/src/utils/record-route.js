@@ -2,7 +2,6 @@ import { readLocalStorage, writeLocalStorage } from './formatters.js';
 
 export const ACTIVE_RECORD_ID_STORAGE_KEY = 'solden_active_ap_item_id';
 export const ACCOUNTS_PAYABLE_ROUTE = '/accounts-payable';
-export const LEGACY_RECORDS_ROUTE = '/records';
 
 export function accountsPayablePath(search = '') {
   const query = String(search || '');
@@ -40,7 +39,7 @@ export function rememberRecordRouteId(recordId) {
  * (the second tuple element from `useLocation()`), which accepts a
  * path string. The SPA route is `/accounts-payable/:id` — the listing
  * lives at `/accounts-payable` and the detail surface at
- * `/accounts-payable/<id>`. `/records` is legacy redirect-only.
+ * `/accounts-payable/<id>`.
  */
 export function navigateToRecordDetail(navigate, recordId) {
   const normalized = rememberRecordRouteId(recordId);
@@ -54,7 +53,7 @@ export function resolveRecordRouteId(params = {}, hash = '') {
   if (paramId) return paramId;
 
   const hashText = String(hash || '');
-  const hashMatch = hashText.match(/(?:accounts-payable|records)\/([^/?#]+)/);
+  const hashMatch = hashText.match(/accounts-payable\/([^/?#]+)/);
   const hashId = normalizeRecordRouteId(hashMatch?.[1]);
   if (hashId) return hashId;
 

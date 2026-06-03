@@ -23,8 +23,7 @@ describe('record-route', () => {
     expect(navigate).toHaveBeenCalledWith('/accounts-payable/AP-1');
   });
 
-  it('still resolves old records hashes for backward compatibility', () => {
+  it('resolves Accounts Payable hashes', () => {
     expect(resolveRecordRouteId({}, '#/accounts-payable/AP-2')).toBe('AP-2');
-    expect(resolveRecordRouteId({}, '#/records/AP-3')).toBe('AP-3');
   });
 });
