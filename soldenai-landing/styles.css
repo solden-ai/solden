@@ -3311,12 +3311,15 @@ body:not(.theme-dark) .footer-cta {
 
 .ix-hero__lead {
   width: 100%;
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(0, 1.02fr) minmax(380px, 0.8fr);
+  align-items: center;
+  gap: clamp(34px, 5vw, 74px);
   margin: auto 0;
 }
 
 .ix-hero__copy {
-  max-width: 940px;
+  max-width: 760px;
   padding-top: clamp(6px, 2vh, 24px);
 }
 
@@ -3326,11 +3329,10 @@ body:not(.theme-dark) .footer-cta {
 }
 
 .ix-hero__inner h1 {
-  max-width: 980px;
+  max-width: 800px;
   margin: 0;
   color: var(--ix-ink);
-  /* Bigger than the original 84px cap — Mo wants a more dominant hero. */
-  font-size: clamp(64px, 5.2vw, 104px);
+  font-size: clamp(64px, 5.3vw, 96px);
   line-height: 0.94;
   font-weight: 760;
   text-wrap: balance;
@@ -3385,6 +3387,167 @@ body:not(.theme-dark) .footer-cta {
   color: var(--ix-ink);
   background: #F4F8F7;
   border-color: var(--ix-line-2);
+}
+
+.ix-hero-record {
+  width: min(100%, 500px);
+  justify-self: end;
+  overflow: hidden;
+  border: 1px solid var(--ix-line-2);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(24, 191, 176, 0.12), transparent 34%),
+    var(--ix-panel);
+  box-shadow: var(--ix-panel-shadow-strong);
+}
+
+.ix-hero-record__top {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 14px;
+  border-bottom: 1px solid rgba(6, 19, 48, 0.12);
+  color: #756b5e;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.ix-hero-record__top strong {
+  padding: 4px 8px;
+  border: 1px solid rgba(202, 138, 4, 0.28);
+  border-radius: 999px;
+  color: #8a5c00;
+  background: rgba(202, 138, 4, 0.1);
+  font-size: 11px;
+  font-weight: 720;
+}
+
+.ix-hero-record__body {
+  padding: 18px;
+}
+
+.ix-hero-record__subject span {
+  display: inline-flex;
+  margin-bottom: 12px;
+  padding: 5px 9px;
+  border: 1px solid rgba(24, 191, 176, 0.34);
+  border-radius: 999px;
+  color: #076a62;
+  background: rgba(24, 191, 176, 0.12);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 720;
+  text-transform: uppercase;
+}
+
+.ix-hero-record__subject h2 {
+  margin: 0;
+  color: var(--ix-ink);
+  font-size: clamp(21px, 1.6vw, 28px);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
+
+.ix-hero-record__subject p {
+  margin: 10px 0 0;
+  max-width: 420px;
+  color: var(--ix-muted);
+  font-size: 13.5px;
+  line-height: 1.48;
+}
+
+.ix-hero-record__fields {
+  margin: 18px 0 0;
+  border-top: 1px solid rgba(6, 19, 48, 0.12);
+}
+
+.ix-hero-record__fields div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 48px;
+  border-bottom: 1px solid rgba(6, 19, 48, 0.12);
+}
+
+.ix-hero-record__fields dt {
+  color: #756b5e;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+}
+
+.ix-hero-record__fields dd {
+  margin: 0;
+  color: var(--ix-ink);
+  font-size: 13px;
+  font-weight: 620;
+  overflow-wrap: anywhere;
+}
+
+.ix-hero-record__route {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 18px;
+  border: 1px solid rgba(6, 19, 48, 0.12);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ix-hero-record__route span {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid rgba(6, 19, 48, 0.1);
+  color: #45515f;
+  font-size: 11.5px;
+  font-weight: 760;
+}
+
+.ix-hero-record__route span:first-child {
+  border-left: 0;
+}
+
+.ix-hero-record__route span:nth-child(3) {
+  color: #076a62;
+  background: rgba(24, 191, 176, 0.1);
+}
+
+.ix-hero-record__events {
+  display: grid;
+  gap: 0;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ix-hero-record__events li {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 10px 0;
+  border-top: 1px solid rgba(6, 19, 48, 0.1);
+}
+
+.ix-hero-record__events li:first-child {
+  border-top: 0;
+}
+
+.ix-hero-record__events strong {
+  color: var(--ix-teal-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.ix-hero-record__events span {
+  color: #685f53;
+  font-size: 13px;
+  line-height: 1.42;
 }
 
 .ix-logos {
@@ -5068,8 +5231,19 @@ body:not(.theme-dark) .footer-cta {
     height: auto;
   }
 
+  .ix-hero__lead {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
   .ix-hero__copy {
     max-width: 100%;
+  }
+
+  .ix-hero-record {
+    width: 100%;
+    max-width: 680px;
+    justify-self: stretch;
   }
 
   .ix-sdk__inner,
@@ -5263,7 +5437,7 @@ body:not(.theme-dark) .footer-cta {
   .ix-hero {
     height: auto;
     min-height: calc(100svh - 58px);
-    padding: 58px 0 26px;
+    padding: 42px 0 24px;
     background-size: 50vw 100%, 100% 78px, auto;
   }
 
@@ -5276,27 +5450,82 @@ body:not(.theme-dark) .footer-cta {
   .ix-hero__inner {
     width: calc(100vw - 44px);
     height: auto;
-    min-height: calc(100svh - 142px);
-    justify-content: center;
+    min-height: 0;
+    justify-content: flex-start;
   }
 
   .ix-hero__inner h1 {
-    font-size: clamp(46px, 13.2vw, 64px);
-    line-height: 0.93;
+    font-size: clamp(39px, 10.8vw, 52px);
+    line-height: 0.94;
   }
 
   .ix-hero__copy > p {
-    margin-top: 24px;
-    font-size: clamp(20px, 2vw, 25px);
-    line-height: 1.44;
+    margin-top: 20px;
+    font-size: 16px;
+    line-height: 1.48;
   }
 
   .ix-hero__ctas {
-    margin-top: 28px;
+    margin-top: 22px;
+    flex-direction: row;
+    flex-wrap: nowrap;
+  }
+
+  .ix-hero__ctas .ix-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: 10px;
+  }
+
+  .ix-hero-record {
+    border-radius: 9px;
+  }
+
+  .ix-hero-record__body {
+    padding: 14px;
+  }
+
+  .ix-hero-record__subject h2 {
+    font-size: 20px;
+  }
+
+  .ix-hero-record__subject p {
+    font-size: 13px;
+  }
+
+  .ix-hero-record__fields div {
+    min-height: 42px;
+    grid-template-columns: 66px minmax(0, 1fr);
+  }
+
+  .ix-hero-record__fields {
+    display: none;
+  }
+
+  .ix-hero-record__route {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 14px;
+  }
+
+  .ix-hero-record__route span {
+    min-height: 34px;
+    border-top: 1px solid rgba(6, 19, 48, 0.1);
+  }
+
+  .ix-hero-record__route span:nth-child(-n + 3) {
+    border-top: 0;
+  }
+
+  .ix-hero-record__route span:nth-child(4) {
+    border-left: 0;
+  }
+
+  .ix-hero-record__events {
+    display: none;
   }
 
   .ix-logos {
-    margin-top: 46px;
+    margin-top: 28px;
     padding-top: 0;
   }
 
