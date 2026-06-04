@@ -165,50 +165,46 @@ export default function RulesPage({ api, toast }) {
         ` : null}
       </section>
 
-      <div class="cl-rules-layout">
-        <main class="cl-rules-main">
-          <${RuleList}
-            rules=${rules}
-            loading=${loading}
-            activeFilterCount=${activeFilterCount}
-            onNewRule=${() => setEditor({
-              mode: 'create',
-              rule: {
-                name: '',
-                description: '',
-                priority: 100,
-                conditions: { all_of: [] },
-                actions: [],
-                status: 'active',
-              },
-            })}
-            onEdit=${(r) => setEditor({ mode: 'edit', rule: r })}
-            onClone=${(r) => setEditor({
-              mode: 'create',
-              rule: { ...r, id: undefined, name: `${r.name} (copy)` },
-            })}
-            onArchive=${async (r) => {
-              if (!window.confirm(`Archive rule '${r.name}'?`)) return;
-              try {
-                await api(`/api/workspace/rules/${r.id}`, { method: 'DELETE' });
-                toast('Rule archived.', 'success');
-                await loadRules();
-              } catch (exc) {
-                toast(`Archive failed: ${String(exc?.message || exc)}`, 'error');
-              }
-            }}
-            onVersions=${(r) => setVersionsForRule(r)}
-          />
-        </main>
+      <${RuleList}
+        rules=${rules}
+        loading=${loading}
+        activeFilterCount=${activeFilterCount}
+        onNewRule=${() => setEditor({
+          mode: 'create',
+          rule: {
+            name: '',
+            description: '',
+            priority: 100,
+            conditions: { all_of: [] },
+            actions: [],
+            status: 'active',
+          },
+        })}
+        onEdit=${(r) => setEditor({ mode: 'edit', rule: r })}
+        onClone=${(r) => setEditor({
+          mode: 'create',
+          rule: { ...r, id: undefined, name: `${r.name} (copy)` },
+        })}
+        onArchive=${async (r) => {
+          if (!window.confirm(`Archive rule '${r.name}'?`)) return;
+          try {
+            await api(`/api/workspace/rules/${r.id}`, { method: 'DELETE' });
+            toast('Rule archived.', 'success');
+            await loadRules();
+          } catch (exc) {
+            toast(`Archive failed: ${String(exc?.message || exc)}`, 'error');
+          }
+        }}
+        onVersions=${(r) => setVersionsForRule(r)}
+      />
 
-        <aside class="cl-rules-side" aria-label="Approval policy context">
-          <${PolicyGuide} />
-          <${TemplatesGallery}
-            templates=${templates}
-            onApply=${onApplyTemplate}
-          />
-        </aside>
-      </div>
+      <section class="cl-rules-support-grid" aria-label="Approval policy context">
+        <${PolicyGuide} />
+        <${TemplatesGallery}
+          templates=${templates}
+          onApply=${onApplyTemplate}
+        />
+      </section>
 
       ${editor ? html`
         <${RuleEditorDialog}
