@@ -851,15 +851,6 @@
   }
 }
 
-/* ───────────────────────────────────────────────────────────────────
- * Audit log page (Module 7 v1)
- *
- * Two-pane layout: filterable table on the left, detail panel on the
- * right when a row is selected. On viewports below 900px the detail
- * panel takes over the full width and hides the table — the audit row
- * the user clicked on is the focus.
- * ─────────────────────────────────────────────────────────────────── */
-
 .cl-audit-page {
   display: flex;
   flex-direction: column;
@@ -868,7 +859,7 @@
 
 .cl-audit-filters {
   display: grid;
-  grid-template-columns: repeat(3, 1fr) auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   padding: 14px 16px;
   border: 1px solid var(--cl-border);
@@ -910,9 +901,11 @@
 
 .cl-audit-filter-actions {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 6px;
-  align-self: end;
+  align-items: center;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
 }
 
 .cl-audit-layout {
@@ -935,7 +928,7 @@
   border: 1px solid var(--cl-border);
   border-radius: var(--cl-radius-sm);
   background: var(--cl-bg);
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .cl-audit-table {
@@ -974,6 +967,11 @@
   background: var(--cl-bg-hover, #f4f4f4);
 }
 
+.cl-audit-row:focus-visible {
+  outline: 2px solid var(--cl-teal-500);
+  outline-offset: -2px;
+}
+
 .cl-audit-row.is-active {
   background: rgba(24, 191, 176, 0.08);
 }
@@ -988,6 +986,7 @@
 .cl-audit-cell-event {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 4px;
 }
 
@@ -1023,7 +1022,14 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--cl-border);
+  border-radius: 10px;
+  background: var(--cl-bg);
   font-size: 12px;
+  font-weight: 600;
+  color: var(--cl-ink-secondary);
 }
 
 .cl-audit-state-arrow {
@@ -1044,6 +1050,7 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  white-space: nowrap;
   background: var(--cl-bg-subtle, #eee);
   color: var(--cl-ink-secondary, #444);
 }
@@ -1056,6 +1063,26 @@
 .cl-audit-verdict-should_execute {
   background: rgba(24, 191, 176, 0.15);
   color: #0a663e;
+}
+
+.cl-audit-verdict-allowed {
+  background: rgba(24, 191, 176, 0.15);
+  color: #0a663e;
+}
+
+.cl-audit-verdict-blocked {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.cl-audit-verdict-observed {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.cl-audit-verdict-neutral {
+  background: var(--cl-bg-subtle, #eee);
+  color: var(--cl-ink-secondary, #444);
 }
 
 .cl-audit-pagination {
@@ -1148,22 +1175,111 @@
   line-height: 1.4;
 }
 
+.cl-audit-mobile-list {
+  display: none;
+}
+
+.cl-audit-mobile-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 0;
+  border-bottom: 1px solid var(--cl-border-subtle, #efefef);
+  background: var(--cl-bg);
+  color: var(--cl-ink-primary);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cl-audit-mobile-card:hover,
+.cl-audit-mobile-card.is-active {
+  background: rgba(24, 191, 176, 0.08);
+}
+
+.cl-audit-mobile-card:focus-visible {
+  outline: 2px solid var(--cl-teal-500);
+  outline-offset: -2px;
+}
+
+.cl-audit-mobile-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.cl-audit-mobile-card-head strong,
+.cl-audit-mobile-card-head small {
+  display: block;
+}
+
+.cl-audit-mobile-card-head small {
+  margin-top: 3px;
+  color: var(--cl-ink-muted);
+  font-size: 12px;
+}
+
+.cl-audit-mobile-card-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.cl-audit-mobile-card-row span {
+  color: var(--cl-ink-muted);
+}
+
+.cl-audit-mobile-card-row strong {
+  text-align: right;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 720px) {
   .cl-audit-filters {
     grid-template-columns: 1fr;
+  }
+  .cl-audit-filter-actions {
+    justify-content: stretch;
+  }
+  .cl-audit-page .secondary-banner-actions {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    align-items: stretch;
+  }
+  .cl-audit-page .secondary-banner-actions .cl-audit-retention {
+    margin-top: 0;
+  }
+  .cl-audit-filter-actions .btn {
+    flex: 1 1 130px;
+  }
+  .cl-audit-table {
+    display: none;
+  }
+  .cl-audit-mobile-list {
+    display: flex;
+    flex-direction: column;
   }
   .cl-audit-table th,
   .cl-audit-table td {
     padding: 8px;
     font-size: 12px;
   }
+  .cl-audit-detail {
+    position: static;
+    max-height: none;
+  }
+  .cl-siem-deliveries-head h4 code {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: 4px;
+  }
 }
-
-/* ─── SIEM webhook section (Module 7 v1 Pass 3) ───────────────────────
- * Collapsible panel above the filter bar. Closed by default — the
- * common case is an operator searching the log, not managing SIEM
- * subscriptions. Expanding loads the webhook list lazily.
- * ─────────────────────────────────────────────────────────────────── */
 
 .cl-siem-section {
   border: 1px solid var(--cl-border);
@@ -5290,6 +5406,7 @@
   color: var(--cl-ink-primary);
   cursor: pointer;
   font-family: inherit;
+  white-space: nowrap;
 }
 .cl-chain-badge-button:hover {
   background: var(--cl-bg-elevated, var(--cl-bg));
@@ -6007,18 +6124,7 @@
 .cl-onb-health-row-warn { border-left: 3px solid #B45309; }
 .cl-onb-health-row-off  { border-left: 3px solid var(--cl-border-strong); }
 
-/* AuditLogPage cells */
 .cl-audit-cell-state {
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 8px;
-  background: var(--cl-bg);
-  border: 1px solid var(--cl-border);
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--cl-ink-secondary);
   white-space: nowrap;
 }
 

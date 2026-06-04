@@ -1,66 +1,171 @@
 /**
- * Audit Log Page — Module 7 v1 dashboard surface.
+ * Org-scoped, admin-gated audit search.
  *
- * Org-scoped, admin-gated audit search. Backed by:
- *   GET /api/workspace/audit/search?from_ts=&to_ts=&event_type=&actor_id=&box_type=&box_id=&limit=&cursor=
- *   GET /api/workspace/audit/event/{event_id}
- *   GET/POST/DELETE /api/workspace/webhooks (Pass 3 SIEM panel)
- *   POST /api/workspace/webhooks/{id}/test (test ping)
- *   GET /api/workspace/webhooks/{id}/deliveries (per-webhook attempt log)
- *
- * Append-only at the database level (Postgres triggers in
- * solden/core/database.py:374). The dashboard is a pure read
- * surface — no mutations of audit events themselves.
- *
- * Pass 1 ships search + filter + pagination + detail panel.
- * Pass 2 ships async CSV export.
- * Pass 3 ships SIEM webhook config + delivery log.
+ * The audit log is a read-only compliance surface. It presents readable
+ * event labels for operators while keeping raw payloads available in detail.
  */
 import { h } from 'preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import htm from 'htm';
 import { fmtDateTime } from '../route-helpers.js';
 import { EmptyState, ErrorRetry, LoadingSkeleton } from '../../components/StatePrimitives.js';
+import { STATE_LABELS, humanizeSnakeText } from '../../utils/formatters.js';
 
 const html = htm.bind(h);
 
 const PAGE_SIZE = 50;
 
-// Curated event-type filter options. The full set of event_type tokens
-// in audit_events is open-ended (any module can introduce new ones), so
-// this list is a curated "common cases" picker — typing a custom value
-// is supported via the free-text fallback.
 const COMMON_EVENT_TYPES = [
   { value: '', label: 'All event types' },
-  { value: 'state_transition', label: 'State transitions' },
+  { value: 'state_transition', label: 'State changes' },
   { value: 'invoice_approved,invoice_rejected', label: 'Approval decisions' },
-  { value: 'erp_post_completed,erp_post_failed', label: 'ERP posts' },
-  { value: 'organization_renamed,organization_domain_changed,organization_integration_mode_changed', label: 'Org config changes' },
-  { value: 'plan_observed', label: 'Plan-observed (sync skill runs)' },
+  { value: 'erp_post_completed,erp_post_failed', label: 'ERP posting' },
+  { value: 'organization_renamed,organization_domain_changed,organization_integration_mode_changed', label: 'Workspace configuration' },
+  { value: 'plan_observed', label: 'Agent observations' },
   { value: 'illegal_transition_blocked,invoice_reverse_blocked,invoice_snooze_blocked', label: 'Blocked actions' },
 ];
 
-// Record-type filter for the audit log. Vendor onboarding was
-// subordinated to AP (memory: 2026-04-30) and isn't a customer-
-// visible record type today; bringing it back is a separate decision.
 const COMMON_RECORD_TYPES = [
   { value: '', label: 'All record types' },
-  { value: 'ap_item', label: 'AP item' },
+  { value: 'ap_item', label: 'Accounts Payable' },
+  { value: 'purchase_order', label: 'Procurement' },
+  { value: 'vendor_onboarding_session', label: 'Vendor onboarding' },
+  { value: 'bank_match', label: 'Bank reconciliation' },
   { value: 'organization', label: 'Organization' },
 ];
+
+const EVENT_TYPE_LABELS = {
+  state_transition: 'State change',
+  invoice_approved: 'Invoice approved',
+  invoice_rejected: 'Invoice rejected',
+  invoice_auto_approved: 'Invoice auto-approved',
+  invoice_created: 'Invoice created',
+  decision_made: 'Decision recorded',
+  enrichment_complete: 'Data extracted',
+  erp_post_completed: 'Posted to ERP',
+  erp_post_failed: 'ERP post failed',
+  organization_renamed: 'Organization renamed',
+  organization_domain_changed: 'Workspace domain changed',
+  organization_integration_mode_changed: 'Integration mode changed',
+  plan_observed: 'Agent observation',
+  illegal_transition_blocked: 'State change blocked',
+  invoice_reverse_blocked: 'Reverse action blocked',
+  invoice_snooze_blocked: 'Snooze blocked',
+  webhook_test: 'Webhook test sent',
+  audit_export_started: 'Audit export started',
+};
+
+const RECORD_TYPE_LABELS = {
+  ap_item: 'Accounts Payable',
+  purchase_order: 'Procurement',
+  vendor_onboarding_session: 'Vendor onboarding',
+  bank_match: 'Bank reconciliation',
+  organization: 'Organization',
+  user: 'User',
+  webhook_subscription: 'SIEM webhook',
+};
+
+const ACTOR_TYPE_LABELS = {
+  user: 'User',
+  system: 'System',
+  agent: 'Agent',
+  api: 'API',
+  webhook: 'Webhook',
+};
+
+const VERDICT_LABELS = {
+  should_execute: { label: 'Allowed', cls: 'cl-audit-verdict-allowed' },
+  allowed: { label: 'Allowed', cls: 'cl-audit-verdict-allowed' },
+  vetoed: { label: 'Blocked', cls: 'cl-audit-verdict-blocked' },
+  blocked: { label: 'Blocked', cls: 'cl-audit-verdict-blocked' },
+  observe: { label: 'Observed', cls: 'cl-audit-verdict-observed' },
+  observed: { label: 'Observed', cls: 'cl-audit-verdict-observed' },
+};
+
+const SOURCE_LABELS = {
+  erp_native_netsuite: 'NetSuite panel',
+  erp_native_sap: 'SAP Fiori panel',
+  erp_native_sage_intacct: 'Sage Intacct panel',
+  erp_native_sage_business_cloud: 'Sage Business Cloud panel',
+  workspace: 'Workspace',
+  gmail: 'Gmail',
+  slack: 'Slack',
+  teams: 'Microsoft Teams',
+  test_seed: 'Test seed',
+};
+
+function normalizeToken(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function formatToken(value) {
+  return humanizeSnakeText(String(value || '').trim());
+}
+
+function formatAuditEventType(value) {
+  const token = normalizeToken(value);
+  if (!token) return 'Audit event';
+  return EVENT_TYPE_LABELS[token] || formatToken(token);
+}
+
+function formatRecordType(value) {
+  const token = normalizeToken(value);
+  if (!token) return 'Record';
+  return RECORD_TYPE_LABELS[token] || formatToken(token);
+}
+
+function formatState(value) {
+  const token = normalizeToken(value);
+  if (!token) return '—';
+  return STATE_LABELS[token] || formatToken(token);
+}
+
+function formatActor(actorId, actorType) {
+  const id = String(actorId || '').trim();
+  if (id && id.includes('@')) return id;
+  if (id && id.includes('_')) return formatToken(id);
+  if (id) return id;
+  const type = normalizeToken(actorType);
+  return ACTOR_TYPE_LABELS[type] || 'System';
+}
+
+function formatVerdict(value) {
+  const token = normalizeToken(value);
+  return VERDICT_LABELS[token] || {
+    label: token ? formatToken(token) : '',
+    cls: 'cl-audit-verdict-neutral',
+  };
+}
+
+function formatSource(value) {
+  const token = normalizeToken(value);
+  if (!token) return '';
+  return SOURCE_LABELS[token] || formatToken(token);
+}
+
+function formatConfidence(value, digits = 0) {
+  return typeof value === 'number' ? `${(value * 100).toFixed(digits)}%` : '';
+}
+
+function eventAriaLabel(event) {
+  const eventLabel = formatAuditEventType(event?.event_type);
+  const recordType = formatRecordType(event?.box_type);
+  const recordId = event?.box_id ? ` ${event.box_id}` : '';
+  return `${eventLabel} for ${recordType}${recordId}`;
+}
 
 
 function FilterBar({ filters, setFilters, onApply, onReset, onExport, exportState, busy }) {
   const setField = (key, value) => setFilters({ ...filters, [key]: value });
   const fmt = (exportState?.export_format || exportState?.format || 'csv').toUpperCase();
   const exportLabel = (() => {
-    if (!exportState) return 'Export';
+    if (!exportState) return 'Export CSV';
     switch (exportState.status) {
       case 'queued': return `Queued ${fmt}…`;
       case 'running': return `Building ${fmt}…`;
       case 'done': return `Download ${fmt}`;
       case 'failed': return 'Export failed';
-      default: return 'Export';
+      default: return 'Export CSV';
     }
   })();
   const exportBusy = exportState && (exportState.status === 'queued' || exportState.status === 'running');
@@ -106,10 +211,10 @@ function FilterBar({ filters, setFilters, onApply, onReset, onExport, exportStat
         </select>
       </label>
       <label class="cl-audit-filter-field">
-        <span>Actor (email)</span>
+        <span>Actor</span>
         <input
           type="text"
-          placeholder="user@example.com"
+          placeholder="email, user ID, or system"
           value=${filters.actor_id}
           onInput=${(e) => setField('actor_id', e.target.value)}
           disabled=${busy} />
@@ -153,41 +258,50 @@ function FilterBar({ filters, setFilters, onApply, onReset, onExport, exportStat
 
 function EventRow({ event, isActive, onSelect }) {
   const ts = fmtDateTime(event.ts);
-  const summary = event.event_type || 'audit_event';
-  const actor = event.actor_id || event.actor_type || 'system';
-  // Governance verdict + agent_confidence pulled from migration v50
-  // columns. When present they're the harness's reasoning trail —
-  // surfaced as a chip so the leader can spot vetoed actions in the
-  // table without opening detail.
+  const summary = formatAuditEventType(event.event_type);
+  const actor = formatActor(event.actor_id, event.actor_type);
   const verdict = event.governance_verdict;
+  const verdictMeta = verdict ? formatVerdict(verdict) : null;
   const confidence = event.agent_confidence;
+  const select = () => onSelect(event);
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      select();
+    }
+  };
 
   return html`
-    <tr class=${`cl-audit-row${isActive ? ' is-active' : ''}`} onClick=${() => onSelect(event)}>
+    <tr
+      class=${`cl-audit-row${isActive ? ' is-active' : ''}`}
+      onClick=${select}
+      onKeyDown=${onKeyDown}
+      tabIndex="0"
+      aria-label=${eventAriaLabel(event)}>
       <td class="cl-audit-cell-ts">${ts}</td>
       <td class="cl-audit-cell-event">
         <span class="cl-audit-event-name">${summary}</span>
-        ${verdict
-          ? html`<span class=${`cl-audit-chip cl-audit-verdict-${verdict}`}>${verdict}</span>`
+        ${verdictMeta?.label
+          ? html`<span class=${`cl-audit-chip ${verdictMeta.cls}`}>${verdictMeta.label}</span>`
           : null}
       </td>
       <td class="cl-audit-cell-actor">${actor}</td>
       <td class="cl-audit-cell-box">
-        <span class="cl-audit-box-type">${event.box_type || '—'}</span>
+        <span class="cl-audit-box-type">${formatRecordType(event.box_type)}</span>
         <span class="cl-audit-box-id">${event.box_id || ''}</span>
       </td>
       <td class="cl-audit-cell-state">
         ${event.prev_state || event.new_state
           ? html`<span class="cl-audit-state-pair">
-              <span>${event.prev_state || '—'}</span>
+              <span>${formatState(event.prev_state)}</span>
               <span class="cl-audit-state-arrow">→</span>
-              <span>${event.new_state || '—'}</span>
+              <span>${formatState(event.new_state)}</span>
             </span>`
           : null}
       </td>
       <td class="cl-audit-cell-confidence">
         ${typeof confidence === 'number'
-          ? html`<span class="cl-audit-confidence">${(confidence * 100).toFixed(0)}%</span>`
+          ? html`<span class="cl-audit-confidence">${formatConfidence(confidence)}</span>`
           : null}
       </td>
     </tr>`;
@@ -199,29 +313,26 @@ function DetailPanel({ event, onClose, api, orgId }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
 
-  // Re-fetch the canonical detail when the row opens — the search
-  // response already includes the full row, but a dedicated GET keeps
-  // the URL bookmarkable and makes payload_json reliably present.
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      if (!event?.id) return;
-      setLoading(true);
-      setErr(null);
-      try {
-        const resp = await api(
-          `/api/workspace/audit/event/${encodeURIComponent(event.id)}?organization_id=${encodeURIComponent(orgId)}`
-        );
-        if (!cancelled) setFull(resp?.event || event);
-      } catch (exc) {
-        if (!cancelled) setErr(String(exc?.message || exc));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  const loadDetail = useCallback(async () => {
+    if (!event?.id) return;
+    setFull(event);
+    setLoading(true);
+    setErr(null);
+    try {
+      const resp = await api(
+        `/api/workspace/audit/event/${encodeURIComponent(event.id)}?organization_id=${encodeURIComponent(orgId)}`
+      );
+      setFull(resp?.event || event);
+    } catch (exc) {
+      setErr(String(exc?.message || exc));
+    } finally {
+      setLoading(false);
     }
-    load();
-    return () => { cancelled = true; };
-  }, [event?.id, api, orgId]);
+  }, [api, orgId, event]);
+
+  useEffect(() => {
+    loadDetail();
+  }, [loadDetail]);
 
   const payload = full?.payload_json || {};
   const payloadJson = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
@@ -233,28 +344,32 @@ function DetailPanel({ event, onClose, api, orgId }) {
   return html`
     <aside class="cl-audit-detail">
       <div class="cl-audit-detail-head">
-        <h3>${full?.event_type || 'audit_event'}</h3>
+        <h3>${formatAuditEventType(full?.event_type)}</h3>
         <button class="btn btn-sm btn-tertiary" onClick=${onClose} aria-label="Close detail">Close</button>
       </div>
-      ${err ? html`<${ErrorRetry} message=${err} onRetry=${() => setFull(event)} />` : null}
+      ${err ? html`<${ErrorRetry} message=${err} onRetry=${loadDetail} />` : null}
       ${loading ? html`<${LoadingSkeleton} rows=${4} />` : null}
       ${!loading && !err ? html`
         <dl class="cl-audit-detail-grid">
           <dt>Event ID</dt><dd><code>${full?.id}</code></dd>
           <dt>Timestamp</dt><dd>${fmtDateTime(full?.ts)}</dd>
-          <dt>Record</dt><dd><code>${full?.box_type}/${full?.box_id}</code></dd>
-          <dt>Actor</dt><dd>${full?.actor_id || full?.actor_type || '—'}</dd>
+          <dt>Record</dt><dd>${formatRecordType(full?.box_type)} <code>${full?.box_id || '—'}</code></dd>
+          <dt>Actor</dt><dd>${formatActor(full?.actor_id, full?.actor_type)}</dd>
           ${full?.prev_state || full?.new_state ? html`
             <dt>State</dt>
-            <dd>${full.prev_state || '—'} → ${full.new_state || '—'}</dd>
+            <dd>${formatState(full.prev_state)} → ${formatState(full.new_state)}</dd>
           ` : null}
           ${full?.governance_verdict ? html`
             <dt>Governance verdict</dt>
-            <dd><span class=${`cl-audit-chip cl-audit-verdict-${full.governance_verdict}`}>${full.governance_verdict}</span></dd>
+            <dd>
+              <span class=${`cl-audit-chip ${formatVerdict(full.governance_verdict).cls}`}>
+                ${formatVerdict(full.governance_verdict).label}
+              </span>
+            </dd>
           ` : null}
           ${typeof full?.agent_confidence === 'number' ? html`
             <dt>Agent confidence</dt>
-            <dd>${(full.agent_confidence * 100).toFixed(1)}%</dd>
+            <dd>${formatConfidence(full.agent_confidence, 1)}</dd>
           ` : null}
           ${full?.decision_reason ? html`
             <dt>Decision reason</dt><dd>${full.decision_reason}</dd>
@@ -263,7 +378,7 @@ function DetailPanel({ event, onClose, api, orgId }) {
             <dt>Correlation</dt><dd><code>${full.correlation_id}</code></dd>
           ` : null}
           ${full?.source ? html`
-            <dt>Source</dt><dd>${full.source}</dd>
+            <dt>Source</dt><dd>${formatSource(full.source)}</dd>
           ` : null}
         </dl>
         ${payload && Object.keys(payload).length > 0 ? html`
@@ -283,25 +398,19 @@ function DetailPanel({ event, onClose, api, orgId }) {
 }
 
 
-// ─── SIEM webhook section (Pass 3) ──────────────────────────────────
-// Curated event-type bundles a SIEM operator typically wants to forward
-// to a downstream collector (Splunk, Datadog Cloud SIEM, Sumo, etc).
-// "*" means every audit event — useful for compliance ingestion that
-// can't pre-filter at the source. Operators can also paste a custom
-// comma-separated list via the form's free-text field.
 const SIEM_EVENT_BUNDLES = [
   { value: '*', label: 'All audit events (compliance feed)' },
   {
     value: 'state_transition,invoice_approved,invoice_rejected,erp_post_completed,erp_post_failed',
-    label: 'AP workflow (states + decisions + ERP posts)',
+    label: 'Accounts payable workflow',
   },
   {
     value: 'organization_renamed,organization_domain_changed,organization_integration_mode_changed',
-    label: 'Org config changes',
+    label: 'Workspace configuration',
   },
   {
     value: 'illegal_transition_blocked,invoice_reverse_blocked,invoice_snooze_blocked',
-    label: 'Blocked actions (security / governance)',
+    label: 'Blocked governance actions',
   },
 ];
 
@@ -516,7 +625,7 @@ function SiemDeliveriesPanel({ api, orgId, webhook, onClose }) {
                 <tr key=${d.id}>
                   <td class="cl-audit-cell-ts">${fmtDateTime(d.attempted_at)}</td>
                   <td>
-                    <span class="cl-audit-event-name">${d.event_type || '—'}</span>
+                    <span class="cl-audit-event-name">${formatAuditEventType(d.event_type)}</span>
                     ${d.audit_event_id
                       ? html`<div class="cl-audit-box-id">${d.audit_event_id}</div>`
                       : null}
@@ -686,7 +795,7 @@ function SiemSection({ api, orgId, refreshTrigger }) {
                   const eventTypes = Array.isArray(w.event_types) ? w.event_types : [];
                   const eventLabel = eventTypes.includes('*')
                     ? 'All events'
-                    : (eventTypes.length <= 2 ? eventTypes.join(', ') : `${eventTypes.length} types`);
+                    : (eventTypes.length <= 2 ? eventTypes.map(formatAuditEventType).join(', ') : `${eventTypes.length} types`);
                   const status = testStatus[w.id];
                   return html`
                     <tr key=${w.id} class=${activeWebhookId === w.id ? 'is-active' : ''}>
@@ -738,22 +847,6 @@ function SiemSection({ api, orgId, refreshTrigger }) {
 }
 
 
-/**
- * ChainStatusBadge — surfaces the audit chain's tamper-evident
- * status from GET /api/workspace/audit/chain-status. Renders one
- * of three states:
- *
- *   - "Chain intact" with chain length + last-verified time
- *     (green dot)
- *   - "Chain broken" with the break_kind + chain_seq of the
- *     first divergence (red dot)
- *   - "Verifying…" while the request is in flight
- *
- * Click → toggles a small popover with details (head event id,
- * head hash prefix, sample size, genesis sentinel prefix). The
- * popover gives an auditor enough handles to reproduce the
- * verification offline.
- */
 function ChainStatusBadge({ status, loading, onRefresh }) {
   const [open, setOpen] = useState(false);
   if (loading && !status) {
@@ -790,7 +883,7 @@ function ChainStatusBadge({ status, loading, onRefresh }) {
         <div class="cl-chain-popover">
           <div class="cl-chain-popover-row">
             <span class="muted">Status</span>
-            <strong>${isIntact ? 'intact' : (isError ? 'unavailable' : 'broken')}</strong>
+            <strong>${isIntact ? 'Intact' : (isError ? 'Unavailable' : 'Broken')}</strong>
           </div>
           ${status.chain_length != null ? html`
             <div class="cl-chain-popover-row">
@@ -835,7 +928,7 @@ function ChainStatusBadge({ status, loading, onRefresh }) {
             </div>
             <div class="cl-chain-popover-row cl-chain-popover-row--break">
               <span class="muted">Break kind</span>
-              <strong>${status.break_kind}</strong>
+              <strong>${formatToken(status.break_kind)}</strong>
             </div>
           ` : null}
           <div class="cl-chain-popover-actions">
@@ -851,9 +944,6 @@ function ChainStatusBadge({ status, loading, onRefresh }) {
 
 
 export default function AuditLogPage({ api, orgId, bootstrap }) {
-  // Filter state. ``event_type_preset`` is the dropdown value (which
-  // is a comma-separated string per COMMON_EVENT_TYPES); the API
-  // accepts ``event_type=a,b,c`` directly so we forward verbatim.
   const [filters, setFilters] = useState({
     from_ts: '',
     to_ts: '',
@@ -867,12 +957,7 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
   const [selected, setSelected] = useState(null);
-  // Export state machine: null (idle) | {job_id, status, error_message?}.
-  // The poll loop below rewrites this whenever the server status
-  // changes; the FilterBar's button reads it to render the right
-  // label (Queued… / Building… / Download CSV / Export failed).
   const [exportState, setExportState] = useState(null);
-  // Module 7 spec line 246 — configurable retention.
   const [retention, setRetention] = useState(null);
   useEffect(() => {
     let cancelled = false;
@@ -882,12 +967,6 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
     return () => { cancelled = true; };
   }, [api, orgId]);
 
-  // Audit chain integrity status. Backs the soldenai.com claim
-  // that the chain is "tamper-evident at the schema layer" — when
-  // an auditor or operator wants to verify that claim against a
-  // live tenant, they get a green badge with chain length +
-  // last-verified timestamp, or a structured break report if the
-  // hash chain has been tampered with.
   const [chainStatus, setChainStatus] = useState(null);
   const [chainLoading, setChainLoading] = useState(true);
   const refreshChainStatus = useCallback(() => {
@@ -929,8 +1008,6 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
     params.set('organization_id', orgId);
     params.set('limit', String(PAGE_SIZE));
     if (filters.from_ts) {
-      // datetime-local emits "YYYY-MM-DDTHH:mm" with no timezone; pin
-      // it to the user's local time by appending the browser's offset.
       params.set('from_ts', new Date(filters.from_ts).toISOString());
     }
     if (filters.to_ts) {
@@ -986,25 +1063,16 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
     fetchPage({ append: true, useCursor: cursor });
   }, [cursor, loading, fetchPage]);
 
-  // Initial load on mount.
   useEffect(() => {
     fetchPage({ append: false });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Export flow ────────────────────────────────────────────────
-  // Click → POST starts a job. While the job runs, poll status every
-  // 2s. When status flips to 'done', the next button click (label
-  // becomes "Download CSV") triggers a fresh GET ?download=true that
-  // the browser handles as a file download via Content-Disposition.
   const onExport = useCallback(async (format) => {
     if (!api || !orgId) return;
 
     // Already done? Trigger the download.
     if (exportState && exportState.status === 'done' && exportState.job_id) {
       const url = `/api/workspace/audit/exports/${encodeURIComponent(exportState.job_id)}?organization_id=${encodeURIComponent(orgId)}&download=true`;
-      // Same-origin fetch + manual blob handoff so cookies + the
-      // download attribute work uniformly. Plain <a href> would
-      // navigate; we want a download trigger.
       try {
         const resp = await fetch(url, { credentials: 'same-origin' });
         if (!resp.ok) {
@@ -1027,9 +1095,6 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
       return;
     }
 
-    // Otherwise kick off a new job. Optional `format` arg picks
-    // between csv (default, unbounded) and pdf (capped at 5K rows;
-    // intended for "share with auditor" not bulk dump).
     const exportFormat = format === 'pdf' ? 'pdf' : 'csv';
     const filtersPayload = {
       organization_id: orgId,
@@ -1058,9 +1123,6 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
     }
   }, [api, orgId, exportState, filters]);
 
-  // Poll loop. Runs while the export is queued/running; cleans up
-  // the timer on every state change so a finished/failed job stops
-  // hammering the server. No polling = no timer.
   useEffect(() => {
     if (!exportState || !exportState.job_id) return undefined;
     if (exportState.status !== 'queued' && exportState.status !== 'running') return undefined;
@@ -1098,7 +1160,7 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
         <div class="secondary-banner-copy">
           <h3>Audit log</h3>
           <p class="muted">
-            Append-only record of every workflow action. Search, filter, and inspect.
+            Tamper-evident record of workflow actions, policy decisions, exports, and configuration changes.
           </p>
         </div>
         <div class="secondary-banner-actions">
@@ -1158,6 +1220,47 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
                 `)}
               </tbody>
             </table>
+            <div class="cl-audit-mobile-list">
+              ${pages.map((event) => {
+                const verdictMeta = event.governance_verdict ? formatVerdict(event.governance_verdict) : null;
+                return html`
+                  <button
+                    type="button"
+                    key=${event.id}
+                    class=${`cl-audit-mobile-card${selected?.id === event.id ? ' is-active' : ''}`}
+                    onClick=${() => setSelected(event)}>
+                    <span class="cl-audit-mobile-card-head">
+                      <span>
+                        <strong>${formatAuditEventType(event.event_type)}</strong>
+                        <small>${fmtDateTime(event.ts)}</small>
+                      </span>
+                      ${verdictMeta?.label
+                        ? html`<span class=${`cl-audit-chip ${verdictMeta.cls}`}>${verdictMeta.label}</span>`
+                        : null}
+                    </span>
+                    <span class="cl-audit-mobile-card-row">
+                      <span>Record</span>
+                      <strong>${formatRecordType(event.box_type)} ${event.box_id || ''}</strong>
+                    </span>
+                    <span class="cl-audit-mobile-card-row">
+                      <span>Actor</span>
+                      <strong>${formatActor(event.actor_id, event.actor_type)}</strong>
+                    </span>
+                    ${event.prev_state || event.new_state ? html`
+                      <span class="cl-audit-mobile-card-row">
+                        <span>State</span>
+                        <strong>${formatState(event.prev_state)} → ${formatState(event.new_state)}</strong>
+                      </span>
+                    ` : null}
+                    ${typeof event.agent_confidence === 'number' ? html`
+                      <span class="cl-audit-mobile-card-row">
+                        <span>Confidence</span>
+                        <strong>${formatConfidence(event.agent_confidence)}</strong>
+                      </span>
+                    ` : null}
+                  </button>`;
+              })}
+            </div>
             <div class="cl-audit-pagination">
               <span class="muted">${pages.length} event${pages.length === 1 ? '' : 's'} loaded.</span>
               ${cursor ? html`
