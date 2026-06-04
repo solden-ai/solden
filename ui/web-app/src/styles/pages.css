@@ -2894,10 +2894,7 @@
 
 
 /* =========================================================== */
-/* Reports — Module 8 (workspace GA scope §266-290)            */
-/*                                                              */
-/* Tab nav across the five reports, shared filter bar, summary  */
-/* strip + chart + breakdown table.                             */
+/* Reports — workspace operating reports                         */
 /* =========================================================== */
 
 .cl-reports {
@@ -2925,12 +2922,13 @@
 /* Tabs */
 .cl-reports-tabs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
   padding: 4px;
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
   border-radius: var(--cl-radius);
+  overflow-x: auto;
 }
 .cl-reports-tab {
   background: transparent;
@@ -2943,10 +2941,10 @@
   cursor: pointer;
   white-space: nowrap;
 }
-.cl-reports-tab:hover { background: #F8FAFC; color: var(--cl-ink-primary); }
+.cl-reports-tab:hover { background: var(--cl-bg); color: var(--cl-ink-primary); }
 .cl-reports-tab.is-active {
-  background: var(--cl-mint-soft);
-  color: #14532D;
+  background: var(--cl-teal-soft);
+  color: var(--cl-navy);
   font-weight: 600;
 }
 
@@ -2955,8 +2953,8 @@
   font-size: 13px;
   color: var(--cl-ink-secondary);
   padding: 8px 12px;
-  background: #F8FAFC;
-  border-left: 3px solid var(--cl-mint);
+  background: var(--cl-bg);
+  border-left: 3px solid var(--cl-teal-500);
   border-radius: 0 var(--cl-radius-sm) var(--cl-radius-sm) 0;
 }
 
@@ -2975,6 +2973,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 140px;
 }
 .cl-reports-filter-label {
   font-size: 11px;
@@ -2992,7 +2991,7 @@
   background: var(--cl-surface);
   color: var(--cl-ink-primary);
   font-family: inherit;
-  min-width: 140px;
+  min-width: 100%;
 }
 .cl-reports-filter input:focus,
 .cl-reports-filter select:focus {
@@ -3000,8 +2999,14 @@
   outline-offset: 1px;
   border-color: var(--cl-mint);
 }
-.cl-reports-export {
+.cl-reports-filter-actions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cl-reports-export {
+  min-width: 56px;
 }
 
 /* Body sections */
@@ -3099,8 +3104,12 @@
 .cl-reports-chart-axis-mid { text-align: center; flex: 1; }
 
 /* Table */
+.cl-reports-table-wrap {
+  overflow-x: auto;
+}
 .cl-reports-table {
   width: 100%;
+  min-width: 560px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -3124,6 +3133,60 @@
   text-align: right;
   font-family: var(--cl-font-mono);
   font-variant-numeric: tabular-nums;
+}
+
+.cl-reports-mobile-rows {
+  display: none;
+}
+
+.cl-reports-mobile-row {
+  padding: 12px;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  background: var(--cl-bg);
+}
+
+.cl-reports-mobile-row-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.cl-reports-mobile-row-head strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+}
+
+.cl-reports-mobile-row-head span {
+  font-family: var(--cl-font-mono);
+  font-size: 12px;
+  color: var(--cl-ink-secondary);
+  white-space: nowrap;
+}
+
+.cl-reports-mobile-row dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.cl-reports-mobile-row dt {
+  margin: 0 0 2px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+}
+
+.cl-reports-mobile-row dd {
+  margin: 0;
+  font-family: var(--cl-font-mono);
+  font-size: 12px;
+  color: var(--cl-ink-primary);
 }
 
 /* Loading / error / empty */
@@ -3186,7 +3249,7 @@
   gap: 12px;
   align-items: flex-end;
   padding: 16px;
-  background: #FAFAF8;
+  background: var(--cl-bg);
   border: 1px solid var(--cl-border);
   border-radius: var(--cl-radius-sm);
   margin-bottom: 16px;
@@ -3201,7 +3264,7 @@
   color: var(--cl-ink-muted);
   padding: 16px;
   text-align: center;
-  background: #FAFAF8;
+  background: var(--cl-bg);
   border-radius: var(--cl-radius-sm);
 }
 
@@ -3262,6 +3325,51 @@
 }
 
 @media (max-width: 720px) {
+  .cl-reports {
+    padding: 20px 16px 40px;
+  }
+  .cl-reports-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+  }
+  .cl-reports-tab {
+    width: 100%;
+  }
+  .cl-reports-filter-bar {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .cl-reports-filter,
+  .cl-reports-filter input,
+  .cl-reports-filter select {
+    width: 100%;
+  }
+  .cl-reports-filter-actions {
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+  .cl-reports-summary-strip {
+    grid-template-columns: 1fr;
+  }
+  .cl-reports-chart-card,
+  .cl-reports-table-card,
+  .cl-reports-subs-card {
+    padding: 16px;
+  }
+  .cl-reports-chart-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .cl-reports-table-wrap {
+    display: none;
+  }
+  .cl-reports-mobile-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
   .cl-reports-subs-row {
     grid-template-columns: 1fr;
   }
