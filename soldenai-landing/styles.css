@@ -5246,6 +5246,10 @@ body:not(.theme-dark) .footer-cta {
     justify-self: stretch;
   }
 
+  .ix-hero-record__events {
+    display: none;
+  }
+
   .ix-sdk__inner,
   .ix-record-system__inner,
   .ix-trust__inner,
@@ -5641,6 +5645,41 @@ body:not(.theme-dark) .footer-cta {
 
   .ix-trust__grid article:last-child {
     border-bottom: 0;
+  }
+}
+
+@media (max-width: 720px) and (max-height: 700px) {
+  .ix-hero-record {
+    display: none;
+  }
+}
+
+@media (min-width: 981px) and (max-height: 760px) {
+  .ix-hero-record__events {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .ix-nav__links {
+    display: none;
+  }
+
+  .ix-nav__row {
+    gap: 14px;
+  }
+
+  .ix-brand__lockup {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .ix-brand__mark {
+    opacity: 1;
+  }
+
+  .ix-hero__ctas .ix-btn--secondary {
+    display: none;
   }
 }
 
