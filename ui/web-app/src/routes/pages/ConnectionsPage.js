@@ -1,5 +1,5 @@
 /**
- * Connections Page — occasional setup surface for AP blockers.
+ * Connections Page — occasional setup surface for connected work surfaces.
  */
 import { h } from 'preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
@@ -16,6 +16,7 @@ const ERP_OPTIONS = [
   { value: 'sage_intacct', label: 'Sage Intacct' },
   { value: 'sage_accounting', label: 'Sage Accounting' },
 ];
+const WEBHOOKS_PAGE_SIZE = 5;
 
 function getErpOptionLabel(value) {
   const token = String(value || '').trim().toLowerCase();
@@ -89,8 +90,8 @@ function getSetupSummary({
   if (!approvalConnected || slack?.requires_reauthorization) missing.push('Slack or Teams approvals');
   if (!erp.connected) missing.push('ERP');
   if (missing.length === 0) return 'Inbox, approvals, and ERP are ready for this workspace.';
-  if (missing.length === 1) return `Finish ${missing[0]} before Solden can run the full AP flow.`;
-  return `Finish ${missing.slice(0, -1).join(', ')}, and ${missing[missing.length - 1]} before Solden can run the full AP flow.`;
+  if (missing.length === 1) return `Finish ${missing[0]} before Solden can run the full workflow.`;
+  return `Finish ${missing.slice(0, -1).join(', ')}, and ${missing[missing.length - 1]} before Solden can run the full workflow.`;
 }
 
 function getSlackConnectionDetail(slack = {}) {
@@ -258,7 +259,7 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
                   ? (outlookReconnectRequired
                     ? 'Reconnect Outlook to keep this inbox connected.'
                     : `Outlook is connected${outlook.email ? ` as ${outlook.email}` : ''}.`)
-                  : 'Connect Outlook to ingest invoices arriving in your Microsoft 365 mailbox.'}
+                  : 'Connect Outlook to ingest documents and requests arriving in your Microsoft 365 mailbox.'}
               actionLabel=${!outlookEnabled
                 ? ''
                 : outlook.connected
@@ -291,7 +292,7 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
               status=${erp.status || (erp.connected ? 'connected' : 'disconnected')}
               detail=${erp.connected
                 ? `${erp.erp_type || 'ERP'} is connected.`
-                : `Choose ${getErpOptionLabel(erpType)} or another ERP below before posting approved invoices.`}
+                : `Choose ${getErpOptionLabel(erpType)} or another ERP below before posting approved records.`}
               actionLabel=${erp.connected ? '' : 'Connect ERP'}
               onAction=${() => document.getElementById('cl-erp-connect-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
               disabled=${!canEditConnections}
@@ -331,7 +332,7 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
         >
           <div class="secondary-inline-actions">
             <button class="btn-primary btn-sm" onClick=${connectSlack} disabled=${slackPending || !canEditConnections}>${slackPending ? 'Working…' : (slack.connected ? 'Reconnect Slack' : 'Install Slack')}</button>
-            <input id="cl-slack-channel" placeholder="#finance-approvals" value=${slack.approval_channel || ''} disabled=${!canEditConnections || !slack.connected} style="flex:1;min-width:180px" />
+            <input id="cl-slack-channel" placeholder="#approvals" value=${slack.approval_channel || ''} disabled=${!canEditConnections || !slack.connected} style="flex:1;min-width:180px" />
             <button class="btn-secondary btn-sm" onClick=${saveChannel} disabled=${saveChannelPending || !canEditConnections || !slack.connected}>${saveChannelPending ? 'Saving…' : 'Save channel'}</button>
             <button class="btn-ghost btn-sm" onClick=${testSlackMsg} disabled=${testSlackPending || !slack.connected || !canEditConnections}>${testSlackPending ? 'Verifying…' : 'Verify Slack'}</button>
           </div>
@@ -529,6 +530,7 @@ function WebhooksPanel({ api, canManage, toast }) {
   const [events, setEvents] = useState('*');
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
+  const [webhookPage, setWebhookPage] = useState(0);
   // Module 5 spec line 184 — surface the delivery log in the UI.
   const [deliveriesByWebhook, setDeliveriesByWebhook] = useState({});
   const [openDeliveryFor, setOpenDeliveryFor] = useState(null);
@@ -582,7 +584,10 @@ function WebhooksPanel({ api, canManage, toast }) {
         method: 'POST',
         body: JSON.stringify({ url: trimmed, event_types: events.split(',').map((e) => e.trim()).filter(Boolean) }),
       });
-      if (result?.id) setWebhooks((prev) => [...prev, result]);
+      if (result?.id) {
+        setWebhooks((prev) => [...prev, result]);
+        setWebhookPage(Math.max(0, Math.ceil((webhooks.length + 1) / WEBHOOKS_PAGE_SIZE) - 1));
+      }
       setUrl('');
     } catch (e) {
       setError(e?.message || 'Could not add webhook. Check the URL and try again.');
@@ -597,18 +602,32 @@ function WebhooksPanel({ api, canManage, toast }) {
       toast?.(e?.message || 'Could not remove webhook.', 'error');
     }
   };
+
+  const webhookPageCount = Math.max(1, Math.ceil(webhooks.length / WEBHOOKS_PAGE_SIZE));
+  const safeWebhookPage = Math.min(webhookPage, webhookPageCount - 1);
+  const visibleWebhooks = webhooks.slice(
+    safeWebhookPage * WEBHOOKS_PAGE_SIZE,
+    safeWebhookPage * WEBHOOKS_PAGE_SIZE + WEBHOOKS_PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    if (safeWebhookPage !== webhookPage) {
+      setWebhookPage(safeWebhookPage);
+    }
+  }, [safeWebhookPage, webhookPage]);
+
   return html`
     <div class="panel">
       <div class="panel-head compact">
         <div>
           <h3 style="margin:0">Outgoing webhooks</h3>
-          <p class="muted" style="margin:4px 0 0;font-size:12px">Notify external systems when AP events happen like approvals, retries, and posting outcomes.</p>
+          <p class="muted" style="margin:4px 0 0;font-size:12px">Notify external systems when work events happen, including approvals, retries, and posting outcomes.</p>
         </div>
       </div>
       ${webhooks.length === 0 && html`<div class="secondary-empty" style="padding:8px 0">No webhooks configured</div>`}
       ${webhooks.length > 0 && html`
         <div class="secondary-card-list">
-          ${webhooks.map((wh) => {
+          ${visibleWebhooks.map((wh) => {
             const open = openDeliveryFor === wh.id;
             const deliveries = deliveriesByWebhook[wh.id] || [];
             return html`
@@ -628,6 +647,7 @@ function WebhooksPanel({ api, canManage, toast }) {
                 ${open ? html`
                   <div class="cl-webhook-deliveries">
                     ${deliveries.length === 0 ? html`<div class="muted" style="padding:8px 0">No deliveries yet for this webhook.</div>` : html`
+                      <div class="muted cl-webhook-deliveries-caption">Latest 20 delivery attempts.</div>
                       <table class="cl-settings-table">
                         <thead>
                           <tr><th>Event</th><th>Status</th><th>HTTP</th><th>Attempts</th><th>Sent</th></tr>
@@ -655,6 +675,27 @@ function WebhooksPanel({ api, canManage, toast }) {
             `;
           })}
         </div>
+        <div class="cl-webhook-pagination">
+          <span class="muted">
+            Page ${safeWebhookPage + 1} of ${webhookPageCount} · ${visibleWebhooks.length} of ${webhooks.length} webhook${webhooks.length === 1 ? '' : 's'} shown
+          </span>
+          <div class="cl-webhook-page-controls" aria-label="Outgoing webhook pagination">
+            <button
+              class="btn-secondary btn-sm"
+              aria-label="Previous webhook page"
+              onClick=${() => setWebhookPage((page) => Math.max(0, page - 1))}
+              disabled=${safeWebhookPage === 0}>
+              Previous
+            </button>
+            <button
+              class="btn-secondary btn-sm"
+              aria-label="Next webhook page"
+              onClick=${() => setWebhookPage((page) => Math.min(webhookPageCount - 1, page + 1))}
+              disabled=${safeWebhookPage >= webhookPageCount - 1}>
+              Next
+            </button>
+          </div>
+        </div>
       `}
       ${canManage && html`
         <div class="secondary-form-stack" style="margin-top:12px">
@@ -671,7 +712,7 @@ function WebhooksPanel({ api, canManage, toast }) {
             <button class="btn-secondary btn-sm" onClick=${addWebhook} disabled=${adding || !url.trim()}>${adding ? 'Adding…' : 'Add webhook'}</button>
           </div>
         </div>
-        <div class="secondary-note" style="margin-top:10px">Events can be "*" for all AP events, or a comma-separated list like "invoice.approved, invoice.posted_to_erp".</div>
+        <div class="secondary-note" style="margin-top:10px">Events can be "*" for all audit events, or a comma-separated list like "invoice.approved, invoice.posted_to_erp".</div>
       `}
     </div>
   `;

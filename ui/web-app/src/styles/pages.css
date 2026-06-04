@@ -4969,6 +4969,29 @@
   border-top: 1px solid var(--cl-line);
 }
 
+.cl-webhook-deliveries-caption {
+  margin: 0 0 8px;
+  font-size: 12px;
+}
+
+.cl-webhook-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--cl-line);
+  font-size: 12px;
+}
+
+.cl-webhook-page-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 
 /* ─── Module 3 — rule list filters ──────────────────────────────── */
 
