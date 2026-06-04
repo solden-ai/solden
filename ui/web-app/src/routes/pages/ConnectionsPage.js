@@ -398,9 +398,12 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
           status=${slack.status || (slack.connected ? 'connected' : 'disconnected')}
           detail="Pick the Slack channel that should receive approval requests."
         >
-          <div class="secondary-inline-actions">
+          <div class="secondary-inline-actions cl-connection-control-row">
             <button class="btn-primary btn-sm" onClick=${connectSlack} disabled=${slackPending || !canEditConnections}>${slackPending ? 'Working…' : (slack.connected ? 'Reconnect Slack' : 'Install Slack')}</button>
-            <input id="cl-slack-channel" placeholder="#approvals" value=${slack.approval_channel || ''} disabled=${!canEditConnections || !slack.connected} style="flex:1;min-width:180px" />
+            <div class="field-row cl-connection-control-field">
+              <label for="cl-slack-channel">Approval channel</label>
+              <input id="cl-slack-channel" placeholder="#approvals" value=${slack.approval_channel || ''} disabled=${!canEditConnections || !slack.connected} />
+            </div>
             <button class="btn-secondary btn-sm" onClick=${saveChannel} disabled=${saveChannelPending || !canEditConnections || !slack.connected}>${saveChannelPending ? 'Saving…' : 'Save channel'}</button>
             <button class="btn-ghost btn-sm" onClick=${testSlackMsg} disabled=${testSlackPending || !slack.connected || !canEditConnections}>${testSlackPending ? 'Verifying…' : 'Verify Slack'}</button>
           </div>
@@ -442,8 +445,11 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
               <p class="muted" style="margin:4px 0 8px;font-size:12px">
                 Paste an Incoming Webhook URL to receive approval card notifications. The Approve / Reject buttons render but don't post back without the full bot — use this as a quick-start while you wait for Microsoft-side registrations.
               </p>
-              <div class="secondary-inline-actions">
-                <input id="cl-teams-webhook" placeholder="https://.../incomingwebhook/..." value=${teams.webhook_url || ''} disabled=${!canEditConnections} style="flex:1;min-width:240px" />
+              <div class="secondary-inline-actions cl-connection-control-row">
+                <div class="field-row cl-connection-control-field cl-connection-control-field-wide">
+                  <label for="cl-teams-webhook">Incoming webhook URL</label>
+                  <input id="cl-teams-webhook" placeholder="https://.../incomingwebhook/..." value=${teams.webhook_url || ''} disabled=${!canEditConnections} />
+                </div>
                 <button class="btn-primary btn-sm" onClick=${saveWebhook} disabled=${saveWebhookPending || !canEditConnections}>${saveWebhookPending ? 'Saving…' : 'Save webhook'}</button>
                 <button class="btn-ghost btn-sm" onClick=${testTeamsMsg} disabled=${testTeamsPending || !teams.connected || !canEditConnections}>${testTeamsPending ? 'Sending…' : 'Send test'}</button>
               </div>
@@ -532,10 +538,13 @@ function ERPConnectionCard({
       status=${erp.status || (erp.connected ? 'connected' : 'disconnected')}
       detail="Choose the ERP Solden should post into. OAuth ERPs open a connect flow; credential-based ERPs finish here with credentials."
     >
-      <div class="secondary-inline-actions">
-        <select value=${erpType} onChange=${(event) => setErpType(event.target.value)} disabled=${!canManageConnections || erpConnectPending || erpSubmitPending} style="min-width:170px">
-          ${ERP_OPTIONS.map((option) => html`<option key=${option.value} value=${option.value}>${option.label}</option>`)}
-        </select>
+      <div class="secondary-inline-actions cl-connection-control-row">
+        <div class="field-row cl-connection-control-field cl-connection-control-field-compact">
+          <label for="cl-erp-type">ERP</label>
+          <select id="cl-erp-type" value=${erpType} onChange=${(event) => setErpType(event.target.value)} disabled=${!canManageConnections || erpConnectPending || erpSubmitPending}>
+            ${ERP_OPTIONS.map((option) => html`<option key=${option.value} value=${option.value}>${option.label}</option>`)}
+          </select>
+        </div>
         <button class="btn-primary btn-sm" onClick=${startErpConnect} disabled=${erpConnectPending || !canManageConnections}>
           ${erpConnectPending ? 'Working…' : `Connect ${getErpOptionLabel(erpType)}`}
         </button>
@@ -552,8 +561,8 @@ function ERPConnectionCard({
           </div>
           <div class="secondary-card-body" style="display:grid;gap:12px">
             ${erpFormSpec.fields.map((field) => html`
-              <label key=${field.name} style="display:grid;gap:6px">
-                <span style="font-size:12px;font-weight:700;color:var(--ink)">${field.label}</span>
+              <div class="field-row cl-connection-credential-field" key=${field.name}>
+                <label>${field.label}</label>
                 <input
                   type=${field.type === 'password' ? 'password' : 'text'}
                   placeholder=${field.placeholder || ''}
@@ -561,7 +570,7 @@ function ERPConnectionCard({
                   onInput=${(event) => setErpFormValues((current) => ({ ...current, [field.name]: event.target.value }))}
                   disabled=${erpSubmitPending || !canManageConnections}
                 />
-              </label>
+              </div>
             `)}
             <div class="secondary-inline-actions">
               <button class="btn-primary btn-sm" onClick=${submitErpForm} disabled=${erpSubmitPending || !canManageConnections}>

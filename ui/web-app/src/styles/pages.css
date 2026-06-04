@@ -5591,6 +5591,39 @@
   margin-bottom: 0;
 }
 
+.cl-connection-control-row {
+  align-items: end;
+  gap: 10px;
+}
+
+.cl-connection-control-field {
+  flex: 1 1 240px;
+  max-width: 420px;
+  gap: 5px;
+}
+
+.cl-connection-control-field-compact {
+  flex-basis: 180px;
+  max-width: 220px;
+}
+
+.cl-connection-control-field-wide {
+  max-width: 520px;
+}
+
+.cl-connection-control-field input,
+.cl-connection-control-field select,
+.cl-connection-credential-field input {
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.cl-connection-control-row .btn-primary,
+.cl-connection-control-row .btn-secondary,
+.cl-connection-control-row .btn-ghost {
+  flex: 0 0 auto;
+}
+
 .cl-connections-permission-panel .secondary-note {
   padding: 0;
 }
@@ -5627,6 +5660,24 @@
   }
 
   .cl-connection-row-action {
+    width: fit-content;
+  }
+
+  .cl-connection-control-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .cl-connection-control-field,
+  .cl-connection-control-field-compact,
+  .cl-connection-control-field-wide {
+    max-width: none;
+  }
+
+  .cl-connection-control-row .btn-primary,
+  .cl-connection-control-row .btn-secondary,
+  .cl-connection-control-row .btn-ghost {
     width: fit-content;
   }
 }

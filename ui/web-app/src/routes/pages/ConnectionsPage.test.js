@@ -66,6 +66,7 @@ describe('ConnectionsPage', () => {
     expect(screen.getByText('Approvals')).toBeTruthy();
     expect(screen.getAllByText('ERP').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Access').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Approval channel')).toBeTruthy();
     expect(screen.queryByText('Setup and reconnects live here')).toBeNull();
     expect(screen.queryByText('At a glance')).toBeNull();
   });
