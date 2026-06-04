@@ -1089,10 +1089,18 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
   padding: 12px 16px;
   border-top: 1px solid var(--cl-border-subtle, #efefef);
   background: var(--cl-bg-subtle, #fafafa);
   font-size: 12px;
+}
+
+.cl-audit-page-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* Detail panel — slides in next to the table on wide viewports, takes

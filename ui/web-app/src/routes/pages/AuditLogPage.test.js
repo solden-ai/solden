@@ -20,7 +20,7 @@ const auditEvent = {
   payload_json: { transition: 'approved_for_posting' },
 };
 
-function renderAuditPage({ events = [auditEvent], detailErrorOnce = false } = {}) {
+function renderAuditPage({ events = [auditEvent], detailErrorOnce = false, searchHandler = null } = {}) {
   let detailFailures = detailErrorOnce ? 1 : 0;
   const api = vi.fn(async (path, opts = {}) => {
     const route = String(path);
@@ -41,6 +41,7 @@ function renderAuditPage({ events = [auditEvent], detailErrorOnce = false } = {}
       };
     }
     if (route.startsWith('/api/workspace/audit/search')) {
+      if (searchHandler) return searchHandler(route);
       return { events, next_cursor: null, count: events.length };
     }
     if (route.startsWith('/api/workspace/audit/event/') && method === 'GET') {
@@ -125,6 +126,52 @@ describe('AuditLogPage', () => {
     expect(screen.getByLabelText('Event type').textContent).toContain('Audit administration');
     expect(screen.queryByText('audit_export_downloaded')).toBeNull();
     expect(screen.queryByText('audit_export')).toBeNull();
+  });
+
+  it('uses page-by-page cursor pagination instead of accumulating rows', async () => {
+    const firstPage = [{
+      ...auditEvent,
+      id: 'evt-page-1',
+      box_id: 'AP-100',
+    }];
+    const secondPage = [{
+      ...auditEvent,
+      id: 'evt-page-2',
+      event_type: 'invoice_approved',
+      box_id: 'AP-200',
+    }];
+    const searchHandler = vi.fn((route) => {
+      const cursor = new URL(route, 'http://workspace.test').searchParams.get('cursor');
+      if (cursor === 'cursor-page-2') {
+        return { events: secondPage, next_cursor: null, count: 1 };
+      }
+      return { events: firstPage, next_cursor: 'cursor-page-2', count: 1 };
+    });
+
+    renderAuditPage({ searchHandler });
+
+    await waitFor(() => {
+      expect(screen.getAllByText('AP-100').length).toBeGreaterThan(0);
+    });
+    expect(screen.queryAllByText('AP-200')).toHaveLength(0);
+    expect(screen.getByText('Page 1 · 1 event shown · 50 per page')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('AP-200').length).toBeGreaterThan(0);
+    });
+    expect(screen.queryAllByText('AP-100')).toHaveLength(0);
+    expect(screen.getByText('Page 2 · 1 event shown · 50 per page')).toBeTruthy();
+    expect(searchHandler.mock.calls.some(([route]) => String(route).includes('cursor=cursor-page-2'))).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('AP-100').length).toBeGreaterThan(0);
+    });
+    expect(screen.queryAllByText('AP-200')).toHaveLength(0);
+    expect(screen.getByText('Page 1 · 1 event shown · 50 per page')).toBeTruthy();
   });
 
   it('submits export filters against the same audit query fields', async () => {

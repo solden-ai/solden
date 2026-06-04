@@ -962,8 +962,10 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
     actor_id: '',
     box_id: '',
   });
-  const [pages, setPages] = useState([]);
-  const [cursor, setCursor] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [nextCursor, setNextCursor] = useState(null);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageCursors, setPageCursors] = useState([null]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -1033,15 +1035,19 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
     return params.toString();
   }, [filters, orgId]);
 
-  const fetchPage = useCallback(async ({ append = false, useCursor = null } = {}) => {
+  const fetchPage = useCallback(async ({ useCursor = null, targetPage = 0, cursorTrail = null } = {}) => {
     if (!api || !orgId) return;
     setLoading(true);
     setErr(null);
     try {
       const resp = await api(`/api/workspace/audit/search?${buildQuery(useCursor)}`);
-      const events = Array.isArray(resp?.events) ? resp.events : [];
-      setPages((prev) => append ? [...prev, ...events] : events);
-      setCursor(resp?.next_cursor || null);
+      const pageEvents = Array.isArray(resp?.events) ? resp.events : [];
+      setEvents(pageEvents);
+      setNextCursor(resp?.next_cursor || null);
+      setPageIndex(targetPage);
+      if (Array.isArray(cursorTrail)) {
+        setPageCursors(cursorTrail);
+      }
     } catch (exc) {
       setErr(String(exc?.message || exc));
     } finally {
@@ -1051,8 +1057,10 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
 
   const onApply = useCallback(() => {
     setSelected(null);
-    setCursor(null);
-    fetchPage({ append: false, useCursor: null });
+    const cursorTrail = [null];
+    setNextCursor(null);
+    setPageCursors(cursorTrail);
+    fetchPage({ useCursor: null, targetPage: 0, cursorTrail });
   }, [fetchPage]);
 
   const onReset = useCallback(() => {
@@ -1065,16 +1073,38 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
       box_id: '',
     });
     setSelected(null);
-    setCursor(null);
+    setNextCursor(null);
+    setPageIndex(0);
+    setPageCursors([null]);
   }, []);
 
-  const onLoadMore = useCallback(() => {
-    if (!cursor || loading) return;
-    fetchPage({ append: true, useCursor: cursor });
-  }, [cursor, loading, fetchPage]);
+  const onPreviousPage = useCallback(() => {
+    if (pageIndex <= 0 || loading) return;
+    const targetPage = pageIndex - 1;
+    const cursorTrail = pageCursors.slice(0, targetPage + 1);
+    setSelected(null);
+    fetchPage({
+      useCursor: cursorTrail[targetPage] || null,
+      targetPage,
+      cursorTrail,
+    });
+  }, [pageIndex, pageCursors, loading, fetchPage]);
+
+  const onNextPage = useCallback(() => {
+    if (!nextCursor || loading) return;
+    const targetPage = pageIndex + 1;
+    const cursorTrail = pageCursors.slice(0, targetPage);
+    cursorTrail[targetPage] = nextCursor;
+    setSelected(null);
+    fetchPage({
+      useCursor: nextCursor,
+      targetPage,
+      cursorTrail,
+    });
+  }, [nextCursor, pageIndex, pageCursors, loading, fetchPage]);
 
   useEffect(() => {
-    fetchPage({ append: false });
+    fetchPage({ useCursor: null, targetPage: 0, cursorTrail: [null] });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onExport = useCallback(async (format) => {
@@ -1162,7 +1192,7 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
     return () => { cancelled = true; clearInterval(id); };
   }, [api, orgId, exportState?.job_id, exportState?.status]);
 
-  const empty = !loading && !err && pages.length === 0;
+  const empty = !loading && !err && events.length === 0;
 
   return html`
     <div class="cl-audit-page">
@@ -1202,13 +1232,13 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
       <div class=${`cl-audit-layout${selected ? ' has-detail' : ''}`}>
         <div class="cl-audit-table-wrap">
           ${err ? html`<${ErrorRetry} message=${err} onRetry=${onApply} />` : null}
-          ${loading && pages.length === 0 ? html`<${LoadingSkeleton} rows=${10} />` : null}
+          ${loading && events.length === 0 ? html`<${LoadingSkeleton} rows=${10} />` : null}
           ${empty ? html`
             <${EmptyState}
               title="No matching events"
               body="Adjust filters or expand the date range." />
           ` : null}
-          ${pages.length > 0 ? html`
+          ${events.length > 0 ? html`
             <table class="cl-audit-table">
               <thead>
                 <tr>
@@ -1221,7 +1251,7 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
                 </tr>
               </thead>
               <tbody>
-                ${pages.map((event) => html`
+                ${events.map((event) => html`
                   <${EventRow}
                     key=${event.id}
                     event=${event}
@@ -1231,7 +1261,7 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
               </tbody>
             </table>
             <div class="cl-audit-mobile-list">
-              ${pages.map((event) => {
+              ${events.map((event) => {
                 const verdictMeta = event.governance_verdict ? formatVerdict(event.governance_verdict) : null;
                 return html`
                   <button
@@ -1272,12 +1302,18 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
               })}
             </div>
             <div class="cl-audit-pagination">
-              <span class="muted">${pages.length} event${pages.length === 1 ? '' : 's'} loaded.</span>
-              ${cursor ? html`
-                <button class="btn btn-sm btn-tertiary" onClick=${onLoadMore} disabled=${loading}>
-                  ${loading ? 'Loading…' : 'Load more'}
+              <span class="muted">
+                Page ${pageIndex + 1} · ${events.length} event${events.length === 1 ? '' : 's'} shown · ${PAGE_SIZE} per page
+              </span>
+              <div class="cl-audit-page-controls" aria-label="Audit log pagination">
+                <button class="btn btn-sm btn-tertiary" onClick=${onPreviousPage} disabled=${loading || pageIndex === 0}>
+                  Previous
                 </button>
-              ` : html`<span class="muted">End of results.</span>`}
+                <button class="btn btn-sm btn-tertiary" onClick=${onNextPage} disabled=${loading || !nextCursor}>
+                  ${loading ? 'Loading…' : 'Next'}
+                </button>
+              </div>
+              ${!nextCursor ? html`<span class="muted">End of results.</span>` : null}
             </div>
           ` : null}
         </div>
