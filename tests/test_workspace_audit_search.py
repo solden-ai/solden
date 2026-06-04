@@ -93,6 +93,18 @@ def _seed_event(db, *, box_id: str, event_type: str, organization_id: str = "org
     return db.append_audit_event(payload)
 
 
+def _latest_event(db, *, event_type: str, box_type: str | None = None, box_id: str | None = None):
+    result = db.search_audit_events(
+        organization_id="org-test",
+        event_types=[event_type],
+        box_type=box_type,
+        box_id=box_id,
+        limit=5,
+    )
+    events = result.get("events") or []
+    return events[0] if events else None
+
+
 # ---------------------------------------------------------------------------
 # Role + tenant gate
 # ---------------------------------------------------------------------------
@@ -147,6 +159,58 @@ def test_search_returns_newest_first(db, client_factory):
     ids = [e["id"] for e in body["events"]]
     # Newest first: e3, e2, e1.
     assert ids[:3] == [e3["id"], e2["id"], e1["id"]]
+
+
+def test_search_records_audit_access(db, client_factory):
+    _seed_event(db, box_id="ap-audit-access", event_type="state_transition")
+
+    client = client_factory(_admin_user)
+    resp = client.get(
+        "/api/workspace/audit/search?organization_id=org-test&box_type=ap_item&box_id=ap-audit-access&limit=10"
+    )
+    assert resp.status_code == 200
+    # The search response should remain stable; the access row is written
+    # after the search page is assembled and appears on the next search.
+    assert {e["event_type"] for e in resp.json()["events"]} == {"state_transition"}
+
+    access = _latest_event(
+        db,
+        event_type="audit_search_viewed",
+        box_type="workspace_audit",
+        box_id="audit-log",
+    )
+    assert access is not None
+    assert access["actor_id"] == "admin@example.com"
+    assert access["source"] == "workspace_audit"
+    payload = access["payload_json"]
+    assert payload["filters"]["box_id"] == "ap-audit-access"
+    assert payload["filters"]["box_type"] == "ap_item"
+    assert payload["result_count"] == 1
+    assert payload["cursor_present"] is False
+    assert payload["next_cursor_present"] is False
+
+
+def test_event_detail_records_audit_access(db, client_factory):
+    seed = _seed_event(db, box_id="ap-event-detail", event_type="invoice_approved")
+
+    client = client_factory(_admin_user)
+    resp = client.get(f"/api/workspace/audit/event/{seed['id']}?organization_id=org-test")
+    assert resp.status_code == 200
+    assert resp.json()["event"]["id"] == seed["id"]
+
+    access = _latest_event(
+        db,
+        event_type="audit_event_viewed",
+        box_type="workspace_audit",
+        box_id=seed["id"],
+    )
+    assert access is not None
+    assert access["actor_id"] == "admin@example.com"
+    payload = access["payload_json"]
+    assert payload["target_event_id"] == seed["id"]
+    assert payload["target_event_type"] == "invoice_approved"
+    assert payload["target_box_type"] == "ap_item"
+    assert payload["target_box_id"] == "ap-event-detail"
 
 
 def test_search_filters_by_event_type(db, client_factory):

@@ -3202,6 +3202,58 @@ def _encode_audit_cursor(pair: Optional[Tuple[str, str]]) -> Optional[str]:
     return base64.urlsafe_b64encode(raw.encode("utf-8")).decode("ascii")
 
 
+def _workspace_audit_actor_id(user: TokenData) -> str:
+    return (
+        getattr(user, "email", None)
+        or getattr(user, "user_id", None)
+        or "system"
+    )
+
+
+def _append_workspace_audit_event(
+    db: Any,
+    *,
+    organization_id: str,
+    event_type: str,
+    actor_id: str,
+    box_type: str = "workspace_audit",
+    box_id: str = "audit-log",
+    payload: Optional[Dict[str, Any]] = None,
+    decision_reason: Optional[str] = None,
+    idempotency_key: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """Record administration of the audit surface itself.
+
+    These rows deliberately use the same append-only hash-chain as
+    workflow events. Failures are logged but do not take the audit UI
+    down; the trail remains the source of truth when the write succeeds.
+    """
+    event_payload: Dict[str, Any] = {
+        "box_id": box_id,
+        "box_type": box_type,
+        "event_type": event_type,
+        "actor_type": "user",
+        "actor_id": actor_id,
+        "organization_id": organization_id,
+        "source": "workspace_audit",
+        "payload_json": payload or {},
+    }
+    if decision_reason:
+        event_payload["decision_reason"] = decision_reason
+    if idempotency_key:
+        event_payload["idempotency_key"] = idempotency_key
+    try:
+        return db.append_audit_event(event_payload)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception(
+            "[workspace/audit] failed to append %s for org=%s: %s",
+            event_type,
+            organization_id,
+            exc,
+        )
+        return None
+
+
 @router.get("/audit/search")
 def search_audit(
     organization_id: Optional[str] = Query(default=None),
@@ -3256,6 +3308,28 @@ def search_audit(
     )
     events = result.get("events") or []
     next_cursor = _encode_audit_cursor(result.get("next_cursor"))
+    _append_workspace_audit_event(
+        db,
+        organization_id=org_id,
+        event_type="audit_search_viewed",
+        actor_id=_workspace_audit_actor_id(user),
+        payload={
+            "filters": {
+                "from_ts": from_ts,
+                "to_ts": to_ts,
+                "event_type": event_type,
+                "actor_id": actor_id,
+                "box_type": box_type,
+                "box_id": box_id,
+            },
+            "limit": limit,
+            "cursor_present": bool(cursor),
+            "result_count": len(events),
+            "next_cursor_present": bool(next_cursor),
+            "entity_scope_applied": entity_scope is not None,
+        },
+        decision_reason="Audit log searched from the workspace.",
+    )
     return {
         "organization_id": org_id,
         "events": events,
@@ -3428,8 +3502,29 @@ def set_audit_retention(
         )
     org = db.get_organization(org_id) or {}
     settings = _load_org_settings(org)
+    previous_configured = settings.get("audit_retention_days")
+    try:
+        previous_configured_days = int(previous_configured) if previous_configured else None
+    except (TypeError, ValueError):
+        previous_configured_days = None
+    previous_effective_days = previous_configured_days or tier_ceiling
     settings["audit_retention_days"] = int(request.days)
     db.update_organization(org_id, settings_json=settings)
+    _append_workspace_audit_event(
+        db,
+        organization_id=org_id,
+        event_type="audit_retention_updated",
+        actor_id=_workspace_audit_actor_id(user),
+        payload={
+            "previous_configured_days": previous_configured_days,
+            "previous_effective_days": previous_effective_days,
+            "configured_days": int(request.days),
+            "effective_days": int(request.days),
+            "tier_ceiling_days": tier_ceiling,
+            "plan": sub.plan,
+        },
+        decision_reason="Audit retention policy updated from the workspace.",
+    )
     return {
         "organization_id": org_id,
         "configured_days": int(request.days),
@@ -3506,6 +3601,31 @@ def start_audit_export(
         )
         export_row = db.get_audit_export(export_row["id"]) or export_row
 
+    _append_workspace_audit_event(
+        db,
+        organization_id=org_id,
+        event_type="audit_export_started",
+        actor_id=actor,
+        box_type="audit_export",
+        box_id=str(export_row["id"]),
+        payload={
+            "job_id": export_row.get("id"),
+            "status": export_row.get("status", "queued"),
+            "format": request.format,
+            "filters": {
+                "from_ts": request.from_ts,
+                "to_ts": request.to_ts,
+                "event_types": request.event_types,
+                "actor_id": request.actor_id,
+                "box_type": request.box_type,
+                "box_id": request.box_id,
+                "entity_scope_applied": entity_scope is not None,
+            },
+            "expires_at": export_row.get("expires_at"),
+        },
+        decision_reason="Audit export started from the workspace.",
+        idempotency_key=f"workspace_audit:export_started:{export_row['id']}",
+    )
     return {
         "job_id": export_row["id"],
         "status": export_row.get("status", "queued"),
@@ -3557,6 +3677,22 @@ def get_audit_export_status(
         # Convert memoryview / bytes from psycopg cleanly.
         if isinstance(content, memoryview):
             content = bytes(content)
+        _append_workspace_audit_event(
+            db,
+            organization_id=org_id,
+            event_type="audit_export_downloaded",
+            actor_id=_workspace_audit_actor_id(user),
+            box_type="audit_export",
+            box_id=str(job_id),
+            payload={
+                "job_id": job_id,
+                "format": export_format,
+                "filename": filename,
+                "total_rows": export.get("total_rows"),
+                "content_size_bytes": len(content),
+            },
+            decision_reason="Audit export downloaded from the workspace.",
+        )
         return Response(
             content=content,
             media_type=media_type,
@@ -3623,6 +3759,22 @@ def get_audit_event_detail(
         if event_entity and str(event_entity) not in entity_scope:
             raise HTTPException(status_code=404, detail="audit_event_not_found")
 
+    _append_workspace_audit_event(
+        db,
+        organization_id=org_id,
+        event_type="audit_event_viewed",
+        actor_id=_workspace_audit_actor_id(user),
+        box_id=str(event.get("id") or event_id),
+        payload={
+            "target_event_id": event.get("id"),
+            "target_event_type": event.get("event_type"),
+            "target_box_type": event.get("box_type"),
+            "target_box_id": event.get("box_id"),
+            "target_ts": event.get("ts"),
+            "entity_scope_applied": entity_scope is not None,
+        },
+        decision_reason="Audit event detail viewed from the workspace.",
+    )
     return {"event": event}
 
 

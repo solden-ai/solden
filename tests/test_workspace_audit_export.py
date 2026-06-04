@@ -117,6 +117,18 @@ def _run_task_inline(export_id: str):
     return generate_audit_export.run(export_id)
 
 
+def _latest_event(db, *, event_type: str, box_type: str | None = None, box_id: str | None = None):
+    result = db.search_audit_events(
+        organization_id="org-test",
+        event_types=[event_type],
+        box_type=box_type,
+        box_id=box_id,
+        limit=5,
+    )
+    events = result.get("events") or []
+    return events[0] if events else None
+
+
 # ---------------------------------------------------------------------------
 # Role + tenant gate
 # ---------------------------------------------------------------------------
@@ -192,6 +204,19 @@ def test_export_full_lifecycle_writes_csv(db, client_factory):
     # delay() was called exactly once with the new job_id
     mock_task.delay.assert_called_once_with(job_id)
 
+    started = _latest_event(
+        db,
+        event_type="audit_export_started",
+        box_type="audit_export",
+        box_id=job_id,
+    )
+    assert started is not None
+    assert started["actor_id"] == "admin@example.com"
+    started_payload = started["payload_json"]
+    assert started_payload["job_id"] == job_id
+    assert started_payload["status"] == "queued"
+    assert started_payload["format"] == "csv"
+
     # Status poll before running the task: still queued.
     poll_resp = client.get(f"/api/workspace/audit/exports/{job_id}")
     assert poll_resp.status_code == 200
@@ -235,6 +260,20 @@ def test_export_full_lifecycle_writes_csv(db, client_factory):
     assert "invoice_approved" in body_str
     assert "erp_post_completed" in body_str
 
+    downloaded = _latest_event(
+        db,
+        event_type="audit_export_downloaded",
+        box_type="audit_export",
+        box_id=job_id,
+    )
+    assert downloaded is not None
+    assert downloaded["actor_id"] == "admin@example.com"
+    downloaded_payload = downloaded["payload_json"]
+    assert downloaded_payload["job_id"] == job_id
+    assert downloaded_payload["format"] == "csv"
+    assert downloaded_payload["filename"].endswith(".csv")
+    assert downloaded_payload["content_size_bytes"] > 0
+
 
 def test_export_filters_apply_to_csv_content(db, client_factory):
     """Filters submitted at POST time must narrow the CSV content the
@@ -255,6 +294,16 @@ def test_export_filters_apply_to_csv_content(db, client_factory):
             },
         )
     job_id = post_resp.json()["job_id"]
+
+    started = _latest_event(
+        db,
+        event_type="audit_export_started",
+        box_type="audit_export",
+        box_id=job_id,
+    )
+    assert started is not None
+    assert started["payload_json"]["filters"]["box_id"] == "ap-filter-1"
+    assert started["payload_json"]["filters"]["event_types"] == ["invoice_approved"]
 
     _run_task_inline(job_id)
     dl_resp = client.get(f"/api/workspace/audit/exports/{job_id}?download=true")

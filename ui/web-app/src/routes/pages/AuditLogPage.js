@@ -21,6 +21,7 @@ const COMMON_EVENT_TYPES = [
   { value: 'invoice_approved,invoice_rejected', label: 'Approval decisions' },
   { value: 'erp_post_completed,erp_post_failed', label: 'ERP posting' },
   { value: 'organization_renamed,organization_domain_changed,organization_integration_mode_changed', label: 'Workspace configuration' },
+  { value: 'audit_search_viewed,audit_event_viewed,audit_retention_updated,audit_export_started,audit_export_downloaded', label: 'Audit administration' },
   { value: 'plan_observed', label: 'Agent observations' },
   { value: 'illegal_transition_blocked,invoice_reverse_blocked,invoice_snooze_blocked', label: 'Blocked actions' },
 ];
@@ -32,6 +33,8 @@ const COMMON_RECORD_TYPES = [
   { value: 'vendor_onboarding_session', label: 'Vendor onboarding' },
   { value: 'bank_match', label: 'Bank reconciliation' },
   { value: 'organization', label: 'Organization' },
+  { value: 'workspace_audit', label: 'Audit log' },
+  { value: 'audit_export', label: 'Audit export' },
 ];
 
 const EVENT_TYPE_LABELS = {
@@ -52,7 +55,11 @@ const EVENT_TYPE_LABELS = {
   invoice_reverse_blocked: 'Reverse action blocked',
   invoice_snooze_blocked: 'Snooze blocked',
   webhook_test: 'Webhook test sent',
+  audit_search_viewed: 'Audit log searched',
+  audit_event_viewed: 'Audit event viewed',
+  audit_retention_updated: 'Audit retention updated',
   audit_export_started: 'Audit export started',
+  audit_export_downloaded: 'Audit export downloaded',
 };
 
 const RECORD_TYPE_LABELS = {
@@ -62,6 +69,8 @@ const RECORD_TYPE_LABELS = {
   bank_match: 'Bank reconciliation',
   organization: 'Organization',
   user: 'User',
+  workspace_audit: 'Audit log',
+  audit_export: 'Audit export',
   webhook_subscription: 'SIEM webhook',
 };
 
@@ -88,6 +97,7 @@ const SOURCE_LABELS = {
   erp_native_sage_intacct: 'Sage Intacct panel',
   erp_native_sage_business_cloud: 'Sage Business Cloud panel',
   workspace: 'Workspace',
+  workspace_audit: 'Audit log',
   gmail: 'Gmail',
   slack: 'Slack',
   teams: 'Microsoft Teams',

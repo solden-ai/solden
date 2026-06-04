@@ -105,6 +105,28 @@ describe('AuditLogPage', () => {
     expect(api.mock.calls.filter(([path]) => String(path).startsWith('/api/workspace/audit/event/evt-1')).length).toBe(2);
   });
 
+  it('renders audit administration rows without exposing raw event tokens', async () => {
+    renderAuditPage({
+      events: [{
+        ...auditEvent,
+        id: 'evt-export-download',
+        event_type: 'audit_export_downloaded',
+        box_type: 'audit_export',
+        box_id: 'AEX-123',
+        prev_state: null,
+        new_state: null,
+      }],
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Audit export downloaded').length).toBeGreaterThan(0);
+    });
+    expect(screen.getAllByText('Audit export').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Event type').textContent).toContain('Audit administration');
+    expect(screen.queryByText('audit_export_downloaded')).toBeNull();
+    expect(screen.queryByText('audit_export')).toBeNull();
+  });
+
   it('submits export filters against the same audit query fields', async () => {
     const { api } = renderAuditPage();
 
