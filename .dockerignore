@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -18,6 +19,7 @@ ENV/
 
 # Testing
 .pytest_cache/
+**/.pytest_cache/
 .coverage
 htmlcov/
 .tox/
@@ -33,6 +35,7 @@ logs/
 # Environment
 .env
 .env.local
+.env.*
 
 # OS
 .DS_Store
@@ -40,7 +43,17 @@ Thumbs.db
 
 # Git
 .git/
+.git
 .gitignore
+
+# Local agent/tooling state
+.agents/
+.claude/
+.codex/
+.gstack/
+.cursor/
+.vscode/
+.idea/
 
 # Documentation
 *.md
@@ -55,5 +68,31 @@ tests/test_data/*.csv
 # Build artifacts
 dist/
 build/
+**/dist/
+**/build/
 *.egg-info/
+**/*.egg-info/
 
+# Frontend/package-manager artifacts
+node_modules/
+**/node_modules/
+**/.npm/
+**/.pnpm-store/
+**/.yarn/
+**/.turbo/
+**/.vite/
+**/coverage/
+**/*.tsbuildinfo
+
+# Local runtime state and generated archives
+data/
+*.sqlite
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3-shm
+*.sqlite3-wal
+*.pid
+*.zip
+*.tar
+*.tar.gz
