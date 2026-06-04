@@ -23,30 +23,46 @@ function getErpOptionLabel(value) {
   return ERP_OPTIONS.find((option) => option.value === token)?.label || 'ERP';
 }
 
+function normalizeConnectionStatus(status, connected = false) {
+  const token = String(status || '').trim().toLowerCase();
+  if (connected || token === 'connected') return 'connected';
+  if (['reconnect_required', 'reauthorization_required', 'degraded', 'error'].includes(token)) return 'attention';
+  if (token === 'disabled_in_v1') return 'disabled';
+  return 'disconnected';
+}
+
+function connectionToneClass(status, connected = false) {
+  const normalized = normalizeConnectionStatus(status, connected);
+  if (normalized === 'connected') return 'connected';
+  if (normalized === 'attention') return 'warning';
+  return '';
+}
+
 function ConnectionRow({ label, status, detail, actionLabel = '', onAction, pending = false, disabled = false }) {
-  const connected = String(status || '').trim().toLowerCase() === 'connected';
-  return html`<div class="secondary-row">
-    <div class="secondary-row-copy">
-      <div class="secondary-chip-row" style="margin-bottom:4px">
-        <strong style="font-size:14px">${label}</strong>
-        <span class=${`status-badge ${connected ? 'connected' : ''}`}>${humanizeStatus(status || 'unknown')}</span>
+  const toneClass = connectionToneClass(status);
+  return html`<div class="cl-connection-row">
+    <div class="cl-connection-row-copy">
+      <div class="cl-connection-row-title">
+        <span class=${`cl-connection-dot cl-connection-dot-${normalizeConnectionStatus(status)}`}></span>
+        <strong>${label}</strong>
+        <span class=${`status-badge ${toneClass}`}>${humanizeStatus(status || 'unknown')}</span>
       </div>
-      <div class="muted" style="font-size:12px">${detail}</div>
+      <div class="cl-connection-row-detail">${detail}</div>
     </div>
     ${actionLabel
-      ? html`<button class="btn-secondary btn-sm" onClick=${onAction} disabled=${pending || disabled}>${pending ? 'Working…' : actionLabel}</button>`
+      ? html`<button class="btn-secondary btn-sm cl-connection-row-action" onClick=${onAction} disabled=${pending || disabled}>${pending ? 'Working…' : actionLabel}</button>`
       : null}
   </div>`;
 }
 
 function ApprovalSurfaceCard({ title, status, detail, children }) {
-  return html`<div class="panel" style="margin-bottom:0">
+  return html`<div class="panel cl-connection-setup-panel">
     <div class="panel-head compact">
-      <div>
-        <h3 style="margin:0 0 4px">${title}</h3>
-        <p class="muted" style="margin:0">${detail}</p>
+      <div class="cl-connection-panel-copy">
+        <h3>${title}</h3>
+        <p>${detail}</p>
       </div>
-      <span class=${`status-badge ${status === 'connected' ? 'connected' : ''}`}>${humanizeStatus(status || 'unknown')}</span>
+      <span class=${`status-badge ${connectionToneClass(status)}`}>${humanizeStatus(status || 'unknown')}</span>
     </div>
     ${children}
   </div>`;
@@ -57,12 +73,6 @@ function getApprovalSummary(slack = {}, teams = {}) {
   if (slack.connected) return 'Slack ready';
   if (teams.connected) return 'Teams ready';
   return 'Set up Slack or Teams';
-}
-
-function getRoutingModeSummary(slack = {}, teams = {}) {
-  if (slack.connected) return humanizeMode(slack.mode || '-');
-  if (teams.connected) return humanizeMode(teams.mode || '-');
-  return 'Set after approval setup';
 }
 
 function getSetupSummary({
@@ -105,6 +115,16 @@ function getSlackConnectionDetail(slack = {}) {
     return 'Slack is connected. Pick the approval channel below.';
   }
   return 'Install Slack to send approval requests there.';
+}
+
+function ReadinessCard({ label, value, detail, tone = 'neutral' }) {
+  return html`
+    <div class=${`cl-connections-readiness-card cl-connections-readiness-${tone}`}>
+      <span>${label}</span>
+      <strong>${value}</strong>
+      <small>${detail}</small>
+    </div>
+  `;
 }
 
 export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefresh, oauthBridge, navigate }) {
@@ -215,28 +235,76 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
   const [erpFormSpec, setErpFormSpec] = useState(null);
   const [erpFormValues, setErpFormValues] = useState({});
 
-  return html`
-    <div class=${`secondary-banner ${canEditConnections ? '' : 'warning'}`}>
-      <div class="secondary-banner-copy">
-        <h3>${canEditConnections ? 'Setup and reconnects live here' : 'Connection status is visible here'}</h3>
-        <p class="muted">${canEditConnections ? setupMode : 'Admins can change Gmail, approval routing, and ERP setup. Everyone else can still see what is connected.'}</p>
-      </div>
-      <div class="secondary-banner-actions">
-        ${gmail.connected || gmailReconnectRequired
-          ? html`<button class="btn-primary btn-sm" onClick=${connectGmail} disabled=${gmailPending || !canEditConnections}>${gmailPending ? 'Working…' : (gmailReconnectRequired ? 'Reconnect Gmail' : 'Refresh Gmail auth')}</button>`
-          : html`<button class="btn-primary btn-sm" onClick=${connectGmail} disabled=${gmailPending || !canEditConnections}>${gmailPending ? 'Working…' : 'Connect Gmail'}</button>`}
-        <button class="btn-secondary btn-sm" onClick=${() => navigate?.('/health')}>Open system status</button>
-      </div>
-    </div>
+  const readiness = [
+    {
+      label: 'Inbox',
+      value: !inboxConnected
+        ? 'Not connected'
+        : (inboxReconnectRequired ? 'Reconnect' : 'Ready'),
+      detail: inboxConnected
+        ? (outlook.connected ? 'Gmail or Outlook intake is available.' : 'Gmail intake is available.')
+        : (outlookEnabled ? 'Connect Gmail or Outlook.' : 'Connect Gmail.'),
+      tone: !inboxConnected ? 'danger' : (inboxReconnectRequired ? 'warning' : 'success'),
+    },
+    {
+      label: 'Approvals',
+      value: approvalConnected && !slack?.requires_reauthorization ? 'Ready' : 'Needs setup',
+      detail: approvalConnected ? getApprovalSummary(slack, teams) : 'Connect Slack or Teams.',
+      tone: approvalConnected && !slack?.requires_reauthorization ? 'success' : 'warning',
+    },
+    {
+      label: 'ERP',
+      value: erp.connected ? 'Ready' : 'Not connected',
+      detail: erp.connected ? `${getErpOptionLabel(erp.erp_type || erpType)} is connected.` : `Connect ${getErpOptionLabel(erpType)} or another ERP.`,
+      tone: erp.connected ? 'success' : 'danger',
+    },
+    {
+      label: 'Access',
+      value: canEditConnections ? 'Admin' : 'Read-only',
+      detail: canEditConnections ? 'You can change setup here.' : 'Admins manage connection setup.',
+      tone: canEditConnections ? 'neutral' : 'warning',
+    },
+  ];
 
-    <div class="secondary-shell">
+  return html`
+    <div class="cl-connections-page">
+      <div class=${`cl-connections-hero ${canEditConnections ? '' : 'is-readonly'}`}>
+        <div class="cl-connections-hero-copy">
+          <span>Admin</span>
+          <h3>Connections</h3>
+          <p>${canEditConnections ? setupMode : 'Connection status is visible here. Admins manage inbox, approval, and ERP setup.'}</p>
+        </div>
+        <div class="cl-connections-hero-actions">
+          ${gmail.connected || gmailReconnectRequired
+            ? html`<button class="btn-primary btn-sm" onClick=${connectGmail} disabled=${gmailPending || !canEditConnections}>${gmailPending ? 'Working…' : (gmailReconnectRequired ? 'Reconnect Gmail' : 'Refresh Gmail auth')}</button>`
+            : html`<button class="btn-primary btn-sm" onClick=${connectGmail} disabled=${gmailPending || !canEditConnections}>${gmailPending ? 'Working…' : 'Connect Gmail'}</button>`}
+          <button class="btn-secondary btn-sm" onClick=${() => navigate?.('/health')}>Open system status</button>
+        </div>
+      </div>
+
+      <div class="cl-connections-readiness-grid">
+        ${readiness.map((item) => html`
+          <${ReadinessCard}
+            key=${item.label}
+            label=${item.label}
+            value=${item.value}
+            detail=${item.detail}
+            tone=${item.tone} />
+        `)}
+      </div>
+
+    <div class="secondary-shell cl-connections-shell">
       <div class="secondary-main">
         <${ConnectionHealthPanel} api=${api} orgId=${orgId} />
 
-        <div class="panel">
-          <h3 style="margin-top:0">Workspace connections</h3>
-          <p class="muted" style="margin:0 0 14px">Keep Gmail, approvals, and ERP ready. If one of these drops, work eventually stalls.</p>
-          <div class="secondary-list">
+        <div class="panel cl-connections-matrix-panel">
+          <div class="panel-head compact">
+            <div class="cl-connection-panel-copy">
+              <h3>Integration matrix</h3>
+              <p>Connection state, owner action, and the next setup step for each surface.</p>
+            </div>
+          </div>
+          <div class="cl-connections-matrix">
             <${ConnectionRow}
               label="Gmail"
               status=${gmail.status || (gmail.connected ? 'connected' : 'disconnected')}
@@ -385,31 +453,14 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
         </${ApprovalSurfaceCard}>
       </div>
 
-      <div class="secondary-side">
-        <div class="panel">
-          <h3 style="margin-top:0">At a glance</h3>
-          <div class="secondary-stat-grid" style="margin-top:12px">
-            <div class="secondary-stat-card">
-              <strong>Gmail</strong>
-              <span>${gmailReconnectRequired ? 'Reconnect needed' : (gmail.connected ? 'Connected' : 'Not connected')}</span>
-            </div>
-            <div class="secondary-stat-card">
-              <strong>Approvals</strong>
-              <span>${getApprovalSummary(slack, teams)}</span>
-            </div>
-            <div class="secondary-stat-card">
-              <strong>ERP</strong>
-              <span>${erp.connected ? (erp.erp_type || 'Connected') : 'Not connected'}</span>
-            </div>
-            <div class="secondary-stat-card">
-              <strong>Routing mode</strong>
-              <span>${getRoutingModeSummary(slack, teams)}</span>
+      <div class="secondary-side cl-connections-side">
+        <div class="panel cl-connections-permission-panel">
+          <div class="panel-head compact">
+            <div class="cl-connection-panel-copy">
+              <h3>Access</h3>
+              <p>${canEditConnections ? 'Admin controls are enabled.' : 'Read-only workspace view.'}</p>
             </div>
           </div>
-        </div>
-
-        <div class="panel">
-          <h3 style="margin-top:0">Who can edit this</h3>
           <div class="secondary-note">
             ${canEditConnections
               ? 'You can change connection setup from here.'
@@ -419,6 +470,7 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
 
         <${WebhooksPanel} api=${api} canManage=${canEditConnections} toast=${toast} />
       </div>
+    </div>
     </div>
   `;
 }
@@ -617,14 +669,14 @@ function WebhooksPanel({ api, canManage, toast }) {
   }, [safeWebhookPage, webhookPage]);
 
   return html`
-    <div class="panel">
+    <div class="panel cl-connection-webhooks-panel">
       <div class="panel-head compact">
-        <div>
-          <h3 style="margin:0">Outgoing webhooks</h3>
-          <p class="muted" style="margin:4px 0 0;font-size:12px">Notify external systems when work events happen, including approvals, retries, and posting outcomes.</p>
+        <div class="cl-connection-panel-copy">
+          <h3>Outgoing webhooks</h3>
+          <p>Notify external systems when work events happen, including approvals, retries, and posting outcomes.</p>
         </div>
       </div>
-      ${webhooks.length === 0 && html`<div class="secondary-empty" style="padding:8px 0">No webhooks configured</div>`}
+      ${webhooks.length === 0 && html`<div class="secondary-empty cl-connection-empty">No webhooks configured</div>`}
       ${webhooks.length > 0 && html`
         <div class="secondary-card-list">
           ${visibleWebhooks.map((wh) => {
@@ -712,7 +764,7 @@ function WebhooksPanel({ api, canManage, toast }) {
             <button class="btn-secondary btn-sm" onClick=${addWebhook} disabled=${adding || !url.trim()}>${adding ? 'Adding…' : 'Add webhook'}</button>
           </div>
         </div>
-        <div class="secondary-note" style="margin-top:10px">Events can be "*" for all audit events, or a comma-separated list like "invoice.approved, invoice.posted_to_erp".</div>
+        <div class="secondary-note cl-connection-form-note">Events can be "*" for all audit events, or a comma-separated list like "invoice.approved, invoice.posted_to_erp".</div>
       `}
     </div>
   `;
@@ -885,9 +937,9 @@ function FieldMappingPanel({ api, orgId, erpType, erpConnected, canManage, toast
   return html`
     <div class="panel cl-field-mapping-panel">
       <div class="panel-head compact">
-        <div>
-          <h3 style="margin:0">Custom field mapping</h3>
-          <p class="muted" style="margin:4px 0 0;font-size:12px">
+        <div class="cl-connection-panel-copy">
+          <h3>Custom field mapping</h3>
+          <p>
             Override the default ${erpLabel} field IDs that Solden writes
             to. Leave a field blank to use the default.
           </p>
@@ -1064,9 +1116,9 @@ function ConnectionHealthPanel({ api, orgId }) {
   return html`
     <div class="panel cl-conn-health-panel">
       <div class="panel-head compact">
-        <div>
-          <h3 style="margin:0">Connection health</h3>
-          <p class="muted" style="margin:4px 0 0;font-size:12px">
+        <div class="cl-connection-panel-copy">
+          <h3>Connection health</h3>
+          <p>
             Live signal from the agent's audit log. Refreshes every 30 seconds.
             ${computedAt ? html` Last update <span class="cl-conn-health-ts">${fmtDateTime(computedAt)}</span>.` : null}
           </p>
@@ -1210,7 +1262,7 @@ function ConnectionHealthPanel({ api, orgId }) {
           </div>
         </div>
       ` : (loading ? null : html`
-        <div class="muted" style="padding:12px 0">No integrations to summarise yet.</div>
+        <div class="secondary-empty cl-connection-empty">No integrations to summarise yet.</div>
       `)}
     </div>
   `;

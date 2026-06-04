@@ -5361,6 +5361,276 @@
 .secondary-stat-card[data-tone="warning"] strong { color: #B45309; }
 .secondary-stat-card[data-tone="danger"]  strong { color: var(--cl-danger); }
 
+/* Connections page — enterprise admin control surface. */
+
+.cl-connections-page {
+  max-width: 1200px;
+}
+
+.cl-connections-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 24px;
+  margin-bottom: 12px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+}
+
+.cl-connections-hero.is-readonly {
+  border-color: rgba(180, 83, 9, 0.28);
+  background: linear-gradient(0deg, rgba(180, 83, 9, 0.035), rgba(180, 83, 9, 0.035)), var(--cl-surface);
+}
+
+.cl-connections-hero-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cl-connections-hero-copy span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+}
+
+.cl-connections-hero-copy h3 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--cl-ink-primary);
+}
+
+.cl-connections-hero-copy p {
+  margin: 0;
+  max-width: 720px;
+  color: var(--cl-ink-secondary);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.cl-connections-hero-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.cl-connections-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.cl-connections-readiness-card {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+}
+
+.cl-connections-readiness-card span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+}
+
+.cl-connections-readiness-card strong {
+  font-size: 17px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--cl-ink-primary);
+}
+
+.cl-connections-readiness-card small {
+  min-height: 34px;
+  color: var(--cl-ink-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.cl-connections-readiness-success {
+  border-color: rgba(24, 191, 176, 0.32);
+}
+
+.cl-connections-readiness-success strong {
+  color: var(--cl-teal-600);
+}
+
+.cl-connections-readiness-warning {
+  border-color: rgba(180, 83, 9, 0.28);
+}
+
+.cl-connections-readiness-warning strong {
+  color: #B45309;
+}
+
+.cl-connections-readiness-danger {
+  border-color: rgba(220, 38, 38, 0.22);
+}
+
+.cl-connections-readiness-danger strong {
+  color: var(--cl-danger);
+}
+
+.cl-connections-shell {
+  max-width: 1200px;
+}
+
+.cl-connection-panel-copy {
+  min-width: 0;
+}
+
+.cl-connection-panel-copy h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--cl-ink-primary);
+}
+
+.cl-connection-panel-copy p {
+  margin: 0;
+  color: var(--cl-ink-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.cl-connections-matrix {
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  overflow: hidden;
+}
+
+.cl-connection-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 13px 16px;
+  background: var(--cl-surface);
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.cl-connection-row:last-child {
+  border-bottom: 0;
+}
+
+.cl-connection-row:hover {
+  background: var(--cl-bg);
+}
+
+.cl-connection-row-copy {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.cl-connection-row-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cl-connection-row-title strong {
+  color: var(--cl-ink-primary);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.cl-connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--cl-border-hover);
+  flex: 0 0 auto;
+}
+
+.cl-connection-dot-connected {
+  background: var(--cl-teal-500);
+}
+
+.cl-connection-dot-attention {
+  background: #B45309;
+}
+
+.cl-connection-dot-disconnected {
+  background: var(--cl-ink-muted);
+}
+
+.cl-connection-dot-disabled {
+  background: var(--cl-border-hover);
+}
+
+.cl-connection-row-detail {
+  color: var(--cl-ink-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.cl-connection-row-action {
+  white-space: nowrap;
+}
+
+.cl-connection-setup-panel {
+  margin-bottom: 0;
+}
+
+.cl-connections-permission-panel .secondary-note {
+  padding: 0;
+}
+
+.cl-connection-empty {
+  padding: 8px 0;
+}
+
+.cl-connection-form-note {
+  margin-top: 10px;
+}
+
+@media (max-width: 900px) {
+  .cl-connections-readiness-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .cl-connection-row {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-connections-hero {
+    flex-direction: column;
+  }
+
+  .cl-connections-hero-actions {
+    justify-content: flex-start;
+  }
+
+  .cl-connections-readiness-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-connection-row-action {
+    width: fit-content;
+  }
+}
+
 /* Card body — sits inside .secondary-card after the head. */
 .secondary-card-body {
   display: flex;

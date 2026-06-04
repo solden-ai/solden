@@ -57,6 +57,19 @@ function renderConnectionsPage({ webhooks = makeWebhooks() } = {}) {
 describe('ConnectionsPage', () => {
   afterEach(() => cleanup());
 
+  it('frames connections as a readiness control surface', async () => {
+    renderConnectionsPage();
+
+    await screen.findByText('Connections');
+    expect(screen.getByText('Integration matrix')).toBeTruthy();
+    expect(screen.getByText('Inbox')).toBeTruthy();
+    expect(screen.getByText('Approvals')).toBeTruthy();
+    expect(screen.getAllByText('ERP').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Access').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Setup and reconnects live here')).toBeNull();
+    expect(screen.queryByText('At a glance')).toBeNull();
+  });
+
   it('paginates outgoing webhooks instead of rendering an unbounded stack', async () => {
     renderConnectionsPage();
 
