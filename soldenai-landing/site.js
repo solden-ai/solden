@@ -151,11 +151,11 @@
     }
 
     var titles = {
-      capture:  'gmail · ap@your-co.example',
-      validate: 'match · PO · GRN · invoice',
-      route:    'slack · #finance-approvals',
-      post:     'netsuite.bill · POST',
-      logged:   'audit_chain · ap_items',
+      capture:  'inbox · request captured',
+      validate: 'policy · vendor · budget',
+      route:    'slack · #ops-approvals',
+      post:     'erp.record · POST',
+      logged:   'audit_chain · work_items',
     };
     var statuses = {
       capture:  'captured',

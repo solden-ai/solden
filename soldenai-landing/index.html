@@ -8,7 +8,7 @@
     <title>Solden | Keep back-office work from getting stuck</title>
     <meta
       name="description"
-      content="Solden gives finance and operations teams one live record for invoices, approvals, vendor work, and ERP follow-through, so owners, blockers, decisions, and proof stay visible."
+      content="Solden gives back-office teams one live record for approvals, vendor onboarding, purchase requests, contract reviews, invoices, and ERP follow-through, so owners, blockers, decisions, and proof stay visible."
     />
     <meta name="theme-color" content="#F4F8F7" />
 
@@ -16,7 +16,7 @@
     <meta property="og:title" content="Solden | Keep back-office work from getting stuck" />
     <meta
       property="og:description"
-      content="Solden gives finance and operations teams one live record for invoices, approvals, vendor work, and ERP follow-through, so owners, blockers, decisions, and proof stay visible."
+      content="Solden gives back-office teams one live record for approvals, vendor onboarding, purchase requests, contract reviews, invoices, and ERP follow-through, so owners, blockers, decisions, and proof stay visible."
     />
     <meta property="og:url" content="https://soldenai.com/" />
     <meta property="og:image" content="https://soldenai.com/assets/solden-lockup-dark.png" />
@@ -43,9 +43,10 @@
                 Keep back-office work <strong>from getting stuck</strong>.
               </h1>
               <p data-reveal data-reveal-delay="1">
-                Solden gives finance and operations teams one live record for
-                invoices, approvals, vendor work, and ERP follow-through, so the
-                owner, blocker, decision, and proof stay visible.
+                Solden gives back-office teams one live record for approvals,
+                vendor onboarding, purchase requests, contract reviews, invoices,
+                and ERP follow-through, so the owner, blocker, decision, and proof
+                stay visible.
               </p>
               <div class="ix-hero__ctas" data-reveal data-reveal-delay="2">
                 <a class="ix-btn ix-btn--primary" href="/contact.html">Talk to us</a>
@@ -77,8 +78,9 @@
             <span class="ix-section-label">The operating problem</span>
             <h2>Your team has the tools. What goes missing is the current state of the work.</h2>
             <p>
-              An invoice arrives by email. An approval waits in chat. Vendor
-              details sit in a spreadsheet. The ERP knows the final posting.
+              A purchase request starts in chat. A vendor setup waits on tax
+              and bank details. A contract review needs business approval. An
+              invoice has to make it through policy checks before ERP posting.
               Solden keeps the live owner, next step, blocker, and proof together
               before the team has to chase the same story again.
             </p>
@@ -136,27 +138,27 @@
 
           <div class="ix-work-record" aria-label="Example Solden work record" data-reveal data-reveal-delay="1">
             <div class="ix-work-record__top">
-              <span>AP invoice</span>
-              <strong>Awaiting approval</strong>
+              <span>Vendor onboarding</span>
+              <strong>Waiting on proof</strong>
             </div>
             <div class="ix-work-record__main">
               <div class="ix-work-record__identity">
                 <span>next action visible</span>
-                <h3>Invoice INV-4821</h3>
-                <p>Northwind Logistics · EUR 18,420.00 · PO #4821</p>
+                <h3>Northwind Logistics setup</h3>
+                <p>UK entity · services vendor · ERP vendor record pending</p>
               </div>
               <div class="ix-work-record__fields">
-                <div><span>Status</span><strong>Awaiting AP manager approval</strong></div>
-                <div><span>Owner</span><strong>Accounts payable</strong></div>
-                <div><span>Evidence</span><strong>Invoice, PO, GRN match</strong></div>
-                <div><span>Next</span><strong>Approve or hold for exception</strong></div>
+                <div><span>Status</span><strong>Waiting on bank and tax verification</strong></div>
+                <div><span>Owner</span><strong>Procurement operations</strong></div>
+                <div><span>Evidence</span><strong>Tax form, bank details, approval note</strong></div>
+                <div><span>Next</span><strong>Verify details or request correction</strong></div>
               </div>
             </div>
             <div class="ix-work-record__chain">
-              <div><span>01</span><strong>Captured</strong><small>AP inbox</small></div>
-              <div><span>02</span><strong>Matched</strong><small>PO + GRN</small></div>
-              <div><span>03</span><strong>Waiting</strong><small>Approval</small></div>
-              <div><span>04</span><strong>Ready</strong><small>Post bill</small></div>
+              <div><span>01</span><strong>Requested</strong><small>Intake thread</small></div>
+              <div><span>02</span><strong>Checked</strong><small>Policy + registry</small></div>
+              <div><span>03</span><strong>Waiting</strong><small>Vendor proof</small></div>
+              <div><span>04</span><strong>Ready</strong><small>Create vendor</small></div>
             </div>
           </div>
         </div>
@@ -166,7 +168,7 @@
         <div class="shell ix-sdk__inner">
           <div class="ix-sdk__copy" data-reveal>
             <span class="ix-section-label">How the work moves</span>
-            <h2>Start with an invoice, approval, <br />or vendor request.</h2>
+            <h2>Start with a request, approval, <br />or vendor setup.</h2>
             <div class="ix-tabs" role="tablist" aria-label="How Solden moves work">
               <button type="button" aria-label="Solden work record">S</button>
               <button type="button" class="is-active" role="tab" aria-selected="true" aria-controls="sdk-capture" id="sdk-tab-capture" data-sdk-tab="capture">Capture</button>
@@ -177,7 +179,7 @@
           <div class="ix-code-card" data-reveal data-reveal-delay="1">
             <div class="ix-code-card__bar">
               <span aria-hidden="true"><i></i><i></i><i></i></span>
-              <strong data-sdk-file>Invoice INV-4821 · Northwind Logistics</strong>
+              <strong data-sdk-file>Purchase request PR-4821</strong>
               <em>record open</em>
             </div>
             <div class="ix-code-card__body">
@@ -189,30 +191,30 @@
                       <strong>Needs owner</strong>
                     </div>
                     <div class="ix-workflow-panel__subject">
-                      <h3>Invoice captured from AP inbox</h3>
-                      <p>Northwind Logistics sent invoice INV-4821 with PO #4821 attached. Solden keeps the thread, invoice PDF, key fields, and AP status together.</p>
+                      <h3>Purchase request captured from chat</h3>
+                      <p>Operations asked to approve a facilities repair with a vendor quote attached. Solden keeps the request, quote, policy, vendor, and approval status together.</p>
                     </div>
                     <dl>
                       <div><dt>Vendor</dt><dd>Northwind Logistics</dd></div>
                       <div><dt>Amount</dt><dd>EUR 18,420.00</dd></div>
-                      <div><dt>Missing</dt><dd>AP manager approval</dd></div>
+                      <div><dt>Missing</dt><dd>department owner approval</dd></div>
                     </dl>
                   </div>
                 </div>
                 <div id="sdk-check" role="tabpanel" aria-labelledby="sdk-tab-check" data-sdk-panel="check" hidden>
                   <div class="ix-workflow-panel">
                     <div class="ix-workflow-panel__header">
-                      <span>Three-way match</span>
+                      <span>Policy check</span>
                       <strong>Needs approval</strong>
                     </div>
                     <div class="ix-workflow-panel__subject">
-                      <h3>Invoice matched to PO and GRN</h3>
-                      <p>Solden keeps the invoice, purchase order, goods receipt, key fields, and decision trail together before anyone approves the bill.</p>
+                      <h3>Request checked against policy</h3>
+                      <p>Solden keeps the quote, vendor status, budget context, approval band, and decision trail together before anyone commits the spend.</p>
                     </div>
                     <dl>
-                      <div><dt>PO</dt><dd>PO #4821 found and open</dd></div>
-                      <div><dt>GRN</dt><dd>Receipt confirmed</dd></div>
-                      <div><dt>Next action</dt><dd>approval routed to AP manager</dd></div>
+                      <div><dt>Budget</dt><dd>facilities budget found</dd></div>
+                      <div><dt>Vendor</dt><dd>active supplier record found</dd></div>
+                      <div><dt>Next action</dt><dd>approval routed to department owner</dd></div>
                     </dl>
                   </div>
                 </div>
@@ -223,13 +225,13 @@
                       <strong>Operator approved</strong>
                     </div>
                     <div class="ix-workflow-panel__subject">
-                      <h3>Bill ready to post</h3>
-                      <p>The work resumes from approval, posts the bill to the ERP, and keeps the audit event attached to the full path.</p>
+                      <h3>Purchase record ready to create</h3>
+                      <p>The work resumes from approval, writes the purchase record to the ERP, and keeps the audit event attached to the full path.</p>
                     </div>
                     <dl>
-                      <div><dt>Owner</dt><dd>Accounts payable</dd></div>
-                      <div><dt>System</dt><dd>NetSuite bill</dd></div>
-                      <div><dt>Audit</dt><dd>sealed with AP approval</dd></div>
+                      <div><dt>Owner</dt><dd>operations</dd></div>
+                      <div><dt>System</dt><dd>NetSuite purchase record</dd></div>
+                      <div><dt>Audit</dt><dd>sealed with manager approval</dd></div>
                     </dl>
                   </div>
                 </div>
@@ -238,8 +240,8 @@
                 <span>HISTORY</span>
                 <ol>
                   <li><strong>Captured</strong><small>Inbox request captured</small></li>
-                  <li><strong>Read</strong><small>Invoice details read</small></li>
-                  <li><strong>Blocked</strong><small>AP approval waiting</small></li>
+                  <li><strong>Read</strong><small>Request details read</small></li>
+                  <li><strong>Blocked</strong><small>Department approval waiting</small></li>
                   <li><strong>Recovered</strong><small>ERP update resumed</small></li>
                 </ol>
               </aside>
@@ -266,12 +268,12 @@
             <article data-reveal>
               <div class="ix-install__terminal">
                 <span>ONE WORK ITEM</span>
-                <pre>From: billing@northwind.example
-Subject: Invoice INV-4821
+                <pre>From: ops@northwind.example
+Subject: Purchase request PR-4821
 
-Captured attachments: invoice.pdf
-Matched PO: #4821
-Next owner: AP manager</pre>
+Captured attachments: quote.pdf
+Matched policy: services threshold
+Next owner: department manager</pre>
               </div>
               <h3>See what happened without digging</h3>
               <p>See the request, checks, approval wait, system retry, and audit record from the first sample path through your stack.</p>
@@ -285,7 +287,7 @@ Next owner: AP manager</pre>
                     <i></i><i></i><i></i>
                     <strong>Solden Workspace</strong>
                   </div>
-                  <div class="ix-env__url">Invoice INV-4821 · awaiting approval</div>
+                  <div class="ix-env__url">Purchase request PR-4821 · awaiting approval</div>
                   <div class="ix-env__history">
                     <span>Captured</span>
                     <strong style="--w: 96%"></strong>
@@ -321,12 +323,12 @@ Next owner: AP manager</pre>
               <div class="ix-map-window">
                 <div class="ix-map-window__top">
                   <i></i><i></i><i></i>
-                  <strong>Work record · AP invoice</strong>
+                  <strong>Work record · purchase request</strong>
                 </div>
                 <div class="ix-map-flow">
-                  <div><span>Inbox</span><strong>Invoice captured</strong><small>PDF + email thread</small></div>
-                  <div><span>Approvals</span><strong>AP owner assigned</strong><small>manager approval waiting</small></div>
-                  <div><span>System</span><strong>Bill queued</strong><small>NetSuite posting ready</small></div>
+                  <div><span>Inbox</span><strong>Request captured</strong><small>quote + chat thread</small></div>
+                  <div><span>Approvals</span><strong>Owner assigned</strong><small>department approval waiting</small></div>
+                  <div><span>System</span><strong>Record queued</strong><small>ERP writeback ready</small></div>
                 </div>
               </div>
               <div class="ix-compute-row">
@@ -341,7 +343,7 @@ Next owner: AP manager</pre>
               <div class="ix-run-card">
                 <code>Work record
 state: pending_approval
-owner: accounts_payable
+owner: operations
 next: approve_or_hold</code>
               </div>
             </div>
