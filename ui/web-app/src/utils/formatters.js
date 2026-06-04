@@ -164,10 +164,23 @@ const FINANCE_EFFECT_REASON_LABELS = {
   linked_refund_exceeds_cash_out: 'Refund exceeds linked cash out',
 };
 
-function getFieldLabel(field) {
+const FIELD_REVIEW_REASON_LABELS = {
+  attachment_llm_mismatch: 'Attachment and model output disagree.',
+  critical_field_low_confidence: 'Solden is not confident enough in this critical field; a person needs to confirm it.',
+  critical_field_review_required: 'A person needs to confirm this critical field.',
+  source_value_mismatch: 'Email and attachment disagree.',
+};
+
+export function getFieldLabel(field) {
   const token = String(field || '').trim().toLowerCase();
   if (!token) return 'Field';
   return FIELD_LABELS[token] || humanizeSnakeText(token);
+}
+
+export function getFieldReviewReasonLabel(reason) {
+  const token = String(reason || '').trim().toLowerCase();
+  if (!token) return 'A person needs to confirm this field.';
+  return FIELD_REVIEW_REASON_LABELS[token] || humanizeSnakeText(token);
 }
 
 function getSourceLabel(source) {
@@ -251,7 +264,7 @@ export function getFieldReviewBlockers(item = {}) {
       winning_value: winningValue,
       winning_value_display: formatFieldReviewValue(field, winningValue, currency),
       reason: String(conflict.reason || 'source_value_mismatch'),
-      reason_label: 'Email and attachment do not match.',
+      reason_label: getFieldReviewReasonLabel(conflict.reason || 'source_value_mismatch'),
       paused_reason: `Check ${fieldLabel.toLowerCase()} because the email and attachment do not match.`,
       winner_reason: winnerReason,
     });
@@ -285,7 +298,7 @@ export function getFieldReviewBlockers(item = {}) {
       field,
       field_label: fieldLabel,
       reason: String(typeof blocker === 'object' ? blocker?.reason || blocker?.code || 'critical_field_review_required' : 'critical_field_review_required'),
-      reason_label: 'A person needs to confirm this field before the invoice can move forward.',
+      reason_label: getFieldReviewReasonLabel(typeof blocker === 'object' ? blocker?.reason || blocker?.code || 'critical_field_review_required' : 'critical_field_review_required'),
       paused_reason: confidencePct !== null && confidencePct !== undefined && thresholdPct !== null && thresholdPct !== undefined
         ? `Review ${fieldLabel.toLowerCase()} before this invoice moves forward.`
         : `Review ${fieldLabel.toLowerCase()} before this invoice moves forward.`,

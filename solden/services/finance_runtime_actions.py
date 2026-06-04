@@ -6,6 +6,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 from solden.core.org_utils import assert_org_id
+from solden.services.ap_field_review import summarize_field_review_blockers
 
 
 logger = logging.getLogger(__name__)
@@ -88,18 +89,7 @@ def build_finance_lead_summary_payload(
     if due_date:
         lines.append(f"Due date: {due_date}")
     if requires_field_review:
-        fields: List[str] = []
-        for entry in confidence_blockers[:4]:
-            if isinstance(entry, str):
-                fields.append(entry)
-            elif isinstance(entry, dict):
-                fields.append(str(entry.get("field") or entry.get("code") or "").strip())
-        fields = [field for field in fields if field]
-        lines.append(
-            f"Field review blockers: {', '.join(fields)}"
-            if fields
-            else "Field review blockers require review before posting."
-        )
+        lines.append(summarize_field_review_blockers(confidence_blockers))
     if bool(item.get("budget_requires_decision")):
         budget_status = str(item.get("budget_status") or "review").replace("_", " ")
         lines.append(f"Budget decision required ({budget_status}).")

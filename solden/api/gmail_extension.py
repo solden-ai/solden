@@ -1404,6 +1404,8 @@ def _build_finance_lead_summary_payload(
     *,
     audit_events: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
+    from solden.services.ap_field_review import summarize_field_review_blockers
+
     state = str(ap_item.get("state") or "received").strip().lower()
     next_action = str(ap_item.get("next_action") or "").strip().replace("_", " ")
     vendor = str(ap_item.get("vendor_name") or ap_item.get("vendor") or "Unknown vendor").strip()
@@ -1434,16 +1436,7 @@ def _build_finance_lead_summary_payload(
     if due_date:
         lines.append(f"Due date: {due_date}")
     if requires_field_review:
-        fields = []
-        for entry in confidence_blockers[:4]:
-            if isinstance(entry, str):
-                fields.append(entry)
-            elif isinstance(entry, dict):
-                fields.append(str(entry.get('field') or entry.get('code') or '').strip())
-        fields = [f for f in fields if f]
-        lines.append(
-            f"Field review blockers: {', '.join(fields)}" if fields else "Field review blockers require review before posting."
-        )
+        lines.append(summarize_field_review_blockers(confidence_blockers))
     if bool(ap_item.get("budget_requires_decision")):
         budget_status = str(ap_item.get("budget_status") or "review").replace("_", " ")
         lines.append(f"Budget decision required ({budget_status}).")

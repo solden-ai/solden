@@ -2437,6 +2437,16 @@
   line-height: 1.6;
   color: var(--cl-ink-primary);
 }
+.cl-record-source-card li span,
+.cl-record-source-card li small {
+  display: block;
+}
+.cl-record-source-card li small {
+  margin-top: 2px;
+  color: var(--cl-ink-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
 .cl-record-source-card-warn {
   background: #FEF3C7;
   border-color: #FCD34D;

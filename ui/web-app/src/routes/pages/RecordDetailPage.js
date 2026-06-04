@@ -32,6 +32,9 @@ import htm from 'htm';
 import { fmtDate, fmtDateTime } from '../route-helpers.js';
 import {
   formatAmount,
+  getFieldLabel,
+  getFieldReviewBlockers,
+  getFieldReviewReasonLabel,
   getStateLabel,
 } from '../../utils/formatters.js';
 import { hasCapability } from '../../utils/capabilities.js';
@@ -861,7 +864,16 @@ function SourcesSection({ sources, item }) {
   const feedback = sources.decision_feedback || {};
   const hints = sources.single_pass_hints;
   const confidenceGate = sources.confidence_gate || {};
-  const blockers = confidenceGate.confidence_blockers || [];
+  const rawConfidenceBlockers = Array.isArray(confidenceGate.confidence_blockers)
+    ? confidenceGate.confidence_blockers
+    : [];
+  const blockers = rawConfidenceBlockers.length > 0
+    ? getFieldReviewBlockers({
+        ...item,
+        field_review_blockers: [],
+        confidence_blockers: rawConfidenceBlockers,
+      })
+    : getFieldReviewBlockers(item);
 
   const hasAnything = (
     Object.keys(vendorContext).length > 0
@@ -874,7 +886,7 @@ function SourcesSection({ sources, item }) {
 
   return html`
     <details class="cl-record-reasoning-sources" open>
-      <summary>Sources the agent consulted</summary>
+      <summary>Evidence and checks</summary>
       <div class="cl-record-reasoning-sources-grid">
         ${Object.keys(vendorContext).length > 0 ? html`
           <div class="cl-record-source-card">
@@ -919,11 +931,13 @@ function SourcesSection({ sources, item }) {
 
         ${blockers.length > 0 ? html`
           <div class="cl-record-source-card cl-record-source-card-warn">
-            <h4>Field review blockers</h4>
+            <h4>Fields needing review</h4>
             <ul>
               ${blockers.map((blocker) => html`
                 <li key=${blocker.field || JSON.stringify(blocker)}>
-                  ${blocker.field ? html`<strong>${blocker.field}</strong>: ${blocker.reason || 'low confidence'}` : JSON.stringify(blocker)}
+                  <strong>${blocker.field_label || getFieldLabel(blocker.field)}</strong>
+                  <span>${blocker.reason_label || getFieldReviewReasonLabel(blocker.reason)}</span>
+                  ${blocker.auto_check_note ? html`<small>${blocker.auto_check_note}</small>` : null}
                 </li>`)}
             </ul>
           </div>` : null}

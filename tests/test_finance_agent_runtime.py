@@ -2167,3 +2167,21 @@ def test_finance_lead_summary_prefers_agent_memory_next_action_label():
     assert payload["agent_next_action"]["label"] == "Wait for approval decision"
     assert any("Wait for approval decision" in line for line in payload["lines"])
     assert any("Agent belief: Approval is pending with the assigned approver." in line for line in payload["lines"])
+
+
+def test_finance_lead_summary_humanizes_field_review_blockers():
+    db = _FakeDB()
+    runtime = _runtime(db)
+    ap_item = dict(db.items["ap-route-1"])
+    ap_item["requires_field_review"] = True
+    ap_item["confidence_blockers"] = [
+        {"field": "vendor", "reason": "critical_field_low_confidence"},
+        {"field": "amount", "reason": "critical_field_low_confidence"},
+    ]
+
+    payload = runtime._build_finance_lead_summary_payload(ap_item)
+
+    text = "\n".join(payload["lines"])
+    assert "Review vendor and amount before posting." in text
+    assert "Field review blockers" not in text
+    assert "critical_field_low_confidence" not in text

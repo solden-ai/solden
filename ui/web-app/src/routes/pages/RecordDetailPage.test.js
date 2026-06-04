@@ -48,4 +48,53 @@ describe('RecordDetailPage', () => {
       expect(screen.getByText('Vendor confirmed the PO out-of-band.')).toBeTruthy();
     });
   });
+
+  it('humanizes field review blockers in the agent evidence panel', async () => {
+    const api = vi.fn(async (path) => {
+      if (String(path).startsWith('/api/workspace/ap-items/AP-2/detail')) {
+        return {
+          item: {
+            id: 'AP-2',
+            vendor_name: 'Acme Supplies',
+            amount: 100,
+            currency: 'USD',
+            invoice_number: 'INV-2',
+            state: 'needs_info',
+            due_date: '2026-06-10',
+          },
+          reasoning: {
+            sources: {
+              confidence_gate: {
+                confidence_blockers: [
+                  { field: 'vendor', reason: 'critical_field_low_confidence' },
+                  { field: 'amount', reason: 'critical_field_low_confidence' },
+                ],
+              },
+            },
+          },
+          match: {},
+          actions: [],
+          timeline: [],
+        };
+      }
+      return {};
+    });
+
+    const { container } = render(h(RecordDetailPage, {
+      api,
+      orgId: 'org-test',
+      recordId: 'AP-2',
+      bootstrap: {},
+      navigate: () => {},
+      toast: () => {},
+    }));
+
+    await screen.findByText('Evidence and checks');
+    expect(screen.getByText('Fields needing review')).toBeTruthy();
+    expect(screen.getAllByText('Vendor').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Amount').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Solden is not confident enough in this critical field; a person needs to confirm it.')).toHaveLength(2);
+    expect(container.textContent).not.toContain('critical_field_low_confidence');
+    expect(container.textContent).not.toContain('Field review blockers');
+  });
 });

@@ -257,6 +257,8 @@ _FIELD_REVIEW_SOURCE_LABELS = {
 _FIELD_REVIEW_REASON_LABELS = {
     "source_value_mismatch": "Email and attachment disagree.",
     "attachment_llm_mismatch": "Attachment and model output disagree.",
+    "critical_field_low_confidence": "Solden is not confident enough in this critical field; a person needs to confirm it.",
+    "critical_field_review_required": "A person needs to confirm this critical field.",
 }
 
 
@@ -272,6 +274,34 @@ def _field_review_source_label(source: Any) -> str:
     if not token:
         return "Source"
     return _FIELD_REVIEW_SOURCE_LABELS.get(token) or token.replace("_", " ").title()
+
+
+def field_review_reason_label(reason: Any) -> str:
+    token = str(reason or "").strip().lower()
+    if not token:
+        return "A person needs to confirm this field."
+    return _FIELD_REVIEW_REASON_LABELS.get(token) or token.replace("_", " ").title()
+
+
+def summarize_field_review_blockers(blockers: List[Any], *, limit: int = 4) -> str:
+    """Return concise operator-facing copy for confidence/source blockers."""
+    fields: List[str] = []
+    for entry in (blockers or [])[:limit]:
+        field = ""
+        if isinstance(entry, str):
+            field = entry
+        elif isinstance(entry, dict):
+            field = str(entry.get("field") or entry.get("code") or "").strip()
+        label = _field_review_label(field)
+        if label and label != "Field":
+            fields.append(label)
+
+    if not fields:
+        return "Field review required before posting."
+    fields = [field.lower() for field in fields]
+    if len(fields) == 1:
+        return f"Review {fields[0]} before posting."
+    return f"Review {', '.join(fields[:-1])} and {fields[-1]} before posting."
 
 
 def _format_field_review_value(field: str, value: Any, payload: Dict[str, Any]) -> str:
