@@ -95,6 +95,177 @@ const MATCH_MODES = [
   },
 ];
 
+const SETTINGS_SECTION_GROUPS = [
+  {
+    label: 'Workspace and systems',
+    items: [
+      { id: 'workspace', label: 'Workspace', summary: 'Name, domain, organization details' },
+      { id: 'erp', label: 'ERP connection', summary: 'Accounting system and sync state' },
+      { id: 'gl', label: 'GL mapping', summary: 'Posting accounts for AP categories' },
+      { id: 'matching', label: 'Matching', summary: 'PO, receipt, and invoice tolerances' },
+      { id: 'fx', label: 'FX rates', summary: 'Currency rates for reporting' },
+    ],
+  },
+  {
+    label: 'Policy controls',
+    items: [
+      { id: 'policy', label: 'AP policy', summary: 'Thresholds, duplicates, payment ceiling' },
+      { id: 'approval', label: 'Approval routing', summary: 'Legacy amount and approver routes' },
+      { id: 'vendor', label: 'Vendor onboarding', summary: 'Vendor chase and verification timing' },
+      { id: 'autonomy', label: 'Autonomy', summary: 'Agent action and override limits' },
+      { id: 'fraud', label: 'Fraud rules', summary: 'Vendor and payment risk thresholds' },
+    ],
+  },
+  {
+    label: 'Access',
+    items: [
+      { id: 'team', label: 'Team', summary: 'Invites, members, and offboarding' },
+      { id: 'roles', label: 'Roles', summary: 'Standard, custom, and entity roles' },
+      { id: 'sso', label: 'SSO', summary: 'SAML identity provider setup' },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { id: 'escalation', label: 'Escalation', summary: 'When stuck work should page a human' },
+      { id: 'notifications', label: 'Notifications', summary: 'Per-user event preferences' },
+      { id: 'billing', label: 'Billing', summary: 'Plan, usage, and subscription' },
+      { id: 'export', label: 'Export', summary: 'Portable workspace data dump' },
+    ],
+  },
+];
+
+const SETTINGS_SECTIONS = SETTINGS_SECTION_GROUPS.flatMap((group) => group.items.map((item) => ({
+  ...item,
+  group: group.label,
+})));
+
+const SETTINGS_SECTION_IDS = new Set(SETTINGS_SECTIONS.map((section) => section.id));
+
+function normalizeSettingsSection(value) {
+  const token = String(value || '').trim().toLowerCase();
+  return SETTINGS_SECTION_IDS.has(token) ? token : 'workspace';
+}
+
+function getSettingsSection(id) {
+  return SETTINGS_SECTIONS.find((section) => section.id === id) || SETTINGS_SECTIONS[0];
+}
+
+function getSettingsSectionStatus(id, context = {}) {
+  const {
+    approvalRules = [],
+    canManageCompany,
+    canManagePlan,
+    canManageTeam,
+    chartAccounts = [],
+    erp = {},
+    glMap = {},
+    gmail = {},
+    invites = [],
+    org = {},
+    planName = 'Free',
+    slack = {},
+    teams = {},
+    usage = {},
+  } = context;
+
+  const connectedApprovals = !!(slack.connected || teams.connected);
+  const connectedSystems = [erp.connected, gmail.connected, connectedApprovals].filter(Boolean).length;
+  const requiredGlMapped = !!glMap.expenses;
+
+  switch (id) {
+    case 'workspace':
+      return org.domain ? 'Ready' : 'Domain missing';
+    case 'erp':
+      return erp.connected ? 'Connected' : 'Needs setup';
+    case 'gl':
+      if (!erp.connected) return 'Blocked';
+      return requiredGlMapped ? 'Mapped' : 'Needs mapping';
+    case 'matching':
+      return canManageCompany ? 'Editable' : 'Read-only';
+    case 'fx':
+      return chartAccounts.length ? `${chartAccounts.length} accounts loaded` : 'Manual';
+    case 'policy':
+      return canManageCompany ? 'Editable' : 'Read-only';
+    case 'approval':
+      return approvalRules.length ? `${approvalRules.length} rules` : 'No rules';
+    case 'vendor':
+      return 'Default policy';
+    case 'autonomy':
+      return 'Guarded';
+    case 'fraud':
+      return canManageCompany ? 'Editable' : 'Read-only';
+    case 'team':
+      return invites.filter((invite) => invite.status === 'pending').length
+        ? `${invites.filter((invite) => invite.status === 'pending').length} pending`
+        : `${Number(usage.users_count || 0).toLocaleString()} members`;
+    case 'roles':
+      return canManageTeam ? 'Editable' : 'Read-only';
+    case 'sso':
+      return canManageCompany ? 'Available' : 'Read-only';
+    case 'escalation':
+      return 'Optional';
+    case 'notifications':
+      return 'Per-user';
+    case 'billing':
+      return canManagePlan ? planName : 'Read-only';
+    case 'export':
+      return canManageCompany ? 'Available' : 'Read-only';
+    default:
+      return connectedSystems ? `${connectedSystems}/3 connected` : 'Not configured';
+  }
+}
+
+function getSettingsSummaryCards(context = {}) {
+  const {
+    approvalRules = [],
+    erp = {},
+    gmail = {},
+    invites = [],
+    org = {},
+    planName = 'Free',
+    slack = {},
+    teams = {},
+    usage = {},
+  } = context;
+  const connectedApprovals = !!(slack.connected || teams.connected);
+  const connectedSystems = [erp.connected, gmail.connected, connectedApprovals].filter(Boolean).length;
+  const pendingInvites = invites.filter((invite) => invite.status === 'pending').length;
+
+  return [
+    {
+      label: 'Workspace',
+      value: displayOrgName(org.name) || 'Untitled',
+      detail: org.domain || 'Domain not set',
+      tone: org.domain ? 'default' : 'warning',
+    },
+    {
+      label: 'Systems',
+      value: `${connectedSystems}/3`,
+      detail: 'ERP, intake, approvals',
+      tone: connectedSystems === 3 ? 'success' : 'warning',
+    },
+    {
+      label: 'Policy',
+      value: approvalRules.length ? `${approvalRules.length}` : '0',
+      detail: approvalRules.length === 1 ? 'legacy approval route' : 'legacy approval routes',
+      tone: approvalRules.length ? 'default' : 'warning',
+    },
+    {
+      label: 'Access',
+      value: Number(usage.users_count || 0).toLocaleString(),
+      detail: pendingInvites ? `${pendingInvites} pending invite${pendingInvites === 1 ? '' : 's'}` : 'active members',
+      tone: pendingInvites ? 'warning' : 'default',
+    },
+    {
+      label: 'Plan',
+      value: planName,
+      detail: 'subscription',
+      tone: 'default',
+    },
+  ];
+}
+
 function MatchingSection({ api, toast, canManage }) {
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -345,7 +516,6 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
   const canManageTeam = hasCapability(bootstrap, 'manage_team');
   const canManageCompany = hasCapability(bootstrap, 'manage_company');
   const canManagePlan = hasCapability(bootstrap, 'manage_plan');
-  const canManageAny = canManageTeam || canManageCompany || canManagePlan;
 
   const workspaceRef = useRef(null);
   const erpRef = useRef(null);
@@ -376,10 +546,22 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
   const erpKind = erp?.connections?.[0]?.erp_type || '';
   const erpType = erpKind.charAt(0).toUpperCase() + erpKind.slice(1);
 
-  const [activeSection, setActiveSection] = useState('workspace');
+  const routeSection = normalizeSettingsSection(routeId);
+  const [activeSection, setActiveSection] = useState(routeSection);
+  useEffect(() => {
+    setActiveSection(routeSection);
+  }, [routeSection]);
+
+  const selectSection = useCallback((sectionId) => {
+    const next = normalizeSettingsSection(sectionId);
+    setActiveSection(next);
+    if (typeof navigate === 'function') {
+      navigate(next === 'workspace' ? '/settings' : `/settings/${next}`);
+    }
+  }, [navigate]);
 
   const goToConnections = () => {
-    if (typeof navigate === 'function') navigate('connections');
+    if (typeof navigate === 'function') navigate('/connections');
   };
 
   const [createInvite, creatingInvite] = useAction(async () => {
@@ -760,101 +942,93 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
     { label: 'AI credits', value: Number(usage.ai_credits_this_month || 0).toLocaleString() },
     { label: 'Users', value: Number(usage.users_count || 0).toLocaleString() },
   ];
+  const sectionContext = {
+    approvalRules,
+    canManageCompany,
+    canManagePlan,
+    canManageTeam,
+    chartAccounts,
+    erp,
+    glMap,
+    gmail,
+    invites,
+    org,
+    planName,
+    slack,
+    teams,
+    usage,
+  };
+  const currentSection = getSettingsSection(activeSection);
+  const currentSectionStatus = getSettingsSectionStatus(activeSection, sectionContext);
+  const summaryCards = getSettingsSummaryCards(sectionContext);
 
   return html`
-    <div class="settings-tabs-strip">
-      <div class="secondary-banner-actions" style="flex-wrap:wrap">
-        <button class=${`segmented-button btn-sm${activeSection === 'workspace' ? ' is-active' : ''}`} onClick=${() => setActiveSection('workspace')}>Workspace</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'erp' ? ' is-active' : ''}`} onClick=${() => setActiveSection('erp')}>ERP Connection</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'gl' ? ' is-active' : ''}`} onClick=${() => setActiveSection('gl')}>GL Mapping</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'policy' ? ' is-active' : ''}`} onClick=${() => setActiveSection('policy')}>AP Policy</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'matching' ? ' is-active' : ''}`} onClick=${() => setActiveSection('matching')}>Matching</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'approval' ? ' is-active' : ''}`} onClick=${() => setActiveSection('approval')}>Approval Routing</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'vendor' ? ' is-active' : ''}`} onClick=${() => setActiveSection('vendor')}>Vendor Onboarding</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'autonomy' ? ' is-active' : ''}`} onClick=${() => setActiveSection('autonomy')}>Autonomy</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'team' ? ' is-active' : ''}`} onClick=${() => setActiveSection('team')}>Team</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'roles' ? ' is-active' : ''}`} onClick=${() => setActiveSection('roles')}>Roles</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'billing' ? ' is-active' : ''}`} onClick=${() => setActiveSection('billing')}>Billing</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'sso' ? ' is-active' : ''}`} onClick=${() => setActiveSection('sso')}>SSO</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'escalation' ? ' is-active' : ''}`} onClick=${() => setActiveSection('escalation')}>Escalation</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'notifications' ? ' is-active' : ''}`} onClick=${() => setActiveSection('notifications')}>Notifications</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'fraud' ? ' is-active' : ''}`} onClick=${() => setActiveSection('fraud')}>Fraud</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'fx' ? ' is-active' : ''}`} onClick=${() => setActiveSection('fx')}>FX rates</button>
-        <button class=${`segmented-button btn-sm${activeSection === 'export' ? ' is-active' : ''}`} onClick=${() => setActiveSection('export')}>Export</button>
-      </div>
-    </div>
+    <main class="cl-settings-page">
+      <header class="cl-settings-hero">
+        <div class="cl-settings-hero-copy">
+          <span class="cl-settings-eyebrow">Admin</span>
+          <h1>Settings</h1>
+          <p>
+            Configure workspace identity, connected systems, policy controls,
+            access, and operational guardrails from one place.
+          </p>
+        </div>
+        <div class="cl-settings-hero-actions">
+          <button class="btn-secondary" onClick=${goToConnections}>Open connections</button>
+          <button class="btn-primary" onClick=${() => selectSection('team')}>Invite teammate</button>
+        </div>
+      </header>
 
-    <div class="settings-summary-grid" style="margin-bottom:20px">
-      <!-- All four cards share the same shape: small uppercase label,
-           a single prominent metric/value, a small subtext line. The
-           previous cards were inconsistent (sentence vs metadata stack
-           vs three-line prose), which read as four different widgets
-           rather than a single status row. -->
-      <div class="settings-summary-card">
-        <strong>Pending invites</strong>
-        <span class="settings-summary-metric">${Number(invites.filter((inv) => inv.status === 'pending').length).toLocaleString()}</span>
-        <span class="muted small">waiting for a response</span>
-      </div>
-      <div class="settings-summary-card">
-        <strong>Workspace</strong>
-        ${editingOrgName
-          ? html`
-            <div class="cl-inline-edit">
-              <input
-                type="text"
-                class="cl-inline-edit-input"
-                value=${orgNameDraft}
-                maxLength=${128}
-                disabled=${savingOrgName}
-                onInput=${(e) => setOrgNameDraft(e.target.value)}
-                onKeyDown=${(e) => {
-                  if (e.key === 'Enter') saveOrgName();
-                  if (e.key === 'Escape') cancelEditOrgName();
-                }}
-                aria-label="Workspace display name" />
-              <div class="cl-inline-edit-actions">
-                <button
-                  class="btn btn-sm btn-primary"
-                  onClick=${saveOrgName}
-                  disabled=${savingOrgName}>
-                  ${savingOrgName ? 'Saving…' : 'Save'}
-                </button>
-                <button
-                  class="btn btn-sm btn-tertiary"
-                  onClick=${cancelEditOrgName}
-                  disabled=${savingOrgName}>
-                  Cancel
-                </button>
+      <section class="cl-settings-summary-grid" aria-label="Settings summary">
+        ${summaryCards.map((card) => html`
+          <div class=${`cl-settings-summary-card cl-settings-summary-card-${card.tone || 'default'}`} key=${card.label}>
+            <span>${card.label}</span>
+            <strong>${card.value}</strong>
+            <small>${card.detail}</small>
+          </div>
+        `)}
+      </section>
+
+      <div class="cl-settings-layout">
+        <nav class="cl-settings-nav" aria-label="Settings sections">
+          ${SETTINGS_SECTION_GROUPS.map((group) => html`
+            <section class="cl-settings-nav-group" key=${group.label}>
+              <h2>${group.label}</h2>
+              <div class="cl-settings-nav-list">
+                ${group.items.map((item) => {
+                  const selected = activeSection === item.id;
+                  const status = getSettingsSectionStatus(item.id, sectionContext);
+                  return html`
+                    <button
+                      type="button"
+                      class=${`cl-settings-nav-item${selected ? ' is-active' : ''}`}
+                      aria-current=${selected ? 'page' : undefined}
+                      onClick=${() => selectSection(item.id)}
+                      key=${item.id}>
+                      <span class="cl-settings-nav-copy">
+                        <strong>${item.label}</strong>
+                        <small>${item.summary}</small>
+                      </span>
+                      <span class="cl-settings-nav-status">${status}</span>
+                    </button>
+                  `;
+                })}
               </div>
-            </div>`
-          : html`
-            <span class="cl-inline-edit-display">
-              <span class="settings-summary-metric cl-inline-edit-value">${displayOrgName(org.name) || 'Untitled'}</span>
-              ${canManageCompany
-                ? html`<button
-                    class="cl-inline-edit-trigger"
-                    type="button"
-                    onClick=${beginEditOrgName}
-                    aria-label="Rename workspace">
-                    Rename
-                  </button>`
-                : null}
-            </span>
-            <span class="muted small">${org.domain || 'Domain not set'}</span>`}
-      </div>
-      <div class="settings-summary-card">
-        <strong>Plan</strong>
-        <span class="settings-summary-metric">${planName}</span>
-        <span class="muted small">${sub.status || 'Active'}</span>
-      </div>
-      <div class="settings-summary-card">
-        <strong>Team</strong>
-        <span class="settings-summary-metric">${Number(usage.users_count || 0).toLocaleString()}</span>
-        <span class="muted small">members</span>
-      </div>
-    </div>
+            </section>
+          `)}
+        </nav>
 
-    <div class="secondary-main">
+        <section class="cl-settings-content" aria-labelledby="cl-settings-current-title">
+          <header class="cl-settings-section-head">
+            <div>
+              <span class="cl-settings-eyebrow">${currentSection.group}</span>
+              <h2 id="cl-settings-current-title">${currentSection.label}</h2>
+              <p>${currentSection.summary}</p>
+            </div>
+            <span class="cl-settings-section-status">${currentSectionStatus}</span>
+          </header>
+
+          <div class="cl-settings-section-body">
       <!-- Workspace identity (org name + domain). The topbar reads
            bootstrap.organization.name; without this panel the auto-
            provisioned default ("default") sticks because the rename
@@ -1224,7 +1398,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         <div class="panel-head compact">
           <div>
             <h3 >Team${!canManageTeam ? html`<span class="status-badge" style="font-size:10px;margin-left:8px">Read-only</span>` : null}</h3>
-            <p class="muted" >Invite the people who need to work or monitor finance operations.</p>
+            <p class="muted" >Invite the people who need to work, monitor, or manage back-office operations.</p>
           </div>
         </div>
         <div class="settings-section-grid">
@@ -1285,7 +1459,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         <div class="panel-head compact">
           <div>
             <h3 >Billing${!canManagePlan ? html`<span class="status-badge" style="font-size:10px;margin-left:8px">Read-only</span>` : null}</h3>
-            <p class="muted" >Plan, usage, and subscription — managed here inside Gmail.</p>
+            <p class="muted" >Plan, usage, and subscription for this workspace.</p>
           </div>
         </div>
 
@@ -1513,7 +1687,10 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         </div>
       </div>
       ` : null}
-    </div>
+          </div>
+        </section>
+      </div>
+    </main>
   `;
 }
 
