@@ -17,6 +17,16 @@ import { fmtDateTime } from '../route-helpers.js';
 
 const html = htm.bind(h);
 
+const WORKFLOW_LABELS = {
+  ap: 'Accounts Payable',
+};
+
+const STATUS_LABELS = {
+  active: 'Active',
+  paused: 'Paused',
+  archived: 'Archived',
+};
+
 
 // ─── Top-level page ─────────────────────────────────────────────────
 
@@ -81,22 +91,26 @@ export default function RulesPage({ api, toast }) {
     });
   }, []);
 
+  const ruleStats = useMemo(() => getRuleStats(rules), [rules]);
+  const activeFilterCount = [filterStatus !== 'all', filterWorkflow !== 'all', filterEntity.trim()].filter(Boolean).length;
+
   return html`
     <div class="cl-rules">
-      <header class="cl-rules-header">
-        <div>
+      <header class="cl-rules-hero">
+        <div class="cl-rules-hero-copy">
+          <span class="cl-rules-eyebrow">Admin</span>
           <h1>Approval rules</h1>
           <p class="cl-rules-sub">
-            Teach the agent how to route AP invoices. Rules evaluate first;
-            anything that doesn't match falls through to the deterministic
-            policy cascade.
+            Set who receives approval requests before work posts to ERP. Solden
+            applies these rules, records the outcome, and keeps decisions in the
+            surfaces your team already uses.
           </p>
         </div>
         <div class="cl-rules-header-actions">
-          <button class="btn btn-secondary" onClick=${() => setTester(true)}>
+          <button class="btn-secondary" onClick=${() => setTester(true)}>
             Test mode
           </button>
-          <button class="btn btn-primary" onClick=${() => setEditor({
+          <button class="btn-primary" onClick=${() => setEditor({
             mode: 'create',
             rule: {
               name: '',
@@ -112,9 +126,9 @@ export default function RulesPage({ api, toast }) {
         </div>
       </header>
 
-      <${TemplatesGallery}
-        templates=${templates}
-        onApply=${onApplyTemplate}
+      <${RuleStatsStrip}
+        stats=${ruleStats}
+        templateCount=${templates.length}
       />
 
       <section class="cl-rules-filters" aria-label="Rule filters">
@@ -131,46 +145,70 @@ export default function RulesPage({ api, toast }) {
           <span>Workflow</span>
           <select value=${filterWorkflow} onChange=${(e) => setFilterWorkflow(e.target.value)}>
             <option value="all">All</option>
-            <option value="ap">AP</option>
+            <option value="ap">Accounts Payable</option>
           </select>
         </label>
         <label class="cl-rules-filter">
           <span>Entity</span>
           <input
             type="text"
-            placeholder="entity id or blank"
+            placeholder="All entities"
             value=${filterEntity}
             onInput=${(e) => setFilterEntity(e.target.value)} />
         </label>
         ${(filterStatus !== 'all' || filterEntity || filterWorkflow !== 'all') ? html`
-          <button type="button" class="btn btn-tertiary btn-sm" onClick=${() => {
+          <button type="button" class="btn-ghost btn-sm" onClick=${() => {
             setFilterStatus('all');
             setFilterEntity('');
             setFilterWorkflow('all');
-          }}>Clear</button>
+          }}>Clear filters</button>
         ` : null}
       </section>
 
-      <${RuleList}
-        rules=${rules}
-        loading=${loading}
-        onEdit=${(r) => setEditor({ mode: 'edit', rule: r })}
-        onClone=${(r) => setEditor({
-          mode: 'create',
-          rule: { ...r, id: undefined, name: `${r.name} (copy)` },
-        })}
-        onArchive=${async (r) => {
-          if (!window.confirm(`Archive rule '${r.name}'?`)) return;
-          try {
-            await api(`/api/workspace/rules/${r.id}`, { method: 'DELETE' });
-            toast('Rule archived.', 'success');
-            await loadRules();
-          } catch (exc) {
-            toast(`Archive failed: ${String(exc?.message || exc)}`, 'error');
-          }
-        }}
-        onVersions=${(r) => setVersionsForRule(r)}
-      />
+      <div class="cl-rules-layout">
+        <main class="cl-rules-main">
+          <${RuleList}
+            rules=${rules}
+            loading=${loading}
+            activeFilterCount=${activeFilterCount}
+            onNewRule=${() => setEditor({
+              mode: 'create',
+              rule: {
+                name: '',
+                description: '',
+                priority: 100,
+                conditions: { all_of: [] },
+                actions: [],
+                status: 'active',
+              },
+            })}
+            onEdit=${(r) => setEditor({ mode: 'edit', rule: r })}
+            onClone=${(r) => setEditor({
+              mode: 'create',
+              rule: { ...r, id: undefined, name: `${r.name} (copy)` },
+            })}
+            onArchive=${async (r) => {
+              if (!window.confirm(`Archive rule '${r.name}'?`)) return;
+              try {
+                await api(`/api/workspace/rules/${r.id}`, { method: 'DELETE' });
+                toast('Rule archived.', 'success');
+                await loadRules();
+              } catch (exc) {
+                toast(`Archive failed: ${String(exc?.message || exc)}`, 'error');
+              }
+            }}
+            onVersions=${(r) => setVersionsForRule(r)}
+          />
+        </main>
+
+        <aside class="cl-rules-side" aria-label="Approval policy context">
+          <${PolicyGuide} />
+          <${TemplatesGallery}
+            templates=${templates}
+            onApply=${onApplyTemplate}
+          />
+        </aside>
+      </div>
 
       ${editor ? html`
         <${RuleEditorDialog}
@@ -210,25 +248,81 @@ export default function RulesPage({ api, toast }) {
 }
 
 
+// ─── Summary + sidecar panels ───────────────────────────────────────
+
+function RuleStatsStrip({ stats, templateCount }) {
+  const cells = [
+    { label: 'Total rules', value: stats.total, detail: stats.total ? 'Configured for this workspace' : 'No routing policy yet' },
+    { label: 'Active', value: stats.active, detail: stats.active ? 'Evaluating in priority order' : 'Nothing active' },
+    { label: 'Paused', value: stats.paused, detail: stats.paused ? 'Saved but not evaluating' : 'None paused' },
+    { label: 'Templates', value: templateCount, detail: 'Starter policies available' },
+  ];
+
+  return html`
+    <section class="cl-rules-summary-grid" aria-label="Approval rule summary">
+      ${cells.map((cell) => html`
+        <div class="cl-rules-summary-card" key=${cell.label}>
+          <span>${cell.label}</span>
+          <strong>${Number(cell.value || 0).toLocaleString()}</strong>
+          <small>${cell.detail}</small>
+        </div>
+      `)}
+    </section>
+  `;
+}
+
+function PolicyGuide() {
+  const rows = [
+    ['Order', 'Lowest priority number runs first.'],
+    ['Fallback', 'Unmatched records follow the default policy cascade.'],
+    ['Proof', 'Every save keeps version history for audit.'],
+  ];
+  return html`
+    <section class="cl-rules-guide">
+      <div class="cl-rules-panel-head">
+        <div>
+          <span class="cl-rules-eyebrow">How it runs</span>
+          <h2>Policy guardrails</h2>
+        </div>
+      </div>
+      <div class="cl-rules-guide-list">
+        ${rows.map(([label, detail]) => html`
+          <div class="cl-rules-guide-row" key=${label}>
+            <strong>${label}</strong>
+            <span>${detail}</span>
+          </div>
+        `)}
+      </div>
+    </section>
+  `;
+}
+
+
 // ─── Templates gallery ──────────────────────────────────────────────
 
 function TemplatesGallery({ templates, onApply }) {
   if (!templates || templates.length === 0) return null;
   return html`
     <section class="cl-rules-templates" aria-label="Starter templates">
-      <h2>Starter templates</h2>
-      <p class="muted">
-        Tap a template to start a new rule pre-filled with the body. Adjust priority,
-        recipients, or conditions and save.
+      <div class="cl-rules-panel-head">
+        <div>
+          <span class="cl-rules-eyebrow">Starter set</span>
+          <h2>Templates</h2>
+        </div>
+      </div>
+      <p class="cl-rules-panel-copy">
+        Start with a common threshold rule, then edit the JSON body before saving.
       </p>
-      <div class="cl-rules-templates-grid">
+      <div class="cl-rules-template-stack">
         ${templates.map((tpl) => html`
           <div class="cl-rules-template-card" key=${tpl.id}>
             <h3>${tpl.name}</h3>
-            <p class="muted">${tpl.description}</p>
-            <button class="btn btn-secondary btn-sm" onClick=${() => onApply(tpl)}>
-              Use this template
-            </button>
+            <p>${tpl.description}</p>
+            <div class="cl-rules-template-meta">
+              <span>Priority ${tpl.priority}</span>
+              <span>${summarizeActions(tpl.actions)}</span>
+            </div>
+            <button class="btn-secondary btn-sm" onClick=${() => onApply(tpl)}>Use template</button>
           </div>
         `)}
       </div>
@@ -239,15 +333,23 @@ function TemplatesGallery({ templates, onApply }) {
 
 // ─── Rule list ──────────────────────────────────────────────────────
 
-function RuleList({ rules, loading, onEdit, onClone, onArchive, onVersions }) {
+function RuleList({ rules, loading, activeFilterCount, onNewRule, onEdit, onClone, onArchive, onVersions }) {
   if (loading && rules.length === 0) {
-    return html`<p class="muted" style="padding:24px 0">Loading rules…</p>`;
+    return html`
+      <section class="cl-rules-list-card">
+        <div class="cl-rules-loading">Loading approval rules…</div>
+      </section>
+    `;
   }
   if (!loading && rules.length === 0) {
     return html`
       <section class="cl-rules-empty">
-        <h3>No rules yet</h3>
-        <p>Pick a starter template above, or click "New rule" to build one from scratch.</p>
+        <span class="cl-rules-eyebrow">${activeFilterCount ? 'No matches' : 'No policy yet'}</span>
+        <h3>${activeFilterCount ? 'No rules match these filters' : 'No approval rules yet'}</h3>
+        <p>${activeFilterCount
+          ? 'Clear the filters to see the rest of the policy set.'
+          : 'Create a rule or use a starter template to define who receives approval requests.'}</p>
+        ${!activeFilterCount ? html`<button class="btn-primary btn-sm" onClick=${onNewRule}>New rule</button>` : null}
       </section>
     `;
   }
@@ -255,49 +357,58 @@ function RuleList({ rules, loading, onEdit, onClone, onArchive, onVersions }) {
   return html`
     <section class="cl-rules-list-card">
       <header class="cl-rules-chart-head">
-        <h3>Active + paused rules</h3>
-        <span class="cl-rules-chart-meta">${rules.length} total</span>
+        <div>
+          <span class="cl-rules-eyebrow">Policy inventory</span>
+          <h3>Routing order</h3>
+        </div>
+        <span class="cl-rules-chart-meta">${rules.length} shown</span>
       </header>
-      <table class="cl-rules-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Priority</th>
-            <th>Conditions</th>
-            <th>Actions</th>
-            <th>Status</th>
-            <th>Updated</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rules.map((r) => html`
-            <tr key=${r.id}>
-              <td>
-                <strong>${r.name}</strong>
-                ${r.description ? html`<div class="muted" style="font-size:12px">${r.description}</div>` : null}
-              </td>
-              <td class="cl-rules-num">${r.priority}</td>
-              <td class="muted">${summarizeConditions(r.conditions)}</td>
-              <td class="muted">${summarizeActions(r.actions)}</td>
-              <td>
-                <span class=${`cl-record-chip cl-record-chip-${statusTone(r.status)}`}>
-                  ${r.status}
-                </span>
-              </td>
-              <td class="muted">${r.updated_at ? fmtDateTime(r.updated_at) : '—'}</td>
-              <td style="text-align:right">
-                <button class="btn btn-tertiary btn-sm" onClick=${() => onEdit(r)}>Edit</button>
-                <button class="btn btn-tertiary btn-sm" onClick=${() => onClone(r)}>Clone</button>
-                <button class="btn btn-tertiary btn-sm" onClick=${() => onVersions(r)}>History</button>
-                ${r.status !== 'archived' ? html`
-                  <button class="btn btn-tertiary btn-sm" onClick=${() => onArchive(r)}>Archive</button>
-                ` : null}
-              </td>
+      <div class="cl-rules-table-wrap">
+        <table class="cl-rules-table">
+          <thead>
+            <tr>
+              <th>Rule</th>
+              <th>Scope</th>
+              <th>Priority</th>
+              <th>Match</th>
+              <th>Outcome</th>
+              <th>Status</th>
+              <th>Updated</th>
+              <th></th>
             </tr>
-          `)}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            ${rules.map((r) => html`
+              <tr key=${r.id}>
+                <td class="cl-rules-rule-cell">
+                  <strong>${r.name}</strong>
+                  ${r.description ? html`<div>${r.description}</div>` : null}
+                </td>
+                <td class="cl-rules-scope">${formatRuleScope(r)}</td>
+                <td class="cl-rules-num">${Number(r.priority ?? 100)}</td>
+                <td>${summarizeConditions(r.conditions)}</td>
+                <td>${summarizeActions(r.actions)}</td>
+                <td>
+                  <span class=${`cl-record-chip cl-record-chip-${statusTone(r.status)}`}>
+                    ${formatStatus(r.status)}
+                  </span>
+                </td>
+                <td class="cl-rules-updated">${r.updated_at ? fmtDateTime(r.updated_at) : 'Not saved yet'}</td>
+                <td>
+                  <div class="cl-rules-row-actions">
+                    <button class="btn-ghost btn-sm" onClick=${() => onEdit(r)}>Edit</button>
+                    <button class="btn-ghost btn-sm" onClick=${() => onClone(r)}>Clone</button>
+                    <button class="btn-ghost btn-sm" onClick=${() => onVersions(r)}>History</button>
+                    ${r.status !== 'archived' ? html`
+                      <button class="btn-ghost btn-sm" onClick=${() => onArchive(r)}>Archive</button>
+                    ` : null}
+                  </div>
+                </td>
+              </tr>
+            `)}
+          </tbody>
+        </table>
+      </div>
     </section>
   `;
 }
@@ -386,27 +497,25 @@ function RuleEditorDialog({ api, toast, mode, rule, onClose, onSaved }) {
     <${Modal} onClose=${onClose} title=${mode === 'edit' ? `Edit "${rule.name}"` : 'New rule'}>
       <div class="cl-rules-editor">
         <div class="cl-rules-editor-row">
-          <label style="flex:2">
+          <label class="cl-rules-editor-field cl-rules-editor-field-name">
             <span class="muted">Name</span>
             <input
               type="text"
               value=${name}
               onInput=${(e) => setName(e.target.value)}
               disabled=${saving}
-              style="width:100%"
             />
           </label>
-          <label style="width:120px">
+          <label class="cl-rules-editor-field cl-rules-editor-field-small">
             <span class="muted">Priority</span>
             <input
               type="number" min="0" max="9999"
               value=${priority}
               onInput=${(e) => setPriority(e.target.value)}
               disabled=${saving}
-              style="width:100%"
             />
           </label>
-          <label style="width:140px">
+          <label class="cl-rules-editor-field cl-rules-editor-field-small">
             <span class="muted">Status</span>
             <select value=${status} onChange=${(e) => setStatus(e.target.value)} disabled=${saving}>
               <option value="active">Active</option>
@@ -424,7 +533,6 @@ function RuleEditorDialog({ api, toast, mode, rule, onClose, onSaved }) {
             onInput=${(e) => setDescription(e.target.value)}
             placeholder="Short note for the next operator who reads this"
             disabled=${saving}
-            style="width:100%"
           />
         </label>
 
@@ -453,7 +561,6 @@ function RuleEditorDialog({ api, toast, mode, rule, onClose, onSaved }) {
               onInput=${(e) => setChangeNote(e.target.value)}
               placeholder="Why this change?"
               disabled=${saving}
-              style="width:100%"
             />
           </label>
         ` : null}
@@ -480,9 +587,9 @@ function RuleEditorDialog({ api, toast, mode, rule, onClose, onSaved }) {
               `)}
             </ul>
             <p class="muted">
-              You can save anyway — the rule will go in with these conflicts on record.
+              You can save anyway. The conflicts stay on record.
             </p>
-            <button class="btn btn-secondary" onClick=${() => onSave(true)} disabled=${saving}>
+            <button class="btn-secondary" onClick=${() => onSave(true)} disabled=${saving}>
               Save anyway
             </button>
           </div>
@@ -490,8 +597,8 @@ function RuleEditorDialog({ api, toast, mode, rule, onClose, onSaved }) {
       </div>
 
       <div class="cl-rules-editor-foot">
-        <button class="btn btn-tertiary" onClick=${onClose} disabled=${saving}>Cancel</button>
-        <button class="btn btn-primary" onClick=${() => onSave(false)} disabled=${saving}>
+        <button class="btn-ghost" onClick=${onClose} disabled=${saving}>Cancel</button>
+        <button class="btn-primary" onClick=${() => onSave(false)} disabled=${saving}>
           ${saving ? 'Saving…' : (mode === 'edit' ? 'Save changes' : 'Create rule')}
         </button>
       </div>
@@ -543,13 +650,12 @@ function TestModeDialog({ api, onClose }) {
     <${Modal} onClose=${onClose} title="Test mode">
       <div class="cl-rules-editor">
         <p class="muted">
-          Paste a synthetic invoice context below and click Run. Every active rule
-          for this org evaluates against it and we show the full trace —
-          which clauses matched, which didn't, and which rule (if any) fired first.
+          Paste a sample record context below and run it through the active policy
+          set. The trace shows which clauses matched and which rule fired first.
         </p>
 
         <label>
-          <span class="muted">Invoice context (JSON)</span>
+          <span class="muted">Sample record JSON</span>
           <textarea
             value=${invoiceText}
             onInput=${(e) => setInvoiceText(e.target.value)}
@@ -559,7 +665,7 @@ function TestModeDialog({ api, onClose }) {
           ></textarea>
         </label>
 
-        <button class="btn btn-primary" onClick=${onRun} disabled=${running}>
+        <button class="btn-primary" onClick=${onRun} disabled=${running}>
           ${running ? 'Running…' : 'Run'}
         </button>
 
@@ -575,7 +681,7 @@ function TestModeDialog({ api, onClose }) {
               </p>
               <pre><code>${JSON.stringify(result.result.actions, null, 2)}</code></pre>
             ` : html`
-              <p class="muted">No rule matched — falls through to the cascade.</p>
+              <p class="muted">No rule matched; falls through to the cascade.</p>
             `}
 
             <h3>Trace</h3>
@@ -589,15 +695,15 @@ function TestModeDialog({ api, onClose }) {
                     : html`<span class="muted">${rt.skipped_reason || 'no match'}</span>`}
                   ${(rt.all_of || []).length > 0 ? html`
                     <details>
-                      <summary class="muted">all_of (${rt.all_of.length})</summary>
+                      <summary class="muted">Required clauses (${rt.all_of.length})</summary>
                       <ul>
                         ${rt.all_of.map((c, i) => html`
                           <li key=${i}>
                             <code>${c.field} ${c.op} ${JSON.stringify(c.expected)}</code>
                             → actual <code>${JSON.stringify(c.actual)}</code>
                             ${c.matched
-                              ? html`<span style="color:#14532D">✓</span>`
-                              : html`<span style="color:#991B1B">✗</span>`}
+                              ? html`<span class="cl-rules-trace-mark cl-rules-trace-mark-ok">match</span>`
+                              : html`<span class="cl-rules-trace-mark cl-rules-trace-mark-no">miss</span>`}
                           </li>
                         `)}
                       </ul>
@@ -654,7 +760,7 @@ function VersionsDialog({ api, toast, rule, onClose, onReverted }) {
   }, [api, rule.id, toast, onReverted]);
 
   return html`
-    <${Modal} onClose=${onClose} title=${`Versions — ${rule.name}`}>
+    <${Modal} onClose=${onClose} title=${`Versions: ${rule.name}`}>
       ${loading ? html`<p class="muted">Loading…</p>` : null}
       ${!loading && versions.length === 0 ? html`
         <p class="muted">No versions recorded yet.</p>
@@ -680,7 +786,7 @@ function VersionsDialog({ api, toast, rule, onClose, onReverted }) {
                 }, null, 2)}</code></pre>
               </details>
               <button
-                class="btn btn-tertiary btn-sm"
+                class="btn-ghost btn-sm"
                 onClick=${() => onRevert(v.version_number)}
                 disabled=${reverting}
               >
@@ -703,7 +809,7 @@ function Modal({ title, onClose, children }) {
       <div class="cl-modal" onClick=${(e) => e.stopPropagation()}>
         <header class="cl-modal-head">
           <h2>${title}</h2>
-          <button class="btn btn-tertiary" onClick=${onClose} aria-label="Close">×</button>
+          <button class="btn-ghost" onClick=${onClose} aria-label="Close">×</button>
         </header>
         <div class="cl-modal-body">${children}</div>
       </div>
@@ -715,19 +821,77 @@ function Modal({ title, onClose, children }) {
 // ─── Helpers ───────────────────────────────────────────────────────
 
 function summarizeConditions(conditions) {
-  if (!conditions || typeof conditions !== 'object') return '—';
-  const all = (conditions.all_of || []).length;
-  const any = (conditions.any_of || []).length;
-  if (!all && !any) return 'matches anything';
+  if (!conditions || typeof conditions !== 'object') return 'None';
+  const all = Array.isArray(conditions.all_of) ? conditions.all_of.length : 0;
+  const any = Array.isArray(conditions.any_of) ? conditions.any_of.length : 0;
+  if (!all && !any) return 'Every record';
   const parts = [];
-  if (all) parts.push(`${all} all_of`);
-  if (any) parts.push(`${any} any_of`);
+  if (all) parts.push(`${all} required clause${all === 1 ? '' : 's'}`);
+  if (any) parts.push(`${any} one-of clause${any === 1 ? '' : 's'}`);
   return parts.join(' · ');
 }
 
 function summarizeActions(actions) {
-  if (!Array.isArray(actions) || actions.length === 0) return '—';
-  return actions.map((a) => a.type).join(' + ');
+  if (!Array.isArray(actions) || actions.length === 0) return 'None';
+  return actions.map(formatAction).join(' + ');
+}
+
+function formatAction(action = {}) {
+  switch (action.type) {
+    case 'auto_approve':
+      return 'Auto-approve';
+    case 'route_to_role':
+      return `Route to ${humanizeToken(action.role || 'role')}`;
+    case 'route_to_user':
+      return action.user_email ? `Route to ${action.user_email}` : 'Route to user';
+    case 'require_n_approvals':
+      return `Require ${Number(action.n || 0).toLocaleString()} approvals`;
+    case 'require_dual_approval':
+      return 'Require dual approval';
+    case 'escalate_after':
+      return `Escalate after ${Number(action.hours || 0).toLocaleString()}h`;
+    case 'hold_for_finance_review':
+      return 'Hold for review';
+    default:
+      return humanizeToken(action.type || 'action');
+  }
+}
+
+function formatRuleScope(rule = {}) {
+  const workflow = formatWorkflow(rule.workflow || 'ap');
+  const entity = rule.entity_id ? String(rule.entity_id) : 'All entities';
+  return `${workflow} · ${entity}`;
+}
+
+function formatWorkflow(value) {
+  const token = String(value || '').trim().toLowerCase();
+  return WORKFLOW_LABELS[token] || humanizeToken(token || 'workflow');
+}
+
+function formatStatus(value) {
+  const token = String(value || '').trim().toLowerCase();
+  return STATUS_LABELS[token] || humanizeToken(token || 'Status');
+}
+
+function humanizeToken(value) {
+  return String(value || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+    .replace(/\bAp\b/g, 'AP')
+    .replace(/\bErp\b/g, 'ERP');
+}
+
+function getRuleStats(rules = []) {
+  return rules.reduce((acc, rule) => {
+    acc.total += 1;
+    const status = String(rule?.status || '').toLowerCase();
+    if (status === 'active') acc.active += 1;
+    else if (status === 'paused') acc.paused += 1;
+    else if (status === 'archived') acc.archived += 1;
+    return acc;
+  }, { total: 0, active: 0, paused: 0, archived: 0 });
 }
 
 function statusTone(status) {
