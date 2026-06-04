@@ -15,11 +15,106 @@ import { h } from 'preact';
 import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import htm from 'htm';
 import { fmtDate, fmtDateTime } from '../route-helpers.js';
-import { formatAmount } from '../../utils/formatters.js';
+import {
+  formatAmount,
+  getExceptionLabel,
+  getStateLabel,
+  humanizeSnakeText,
+} from '../../utils/formatters.js';
 import { accountPayableRecordPath } from '../../utils/record-route.js';
 
 const html = htm.bind(h);
 
+const VENDOR_SOURCE_LABELS = {
+  attachment: 'Invoice attachment',
+  bank_details: 'Bank details',
+  bank_verification: 'Bank verification',
+  companies_house: 'Companies House',
+  email: 'Email',
+  erp: 'ERP',
+  invoice: 'Invoice',
+  manual: 'Manual review',
+  opencorporates: 'OpenCorporates',
+  parser: 'Current invoice parse',
+  vendor_portal: 'Vendor portal',
+};
+
+function formatVendorSourceLabel(source) {
+  const token = String(source || '').trim().toLowerCase().replace(/[-\s]+/g, '_');
+  if (!token) return '';
+  return VENDOR_SOURCE_LABELS[token] || humanizeSnakeText(token);
+}
+
+function formatVendorStatusLabel(status) {
+  const token = String(status || '').trim().toLowerCase();
+  if (!token) return 'Active';
+  if (token === 'active') return 'Active';
+  if (token === 'blocked') return 'Blocked';
+  if (token === 'archived') return 'Archived';
+  if (token === 'verified') return 'Verified';
+  if (token === 'unverified') return 'Unverified';
+  if (token === 'pending') return 'Pending';
+  if (token === 'frozen') return 'Frozen';
+  return humanizeSnakeText(token);
+}
+
+function formatApStateLabel(state) {
+  const token = String(state || '').trim().toLowerCase();
+  if (!token) return 'Unknown';
+  return token === 'received' || getStateLabel(token) !== 'Received'
+    ? getStateLabel(token)
+    : humanizeSnakeText(token);
+}
+
+function getFraudFlagToken(flag) {
+  if (typeof flag === 'string') return flag;
+  if (!flag || typeof flag !== 'object') return '';
+  return flag.flag_type || flag.type || flag.code || '';
+}
+
+function getFraudFlagMessage(flag) {
+  if (!flag || typeof flag !== 'object') return '';
+  return String(flag.note || flag.message || flag.reason || '').trim();
+}
+
+function getFraudFlagDate(flag) {
+  if (!flag || typeof flag !== 'object') return '';
+  return flag.raised_at || flag.detected_at || flag.created_at || '';
+}
+
+function formatRoutingText(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  if (text.includes('@')) return text;
+  return humanizeSnakeText(text);
+}
+
+function formatCustomRouting(value) {
+  if (!value) return '';
+  if (typeof value !== 'object') return humanizeSnakeText(value);
+
+  const label = value.label
+    || value.name
+    || value.route_name
+    || value.approval_chain_name
+    || value.approver_group
+    || value.group
+    || value.approver
+    || value.approver_email
+    || '';
+  const approvers = Array.isArray(value.approvers)
+    ? value.approvers
+    : (Array.isArray(value.approver_emails) ? value.approver_emails : []);
+  const channel = value.channel || value.surface || value.destination || '';
+  const reason = value.reason || value.rule_name || value.policy || '';
+  const parts = [
+    label ? formatRoutingText(label) : '',
+    !label && approvers.length ? `${approvers.length} approver${approvers.length === 1 ? '' : 's'}` : '',
+    channel ? `via ${formatVendorSourceLabel(channel)}` : '',
+    reason ? formatRoutingText(reason) : '',
+  ].filter(Boolean);
+  return parts.length ? parts.join(' · ') : 'Custom approval route configured';
+}
 
 export default function VendorDetailPage({ api, orgId, navigate, toast, vendorName }) {
   const [data, setData] = useState(null);
@@ -147,7 +242,7 @@ function VendorHeader({ name, profile, summary }) {
           <h1 class="cl-record-header-vendor-name">${name}</h1>
         </div>
         <span class=${`cl-record-chip cl-record-chip-${vendorStatusTone(status)}`}>
-          ${status}
+          ${formatVendorStatusLabel(status)}
         </span>
       </div>
       <dl class="cl-record-header-meta">
@@ -250,7 +345,7 @@ function SoldenLayerPanel({
                 <code>${entry.iban_masked || entry.iban || '—'}</code>
                 <span class="cl-record-muted">
                   ${entry.verified_at ? `verified ${fmtDate(entry.verified_at)}` : 'pending'}
-                  ${entry.source ? ` · ${entry.source}` : ''}
+                  ${entry.source ? ` · ${formatVendorSourceLabel(entry.source)}` : ''}
                 </span>
               </li>`)}
           </ul>
@@ -268,11 +363,11 @@ function SoldenLayerPanel({
             ${fraudFlags.map((flag, idx) => html`
               <li key=${idx} class="cl-vendor-list-row">
                 <span class=${`cl-record-chip cl-record-chip-${fraudTone(flag.severity)}`}>
-                  ${flag.flag_type || flag.type || 'flag'}
+                  ${humanizeSnakeText(getFraudFlagToken(flag) || 'review')}
                 </span>
-                <span>${flag.note || flag.message || ''}</span>
-                ${flag.raised_at ? html`
-                  <span class="cl-record-muted">${fmtDate(flag.raised_at)}</span>` : null}
+                ${getFraudFlagMessage(flag) ? html`<span>${getFraudFlagMessage(flag)}</span>` : null}
+                ${getFraudFlagDate(flag) ? html`
+                  <span class="cl-record-muted">${fmtDate(getFraudFlagDate(flag))}</span>` : null}
               </li>`)}
           </ul>
         `}
@@ -294,9 +389,7 @@ function SoldenLayerPanel({
           ${customRouting ? html`
             <div class="cl-record-bill-cell">
               <dt>Custom routing</dt>
-              <dd>${typeof customRouting === 'object'
-                ? JSON.stringify(customRouting)
-                : String(customRouting)}</dd>
+              <dd>${formatCustomRouting(customRouting)}</dd>
             </div>` : null}
           ${profile.bank_details_changed_at ? html`
             <div class="cl-record-bill-cell">
@@ -410,8 +503,8 @@ function RecentInvoicesPanel({ invoices, navigate }) {
               <td class="cl-record-num">
                 ${formatAmount(inv.amount, inv.currency)}
               </td>
-              <td>${(inv.state || '').replace(/_/g, ' ')}</td>
-              <td class="cl-record-muted">${inv.exception_code || '—'}</td>
+              <td>${formatApStateLabel(inv.state)}</td>
+              <td class="cl-record-muted">${getExceptionLabel(inv.exception_code) || '—'}</td>
             </tr>
           `)}
         </tbody>

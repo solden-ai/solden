@@ -5,12 +5,55 @@ import { h } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import htm from 'htm';
 import { fmtDateTime, useAction } from '../route-helpers.js';
-import { formatAmount } from '../../utils/formatters.js';
+import { formatAmount, getExceptionLabel, getStateLabel, humanizeSnakeText } from '../../utils/formatters.js';
 import { navigateToVendorRecord } from '../../utils/vendor-route.js';
-import { getExceptionLabel } from '../../utils/formatters.js';
 import { EmptyState, LoadingSkeleton, ErrorRetry } from '../../components/StatePrimitives.js';
 
 const html = htm.bind(h);
+
+function formatVendorStatusLabel(status) {
+  const token = String(status || '').trim().toLowerCase();
+  if (!token) return 'Active';
+  if (token === 'active') return 'Active';
+  if (token === 'blocked') return 'Blocked';
+  if (token === 'archived') return 'Archived';
+  return humanizeSnakeText(token);
+}
+
+function formatApStateLabel(state) {
+  const token = String(state || '').trim().toLowerCase();
+  if (!token) return 'Unknown';
+  return token === 'received' || getStateLabel(token) !== 'Received'
+    ? getStateLabel(token)
+    : humanizeSnakeText(token);
+}
+
+const VENDOR_IMPORT_ISSUE_LABELS = {
+  csv_too_large: 'CSV is too large',
+  invalid_email: 'Invalid email',
+  invalid_status: 'Invalid status',
+  missing_required_column: 'Missing required column',
+  too_many_rows: 'Too many rows',
+  vendor_name_required: 'Vendor name required',
+};
+
+function formatVendorImportIssue(issue) {
+  const text = String(issue || '').trim();
+  if (!text) return '';
+  const [code, ...rest] = text.split(':');
+  const token = String(code || '').trim().toLowerCase();
+  const detail = rest.join(':').trim();
+  const label = VENDOR_IMPORT_ISSUE_LABELS[token] || humanizeSnakeText(token);
+  return detail ? `${label}: ${detail}` : label;
+}
+
+function formatVendorFlagLabel(flag) {
+  if (!flag) return 'Review';
+  if (typeof flag === 'object') {
+    return humanizeSnakeText(flag.label || flag.flag_type || flag.type || flag.code || 'review');
+  }
+  return humanizeSnakeText(flag);
+}
 
 export default function VendorsPage({ api, orgId, navigate, toast }) {
   const [vendors, setVendors] = useState([]);
@@ -160,7 +203,7 @@ export default function VendorsPage({ api, orgId, navigate, toast }) {
                     <div class="secondary-card-tags">
                       ${(vendor.top_states || []).map((row) => html`
                         <span key=${row.state} class="secondary-chip">
-                          ${String(row.state || '').replace(/_/g, ' ')} ${row.count}
+                          ${formatApStateLabel(row.state)} ${row.count}
                         </span>
                       `)}
                       ${(vendor.top_exception_codes || []).slice(0, 2).map((row) => html`
@@ -171,8 +214,8 @@ export default function VendorsPage({ api, orgId, navigate, toast }) {
                       ${vendor.profile?.requires_po
                         ? html`<span class="secondary-chip" style="background:#FEF3C7;color:#92400E;border-color:#FDE68A">Requires PO</span>`
                         : null}
-                      ${(vendor.profile?.anomaly_flags || []).slice(0, 2).map((flag) => html`
-                        <span key=${flag} class="secondary-chip" style="background:#FEF2F2;color:#B91C1C;border-color:#FECACA">${String(flag).replace(/_/g, ' ')}</span>
+                      ${(vendor.profile?.anomaly_flags || []).slice(0, 2).map((flag, index) => html`
+                        <span key=${typeof flag === 'object' ? `${flag.flag_type || flag.type || flag.code || 'flag'}-${index}` : flag} class="secondary-chip" style="background:#FEF2F2;color:#B91C1C;border-color:#FECACA">${formatVendorFlagLabel(flag)}</span>
                       `)}
                       ${typeof vendor.risk_score === 'number' && vendor.risk_score > 0
                         ? html`<${RiskScoreChip} score=${vendor.risk_score} />`
@@ -181,7 +224,7 @@ export default function VendorsPage({ api, orgId, navigate, toast }) {
                         ? html`<span class="secondary-chip" style=${vendor.profile.status === 'blocked'
                             ? 'background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;font-weight:600'
                             : 'background:#F4F4F5;color:#52525B;border-color:#D4D4D8'}>
-                            ${vendor.profile.status === 'blocked' ? 'Blocked' : (vendor.profile.status === 'archived' ? 'Archived' : vendor.profile.status)}
+                            ${formatVendorStatusLabel(vendor.profile.status)}
                           </span>`
                         : null}
                     </div>
@@ -289,7 +332,7 @@ function VendorStatusButton({ api, orgId, vendor, toast, onChanged }) {
   const status = vendor?.profile?.status || 'active';
   const isBlocked = status === 'blocked';
   const verb = isBlocked ? 'Unblock' : 'Block';
-  const [pending, run] = useAction(async () => {
+  const [run, pending] = useAction(async () => {
     let reason = null;
     if (!isBlocked) {
       // window.prompt is intentionally synchronous here so the
@@ -352,7 +395,7 @@ function VendorStatusButton({ api, orgId, vendor, toast, onChanged }) {
 // side; the button is always visible so the role gate's the source
 // of truth.
 function VendorPushButton({ api, orgId, vendor, toast }) {
-  const [pending, run] = useAction(async () => {
+  const [run, pending] = useAction(async () => {
     try {
       const res = await api(
         `/api/vendors/${encodeURIComponent(vendor.vendor_name)}/sync-erp?organization_id=${encodeURIComponent(orgId)}`,
@@ -491,7 +534,7 @@ function VendorBulkImportModal({ api, orgId, toast, onClose, onCommitted }) {
           ${preview ? html`
             <div style="margin-top:14px">
               ${preview.fatal_error
-                ? html`<div class="form-error">CSV invalid: <code>${preview.fatal_error}</code></div>`
+                ? html`<div class="form-error">CSV invalid: ${formatVendorImportIssue(preview.fatal_error)}</div>`
                 : html`
                   <div class="muted" style="font-size:12px;margin-bottom:6px">
                     ${preview.total_rows} row${preview.total_rows === 1 ? '' : 's'} parsed:
@@ -522,7 +565,7 @@ function VendorBulkImportModal({ api, orgId, toast, onClose, onCommitted }) {
                                   : html`<span style="color:#991b1b">Error</span>`}
                               </td>
                               <td style="padding:4px 8px;color:#991b1b">
-                                ${(r.errors || []).join(', ')}
+                                ${(r.errors || []).map(formatVendorImportIssue).filter(Boolean).join(', ')}
                               </td>
                             </tr>
                           `)}
