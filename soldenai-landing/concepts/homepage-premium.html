@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Solden</title>
+    <meta name="theme-color" content="#060B18" />
+    <style>
+      @font-face { font-family:"Geist"; src:url("../assets/fonts/Geist-Variable.woff2") format("woff2"); font-weight:100 900; font-display:swap; }
+      @font-face { font-family:"Geist Mono"; src:url("../assets/fonts/GeistMono-Variable.woff2") format("woff2"); font-weight:100 900; font-display:swap; }
+
+      :root{
+        --bg:#060B18; --bg-2:#0A1124; --rail:#080E1E; --panel:#0C1326;
+        --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.12);
+        --ink:#F3F6FB; --ink-2:#9AA8BE; --ink-3:#56657E;
+        --teal:#18BFB0; --teal-soft:#7FE0D6; --teal-deep:#0E8E83;
+        --amber:#E6B768; --green:#5BD39B; --violet:#8C9CF0;
+        --font:"Geist",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+        --mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+        --shell:1200px;
+      }
+      *{box-sizing:border-box;}
+      html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;scroll-behavior:smooth;}
+      body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5;overflow-x:hidden;}
+      a{color:inherit;text-decoration:none;}
+      ::selection{background:rgba(24,191,176,.28);}
+      .shell{width:100%;max-width:var(--shell);margin:0 auto;padding:0 32px;}
+      .mono{font-family:var(--mono);}
+
+      /* aurora + grain backdrop */
+      .bg-art{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+      .bg-art .glow{position:absolute;width:1100px;height:760px;left:50%;top:-280px;transform:translateX(-30%);
+        background:radial-gradient(closest-side, rgba(24,191,176,.20), rgba(24,191,176,.05) 55%, transparent 72%);
+        filter:blur(8px);animation:drift 18s ease-in-out infinite alternate;}
+      .bg-art .glow2{position:absolute;width:760px;height:620px;left:-140px;top:380px;
+        background:radial-gradient(closest-side, rgba(35,60,140,.30), transparent 70%);filter:blur(10px);}
+      .bg-art .grid{position:absolute;inset:0;opacity:.5;
+        background-image:radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px);background-size:30px 30px;
+        mask-image:linear-gradient(to bottom, black, transparent 70%);-webkit-mask-image:linear-gradient(to bottom, black, transparent 70%);}
+      @keyframes drift{from{transform:translateX(-34%) translateY(0)}to{transform:translateX(-22%) translateY(26px)}}
+
+      main,header,footer{position:relative;z-index:1;}
+
+      /* fade-up */
+      .rise{opacity:0;transform:translateY(18px);animation:rise .8s cubic-bezier(.2,.7,.2,1) forwards;}
+      @keyframes rise{to{opacity:1;transform:none;}}
+      .d1{animation-delay:.05s}.d2{animation-delay:.13s}.d3{animation-delay:.21s}.d4{animation-delay:.29s}.d5{animation-delay:.4s}.d6{animation-delay:.52s}
+
+      /* nav */
+      .nav{position:sticky;top:0;z-index:40;border-bottom:1px solid var(--line);
+        background:rgba(6,11,24,.72);backdrop-filter:blur(14px) saturate(140%);}
+      .nav__in{display:flex;align-items:center;justify-content:space-between;height:64px;}
+      .brand img{height:21px;display:block;}
+      .nav__links{display:flex;gap:28px;}
+      .nav__links a{font-size:13.5px;color:var(--ink-2);transition:color .14s;}
+      .nav__links a:hover{color:var(--ink);}
+      .nav__r{display:flex;align-items:center;gap:18px;}
+      .nav__r .login{font-size:13.5px;color:var(--ink-2);}.nav__r .login:hover{color:var(--ink);}
+
+      .btn{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:9px;
+        font-size:14px;font-weight:500;border:1px solid transparent;cursor:pointer;
+        transition:transform .14s ease,background .14s,border-color .14s,box-shadow .14s;white-space:nowrap;}
+      .btn--teal{background:var(--teal);color:#042521;font-weight:600;box-shadow:0 1px 0 rgba(255,255,255,.25) inset;}
+      .btn--teal:hover{background:var(--teal-soft);transform:translateY(-1px);box-shadow:0 8px 24px -8px rgba(24,191,176,.6);}
+      .btn--ghost{border-color:var(--line-2);color:var(--ink);}
+      .btn--ghost:hover{border-color:rgba(255,255,255,.34);transform:translateY(-1px);}
+      .btn--lg{height:48px;padding:0 22px;font-size:15px;border-radius:11px;}
+      .arr{transition:transform .14s;}.btn:hover .arr{transform:translateX(3px);}
+
+      /* hero */
+      .hero{padding:104px 0 60px;text-align:center;}
+      .kick{display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);font-size:12px;letter-spacing:.14em;
+        text-transform:uppercase;color:var(--ink-2);border:1px solid var(--line);border-radius:999px;padding:6px 14px;background:rgba(255,255,255,.02);}
+      .kick .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px var(--teal);}
+      h1{font-size:clamp(46px,6.4vw,88px);line-height:.95;letter-spacing:-.04em;font-weight:600;margin:26px auto 0;max-width:14ch;}
+      h1 .g{background:linear-gradient(180deg,#CFFBF5,var(--teal) 60%,var(--teal-deep));-webkit-background-clip:text;background-clip:text;color:transparent;}
+      .sub{margin:24px auto 0;max-width:62ch;font-size:19px;line-height:1.55;color:var(--ink-2);}
+      .cta{display:flex;gap:14px;justify-content:center;margin-top:34px;flex-wrap:wrap;}
+
+      /* product window */
+      .stage{margin-top:64px;perspective:1800px;}
+      .window{max-width:1120px;margin:0 auto;border:1px solid var(--line-2);border-radius:16px;overflow:hidden;
+        background:linear-gradient(180deg,#0B1226,#070D1C);
+        box-shadow:0 60px 160px -50px rgba(0,0,0,.9), 0 0 0 1px rgba(24,191,176,.05), 0 1px 0 rgba(255,255,255,.06) inset;
+        opacity:0;transform:translateY(34px) scale(.985);animation:rise .9s .5s cubic-bezier(.2,.7,.2,1) forwards;}
+      .win__top{display:flex;align-items:center;gap:14px;height:42px;padding:0 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.015);}
+      .win__top .dots{display:flex;gap:7px;}.win__top .dots i{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.13);}
+      .win__url{font-family:var(--mono);font-size:12px;color:var(--ink-3);background:rgba(255,255,255,.03);border:1px solid var(--line);
+        border-radius:7px;padding:4px 12px;margin:0 auto;}
+      .win__body{display:grid;grid-template-columns:208px 1fr;min-height:454px;}
+
+      /* rail */
+      .rail{background:var(--rail);border-right:1px solid var(--line);padding:16px 12px;}
+      .rail__brand{display:flex;align-items:center;gap:8px;padding:4px 8px 16px;}
+      .rail__brand img{height:18px;}
+      .rgrp{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);padding:14px 10px 6px;}
+      .ritem{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;border-radius:8px;font-size:13.5px;color:var(--ink-2);}
+      .ritem .l{display:flex;align-items:center;gap:9px;}
+      .ritem .ic{width:7px;height:7px;border-radius:2px;background:var(--ink-3);}
+      .ritem .ct{font-family:var(--mono);font-size:11px;color:var(--ink-3);}
+      .ritem:hover{background:rgba(255,255,255,.03);color:var(--ink);}
+      .ritem.on{background:rgba(24,191,176,.12);color:var(--teal-soft);}
+      .ritem.on .ic{background:var(--teal);box-shadow:0 0 8px var(--teal);}
+      .ritem.on .ct{color:var(--teal-soft);}
+
+      /* main panel */
+      .work{padding:18px 20px 22px;display:flex;flex-direction:column;min-width:0;}
+      .work__h{display:flex;align-items:baseline;justify-content:space-between;}
+      .work__h h3{margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em;}
+      .work__h .live{font-family:var(--mono);font-size:11px;color:var(--ink-3);display:flex;align-items:center;gap:7px;}
+      .pulse{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pp 2s infinite;}
+      @keyframes pp{0%{box-shadow:0 0 0 0 rgba(24,191,176,.5)}70%{box-shadow:0 0 0 7px rgba(24,191,176,0)}100%{box-shadow:0 0 0 0 rgba(24,191,176,0)}}
+
+      .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0 6px;}
+      .stat{border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:rgba(255,255,255,.012);}
+      .stat .n{font-family:var(--mono);font-size:21px;letter-spacing:-.02em;}
+      .stat .k{font-size:11px;color:var(--ink-3);margin-top:3px;}
+      .stat.acc .n{color:var(--teal-soft);}
+
+      .tbl{margin-top:16px;border:1px solid var(--line);border-radius:11px;overflow:hidden;}
+      .tr{display:grid;grid-template-columns:78px 1.5fr 96px 132px 1fr 52px;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line);font-size:13px;}
+      .tr:last-child{border-bottom:0;}
+      .tr.head{background:rgba(255,255,255,.02);}
+      .tr.head span{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);}
+      .tr .id{font-family:var(--mono);color:var(--ink-3);font-size:12px;}
+      .tr .vn{color:var(--ink);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .tr .am{font-family:var(--mono);color:var(--ink);text-align:left;}
+      .tr .ow{color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .tr .ag{font-family:var(--mono);color:var(--ink-3);font-size:12px;}
+      .tr.row:hover{background:rgba(255,255,255,.025);}
+      .pill{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;padding:4px 9px;border-radius:999px;border:1px solid;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+      .pill i{width:6px;height:6px;border-radius:50%;}
+      .pill.appr{color:var(--amber);border-color:rgba(230,183,104,.3);background:rgba(230,183,104,.08);}.pill.appr i{background:var(--amber);}
+      .pill.match{color:var(--teal-soft);border-color:rgba(24,191,176,.3);background:rgba(24,191,176,.08);}.pill.match i{background:var(--teal);}
+      .pill.post{color:var(--green);border-color:rgba(91,211,155,.3);background:rgba(91,211,155,.08);}.pill.post i{background:var(--green);}
+      .pill.exc{color:#F2A0A0;border-color:rgba(242,160,160,.3);background:rgba(242,160,160,.08);}.pill.exc i{background:#F2A0A0;}
+
+      /* logo strip */
+      .trust{margin-top:54px;text-align:center;}
+      .trust .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);}
+      .trust .row{display:flex;gap:30px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:16px;}
+      .trust .row span{font-size:15px;font-weight:600;color:var(--ink-2);letter-spacing:-.01em;opacity:.7;}
+
+      /* sections */
+      .sec{padding:92px 0;border-top:1px solid var(--line);}
+      .sec__k{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);}
+      .sec h2{font-size:clamp(30px,3.6vw,46px);line-height:1.04;letter-spacing:-.03em;font-weight:600;margin:14px 0 0;max-width:18ch;}
+      .sec h2 .g{color:var(--teal);}
+      .sec .lede{color:var(--ink-2);font-size:18px;max-width:54ch;margin:18px 0 0;}
+
+      .cols{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:42px;}
+      .cell{background:var(--bg);padding:24px 22px 28px;transition:background .15s;}
+      .cell:hover{background:var(--bg-2);}
+      .cell .k{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);}
+      .cell h4{font-size:17px;font-weight:600;margin:14px 0 6px;letter-spacing:-.01em;}
+      .cell p{font-size:14px;color:var(--ink-2);margin:0;}
+
+      .proof{display:grid;grid-template-columns:1.05fr .95fr;gap:30px;margin-top:42px;align-items:start;}
+      .uc{border:1px solid var(--line-2);border-radius:16px;background:linear-gradient(180deg,#0C1326,#070D1C);padding:28px;}
+      .uc .w{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);}
+      .uc h4{font-size:23px;line-height:1.2;letter-spacing:-.02em;margin:12px 0 14px;font-weight:600;}
+      .uc p{color:var(--ink-2);font-size:15px;line-height:1.6;margin:0 0 14px;}
+      .uc .strip{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
+      .uc .strip span{font-family:var(--mono);font-size:11px;color:var(--ink-2);border:1px solid var(--line);border-radius:7px;padding:5px 9px;}
+      .steps{display:grid;gap:2px;}
+      .stp{display:grid;grid-template-columns:32px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid var(--line);}
+      .stp:last-child{border-bottom:0;}
+      .stp .n{font-family:var(--mono);font-size:12px;color:var(--teal);border:1px solid var(--line-2);border-radius:8px;height:30px;width:30px;display:grid;place-items:center;}
+      .stp h5{margin:5px 0 3px;font-size:15px;font-weight:600;}
+      .stp p{margin:0;color:var(--ink-2);font-size:14px;}
+
+      .end{text-align:center;padding:108px 0;border-top:1px solid var(--line);}
+      .end h2{font-size:clamp(32px,4.4vw,58px);letter-spacing:-.035em;font-weight:600;margin:14px 0 12px;}
+      .end p{color:var(--ink-2);font-size:18px;margin:0 0 28px;}
+
+      footer{border-top:1px solid var(--line);padding:28px 0;}
+      .foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+      .foot img{height:17px;opacity:.85;}
+      .foot small{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--ink-3);}
+
+      @media (max-width:900px){
+        .win__body{grid-template-columns:1fr;}.rail{display:none;}
+        .proof{grid-template-columns:1fr;}.cols{grid-template-columns:1fr 1fr;}
+        .nav__links{display:none;}.stats{grid-template-columns:1fr 1fr;}
+        .tr{grid-template-columns:1.4fr 90px 120px;}.tr .id,.tr .ow,.tr .ag{display:none;}
+      }
+      @media (prefers-reduced-motion:reduce){.rise,.window,.bg-art .glow{animation:none!important;opacity:1!important;transform:none!important;}}
+    </style>
+  </head>
+  <body>
+    <div class="bg-art"><div class="glow"></div><div class="glow2"></div><div class="grid"></div></div>
+
+    <header class="nav">
+      <div class="shell nav__in">
+        <a class="brand" href="#"><img src="../assets/solden-lockup-white.png" alt="Solden" /></a>
+        <nav class="nav__links">
+          <a href="#">Product</a><a href="#">Use cases</a><a href="#">Manifesto</a><a href="#">Pricing</a>
+        </nav>
+        <div class="nav__r">
+          <a class="login" href="#">Log in</a>
+          <a class="btn btn--teal" href="#">Talk to us</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="shell">
+          <span class="kick rise d1"><span class="dot"></span> Operational memory for the back office</span>
+          <h1 class="rise d2">The runtime that keeps<br />back-office work <span class="g">moving.</span></h1>
+          <p class="sub rise d3">Your ERP records what happened. Solden holds what's happening, every owner, next step, approval, and exception, on one live record, across the tools your team already uses.</p>
+          <div class="cta rise d4">
+            <a class="btn btn--teal btn--lg" href="#">Talk to us <span class="arr">→</span></a>
+            <a class="btn btn--ghost btn--lg" href="#">Read the manifesto</a>
+          </div>
+
+          <div class="stage">
+            <div class="window">
+              <div class="win__top">
+                <div class="dots"><i></i><i></i><i></i></div>
+                <span class="win__url">workspace.soldenai.com</span>
+                <span style="width:48px"></span>
+              </div>
+              <div class="win__body">
+                <aside class="rail">
+                  <div class="rail__brand"><img src="../assets/solden-lockup-white.png" alt="" /></div>
+                  <div class="ritem"><span class="l"><span class="ic"></span> Home</span></div>
+                  <div class="ritem"><span class="l"><span class="ic"></span> Activity</span><span class="ct">live</span></div>
+                  <div class="ritem"><span class="l"><span class="ic"></span> Exceptions</span><span class="ct">7</span></div>
+                  <div class="rgrp">Work types</div>
+                  <div class="ritem on"><span class="l"><span class="ic"></span> Accounts Payable</span><span class="ct">142</span></div>
+                  <div class="ritem"><span class="l"><span class="ic"></span> Procurement</span></div>
+                  <div class="ritem"><span class="l"><span class="ic"></span> Builder</span></div>
+                  <div class="rgrp">Data</div>
+                  <div class="ritem"><span class="l"><span class="ic"></span> Vendors</span></div>
+                  <div class="ritem"><span class="l"><span class="ic"></span> Audit log</span></div>
+                </aside>
+                <section class="work">
+                  <div class="work__h">
+                    <h3>Accounts payable</h3>
+                    <span class="live"><span class="pulse"></span> live · 142 in flight</span>
+                  </div>
+                  <div class="stats">
+                    <div class="stat"><div class="n">142</div><div class="k">In flight</div></div>
+                    <div class="stat acc"><div class="n">18</div><div class="k">Awaiting approval</div></div>
+                    <div class="stat"><div class="n">389</div><div class="k">Posted this week</div></div>
+                    <div class="stat"><div class="n">7</div><div class="k">Exceptions</div></div>
+                  </div>
+                  <div class="tbl">
+                    <div class="tr head"><span>Record</span><span>Vendor</span><span>Amount</span><span>State</span><span>Owner</span><span>Age</span></div>
+                    <div class="tr row"><span class="id">AP-44128</span><span class="vn">Amazon Web Services</span><span class="am">$48,210.00</span><span><span class="pill appr"><i></i>Needs approval</span></span><span class="ow">Sarah Chen</span><span class="ag">2h</span></div>
+                    <div class="tr row"><span class="id">AP-44127</span><span class="vn">Datadog</span><span class="am">$12,480.00</span><span><span class="pill match"><i></i>Matched</span></span><span class="ow">Agent</span><span class="ag">11m</span></div>
+                    <div class="tr row"><span class="id">AP-44125</span><span class="vn">Ramp · card</span><span class="am">$3,902.40</span><span><span class="pill exc"><i></i>Duplicate?</span></span><span class="ow">Priya N.</span><span class="ag">40m</span></div>
+                    <div class="tr row"><span class="id">AP-44122</span><span class="vn">Linear</span><span class="am">$2,400.00</span><span><span class="pill post"><i></i>Posted</span></span><span class="ow">Agent</span><span class="ag">1d</span></div>
+                    <div class="tr row"><span class="id">AP-44120</span><span class="vn">Vercel</span><span class="am">$8,150.00</span><span><span class="pill appr"><i></i>Needs approval</span></span><span class="ow">Sarah Chen</span><span class="ag">3h</span></div>
+                    <div class="tr row"><span class="id">AP-44118</span><span class="vn">Notion Labs</span><span class="am">$960.00</span><span><span class="pill post"><i></i>Posted</span></span><span class="ow">Agent</span><span class="ag">2d</span></div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+
+          <div class="trust rise d6">
+            <div class="lbl">Renders into the tools work already lives in</div>
+            <div class="row"><span>Gmail</span><span>Slack</span><span>Teams</span><span>NetSuite</span><span>SAP</span><span>Xero</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sec">
+        <div class="shell">
+          <p class="sec__k">01 / The problem</p>
+          <h2>Every system holds a slice. <span class="g">None holds the work.</span></h2>
+          <div class="cols">
+            <div class="cell"><div class="k">ERP</div><h4>Holds the result</h4><p>Knows what posted. Not what is stuck, or who owes the next step.</p></div>
+            <div class="cell"><div class="k">Email</div><h4>Holds fragments</h4><p>Fourteen threads, no single truth, no owner attached.</p></div>
+            <div class="cell"><div class="k">Slack</div><h4>Holds the decision</h4><p>The approval happens, then the context evaporates.</p></div>
+            <div class="cell"><div class="k">Your team</div><h4>Holds the rest</h4><p>The workflow lives in someone's head, carried by hand.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sec">
+        <div class="shell">
+          <p class="sec__k">02 / First shipped proof</p>
+          <h2>Accounts payable is the first thing it runs.</h2>
+          <div class="proof">
+            <article class="uc">
+              <div class="w">A 70-person SaaS company</div>
+              <h4>Two-person finance team. 180 invoices a month.</h4>
+              <p>Invoices land in a shared Gmail inbox. The finance lead forwards each one, chases approvers in Slack, then keys the approved ones into NetSuite by hand. Approvals sit for a week. Duplicates slip through. Month-end is reconciliation against memory.</p>
+              <p>Solden reads every invoice, matches it to its PO, routes the approval to the budget owner in Slack where they already work, posts to NetSuite when it clears policy, and keeps the full trail on the record. Cycle time drops from 17 days to under 5.</p>
+              <div class="strip"><span>Lands · Gmail</span><span>Approves · Slack</span><span>Posts · NetSuite</span><span>Proof · audit trail</span></div>
+            </article>
+            <div class="steps">
+              <div class="stp"><div class="n">01</div><div><h5>It lands</h5><p>An invoice arrives in email or the ERP. Solden gives it a live record.</p></div></div>
+              <div class="stp"><div class="n">02</div><div><h5>It checks</h5><p>Three-way match against PO and receipt. Deterministic policy gates, not a guess.</p></div></div>
+              <div class="stp"><div class="n">03</div><div><h5>It routes</h5><p>The approval goes to the approver in Slack or Teams, where they already respond.</p></div></div>
+              <div class="stp"><div class="n">04</div><div><h5>It writes back</h5><p>Posts to NetSuite, Xero, or QuickBooks when policy allows, with a 15-minute undo.</p></div></div>
+              <div class="stp"><div class="n">05</div><div><h5>It remembers</h5><p>Every transition on a hash-chained audit trail. The proof follows the work.</p></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="end">
+        <div class="shell">
+          <p class="sec__k">Finance first · the back office next</p>
+          <h2>Bring the work that keeps getting stuck.</h2>
+          <p>We map where it lands, who owns it, what it waits on, and what proof stays attached.</p>
+          <a class="btn btn--teal btn--lg" href="#">Talk to us <span class="arr">→</span></a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="shell foot">
+        <img src="../assets/solden-lockup-white.png" alt="Solden" />
+        <small>SOLDEN SYSTEMS LTD · soldenai.com · © 2026</small>
+      </div>
+    </footer>
+  </body>
+</html>

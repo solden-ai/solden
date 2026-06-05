@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Solden Homepage Direction - Reference Led</title>
+    <style>
+      @font-face {
+        font-family: "Geist";
+        src: url("../assets/fonts/Geist-Variable.woff2") format("woff2-variations");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Geist Mono";
+        src: url("../assets/fonts/GeistMono-Variable.woff2") format("woff2-variations");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      :root {
+        --navy: #0A1F44;
+        --teal: #18BFB0;
+        --paper: #F6F8F7;
+        --surface: #FFFFFF;
+        --ink: #08152D;
+        --muted: #566274;
+        --faint: #98A2B0;
+        --line: rgba(8, 21, 45, 0.13);
+        --line-strong: rgba(8, 21, 45, 0.24);
+        --danger: #C91D25;
+        --font: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--font);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      body {
+        overflow-x: hidden;
+      }
+
+      .page {
+        position: relative;
+        min-height: 900px;
+        padding: 16px 0 28px;
+        overflow: hidden;
+        background:
+          linear-gradient(90deg, rgba(8, 21, 45, 0.035) 1px, transparent 1px),
+          linear-gradient(180deg, rgba(8, 21, 45, 0.035) 1px, transparent 1px),
+          var(--paper);
+        background-size: 72px 72px;
+      }
+
+      .nav {
+        width: min(1280px, calc(100vw - 48px));
+        min-height: 56px;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 28px;
+        align-items: center;
+        margin: 0 auto;
+      }
+
+      .brand {
+        width: 116px;
+      }
+
+      .nav-links {
+        display: flex;
+        justify-content: end;
+        gap: 10px;
+      }
+
+      .nav-links span,
+      .nav-cta,
+      .button {
+        min-height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.6);
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .nav-links span {
+        padding: 0 13px;
+      }
+
+      .nav-cta {
+        padding: 0 16px;
+        border-color: transparent;
+        color: #FFFFFF;
+        background: var(--ink);
+      }
+
+      .frame {
+        width: min(1280px, calc(100vw - 48px));
+        min-height: 704px;
+        display: grid;
+        grid-template-columns: 0.58fr 0.42fr;
+        margin: 24px auto 0;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.66);
+      }
+
+      .copy-panel {
+        position: relative;
+        min-width: 0;
+        padding: 52px 32px 28px;
+        border-right: 1px solid var(--line);
+      }
+
+      .copy-panel::after {
+        content: "";
+        position: absolute;
+        right: -1px;
+        bottom: 0;
+        width: 1px;
+        height: 44%;
+        background: var(--teal);
+      }
+
+      .spec {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      .spec::before {
+        content: "# 01";
+        color: var(--teal);
+      }
+
+      h1 {
+        max-width: 620px;
+        margin: 30px 0 0;
+        color: var(--ink);
+        font-size: clamp(70px, 6vw, 96px);
+        font-weight: 790;
+        letter-spacing: 0;
+        line-height: 0.88;
+      }
+
+      .lede {
+        max-width: 560px;
+        margin: 28px 0 0;
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.55;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 34px;
+      }
+
+      .button {
+        padding: 0 16px;
+      }
+
+      .button.primary {
+        border-color: transparent;
+        background: var(--teal);
+      }
+
+      .signal-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: 72px;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .signal-grid div {
+        min-height: 104px;
+        padding: 18px 18px;
+        border-left: 1px solid var(--line);
+      }
+
+      .signal-grid div:first-child {
+        border-left: 0;
+        padding-left: 0;
+      }
+
+      .label,
+      .signal-grid span,
+      .use-case-tabs span,
+      .artifact-meta span {
+        color: var(--teal);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 760;
+        line-height: 1.2;
+        text-transform: uppercase;
+      }
+
+      .signal-grid strong {
+        display: block;
+        margin-top: 16px;
+        color: var(--ink);
+        font-size: 19px;
+        line-height: 1.12;
+      }
+
+      .artifact-panel {
+        position: relative;
+        min-width: 0;
+        overflow: hidden;
+        background: #FBFCFB;
+      }
+
+      .artifact-panel::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(var(--line) 1px, transparent 1px),
+          linear-gradient(90deg, var(--line) 1px, transparent 1px);
+        background-size: 40px 40px;
+        opacity: 0.5;
+      }
+
+      .artifact {
+        position: absolute;
+        inset: 38px 22px 96px;
+        display: grid;
+        align-content: center;
+      }
+
+      .flow-map {
+        position: relative;
+        min-height: 500px;
+      }
+
+      .flow-map::before {
+        content: "";
+        position: absolute;
+        top: 52px;
+        bottom: 52px;
+        left: 50%;
+        width: 1px;
+        transform: translateX(-50%);
+        background: linear-gradient(180deg, transparent, var(--teal), transparent);
+      }
+
+      .flow-step {
+        position: absolute;
+        width: 236px;
+        min-height: 104px;
+        padding: 14px 14px 13px;
+        border: 1px solid rgba(8, 21, 45, 0.22);
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 16px 28px rgba(8, 21, 45, 0.055);
+      }
+
+      .flow-step::before {
+        content: "";
+        position: absolute;
+        top: 19px;
+        width: 9px;
+        height: 9px;
+        border: 1px solid var(--teal);
+        border-radius: 999px;
+        background: #FFFFFF;
+      }
+
+      .flow-step.left::before {
+        right: -31px;
+      }
+
+      .flow-step.right::before {
+        left: -31px;
+      }
+
+      .flow-step.left {
+        left: 18px;
+      }
+
+      .flow-step.right {
+        right: 18px;
+      }
+
+      .flow-step:nth-child(1) { top: 0; }
+      .flow-step:nth-child(2) { top: 112px; }
+      .flow-step:nth-child(3) { top: 224px; }
+      .flow-step:nth-child(4) { top: 336px; }
+
+      .flow-step span {
+        color: var(--teal);
+        font-family: var(--mono);
+        font-size: 10.5px;
+        font-weight: 760;
+        text-transform: uppercase;
+      }
+
+      .flow-step strong {
+        display: block;
+        margin-top: 11px;
+        color: var(--ink);
+        font-size: 16px;
+        line-height: 1.12;
+      }
+
+      .flow-step small {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .flow-step.current {
+        background: linear-gradient(90deg, rgba(24, 191, 176, 0.12), rgba(255, 255, 255, 0.94));
+        box-shadow: inset 2px 0 0 var(--teal), 0 16px 28px rgba(8, 21, 45, 0.055);
+      }
+
+      .record-card {
+        position: absolute;
+        right: 24px;
+        top: 220px;
+        right: 50%;
+        width: 308px;
+        transform: translateX(50%);
+        border: 1px solid var(--line-strong);
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 22px 46px rgba(8, 21, 45, 0.08);
+      }
+
+      .record-card header {
+        min-height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--line);
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .record-card header strong {
+        color: var(--teal);
+        font-weight: 760;
+      }
+
+      .record-card dl {
+        margin: 0;
+      }
+
+      .record-card div {
+        display: grid;
+        grid-template-columns: 78px minmax(0, 1fr);
+        gap: 12px;
+        padding: 13px 14px;
+        border-top: 1px solid var(--line);
+      }
+
+      .record-card div:first-of-type {
+        border-top: 0;
+      }
+
+      .record-card dt {
+        color: var(--faint);
+        font-family: var(--mono);
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+
+      .record-card dd {
+        margin: 0;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.25;
+      }
+
+      .artifact-meta {
+        position: absolute;
+        right: 24px;
+        bottom: 24px;
+        left: 24px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border-top: 1px solid var(--line);
+      }
+
+      .artifact-meta div {
+        min-height: 60px;
+        padding: 13px 12px;
+        border-left: 1px solid var(--line);
+      }
+
+      .artifact-meta div:first-child {
+        border-left: 0;
+      }
+
+      .artifact-meta strong {
+        display: block;
+        margin-top: 8px;
+        color: var(--ink);
+        font-size: 13px;
+        line-height: 1.12;
+      }
+
+      .use-case-tabs {
+        width: min(1280px, calc(100vw - 48px));
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin: 0 auto;
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        border-left: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.62);
+      }
+
+      .use-case-tabs div {
+        min-height: 82px;
+        padding: 18px;
+        border-left: 1px solid var(--line);
+      }
+
+      .use-case-tabs div:first-child {
+        border-left: 0;
+      }
+
+      .use-case-tabs strong {
+        display: block;
+        margin-top: 10px;
+        color: var(--ink);
+        font-size: 15px;
+        line-height: 1.2;
+      }
+
+      @media (max-width: 980px) {
+        .page {
+          min-height: 0;
+          padding-top: 12px;
+        }
+
+        .nav,
+        .frame,
+        .use-case-tabs {
+          width: calc(100vw - 32px);
+        }
+
+        .nav {
+          grid-template-columns: auto auto;
+          justify-content: space-between;
+        }
+
+        .nav-links {
+          display: none;
+        }
+
+        .frame {
+          grid-template-columns: 1fr;
+        }
+
+        .copy-panel {
+          padding: 36px 20px 28px;
+          border-right: 0;
+        }
+
+        h1 {
+          max-width: 100%;
+          font-size: 48px;
+          line-height: 0.96;
+        }
+
+        .lede {
+          font-size: 16px;
+          line-height: 1.5;
+        }
+
+        .signal-grid {
+          display: none;
+        }
+
+        .artifact-panel {
+          min-height: 530px;
+          border-top: 1px solid var(--line);
+        }
+
+        .artifact {
+          inset: 34px 0 112px;
+        }
+
+        .record-card {
+          right: 16px;
+          bottom: 104px;
+          width: min(300px, calc(100% - 32px));
+        }
+
+        .use-case-tabs {
+          grid-template-columns: 1fr;
+        }
+
+        .use-case-tabs div {
+          min-height: 68px;
+          border-top: 1px solid var(--line);
+          border-left: 0;
+        }
+      }
+
+      @media (max-width: 430px) {
+        .brand {
+          width: 104px;
+        }
+
+        .nav-cta {
+          min-height: 34px;
+          padding: 0 12px;
+          font-size: 12px;
+        }
+
+        h1 {
+          font-size: 38px;
+        }
+
+        .actions {
+          gap: 8px;
+        }
+
+        .button {
+          flex: 1 1 0;
+          padding: 0 10px;
+          font-size: 13px;
+        }
+
+        .signal-grid,
+        .artifact-meta {
+          grid-template-columns: 1fr;
+        }
+
+        .signal-grid div,
+        .signal-grid div:first-child,
+        .artifact-meta div {
+          min-height: 0;
+          padding: 14px 0;
+          border-top: 1px solid var(--line);
+          border-left: 0;
+        }
+
+        .signal-grid div:first-child,
+        .artifact-meta div:first-child {
+          border-top: 0;
+        }
+
+        .plane {
+          width: 318px;
+        }
+
+        .plane-state {
+          width: 276px;
+        }
+
+        .plane-erp {
+          width: 328px;
+        }
+
+        .record-card {
+          bottom: 148px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="nav">
+        <img class="brand" src="../assets/solden-lockup-dark.png" alt="Solden" />
+        <nav class="nav-links" aria-label="Concept navigation">
+          <span>Use cases</span>
+          <span>Manifesto</span>
+          <span>Security</span>
+        </nav>
+        <span class="nav-cta">Schedule a demo</span>
+      </header>
+
+      <section class="frame" aria-label="Reference-led Solden landing direction">
+        <div class="copy-panel">
+          <p class="spec">Solden live work record</p>
+          <h1>Operational memory for work that is still moving.</h1>
+          <p class="lede">
+            Solden gives approvals, requests, exceptions, and ERP follow-up one
+            record that carries owner, blocker, proof, audit, and agent state
+            across the tools where the work already happens.
+          </p>
+          <div class="actions">
+            <span class="button primary">Talk to us</span>
+            <span class="button">See use cases</span>
+          </div>
+
+          <div class="signal-grid" aria-label="Record fields">
+            <div><span>Owner</span><strong>who has the next move</strong></div>
+            <div><span>Wait</span><strong>why the item stopped</strong></div>
+            <div><span>Proof</span><strong>what makes action safe</strong></div>
+          </div>
+        </div>
+
+        <div class="artifact-panel" aria-label="Solden operational memory artifact">
+          <div class="artifact">
+            <div class="flow-map" aria-label="Work item flow">
+              <div class="flow-step left">
+                <span>01 Slack</span>
+                <strong>Request captured</strong>
+                <small>Quote, requester, vendor, and budget context attached.</small>
+              </div>
+              <div class="flow-step right current">
+                <span>02 Solden</span>
+                <strong>Live record created</strong>
+                <small>Owner, blocker, proof, audit, and agent state are now visible.</small>
+              </div>
+              <div class="flow-step left">
+                <span>03 Teams</span>
+                <strong>Approval routed</strong>
+                <small>Manager sees the request with proof and policy reason.</small>
+              </div>
+              <div class="flow-step right">
+                <span>04 ERP</span>
+                <strong>Writeback queued</strong>
+                <small>ERP update waits for approval, then audit is sealed.</small>
+              </div>
+            </div>
+          </div>
+
+          <aside class="record-card" aria-label="Example work record">
+            <header>
+              <span>REQ-4821</span>
+              <strong>waiting</strong>
+            </header>
+            <dl>
+              <div><dt>Work</dt><dd>Purchase request captured from Slack</dd></div>
+              <div><dt>Blocker</dt><dd>Manager approval before ERP writeback</dd></div>
+              <div><dt>Agent</dt><dd>Paused until the approval clears</dd></div>
+            </dl>
+          </aside>
+
+          <div class="artifact-meta" aria-label="Surfaces">
+            <div><span>Inbox</span><strong>source</strong></div>
+            <div><span>Chat</span><strong>decision</strong></div>
+            <div><span>ERP</span><strong>writeback</strong></div>
+            <div><span>Audit</span><strong>trail</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="use-case-tabs" aria-label="Use case examples">
+        <div><span>01 Vendor approval</span><strong>tax and bank proof missing</strong></div>
+        <div><span>02 Purchase request</span><strong>manager approval needed</strong></div>
+        <div><span>03 Invoice exception</span><strong>PO match failed</strong></div>
+        <div><span>04 ERP follow-up</span><strong>writeback failed</strong></div>
+      </section>
+    </main>
+  </body>
+</html>

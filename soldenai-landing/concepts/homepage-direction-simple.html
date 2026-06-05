@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Solden Homepage Direction - Simple</title>
+    <style>
+      @font-face {
+        font-family: "Geist";
+        src: url("../assets/fonts/Geist-Variable.woff2") format("woff2-variations");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Geist Mono";
+        src: url("../assets/fonts/GeistMono-Variable.woff2") format("woff2-variations");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      :root {
+        --navy: #0A1F44;
+        --teal: #18BFB0;
+        --paper: #F8FAF9;
+        --surface: #FFFFFF;
+        --ink: #0A1F44;
+        --muted: #536174;
+        --faint: #8A95A4;
+        --line: rgba(10, 31, 68, 0.13);
+        --line-strong: rgba(10, 31, 68, 0.24);
+        --font: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--font);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      body {
+        overflow-x: hidden;
+      }
+
+      .page {
+        position: relative;
+        min-height: 900px;
+        overflow: hidden;
+        background: var(--paper);
+      }
+
+      .page::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(10, 31, 68, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(10, 31, 68, 0.05) 1px, transparent 1px);
+        background-size: 72px 72px;
+        mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.16), #000 42%, #000);
+      }
+
+      .nav {
+        position: relative;
+        z-index: 3;
+        width: min(1240px, calc(100vw - 64px));
+        min-height: 76px;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 30px;
+        align-items: center;
+        margin: 0 auto;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .brand {
+        width: 118px;
+        height: auto;
+      }
+
+      .nav-links {
+        display: flex;
+        justify-content: end;
+        gap: 28px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 640;
+      }
+
+      .nav-cta,
+      .button {
+        min-height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 740;
+      }
+
+      .nav-cta {
+        padding: 0 16px;
+        color: var(--navy);
+        background: var(--teal);
+      }
+
+      .hero {
+        position: relative;
+        z-index: 2;
+        width: min(1240px, calc(100vw - 64px));
+        min-height: 642px;
+        display: grid;
+        align-items: center;
+        margin: 0 auto;
+        padding: 64px 0 54px;
+      }
+
+      .product-backdrop {
+        position: absolute;
+        top: 148px;
+        right: max(-118px, calc((100vw - 1240px) / -2));
+        bottom: 52px;
+        left: 46%;
+        z-index: -2;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.74);
+      }
+
+      .product-backdrop::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, var(--paper) 0%, rgba(248, 250, 249, 0.92) 9%, rgba(248, 250, 249, 0.18) 34%, rgba(248, 250, 249, 0) 100%);
+      }
+
+      .product-backdrop::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 196px;
+        width: 1px;
+        background: linear-gradient(180deg, transparent, var(--teal), transparent);
+      }
+
+      .work-table {
+        position: absolute;
+        inset: 0 0 0 0;
+        display: grid;
+        grid-template-rows: 48px repeat(5, 1fr);
+      }
+
+      .work-row {
+        display: grid;
+        grid-template-columns: 118px 180px minmax(260px, 0.72fr) 190px 160px;
+        align-items: center;
+        border-top: 1px solid var(--line);
+      }
+
+      .work-row:first-child {
+        border-top: 0;
+      }
+
+      .work-row > * {
+        min-width: 0;
+        padding: 0 18px;
+      }
+
+      .work-row span,
+      .eyebrow,
+      .field-strip span,
+      .examples span,
+      .surface-strip span {
+        color: var(--teal);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 760;
+        line-height: 1.2;
+        text-transform: uppercase;
+      }
+
+      .work-row strong {
+        color: var(--ink);
+        font-size: 14px;
+        font-weight: 720;
+        line-height: 1.2;
+      }
+
+      .work-row small {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.32;
+      }
+
+      .work-row time,
+      .work-row em {
+        color: var(--faint);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-style: normal;
+      }
+
+      .work-row.current {
+        background: linear-gradient(90deg, rgba(24, 191, 176, 0.1), rgba(24, 191, 176, 0.015));
+        box-shadow: inset 2px 0 0 var(--teal);
+      }
+
+      .copy {
+        max-width: 660px;
+      }
+
+      h1 {
+        margin: 18px 0 0;
+        max-width: 650px;
+        color: var(--ink);
+        font-size: clamp(52px, 5.1vw, 72px);
+        font-weight: 780;
+        letter-spacing: 0;
+        line-height: 0.96;
+      }
+
+      .lede {
+        max-width: 610px;
+        margin: 28px 0 0;
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.56;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 32px;
+      }
+
+      .button {
+        padding: 0 18px;
+        border: 1px solid var(--line-strong);
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .button.primary {
+        border-color: transparent;
+        background: var(--teal);
+      }
+
+      .field-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        max-width: 700px;
+        margin-top: 56px;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .field-strip div {
+        min-width: 0;
+        padding: 16px 18px;
+        border-left: 1px solid var(--line);
+      }
+
+      .field-strip div:first-child {
+        padding-left: 0;
+        border-left: 0;
+      }
+
+      .field-strip strong {
+        display: block;
+        margin-top: 8px;
+        color: var(--ink);
+        font-size: 16px;
+        line-height: 1.2;
+      }
+
+      .examples {
+        position: relative;
+        z-index: 2;
+        width: min(1240px, calc(100vw - 64px));
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin: 0 auto 34px;
+        border-top: 1px solid var(--line-strong);
+        border-bottom: 1px solid var(--line-strong);
+      }
+
+      .examples article {
+        min-height: 168px;
+        padding: 26px 26px;
+        border-left: 1px solid var(--line);
+      }
+
+      .examples article:first-child {
+        border-left: 0;
+        padding-left: 0;
+      }
+
+      .examples h2 {
+        margin: 28px 0 0;
+        color: var(--ink);
+        font-size: 23px;
+        line-height: 1.06;
+        letter-spacing: 0;
+      }
+
+      .examples p {
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.48;
+      }
+
+      .surface-strip {
+        position: relative;
+        z-index: 2;
+        width: min(1240px, calc(100vw - 64px));
+        display: grid;
+        grid-template-columns: 1.1fr repeat(6, minmax(0, 1fr));
+        align-items: center;
+        margin: 0 auto 44px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.62);
+      }
+
+      .surface-strip div {
+        min-height: 54px;
+        display: grid;
+        place-items: center;
+        padding: 0 14px;
+        border-left: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+        text-align: center;
+      }
+
+      .surface-strip div:first-child {
+        justify-items: start;
+        border-left: 0;
+        color: var(--teal);
+        font-family: var(--mono);
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+
+      @media (max-width: 940px) {
+        .page {
+          min-height: 0;
+        }
+
+        .nav,
+        .hero,
+        .examples,
+        .surface-strip {
+          width: calc(100vw - 40px);
+        }
+
+        .nav {
+          grid-template-columns: auto auto;
+          justify-content: space-between;
+        }
+
+        .nav-links {
+          display: none;
+        }
+
+        .hero {
+          min-height: 0;
+          padding: 46px 0 34px;
+        }
+
+        .product-backdrop {
+          position: relative;
+          top: auto;
+          right: auto;
+          bottom: auto;
+          left: auto;
+          z-index: 0;
+          height: 360px;
+          margin-top: 32px;
+          overflow: hidden;
+          border: 1px solid var(--line);
+        }
+
+        .product-backdrop::before {
+          display: none;
+        }
+
+        .work-row {
+          grid-template-columns: 76px 92px minmax(0, 1fr);
+        }
+
+        .work-row > :nth-child(n + 4) {
+          display: none;
+        }
+
+        .copy {
+          max-width: none;
+        }
+
+        h1 {
+          font-size: 44px;
+          line-height: 1;
+        }
+
+        .lede {
+          font-size: 16px;
+          line-height: 1.5;
+        }
+
+        .field-strip {
+          display: none;
+        }
+
+        .examples,
+        .surface-strip {
+          grid-template-columns: 1fr;
+        }
+
+        .examples article,
+        .examples article:first-child {
+          min-height: 0;
+          padding: 24px 0;
+          border-top: 1px solid var(--line);
+          border-left: 0;
+        }
+
+        .examples article:first-child {
+          border-top: 0;
+        }
+
+        .surface-strip div,
+        .surface-strip div:first-child {
+          min-height: 48px;
+          justify-items: center;
+          border-top: 1px solid var(--line);
+          border-left: 0;
+        }
+
+        .surface-strip div:first-child {
+          border-top: 0;
+        }
+      }
+
+      @media (max-width: 430px) {
+        .nav,
+        .hero,
+        .examples,
+        .surface-strip {
+          width: calc(100vw - 32px);
+        }
+
+        .brand {
+          width: 104px;
+        }
+
+        .nav-cta {
+          min-height: 38px;
+          padding: 0 13px;
+          font-size: 13px;
+        }
+
+        .hero {
+          padding-top: 36px;
+        }
+
+        h1 {
+          font-size: 37px;
+        }
+
+        .actions {
+          flex-wrap: nowrap;
+          gap: 8px;
+        }
+
+        .button {
+          flex: 1 1 0;
+          min-width: 0;
+          padding: 0 10px;
+          font-size: 13px;
+        }
+
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page" aria-label="Simple Solden landing-page direction">
+      <header class="nav">
+        <img class="brand" src="../assets/solden-lockup-dark.png" alt="Solden" />
+        <nav class="nav-links" aria-label="Concept navigation">
+          <span>Use cases</span>
+          <span>Manifesto</span>
+          <span>Security</span>
+        </nav>
+        <span class="nav-cta">Talk to us</span>
+      </header>
+
+      <section class="hero">
+        <div class="copy">
+          <p class="eyebrow">For work that starts in email or chat and ends in the ERP</p>
+          <h1>Track approvals, requests, and ERP follow-up without chasing people.</h1>
+          <p class="lede">
+            Solden gives each stuck item one live record. Your team can see who
+            owns it, why it is waiting, what proof exists, and what happens next.
+          </p>
+          <div class="actions">
+            <span class="button primary">Talk to us</span>
+            <span class="button">See use cases</span>
+          </div>
+          <div class="field-strip" aria-label="What the Solden record keeps attached">
+            <div><span>Owner</span><strong>Who has the next move</strong></div>
+            <div><span>Blocker</span><strong>Why the work stopped</strong></div>
+            <div><span>Proof</span><strong>What supports action</strong></div>
+            <div><span>Audit</span><strong>What happened already</strong></div>
+          </div>
+        </div>
+
+        <div class="product-backdrop" aria-label="Example Solden live record table">
+          <div class="work-table">
+            <div class="work-row">
+              <span>When</span>
+              <span>Surface</span>
+              <span>Work item</span>
+              <span>Owner</span>
+              <span>Status</span>
+            </div>
+            <div class="work-row">
+              <time>08:41</time>
+              <strong>Slack</strong>
+              <div><strong>Purchase request captured</strong><small>Quote, requester, and budget code attached.</small></div>
+              <em>Ops manager</em>
+              <em>captured</em>
+            </div>
+            <div class="work-row current">
+              <time>08:49</time>
+              <strong>Teams</strong>
+              <div><strong>Approval needed before ERP writeback</strong><small>Policy requires manager decision above spend band.</small></div>
+              <em>Department head</em>
+              <em>waiting</em>
+            </div>
+            <div class="work-row">
+              <time>09:12</time>
+              <strong>ERP</strong>
+              <div><strong>Vendor record ready to update</strong><small>NetSuite, SAP, Sage, QuickBooks, and Xero context stays attached.</small></div>
+              <em>Agent</em>
+              <em>queued</em>
+            </div>
+            <div class="work-row">
+              <time>audit</time>
+              <strong>Solden</strong>
+              <div><strong>Proof and decision trail preserved</strong><small>Actor, source, timestamp, policy version, and writeback state.</small></div>
+              <em>System</em>
+              <em>logged</em>
+            </div>
+            <div class="work-row">
+              <time>next</time>
+              <strong>Workspace</strong>
+              <div><strong>Exception remains visible until cleared</strong><small>Leaders can see what is blocked without searching threads.</small></div>
+              <em>Finance lead</em>
+              <em>open</em>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="examples" aria-label="Example work Solden tracks">
+        <article>
+          <span>Vendor approvals</span>
+          <h2>New vendor needs tax and bank proof.</h2>
+          <p>Solden keeps the requester, proof, registry check, approval owner, and ERP vendor state together.</p>
+        </article>
+        <article>
+          <span>Purchase requests</span>
+          <h2>Spend is waiting on a manager.</h2>
+          <p>The quote, budget context, approver, policy reason, and writeback path stay on one record.</p>
+        </article>
+        <article>
+          <span>Invoice exceptions</span>
+          <h2>PO match failed and the agent stopped.</h2>
+          <p>The blocker, source evidence, owner, and next action are visible without rebuilding the story.</p>
+        </article>
+      </section>
+
+      <section class="surface-strip" aria-label="Surfaces Solden connects">
+        <div>Works across</div>
+        <div>Inbox</div>
+        <div>Slack</div>
+        <div>Teams</div>
+        <div>NetSuite</div>
+        <div>SAP</div>
+        <div>Sage</div>
+      </section>
+    </main>
+  </body>
+</html>

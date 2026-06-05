@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Solden Homepage Direction - Memory Object</title>
+    <style>
+      @font-face {
+        font-family: "Geist";
+        src: url("../assets/fonts/Geist-Variable.woff2") format("woff2-variations");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Geist Mono";
+        src: url("../assets/fonts/GeistMono-Variable.woff2") format("woff2-variations");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      :root {
+        --cl-navy: #001137;
+        --cl-teal-500: #18BFB0;
+        --paper: #F7F9F8;
+        --surface: #FFFFFF;
+        --ink: var(--cl-navy);
+        --muted: #536173;
+        --faint: #9BA6B3;
+        --line: rgba(8, 21, 45, 0.12);
+        --line-strong: rgba(8, 21, 45, 0.24);
+        --font: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--font);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      body {
+        overflow-x: hidden;
+      }
+
+      .page {
+        position: relative;
+        min-height: 100svh;
+        overflow: hidden;
+        background:
+          linear-gradient(90deg, rgba(8, 21, 45, 0.035) 1px, transparent 1px),
+          linear-gradient(180deg, rgba(8, 21, 45, 0.035) 1px, transparent 1px),
+          var(--paper);
+        background-size: 80px 80px;
+      }
+
+      .page::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(90deg, var(--paper) 0%, rgba(247, 249, 248, 0.88) 35%, rgba(247, 249, 248, 0.38) 63%, rgba(247, 249, 248, 0.72) 100%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(247, 249, 248, 0) 54%);
+        pointer-events: none;
+      }
+
+      .nav {
+        position: relative;
+        z-index: 5;
+        width: min(1280px, calc(100vw - 64px));
+        min-height: 76px;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 28px;
+        align-items: center;
+        margin: 0 auto;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .brand {
+        width: 118px;
+        display: block;
+      }
+
+      .nav-links {
+        display: flex;
+        justify-content: end;
+        gap: 28px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      .nav-cta {
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 15px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: var(--ink);
+        color: #FFFFFF;
+        font-size: 14px;
+        font-weight: 740;
+      }
+
+      .hero {
+        position: relative;
+        z-index: 2;
+        width: min(1280px, calc(100vw - 64px));
+        min-height: calc(100svh - 76px);
+        display: grid;
+        grid-template-columns: minmax(0, 0.47fr) minmax(0, 0.53fr);
+        gap: 36px;
+        align-items: center;
+        margin: 0 auto;
+        padding: 54px 0 40px;
+      }
+
+      .copy {
+        position: relative;
+        z-index: 4;
+        max-width: 640px;
+      }
+
+      .kicker,
+      .field span,
+      .artifact-label span,
+      .system-row span,
+      .work-tabs span {
+        color: var(--cl-teal-500);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 760;
+        line-height: 1.2;
+        text-transform: uppercase;
+      }
+
+      .kicker {
+        max-width: 510px;
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .kicker strong {
+        color: var(--cl-teal-500);
+        font-weight: 760;
+      }
+
+      h1 {
+        max-width: 660px;
+        margin: 20px 0 0;
+        color: var(--ink);
+        font-size: 76px;
+        font-weight: 790;
+        letter-spacing: 0;
+        line-height: 0.91;
+      }
+
+      .lede {
+        max-width: 570px;
+        margin: 28px 0 0;
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.56;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 34px;
+      }
+
+      .button {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 18px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--ink);
+        font-size: 14px;
+        font-weight: 740;
+        white-space: nowrap;
+      }
+
+      .button.primary {
+        border-color: transparent;
+        background: var(--cl-teal-500);
+      }
+
+      .memory-fields {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        max-width: 620px;
+        margin-top: 64px;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .field {
+        min-height: 100px;
+        padding: 18px 18px;
+        border-left: 1px solid var(--line);
+      }
+
+      .field:first-child {
+        padding-left: 0;
+        border-left: 0;
+      }
+
+      .field strong {
+        display: block;
+        margin-top: 16px;
+        color: var(--ink);
+        font-size: 18px;
+        line-height: 1.12;
+      }
+
+      .artifact {
+        position: relative;
+        min-height: 668px;
+      }
+
+      .artifact::before {
+        content: "";
+        position: absolute;
+        inset: 44px -110px 74px -20px;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background:
+          linear-gradient(90deg, rgba(8, 21, 45, 0.06) 1px, transparent 1px),
+          linear-gradient(180deg, rgba(8, 21, 45, 0.045) 1px, transparent 1px),
+          rgba(255, 255, 255, 0.36);
+        background-size: 44px 44px;
+      }
+
+      .artifact::after {
+        content: "the work moves. the memory stays attached.";
+        position: absolute;
+        right: 0;
+        bottom: 104px;
+        z-index: 4;
+        width: 348px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line-strong);
+        color: var(--ink);
+        font-size: 20px;
+        font-weight: 720;
+        line-height: 1.12;
+      }
+
+      .memory-object {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 820px;
+        max-width: none;
+        height: auto;
+        transform: translate(-45%, -52%);
+        filter: drop-shadow(0 38px 64px rgba(8, 21, 45, 0.15));
+      }
+
+      .artifact-label {
+        position: absolute;
+        z-index: 3;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 10px;
+        align-items: start;
+        width: 230px;
+        color: var(--muted);
+        font-size: 12.5px;
+        line-height: 1.35;
+      }
+
+      .artifact-label::before {
+        content: "";
+        width: 58px;
+        height: 1px;
+        margin-top: 8px;
+        background: var(--cl-teal-500);
+      }
+
+      .artifact-label strong {
+        display: block;
+        margin: 7px 0 0;
+        color: var(--ink);
+        font-size: 14px;
+        line-height: 1.14;
+      }
+
+      .label-source {
+        top: 90px;
+        left: 2px;
+      }
+
+      .label-state {
+        top: 150px;
+        right: -22px;
+      }
+
+      .label-action {
+        right: 8px;
+        bottom: 160px;
+      }
+
+      .system-row {
+        position: absolute;
+        left: 10px;
+        right: 16px;
+        bottom: 0;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .system-row div {
+        min-height: 66px;
+        padding: 13px 12px;
+        border-left: 1px solid var(--line);
+      }
+
+      .system-row div:first-child {
+        border-left: 0;
+      }
+
+      .system-row strong {
+        display: block;
+        margin-top: 8px;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 720;
+        line-height: 1.14;
+      }
+
+      .work-tabs {
+        position: relative;
+        z-index: 3;
+        width: min(1280px, calc(100vw - 64px));
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin: 0 auto 32px;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .work-tabs div {
+        min-height: 78px;
+        padding: 18px;
+        border-left: 1px solid var(--line);
+      }
+
+      .work-tabs div:first-child {
+        border-left: 0;
+      }
+
+      .work-tabs strong {
+        display: block;
+        margin-top: 10px;
+        color: var(--ink);
+        font-size: 15px;
+        line-height: 1.2;
+      }
+
+      @media (max-width: 1120px) {
+        .hero {
+          grid-template-columns: 1fr;
+          gap: 18px;
+          min-height: 0;
+          padding-top: 52px;
+        }
+
+        h1 {
+          max-width: 760px;
+          font-size: 62px;
+        }
+
+        .artifact {
+          min-height: 590px;
+        }
+
+        .memory-object {
+          width: 760px;
+          transform: translate(-50%, -53%);
+        }
+
+        .artifact::after {
+          right: 12px;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .nav,
+        .hero,
+        .work-tabs {
+          width: calc(100vw - 32px);
+        }
+
+        .page::before {
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(247, 249, 248, 0.18) 62%, var(--paper) 100%);
+        }
+
+        .nav {
+          grid-template-columns: auto auto;
+          justify-content: space-between;
+          min-height: 68px;
+        }
+
+        .brand {
+          width: 104px;
+        }
+
+        .nav-links {
+          display: none;
+        }
+
+        .nav-cta {
+          min-height: 36px;
+          padding: 0 12px;
+          font-size: 12px;
+        }
+
+        .hero {
+          padding: 36px 0 28px;
+        }
+
+        h1 {
+          font-size: 43px;
+          line-height: 0.98;
+        }
+
+        .lede {
+          margin-top: 22px;
+          font-size: 16px;
+          line-height: 1.5;
+        }
+
+        .actions {
+          gap: 8px;
+        }
+
+        .button {
+          flex: 1 1 0;
+          min-width: 0;
+          padding: 0 10px;
+          font-size: 13px;
+        }
+
+        .memory-fields {
+          display: none;
+        }
+
+        .artifact {
+          min-height: 570px;
+          margin-top: 12px;
+        }
+
+        .artifact::before {
+          inset: 44px -24px 86px -24px;
+          background-size: 38px 38px;
+        }
+
+        .artifact::after {
+          right: 0;
+          bottom: 138px;
+          width: 252px;
+          font-size: 16px;
+        }
+
+        .memory-object {
+          top: 43%;
+          width: 620px;
+          transform: translate(-45%, -50%);
+        }
+
+        .artifact-label {
+          width: 166px;
+          grid-template-columns: 1fr;
+          gap: 6px;
+          font-size: 0;
+          line-height: 0;
+        }
+
+        .artifact-label::before {
+          width: 34px;
+        }
+
+        .artifact-label strong {
+          font-size: 12px;
+          line-height: 1.12;
+        }
+
+        .label-source {
+          top: 12px;
+          left: 0;
+        }
+
+        .label-state {
+          top: 48px;
+          right: 0;
+        }
+
+        .label-action {
+          right: 0;
+          bottom: 206px;
+        }
+
+        .system-row {
+          left: 0;
+          right: 0;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .system-row div {
+          min-height: 58px;
+        }
+
+        .system-row div:nth-child(odd) {
+          border-left: 0;
+        }
+
+        .system-row div:nth-child(n + 3) {
+          border-top: 1px solid var(--line);
+        }
+
+        .system-row div:last-child {
+          display: none;
+        }
+
+        .work-tabs {
+          grid-template-columns: 1fr;
+          margin-bottom: 24px;
+        }
+
+        .work-tabs div {
+          min-height: 66px;
+          border-top: 1px solid var(--line);
+          border-left: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="nav">
+        <img class="brand" src="../assets/solden-lockup-dark.png" alt="Solden" />
+        <nav class="nav-links" aria-label="Concept navigation">
+          <span>Use cases</span>
+          <span>Manifesto</span>
+          <span>Security</span>
+        </nav>
+        <span class="nav-cta">Schedule a demo</span>
+      </header>
+
+      <section class="hero" aria-label="Solden operational memory hero">
+        <div class="copy">
+          <p class="kicker"><strong># 01</strong> System of record for work in progress</p>
+          <h1>Operational memory for back-office work in progress.</h1>
+          <p class="lede">
+            Solden keeps owner, blocker, proof, next step, audit, and agent context attached
+            as Accounts Payable work moves across inbox, chat, approvals, ERP, and audit.
+          </p>
+          <div class="actions">
+            <span class="button primary">Talk to us</span>
+            <span class="button">See use cases</span>
+          </div>
+          <div class="memory-fields" aria-label="Operational memory fields">
+            <div class="field"><span>Owner</span><strong>who has the next move</strong></div>
+            <div class="field"><span>Blocker</span><strong>why the item stopped</strong></div>
+            <div class="field"><span>Proof</span><strong>what makes action safe</strong></div>
+          </div>
+        </div>
+
+        <div class="artifact" aria-label="Operational memory object">
+          <img
+            class="memory-object"
+            src="assets/operational-memory-slab.png"
+            alt="A translucent operational memory object holding invoice, ERP, approval, audit, and agent context in one persistent record."
+          />
+
+          <div class="artifact-label label-source">
+            <span>Source</span>
+            <div>
+              <strong>Invoice and thread</strong>
+              email, PDF, sender context
+            </div>
+          </div>
+
+          <div class="artifact-label label-state">
+            <span>State</span>
+            <div>
+              <strong>ERP, policy, owner</strong>
+              vendor, PO, amount, rule
+            </div>
+          </div>
+
+          <div class="artifact-label label-action">
+            <span>Action</span>
+            <div>
+              <strong>Approval and writeback</strong>
+              chat decision, ERP update, audit
+            </div>
+          </div>
+
+          <div class="system-row" aria-label="Systems Solden keeps attached">
+            <div><span>Inbox</span><strong>source facts</strong></div>
+            <div><span>Chat</span><strong>owner action</strong></div>
+            <div><span>ERP</span><strong>posting state</strong></div>
+            <div><span>Agent</span><strong>next step</strong></div>
+            <div><span>Audit</span><strong>proof trail</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="work-tabs" aria-label="Work examples">
+        <div><span>01 Accounts Payable</span><strong>invoice exceptions and approvals</strong></div>
+        <div><span>02 Procurement</span><strong>purchase requests and approvals</strong></div>
+        <div><span>03 Vendor setup</span><strong>proof, owner, and ERP state</strong></div>
+        <div><span>04 Reconciliation</span><strong>exceptions, proof, and audit</strong></div>
+      </section>
+    </main>
+  </body>
+</html>
