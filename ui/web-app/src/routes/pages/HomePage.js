@@ -448,9 +448,11 @@ function HomeLiveConsole({
                               <span class=${`cl-home-state-pill is-${workStateTone(item.state, item)}`}>
                                 ${workStateLabel(item.state)}
                               </span>
-                              <span class="cl-home-owner-avatar" title=${workOwnerTitle(item)}>
-                                ${ownerInitials(item)}
-                              </span>
+                              ${ownerInitials(item) ? html`
+                                <span class="cl-home-owner-avatar" title=${workOwnerTitle(item)}>
+                                  ${ownerInitials(item)}
+                                </span>
+                              ` : null}
                             </span>
                           </button>
                         </li>
@@ -705,7 +707,7 @@ function workOwnerTitle(item = {}) {
 
 function ownerInitials(item = {}) {
   const label = workOwnerLabel(item);
-  if (!label || label === 'Unassigned') return '—';
+  if (!label || label === 'Unassigned') return '';
   const parts = label.split(/\s+/).filter(Boolean);
   const letters = parts.length > 1
     ? `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`

@@ -134,6 +134,8 @@ describe('HomePage', () => {
     expect(screen.getAllByText('Field review: Vendor, Amount').length).toBeGreaterThan(0);
     expect(screen.getByText('2 sources linked · Gmail')).toBeTruthy();
     expect(screen.getByText('Requested context')).toBeTruthy();
+    expect([...document.querySelectorAll('.cl-home-owner-avatar')]
+      .some((node) => node.textContent.trim() === '—')).toBe(false);
     expect(document.body.textContent).not.toContain('critical_field_low_confidence');
   });
 });
