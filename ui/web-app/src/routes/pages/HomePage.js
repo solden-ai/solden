@@ -8,7 +8,6 @@ import { api } from '../../api/client.js';
 import { useBootstrap, useOrgId } from '../../shell/BootstrapContext.js';
 import { hasCapability } from '../../utils/capabilities.js';
 import { formatAmount, formatRelative, displayOrgName } from '../../utils/formatters.js';
-import { AgentActivityRibbon } from '../../components/AgentActivityRibbon.js';
 import { accountsPayablePath, accountPayableRecordPath } from '../../utils/record-route.js';
 
 /**
@@ -26,14 +25,11 @@ import { accountsPayablePath, accountPayableRecordPath } from '../../utils/recor
  *   1. Welcome header + primary actions
  *   2. Onboarding banner (only if onboarding incomplete)
  *   3. Implementation checklist (only if setup incomplete)
- *   4. Agent activity ribbon — the hero. Live SSE stream of agent /
- *      operator actions across every render target. The whole page is
- *      organized around this primary surface; everything below is
- *      either context (stats) or follow-up work (exceptions, work types).
+ *   4. Live work-in-progress console: work types, selected open work,
+ *      and operational context with evidence/activity
  *   5. Compact stat strip (4 dense tiles, live-pulse indicators)
- *   6. 2-col panels: Exception queue + Work by type
- *   7. Approver workload
- *   8. System status footer
+ *   6. Approver workload
+ *   7. System status footer
  *
  * Each panel fetches independently; one slow endpoint never gates
  * the rest. SSE keeps stats / workload / activity live within ~15s.
@@ -76,7 +72,7 @@ export function HomePage() {
 
   const orgQuery = `organization_id=${encodeURIComponent(orgId)}`;
   const metrics = useEndpoint(`/api/ap/items/metrics/aggregation?${orgQuery}&vendor_limit=5`, [orgId]);
-  const upcoming = useEndpoint(`/api/ap/items/upcoming?${orgQuery}&limit=10`, [orgId]);
+  const records = useEndpoint(`/api/workspace/records?${orgQuery}&active_slice_id=all_open&limit=8&sort_col=queue_age&sort_dir=desc`, [orgId]);
   const workload = useEndpoint('/api/workspace/dashboard/approver-workload', [orgId]);
   const exceptions = useEndpoint('/api/workspace/exceptions?limit=10', [orgId]);
   const exceptionStats = useEndpoint('/api/workspace/exceptions/stats', [orgId]);
@@ -89,6 +85,8 @@ export function HomePage() {
   const [liveActivity, setLiveActivity] = useState(null);
   const [liveWorkload, setLiveWorkload] = useState(null);
   const [streamPulse, setStreamPulse] = useState(0);  // increments on every frame; powers the live-pulse dot
+  const [selectedWorkId, setSelectedWorkId] = useState(null);
+  const [workSearch, setWorkSearch] = useState('');
 
   useEffect(() => {
     if (typeof EventSource === 'undefined') return undefined;
@@ -126,12 +124,12 @@ export function HomePage() {
   );
 
   const exceptionItems = Array.isArray(exceptions.data?.items) ? exceptions.data.items : [];
-  const upcomingItems = upcoming.data?.items || upcoming.data?.upcoming || [];
+  const recordItems = Array.isArray(records.data?.items) ? records.data.items : [];
+  const recordsTotal = safeMetric(records.data?.total) ?? recordItems.length;
 
   // Activity ribbon: live SSE feed wins over the initial HTTP fetch.
   const activityItems = (liveActivity?.items)
     || (Array.isArray(activity.data?.items) ? activity.data.items : []);
-  const activityHeroItems = activityItems.slice(0, 8);
 
   // Workload: live SSE wins.
   const workloadState = liveWorkload
@@ -145,6 +143,27 @@ export function HomePage() {
     inFlight,
     awaitingApproval,
   });
+  const visibleWorkItems = useMemo(
+    () => filterWorkItems(recordItems, workSearch),
+    [recordItems, workSearch],
+  );
+  const firstVisibleWorkId = visibleWorkItems[0]?.id || recordItems[0]?.id || '';
+  const selectedWorkItem = visibleWorkItems.find((item) => String(item.id || '') === String(selectedWorkId || ''))
+    || recordItems.find((item) => String(item.id || '') === String(selectedWorkId || ''))
+    || visibleWorkItems[0]
+    || recordItems[0]
+    || null;
+
+  useEffect(() => {
+    if (!firstVisibleWorkId) {
+      if (selectedWorkId) setSelectedWorkId(null);
+      return;
+    }
+    const selectedStillVisible = visibleWorkItems.some(
+      (item) => String(item.id || '') === String(selectedWorkId || ''),
+    );
+    if (!selectedStillVisible) setSelectedWorkId(firstVisibleWorkId);
+  }, [firstVisibleWorkId, selectedWorkId, visibleWorkItems]);
 
   const integrations = Array.isArray(bootstrap?.integrations) ? bootstrap.integrations : [];
   const agentLastAction = bootstrap?.dashboard_stats?.last_action_at
@@ -189,16 +208,23 @@ export function HomePage() {
 
       <${ImplementationChecklist} orgId=${orgId} navigate=${navigate} />
 
-      <${AgentActivityRibbon}
-        state=${activity}
-        items=${activityHeroItems}
-        live=${!!liveActivity}
+      <${HomeLiveConsole}
+        recordsState=${records}
+        recordsTotal=${recordsTotal}
+        workItems=${visibleWorkItems}
+        selectedItem=${selectedWorkItem}
+        selectedWorkId=${selectedWorkId}
+        onSelect=${setSelectedWorkId}
+        search=${workSearch}
+        onSearch=${setWorkSearch}
+        workTypeRows=${workTypeRows}
+        exceptionCount=${exceptionCount}
+        exceptionItems=${exceptionItems}
+        activityState=${activity}
+        activityItems=${activityItems}
+        live=${!!liveActivity || streamPulse > 0}
         navigate=${navigate}
-        variant="hero"
-        title="Live activity"
-        metaSuffix=${activityItems.length > activityHeroItems.length ? `last ${activityHeroItems.length} of ${activityItems.length}` : undefined}
-        emptyTitle="No work has moved yet."
-        emptyDescription="As Solden watches inboxes, chat approvals, ERP events, and work-type records, the live trail appears here." />
+      />
 
       <section class="cl-home-stat-strip" aria-label="Work in progress at a glance">
         <${StatTile}
@@ -232,106 +258,6 @@ export function HomePage() {
           live=${streamPulse > 0}
           onClick=${exceptionCount > 0 ? () => navigate('/exceptions') : undefined}
         />
-      </section>
-
-      <section class="cl-home-grid">
-        <div class="cl-home-panel">
-          <header class="cl-home-panel-header">
-            <h2>Exception queue</h2>
-            <button class="cl-home-link" onClick=${() => navigate('/exceptions')}>View all →</button>
-          </header>
-          ${renderPanelBody({
-            state: exceptions,
-            items: exceptionItems,
-            renderEmpty: () => html`
-              <div class="cl-home-empty">
-                <div class="cl-home-empty-title">${upcomingItems.length === 0 && inFlight === 0 ? 'No tracked work yet.' : 'Nothing waiting for judgment.'}</div>
-                <div class="cl-home-empty-sub">
-                  ${upcomingItems.length === 0 && inFlight === 0
-                    ? "Connect inbox, chat, or ERP surfaces to start tracking work automatically."
-                    : "Every tracked record is moving. The agent will surface work that needs a human decision here."}
-                </div>
-                ${upcomingItems.length === 0 && inFlight === 0 ? html`
-                  <button class="cl-home-btn cl-home-btn-secondary" onClick=${() => navigate('/connections')}>
-                    Connect a source
-                  </button>
-                ` : null}
-              </div>
-            `,
-            renderList: () => html`
-              <ul class="cl-home-list">
-                ${exceptionItems.slice(0, 8).map((row) => html`
-                  <li class="cl-home-row cl-home-row-exception" key=${row.id || row.exception_id || row.box_id}
-                    onClick=${() => navigate(exceptionTarget(row))}
-                    onKeyDown=${(event) => activateOnKey(event, () => navigate(exceptionTarget(row)))}
-                    role="button"
-                    tabindex="0">
-                    <div class="cl-home-row-main">
-                      <div class="cl-home-row-vendor">
-                        ${exceptionHeadline(row)}
-                      </div>
-                      <div class="cl-home-row-meta">
-                        ${humanizeWorkType(row.box_type)}
-                        · ${humanizeExceptionType(row.exception_type)}
-                        ${row.box_summary?.invoice_number ? html` · #${row.box_summary.invoice_number}` : null}
-                        ${row.raised_at ? html` · ${exceptionAgeDays(row.raised_at)}d stuck` : null}
-                      </div>
-                      ${row.reason || row.metadata?.suggested_action ? html`
-                        <div class="cl-home-row-suggestion">
-                          ${row.metadata?.suggested_action || row.reason}
-                        </div>
-                      ` : null}
-                    </div>
-                    <div class="cl-home-row-right">
-                      ${row.box_summary?.amount != null ? html`
-                        <div class="cl-home-row-amount">
-                          ${fmtCurrency(row.box_summary.amount, row.box_summary.currency)}
-                        </div>
-                      ` : null}
-                      <span class=${`cl-home-pill cl-home-pill-${severityTone(row.severity)}`}>
-                        ${row.severity || 'medium'}
-                      </span>
-                    </div>
-                  </li>
-                `)}
-              </ul>
-            `,
-          })}
-        </div>
-
-        <div class="cl-home-panel">
-          <header class="cl-home-panel-header">
-            <h2>Work by type</h2>
-            ${hasCapability(bootstrap, 'view_workflow_builder')
-              ? html`<button class="cl-home-link" onClick=${() => navigate('/workflows')}>Configure →</button>`
-              : null}
-          </header>
-          <ul class="cl-home-worktype-list">
-            ${workTypeRows.map((row) => html`
-              <li
-                class=${`cl-home-worktype-row ${row.path ? 'cl-home-worktype-row-clickable' : ''}`}
-                key=${row.id}
-                onClick=${() => row.path && navigate(row.path)}
-                onKeyDown=${row.path ? (event) => activateOnKey(event, () => navigate(row.path)) : undefined}
-                role=${row.path ? 'button' : undefined}
-                tabindex=${row.path ? 0 : undefined}>
-                <div class="cl-home-worktype-main">
-                  <div class="cl-home-worktype-name">${row.label}</div>
-                  <div class="cl-home-worktype-sub">${row.sub}</div>
-                </div>
-                <div class="cl-home-worktype-right">
-                  ${row.metricValue == null
-                    ? html`<span class=${`cl-home-worktype-state cl-home-worktype-state-${row.tone}`}>${row.state}</span>`
-                    : html`
-                        <span class="cl-home-worktype-count">${row.metricValue}</span>
-                        <span class="cl-home-worktype-count-label">${row.metricLabel}</span>
-                      `}
-                  ${row.detail ? html`<span class=${`cl-home-worktype-detail cl-home-worktype-detail-${row.tone}`}>${row.detail}</span>` : null}
-                </div>
-              </li>
-            `)}
-          </ul>
-        </div>
       </section>
 
       <${ApproverWorkloadStrip} state=${workloadState} navigate=${navigate} />
@@ -430,6 +356,537 @@ function StatTile({ label, value, sub, tone = 'neutral', live = false, onClick }
       ${sub ? html`<div class="cl-home-stat-sub">${sub}</div>` : null}
     </div>
   `;
+}
+
+// ─── Live work-in-progress console ───────────────────────────────
+
+function HomeLiveConsole({
+  recordsState,
+  recordsTotal,
+  workItems,
+  selectedItem,
+  selectedWorkId,
+  onSelect,
+  search,
+  onSearch,
+  workTypeRows,
+  exceptionCount,
+  exceptionItems,
+  activityState,
+  activityItems,
+  live,
+  navigate,
+}) {
+  const selectedActivity = activityForSelectedItem(activityItems, selectedItem);
+  const hasWorkItems = Array.isArray(workItems) && workItems.length > 0;
+  const totalLabel = recordsTotal === 1 ? '1 item' : `${recordsTotal || 0} items`;
+
+  return html`
+    <section class="cl-home-console" aria-label="Live work in progress">
+      <header class="cl-home-console-bar">
+        <div class="cl-home-console-title-block">
+          <span class="cl-home-console-live">
+            ${live ? html`<span class="cl-home-console-pulse" aria-hidden="true"></span>` : null}
+            ${live ? 'Context updated live' : 'Recent context'}
+          </span>
+          <h2>Work in progress</h2>
+          <p>Operational memory across inbox, chat, ERP, approvals, and agent actions.</p>
+        </div>
+        <label class="cl-home-console-search">
+          <span class="sr-only">Search work in progress</span>
+          <input
+            type="search"
+            value=${search}
+            placeholder="Search context, owners, decisions..."
+            onInput=${(event) => onSearch?.(event.target.value)}
+          />
+        </label>
+      </header>
+
+      <aside class="cl-home-console-rail" aria-label="Workspace scopes">
+        <div class="cl-home-console-section-label">Work types</div>
+        <button
+          type="button"
+          class="cl-home-console-scope is-active"
+          onClick=${() => navigate(accountsPayablePath())}>
+          <span class="cl-home-console-scope-icon">A</span>
+          <span class="cl-home-console-scope-main">All open work</span>
+          <span class="cl-home-console-scope-count">${recordsTotal || 0}</span>
+        </button>
+        ${workTypeRows.map((row) => html`
+          <button
+            type="button"
+            key=${row.id}
+            class="cl-home-console-scope"
+            onClick=${() => row.path && navigate(row.path)}>
+            <span class="cl-home-console-scope-icon">${scopeInitial(row.label)}</span>
+            <span class="cl-home-console-scope-main">${row.label}</span>
+            <span class="cl-home-console-scope-count">
+              ${row.metricValue == null ? row.state || '' : row.metricValue}
+            </span>
+          </button>
+        `)}
+
+        <div class="cl-home-console-section-label cl-home-console-views-label">Views</div>
+        <button type="button" class="cl-home-console-scope" onClick=${() => navigate('/activity')}>
+          <span class="cl-home-console-scope-icon">L</span>
+          <span class="cl-home-console-scope-main">Live context</span>
+          <span class="cl-home-console-scope-count">${activityItems.length || ''}</span>
+        </button>
+        <button type="button" class="cl-home-console-scope" onClick=${() => navigate('/exceptions')}>
+          <span class="cl-home-console-scope-icon">!</span>
+          <span class="cl-home-console-scope-main">Blocked</span>
+          <span class="cl-home-console-scope-count">${exceptionCount || ''}</span>
+        </button>
+      </aside>
+
+      <div class="cl-home-workstream">
+        <header class="cl-home-workstream-head">
+          <div>
+            <h3>Open work <span>· ${totalLabel}</span></h3>
+            <p>Sorted by time waiting in queue.</p>
+          </div>
+          <button type="button" class="cl-home-link" onClick=${() => navigate(accountsPayablePath())}>
+            View records →
+          </button>
+        </header>
+
+        ${recordsState.status === 'loading'
+          ? html`<div class="cl-home-skeleton">Loading open work…</div>`
+          : recordsState.status === 'error'
+            ? html`
+                <div class="cl-home-empty">
+                  <div class="cl-home-empty-title cl-home-empty-error">Couldn't load open work.</div>
+                  <div class="cl-home-empty-sub">${recordsState.error || 'Try again in a moment.'}</div>
+                </div>
+              `
+            : !hasWorkItems
+              ? html`
+                  <div class="cl-home-empty">
+                    <div class="cl-home-empty-title">${search ? 'No work matches that search.' : 'No open work right now.'}</div>
+                    <div class="cl-home-empty-sub">
+                      ${search
+                        ? 'Try another vendor, owner, invoice, blocker, or next step.'
+                        : 'Connected surfaces will populate this list as the agent tracks work in progress.'}
+                    </div>
+                  </div>
+                `
+              : html`
+                  <ul class="cl-home-workstream-list">
+                    ${workItems.map((item) => {
+                      const isSelected = String(item.id || '') === String(selectedWorkId || selectedItem?.id || '');
+                      return html`
+                        <li key=${item.id}>
+                          <button
+                            type="button"
+                            class=${`cl-home-workstream-row ${isSelected ? 'is-selected' : ''}`}
+                            onClick=${() => onSelect?.(item.id)}
+                            aria-pressed=${isSelected}>
+                            <span class=${`cl-home-work-dot is-${workStateTone(item.state, item)}`} aria-hidden="true"></span>
+                            <span class="cl-home-workstream-main">
+                              <span class="cl-home-workstream-title">${workItemTitle(item)}</span>
+                              <span class="cl-home-workstream-sub">${workItemSubline(item)}</span>
+                            </span>
+                            <span class="cl-home-workstream-side">
+                              <span class=${`cl-home-state-pill is-${workStateTone(item.state, item)}`}>
+                                ${workStateLabel(item.state)}
+                              </span>
+                              <span class="cl-home-owner-avatar" title=${workOwnerTitle(item)}>
+                                ${ownerInitials(item)}
+                              </span>
+                            </span>
+                          </button>
+                        </li>
+                      `;
+                    })}
+                  </ul>
+                `}
+      </div>
+
+      <aside class="cl-home-context-panel" aria-label="Selected work context">
+        ${selectedItem
+          ? html`
+              <header class="cl-home-context-head">
+                <div>
+                  <h3>${workItemTitle(selectedItem)}</h3>
+                  <p>${humanizeWorkType('ap_item')} · ${workItemSurface(selectedItem)}</p>
+                </div>
+                <span class=${`cl-home-context-live is-${workStateTone(selectedItem.state, selectedItem)}`}>
+                  ${workStateLabel(selectedItem.state)}
+                </span>
+              </header>
+
+              <div class="cl-home-context-section-label">Operational context</div>
+              <dl class="cl-home-context-list">
+                <${ContextRow} label="Status" value=${workStateLabel(selectedItem.state)} tone=${workStateTone(selectedItem.state, selectedItem)} />
+                <${ContextRow} label="Owner" value=${workOwnerLabel(selectedItem)} strong=${true} />
+                <${ContextRow} label="Blocker" value=${workBlockerLabel(selectedItem) || 'None blocking'} muted=${!workBlockerLabel(selectedItem)} />
+                <${ContextRow} label="Next" value=${workNextStepLabel(selectedItem)} strong=${true} />
+                <${ContextRow} label="Evidence" value=${workEvidenceLabel(selectedItem)} />
+                <${ContextRow} label="Changed" value=${workChangedLabel(selectedItem)} />
+                <${ContextRow} label="ERP" value=${erpStatusLabel(selectedItem)} />
+              </dl>
+
+              ${fieldReviewSummary(selectedItem) ? html`
+                <div class="cl-home-context-callout">
+                  <div class="cl-home-context-callout-label">Field review</div>
+                  <div>${fieldReviewSummary(selectedItem)}</div>
+                </div>
+              ` : null}
+
+              <div class="cl-home-context-actions">
+                <button
+                  type="button"
+                  class="cl-home-btn cl-home-btn-primary"
+                  onClick=${() => navigate(accountPayableRecordPath(selectedItem.id))}>
+                  Open record
+                </button>
+                ${exceptionItems.some((row) => String(row.box_id || '') === String(selectedItem.id || '')) ? html`
+                  <button type="button" class="cl-home-btn cl-home-btn-secondary" onClick=${() => navigate('/exceptions')}>
+                    Review blocker
+                  </button>
+                ` : null}
+              </div>
+
+              <section class="cl-home-context-activity" aria-label="Recent activity for selected work">
+                <header>
+                  <span>Recent activity</span>
+                  <button type="button" class="cl-home-link" onClick=${() => navigate('/activity')}>Full stream →</button>
+                </header>
+                ${renderContextActivity({
+                  state: activityState,
+                  items: selectedActivity,
+                  selectedItem,
+                  navigate,
+                })}
+              </section>
+            `
+          : html`
+              <div class="cl-home-empty cl-home-context-empty">
+                <div class="cl-home-empty-title">Select a work item.</div>
+                <div class="cl-home-empty-sub">The owner, blocker, next step, evidence, and recent decisions appear here.</div>
+              </div>
+            `}
+      </aside>
+    </section>
+  `;
+}
+
+function ContextRow({ label, value, strong = false, muted = false, tone = '' }) {
+  return html`
+    <div class="cl-home-context-row">
+      <dt>${label}</dt>
+      <dd class=${`${strong ? 'is-strong' : ''} ${muted ? 'is-muted' : ''} ${tone ? `is-${tone}` : ''}`}>
+        ${value || '—'}
+      </dd>
+    </div>
+  `;
+}
+
+function renderContextActivity({ state, items, selectedItem, navigate }) {
+  if ((!items || items.length === 0) && state?.status === 'loading') {
+    return html`<div class="cl-home-skeleton">Loading activity…</div>`;
+  }
+  if ((!items || items.length === 0) && state?.status === 'error') {
+    return html`
+      <div class="cl-home-empty cl-home-context-activity-empty">
+        <div class="cl-home-empty-title cl-home-empty-error">Couldn't load activity.</div>
+        <div class="cl-home-empty-sub">${state?.error || 'Try again in a moment.'}</div>
+      </div>
+    `;
+  }
+  if (!items || items.length === 0) {
+    return html`
+      <div class="cl-home-empty cl-home-context-activity-empty">
+        <div class="cl-home-empty-title">No recent changes for this item.</div>
+        <div class="cl-home-empty-sub">New decisions, messages, and ERP changes will attach here.</div>
+      </div>
+    `;
+  }
+  return html`
+    <ol class="cl-home-context-timeline">
+      ${items.slice(0, 4).map((row) => {
+        const target = activityTarget(row) || (selectedItem?.id ? accountPayableRecordPath(selectedItem.id) : '');
+        return html`
+          <li key=${row.id || `${row.ts}-${row.event_type}`}>
+            <button
+              type="button"
+              class="cl-home-context-event"
+              onClick=${() => target && navigate(target)}>
+              <span class=${`cl-home-context-event-dot is-${row.tone || 'info'}`} aria-hidden="true"></span>
+              <span class="cl-home-context-event-main">
+                <span class="cl-home-context-event-meta">
+                  ${row.ts ? fmtRelative(row.ts) : 'Recently'}
+                  ${row.surface ? html` · ${surfaceLabel(row.surface)}` : null}
+                </span>
+                <span class="cl-home-context-event-title">${row.action || 'Updated context'}</span>
+                ${row.subject ? html`<span class="cl-home-context-event-sub">${row.subject}</span>` : null}
+              </span>
+            </button>
+          </li>
+        `;
+      })}
+    </ol>
+  `;
+}
+
+const HOME_STATE_LABELS = {
+  approved: 'Approved',
+  closed: 'Closed',
+  failed_post: 'Failed post',
+  needs_approval: 'Needs approval',
+  needs_info: 'Needs info',
+  needs_second_approval: 'Second approval',
+  pending_approval: 'Needs approval',
+  posted_to_erp: 'Posted',
+  ready_to_post: 'Ready to post',
+  received: 'Received',
+  rejected: 'Rejected',
+  reversed: 'Reversed',
+  snoozed: 'Snoozed',
+  validated: 'Validated',
+};
+
+const HOME_NEXT_STEP_LABELS = {
+  approve_or_reject: 'Awaiting approver',
+  budget_decision: 'Budget decision',
+  escalate_approval: 'Escalate approval',
+  needs_non_invoice_followup: 'Follow up',
+  none: 'No open step',
+  post_to_erp: 'Post to ERP',
+  request_info: 'Ask for context',
+  resolve_entity_route: 'Choose entity',
+  resolve_non_invoice: 'Classify document',
+  resubmit: 'Review resubmission',
+  retry_post: 'Recover ERP post',
+  review: 'Review record',
+  review_exception: 'Review exception',
+  review_fields: 'Check fields',
+  review_finance_effects: 'Review accounting',
+  route_for_approval: 'Route approval',
+};
+
+const HOME_ERP_STATUS_LABELS = {
+  connected: 'Connected',
+  failed: 'Failed',
+  not_connected: 'No ERP',
+  posted: 'Posted',
+  ready: 'Ready',
+};
+
+function filterWorkItems(items, query) {
+  const rows = Array.isArray(items) ? items : [];
+  const q = String(query || '').trim().toLowerCase();
+  if (!q) return rows;
+  return rows.filter((item) => [
+    item?.vendor_name,
+    item?.vendor,
+    item?.invoice_number,
+    item?.po_number,
+    item?.owner_email,
+    item?.owner,
+    item?.assigned_to_email,
+    workStateLabel(item?.state),
+    workNextStepLabel(item),
+    workBlockerLabel(item),
+    workEvidenceLabel(item),
+  ].some((value) => String(value || '').toLowerCase().includes(q)));
+}
+
+function workItemTitle(item = {}) {
+  return String(item.vendor_name || item.vendor || item.sender || 'Unknown vendor').trim();
+}
+
+function workItemSubline(item = {}) {
+  const amount = item.amount != null ? fmtCurrency(item.amount, item.currency) : '';
+  const parts = [
+    documentLabel(item),
+    amount,
+    workBlockerLabel(item) || workNextStepLabel(item),
+    queueAgeLabel(item),
+  ].filter(Boolean);
+  return parts.join(' · ');
+}
+
+function documentLabel(item = {}) {
+  const reference = String(item.invoice_number || item.reference || item.po_number || '').trim();
+  if (reference) return `Invoice ${reference}`;
+  const type = String(item.document_type || '').trim();
+  return type ? humanizeToken(type) : 'Work item';
+}
+
+function workStateLabel(state) {
+  const token = String(state || '').trim().toLowerCase();
+  return HOME_STATE_LABELS[token] || humanizeToken(token || 'unknown');
+}
+
+function workStateTone(state, item = {}) {
+  const token = String(state || '').trim().toLowerCase();
+  if (workBlockerLabel(item) || ['failed_post', 'rejected', 'reversed'].includes(token)) return 'blocked';
+  if (['needs_approval', 'needs_second_approval', 'pending_approval', 'needs_info'].includes(token)) return 'pending';
+  if (['approved', 'ready_to_post', 'posted_to_erp', 'closed'].includes(token)) return 'live';
+  return 'neutral';
+}
+
+function compactPersonLabel(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (!raw.includes('@')) return raw;
+  return raw.split('@')[0].replace(/[._-]+/g, ' ').trim() || raw;
+}
+
+function workOwnerLabel(item = {}) {
+  const pending = Array.isArray(item.approval_pending_assignees) ? item.approval_pending_assignees : [];
+  const owner = item.owner_email || item.owner || item.assigned_to_email || pending[0] || '';
+  return compactPersonLabel(owner) || 'Unassigned';
+}
+
+function workOwnerTitle(item = {}) {
+  const pending = Array.isArray(item.approval_pending_assignees) ? item.approval_pending_assignees : [];
+  return String(item.owner_email || item.owner || item.assigned_to_email || pending[0] || 'Unassigned');
+}
+
+function ownerInitials(item = {}) {
+  const label = workOwnerLabel(item);
+  if (!label || label === 'Unassigned') return '—';
+  const parts = label.split(/\s+/).filter(Boolean);
+  const letters = parts.length > 1
+    ? `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`
+    : label.slice(0, 2);
+  return letters.toUpperCase();
+}
+
+function workNextStepLabel(item = {}) {
+  const action = String(item.next_action || '').trim().toLowerCase();
+  if (HOME_NEXT_STEP_LABELS[action]) return HOME_NEXT_STEP_LABELS[action];
+  if (item.workflow_paused_reason) return 'Resolve blocker';
+  const state = String(item.state || '').trim().toLowerCase();
+  if (state === 'needs_info') return 'Ask for context';
+  if (state === 'failed_post') return 'Recover ERP post';
+  if (state === 'needs_approval' || state === 'pending_approval') return 'Awaiting approver';
+  if (state === 'ready_to_post' || state === 'approved') return 'Post to ERP';
+  if (state === 'posted_to_erp' || state === 'closed') return 'No open step';
+  return 'Inspect record';
+}
+
+function workBlockerLabel(item = {}) {
+  const fieldSummary = fieldReviewSummary(item);
+  if (fieldSummary) return fieldSummary;
+  const paused = String(item.workflow_paused_reason || '').trim();
+  if (paused) return humanizeSentence(paused);
+  const exception = String(item.exception_code || '').trim();
+  if (exception) return humanizeToken(exception);
+  if (item.budget_requires_decision) return 'Budget decision required';
+  if (item.requires_extraction_review) return 'Extraction review required';
+  if (item.non_invoice_review_required) return 'Non-invoice review required';
+  return '';
+}
+
+function fieldReviewSummary(item = {}) {
+  const blockers = Array.isArray(item.field_review_blockers) ? item.field_review_blockers : [];
+  if (!blockers.length && !item.requires_field_review) return '';
+  const fields = blockers
+    .map((blocker) => blocker?.field || blocker?.field_name || blocker?.name || blocker?.label)
+    .map((field) => humanizeToken(field))
+    .filter(Boolean);
+  const uniqueFields = [...new Set(fields)];
+  if (uniqueFields.length) {
+    const shown = uniqueFields.slice(0, 3);
+    const extra = uniqueFields.length - shown.length;
+    return `Field review: ${shown.join(', ')}${extra > 0 ? ` +${extra}` : ''}`;
+  }
+  return 'Field review required';
+}
+
+function workEvidenceLabel(item = {}) {
+  const count = safeMetric(item.source_count);
+  const source = workItemSurface(item);
+  if (count && count > 0) {
+    return `${count} source${count === 1 ? '' : 's'} linked · ${source}`;
+  }
+  if (item.primary_source || item.thread_id || item.message_id) return `Source linked · ${source}`;
+  return 'Evidence not linked yet';
+}
+
+function workItemSurface(item = {}) {
+  const source = item.primary_source || {};
+  return surfaceLabel(source.source_type || source.type || item.source_type || item.surface || item.erp_type || 'workspace');
+}
+
+function workChangedLabel(item = {}) {
+  const stamp = item.updated_at || item.queue_entered_at || item.received_at || item.created_at;
+  return stamp ? fmtRelative(stamp) : 'No timestamp';
+}
+
+function queueAgeLabel(item = {}) {
+  const minutes = Number(item.queue_age_minutes || item.approval_wait_minutes || 0);
+  if (!Number.isFinite(minutes) || minutes <= 0) return '';
+  if (minutes < 60) return `${Math.round(minutes)}m waiting`;
+  if (minutes < 1440) return `${Math.round(minutes / 60)}h waiting`;
+  return `${Math.round(minutes / 1440)}d waiting`;
+}
+
+function erpStatusLabel(item = {}) {
+  const status = String(item.erp_status || '').trim().toLowerCase();
+  return HOME_ERP_STATUS_LABELS[status] || humanizeToken(status || 'Unknown');
+}
+
+function surfaceLabel(value) {
+  const token = String(value || '').trim().toLowerCase();
+  if (!token) return 'Workspace';
+  if (token.includes('gmail')) return 'Gmail';
+  if (token.includes('slack')) return 'Slack';
+  if (token.includes('teams')) return 'Teams';
+  if (token.includes('netsuite')) return 'NetSuite';
+  if (token.includes('sap')) return 'SAP';
+  if (token.includes('sage_intacct') || token.includes('sage-intacct')) return 'Sage Intacct';
+  if (token.includes('sage')) return 'Sage';
+  if (token.includes('erp')) return 'ERP';
+  if (token === 'agent') return 'Agent';
+  return humanizeToken(token);
+}
+
+function activityForSelectedItem(items, selectedItem) {
+  const rows = Array.isArray(items) ? items : [];
+  const selectedId = String(selectedItem?.id || '').trim();
+  if (!selectedId) return rows.slice(0, 4);
+  const matched = rows.filter((row) => [
+    row?.box_id,
+    row?.record_id,
+    row?.ap_item_id,
+    row?.subject_id,
+  ].some((value) => String(value || '').trim() === selectedId));
+  return (matched.length ? matched : rows).slice(0, 4);
+}
+
+function activityTarget(row = {}) {
+  const explicitPath = String(row.record_path || row.path || '').trim();
+  if (explicitPath.startsWith('/')) return explicitPath;
+  const boxType = String(row.box_type || '').trim().toLowerCase();
+  if ((!boxType || boxType === 'ap_item') && row.box_id) {
+    return accountPayableRecordPath(row.box_id);
+  }
+  return '';
+}
+
+function scopeInitial(label) {
+  const raw = String(label || '').trim();
+  return raw ? raw[0].toUpperCase() : '•';
+}
+
+function humanizeToken(value) {
+  const s = String(value || '').trim();
+  if (!s) return '';
+  return s
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function humanizeSentence(value) {
+  const s = humanizeToken(value);
+  if (!s) return '';
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 
