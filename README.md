@@ -15,6 +15,8 @@ Use these documents as source of truth:
 4. [docs/V1_BACKEND_CONTRACTS.md](docs/V1_BACKEND_CONTRACTS.md)
 5. [docs/API_REFERENCE.md](docs/API_REFERENCE.md)
 6. [docs/WEDGE_QUALITY_SCORECARD.md](docs/WEDGE_QUALITY_SCORECARD.md)
+7. [docs/OPERATIONAL_MEMORY_MAP_SOURCE_TO_PAY.md](docs/OPERATIONAL_MEMORY_MAP_SOURCE_TO_PAY.md)
+8. [docs/OPERATIONAL_MEMORY_OBJECT.md](docs/OPERATIONAL_MEMORY_OBJECT.md)
 
 If any document conflicts with [PLAN.md](PLAN.md), `PLAN.md` wins.
 
@@ -53,6 +55,9 @@ For pilot hardening and wedge-truth evaluation, use [docs/WEDGE_QUALITY_SCORECAR
 14. Operator-facing timestamps are standardized to `Europe/London`; backend storage/audit timestamps remain UTC.
 
 Solden is not a generic company brain, a knowledge base, a generic automation builder, or a dashboard-first AP tool. It starts with one painful finance workflow, then expands across back-office work where owner, next step, context, blocker, proof, and audit otherwise live in human memory.
+
+Use [docs/OPERATIONAL_MEMORY_MAP_SOURCE_TO_PAY.md](docs/OPERATIONAL_MEMORY_MAP_SOURCE_TO_PAY.md) to guide design-partner discovery: AP is the built wedge, Source-to-Pay is the process context, and operational memory is the product being validated.
+Use [docs/OPERATIONAL_MEMORY_OBJECT.md](docs/OPERATIONAL_MEMORY_OBJECT.md) for the object model: the smallest durable unit is a work item in flight; the decision ledger is what makes its execution state true operational memory.
 
 ## AP v1 Workflow
 

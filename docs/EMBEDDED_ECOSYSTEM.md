@@ -49,8 +49,10 @@ Implementation by ERP:
 
 1. NetSuite: SuiteApp panel renders Solden operational memory inside the ERP record context.
 2. SAP: Fiori extension renders Solden operational memory inside the ERP record context.
-3. Xero: public APIs do not provide an equivalent in-record embedded panel, so posted ACCPAY invoices carry a `Url` back to the Solden AP record plus `solden:` workflow markers in `Reference` when tenant field mappings request workflow context.
-4. QuickBooks Online: public APIs do not provide an equivalent in-bill embedded panel, so posted Bills carry the Solden AP record link in `PrivateNote` while configured QBO `CustomField` `DefinitionId`s remain tenant-controlled.
+3. Sage Intacct: Platform Services hosted page renders Solden operational memory for an APBILL record context.
+4. Xero: public APIs do not provide an equivalent in-record embedded panel, so posted ACCPAY invoices carry a `Url` back to the Solden AP record plus `solden:` workflow markers in `Reference` when tenant field mappings request workflow context.
+5. QuickBooks Online: public APIs do not provide an equivalent in-bill embedded panel, so posted Bills carry the Solden AP record link in `PrivateNote` while configured QBO `CustomField` `DefinitionId`s remain tenant-controlled.
+6. Sage Business Cloud Accounting: OAuth REST connector with purchase-invoice posting, status reads, and Solden links/notes. It is not represented as an in-product embedded panel.
 
 ### 4. Admin/Ops surfaces (configuration context)
 
@@ -117,3 +119,5 @@ All new skills must inherit:
 4. [V1_BACKEND_CONTRACTS.md](V1_BACKEND_CONTRACTS.md)
 5. [API_REFERENCE.md](API_REFERENCE.md)
 6. [AGENT_ARCHITECTURE.md](AGENT_ARCHITECTURE.md)
+7. [OPERATIONAL_MEMORY_MAP_SOURCE_TO_PAY.md](OPERATIONAL_MEMORY_MAP_SOURCE_TO_PAY.md)
+8. [OPERATIONAL_MEMORY_OBJECT.md](OPERATIONAL_MEMORY_OBJECT.md)

@@ -1885,7 +1885,42 @@ class FinanceAgentRuntime:
                 or str(payload.get("idempotency_key") or "").strip()
             ),
         )
-        return await self.execute_skill_request(request, action=action)
+        response = await self.execute_skill_request(request, action=action)
+        self._commit_intent_memory_event(
+            intent=intent,
+            input_payload=payload,
+            response=response,
+        )
+        return response
+
+    def _commit_intent_memory_event(
+        self,
+        *,
+        intent: str,
+        input_payload: Dict[str, Any],
+        response: Dict[str, Any],
+    ) -> None:
+        """Best-effort operational-memory capture for runtime intents."""
+        try:
+            from solden.services.memory_events import commit_runtime_memory_event
+
+            row = commit_runtime_memory_event(
+                self.db,
+                organization_id=self.organization_id,
+                intent=intent,
+                input_payload=input_payload,
+                response=response,
+                actor_type=self.actor_type,
+                actor_id=self.actor_email or self.actor_id,
+            )
+            if isinstance(row, dict) and row.get("id"):
+                response["memory_event_id"] = row.get("id")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Operational memory capture failed for intent=%s: %s",
+                intent,
+                exc,
+            )
 
     def refresh_invoice_record_from_extraction(
         self,

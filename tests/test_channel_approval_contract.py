@@ -684,6 +684,12 @@ def test_slack_and_teams_card_builders_include_request_info_action():
             "Request info: returns the invoice to needs-info.",
             "Reject: records the rejection.",
         ],
+        operational_memory={
+            "owner_label": "AP Manager",
+            "waiting_on": "controller@example.com",
+            "waiting_reason": "PO match required",
+            "next_step": "Controller should approve, reject, or request info.",
+        },
     )
     teams_content = teams_card["attachments"][0]["content"]
     actions = teams_card["attachments"][0]["content"]["actions"]
@@ -698,6 +704,8 @@ def test_slack_and_teams_card_builders_include_request_info_action():
     assert "What happens next" in body_text
     assert "Raised by Solden" in body_text
     assert "Open in Gmail" in body_text
+    assert "Current work memory" in body_text
+    assert "controller@example.com" in body_text
 
     teams_budget_card = TeamsAPIClient.build_invoice_budget_card(
         email_id="thread-123",
@@ -731,7 +739,18 @@ def test_invoice_workflow_slack_blocks_include_request_info_for_standard_and_bud
         confidence=0.98,
     )
 
-    standard_blocks = svc._build_approval_blocks(invoice, extra_context={"budget": {"status": "healthy", "requires_decision": False}})
+    standard_blocks = svc._build_approval_blocks(
+        invoice,
+        extra_context={
+            "budget": {"status": "healthy", "requires_decision": False},
+            "operational_memory": {
+                "owner_label": "AP Manager",
+                "waiting_on": "controller@example.com",
+                "waiting_reason": "PO match required",
+                "next_step": "Controller should approve, reject, or request info.",
+            },
+        },
+    )
     standard_actions = next(block for block in standard_blocks if block.get("type") == "actions")
     standard_ids = [el.get("action_id") for el in (standard_actions.get("elements") or []) if isinstance(el, dict)]
     assert any(str(action_id).startswith("request_info_") for action_id in standard_ids)
@@ -750,6 +769,8 @@ def test_invoice_workflow_slack_blocks_include_request_info_for_standard_and_bud
     assert "Why this needs your decision" in standard_text
     assert "Recommended decision" in standard_text
     assert "What happens next" in standard_text
+    assert "Current work memory" in standard_text
+    assert "controller@example.com" in standard_text
     assert "Raised by Solden" in standard_context_text
     assert "Open in Gmail" in standard_context_text
 

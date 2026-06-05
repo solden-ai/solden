@@ -11,8 +11,8 @@
         <!-- Header — brand + state badge -->
         <HBox justifyContent="SpaceBetween" alignItems="Center" class="cl-header">
             <HBox alignItems="Center">
-                <core:Icon src="sap-icon://workflow-tasks" color="#00D67E" size="1.25rem" class="sapUiTinyMarginEnd"/>
-                <Title text="Clearledgr" level="H3"/>
+                <core:Icon src="sap-icon://workflow-tasks" color="#18BFB0" size="1.25rem" class="sapUiTinyMarginEnd"/>
+                <Title text="Solden" level="H3"/>
             </HBox>
             <ObjectStatus
                 text="{= ${box>/state} ? ${box>/state}.replace(/_/g, ' ') : 'loading…'}"
@@ -41,7 +41,7 @@
         <Panel visible="{box>/_empty}" expandable="false" class="cl-section cl-empty">
             <VBox alignItems="Center" class="sapUiMediumMargin">
                 <core:Icon src="sap-icon://document" size="2rem" color="#6B7280"/>
-                <Text text="This supplier invoice was not processed through Clearledgr." class="sapUiSmallMarginTop"/>
+                <Text text="This supplier invoice was not processed through Solden." class="sapUiSmallMarginTop"/>
             </VBox>
         </Panel>
 
@@ -67,6 +67,50 @@
                 <Text text="{box>/summary/due_date}" class="cl-summary-value"/>
             </VBox>
         </f:GridContainer>
+
+        <!-- Operational memory -->
+        <Panel
+            visible="{= !${box>/_loading} &amp;&amp; !${box>/_empty} &amp;&amp; !${box>/_error} &amp;&amp; !!${box>/memory}}"
+            headerText="Current work"
+            expandable="false"
+            class="cl-section cl-memory">
+            <VBox>
+                <l:Grid
+                    defaultSpan="XL6 L6 M6 S12"
+                    hSpacing="1"
+                    vSpacing="0"
+                    class="cl-memory-grid">
+                    <VBox class="cl-memory-cell">
+                        <Label text="Owner" class="cl-memory-label"/>
+                        <Text text="{box>/memory/_ownerLabel}" class="cl-memory-value"/>
+                    </VBox>
+                    <VBox class="cl-memory-cell">
+                        <Label text="Waiting on" class="cl-memory-label"/>
+                        <Text text="{box>/memory/_waitingOn}" class="cl-memory-value"/>
+                    </VBox>
+                    <VBox class="cl-memory-cell cl-memory-wide">
+                        <Label text="Why" class="cl-memory-label"/>
+                        <Text text="{box>/memory/_waitingReason}" wrapping="true" class="cl-memory-value"/>
+                    </VBox>
+                    <VBox class="cl-memory-cell cl-memory-wide">
+                        <Label text="Next" class="cl-memory-label"/>
+                        <Text text="{box>/memory/_nextStep}" wrapping="true" class="cl-memory-value"/>
+                    </VBox>
+                </l:Grid>
+                <List
+                    visible="{box>/memory/_hasNarrative}"
+                    items="{box>/memory/_narrative}"
+                    showSeparators="None"
+                    class="cl-memory-narrative">
+                    <CustomListItem>
+                        <HBox class="cl-memory-line" alignItems="Center">
+                            <core:Icon src="sap-icon://process" color="#18BFB0" size="0.875rem" class="sapUiTinyMarginEnd"/>
+                            <Text text="{box>text}" wrapping="true"/>
+                        </HBox>
+                    </CustomListItem>
+                </List>
+            </VBox>
+        </Panel>
 
         <!-- Exceptions -->
         <Panel
@@ -122,9 +166,9 @@
                 press=".onRejectPress"/>
         </HBox>
 
-        <!-- Footer — deep link to Clearledgr app -->
+        <!-- Footer — deep link to Solden app -->
         <HBox justifyContent="Center" class="cl-footer">
-            <Link text="Open in Clearledgr →" press=".onOpenInClearledgrPress"/>
+            <Link text="Open in Solden →" press=".onOpenInClearledgrPress"/>
         </HBox>
 
     </Page>

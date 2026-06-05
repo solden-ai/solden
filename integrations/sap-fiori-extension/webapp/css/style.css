@@ -1,5 +1,5 @@
 /* Solden — Fiori panel custom styling.
-   Brand: mint #00D67E + navy #0A1628. We lean on the Horizon theme for
+   Brand: teal #18BFB0 + navy #001137. We lean on the Horizon theme for
    most chrome and only override to surface the brand tokens — too much
    custom CSS in a Fiori app smells like "this isn't really UI5". */
 
@@ -40,6 +40,39 @@
 .cl-summary-value {
     font-weight: 500;
     color: var(--sapTextColor, #0A1628);
+}
+
+.cl-memory .sapMPanelContent {
+    padding-top: 0.25rem;
+}
+.cl-memory-grid {
+    width: 100%;
+}
+.cl-memory-cell {
+    padding: 0.45rem 0.5rem;
+    border-bottom: 1px solid var(--sapList_BorderColor, #E5E7EB);
+}
+.cl-memory-wide {
+    min-height: 3.25rem;
+}
+.cl-memory-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--sapContent_LabelColor, #6B7280);
+    font-weight: 500;
+}
+.cl-memory-value {
+    color: var(--sapTextColor, #0A1628);
+    font-weight: 500;
+}
+.cl-memory-narrative {
+    margin-top: 0.5rem;
+    background: transparent;
+}
+.cl-memory-line {
+    padding: 0.35rem 0.5rem;
+    width: 100%;
 }
 
 .cl-exception-list {

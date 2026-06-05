@@ -626,13 +626,17 @@ This matrix prevents contradictions across strategy, backlog, and assessment doc
 | `PLAN.md` | Doctrine + contracts + launch spec | Product doctrine, AP v1 release taxonomy, channel/ERP parity, GA launch gates | Point-in-time implementation status, backlog sequencing | Product/engineering doctrine change, launch-gate changes |
 | `TODO_BACKLOG.md` | Execution backlog | Work sequencing, ownership, implementation streams, release buckets | Product doctrine, launch definitions | Backlog grooming / implementation progress |
 | `VISION.md` | Product direction framing | Long-range positioning and runtime expansion direction | Canonical launch gates or release taxonomy | Strategy updates |
+| `docs/OPERATIONAL_MEMORY_OBJECT.md` | Product object doctrine | Operational-memory unit model, execution state, decision-ledger concept | AP v1 GA launch gates, connector parity, implementation sequencing | Product model updates, runtime projection changes |
+| `docs/OPERATIONAL_MEMORY_MAP_SOURCE_TO_PAY.md` | Product-discovery map | Design-partner discovery, Source-to-Pay learning workflow, operational-memory validation outcomes | AP v1 GA launch gates, connector parity, production release commitments | Design-partner workflow evidence, new measured outcomes |
 | `docs/GA_LAUNCH_READINESS_TRACKER.md` | Point-in-time readiness report | Current launch-readiness findings and evidence checklist status | Canonical product doctrine or future release commitments | New readiness audit run |
 
 ### 10.2 Required cross-doc consistency rules
 1. `PLAN.md` defines release terminology (`pilot`, `GA`, `launch`).
 2. `TODO_BACKLOG.md` must not redefine launch doctrine; it maps work to the doctrine in `PLAN.md`.
 3. `VISION.md` may describe future direction and expansion, but must not override `PLAN.md` contracts.
-4. `docs/GA_LAUNCH_READINESS_TRACKER.md` must be treated as a dated report and cite the `PLAN.md` version/assumptions it assessed.
+4. `docs/OPERATIONAL_MEMORY_OBJECT.md` defines the product object model but must not override shipped AP v1 release gates.
+5. `docs/OPERATIONAL_MEMORY_MAP_SOURCE_TO_PAY.md` guides design-partner learning and must not be read as a commitment to build a full Source-to-Pay suite before AP proof.
+6. `docs/GA_LAUNCH_READINESS_TRACKER.md` must be treated as a dated report and cite the `PLAN.md` version/assumptions it assessed.
 
 ### 10.3 Current cross-doc notes (as of 2026-02-25)
 1. `docs/GA_LAUNCH_READINESS_TRACKER.md` is a point-in-time readiness assessment and must be interpreted against this `PLAN.md` revision.

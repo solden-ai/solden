@@ -30,6 +30,52 @@ def _po_id(po: Dict[str, Any]) -> str:
     return str(po.get("po_id") or po.get("id") or "")
 
 
+def _memory_from_box(po: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    memory = po.get("operational_memory") or po.get("memory")
+    return memory if isinstance(memory, dict) and memory else None
+
+
+def _memory_lines(memory: Optional[Dict[str, Any]]) -> List[str]:
+    if not isinstance(memory, dict) or not memory:
+        return []
+    execution_state = memory.get("execution_state")
+    execution_state = execution_state if isinstance(execution_state, dict) else {}
+    values = [
+        ("Owner", memory.get("owner_label") or execution_state.get("owner_label")),
+        ("Waiting on", memory.get("waiting_on") or execution_state.get("waiting_on")),
+        ("Why", memory.get("waiting_reason") or execution_state.get("waiting_reason")),
+        ("Next", memory.get("next_step") or execution_state.get("next_action")),
+    ]
+    return [
+        f"*{label}:* {str(value).strip()}"
+        for label, value in values
+        if str(value or "").strip()
+    ]
+
+
+def _attach_po_memory(po: Dict[str, Any], organization_id: str) -> Dict[str, Any]:
+    if _memory_from_box(po):
+        return dict(po)
+    po_id = _po_id(po)
+    if not po_id:
+        return dict(po)
+    try:
+        from solden.core.database import get_db
+        from solden.services.operational_memory import build_box_operational_memory_record
+        memory = build_box_operational_memory_record(
+            db=get_db(),
+            box_type="purchase_order",
+            box_id=po_id,
+            item=po,
+        )
+    except Exception as exc:
+        logger.debug("PO operational memory unavailable for %s/%s: %s", organization_id, po_id, exc)
+        return dict(po)
+    out = dict(po)
+    out["operational_memory"] = memory
+    return out
+
+
 def build_po_approval_blocks(po: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Slack Block Kit card for a PO awaiting approval.
 
@@ -56,7 +102,7 @@ def build_po_approval_blocks(po: Dict[str, Any]) -> List[Dict[str, Any]]:
             btn["style"] = style
         return btn
 
-    return [
+    blocks = [
         {"type": "header", "text": {"type": "plain_text", "text": f"PO approval: {po_number}"}},
         {
             "type": "section",
@@ -67,6 +113,14 @@ def build_po_approval_blocks(po: Dict[str, Any]) -> List[Dict[str, Any]]:
                 {"type": "mrkdwn", "text": f"*Line items:*\n{line_count}"},
             ],
         },
+    ]
+    memory_lines = _memory_lines(_memory_from_box(po))
+    if memory_lines:
+        blocks.append({
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": "*Current work memory:*\n" + "\n".join(memory_lines[:4])},
+        })
+    blocks.append(
         {
             "type": "actions",
             "block_id": f"po_decision_{po_id}",
@@ -74,8 +128,9 @@ def build_po_approval_blocks(po: Dict[str, Any]) -> List[Dict[str, Any]]:
                 _btn("Approve", "approve", style="primary"),
                 _btn("Reject", "reject", style="danger"),
             ],
-        },
-    ]
+        }
+    )
+    return blocks
 
 
 def build_po_teams_card(po: Dict[str, Any]) -> Dict[str, Any]:
@@ -98,18 +153,30 @@ def build_po_teams_card(po: Dict[str, Any]) -> Dict[str, Any]:
             "data": {"box_type": "purchase_order", "po_id": po_id, "decision": decision},
         }
 
+    body = [
+        {"type": "TextBlock", "size": "Large", "weight": "Bolder",
+         "text": f"PO approval: {po_number}"},
+        {"type": "FactSet", "facts": [
+            {"title": "Vendor", "value": vendor},
+            {"title": "Amount", "value": f"{currency} {amount:,.2f}".strip()},
+            {"title": "PO #", "value": po_number},
+        ]},
+    ]
+    memory_lines = [
+        line.replace("*", "")
+        for line in _memory_lines(_memory_from_box(po))
+    ]
+    if memory_lines:
+        body.append({"type": "TextBlock", "wrap": True, "weight": "Bolder", "text": "Current work memory"})
+        body.extend(
+            {"type": "TextBlock", "wrap": True, "spacing": "None", "text": line}
+            for line in memory_lines[:4]
+        )
+
     return {
         "type": "AdaptiveCard",
         "version": "1.4",
-        "body": [
-            {"type": "TextBlock", "size": "Large", "weight": "Bolder",
-             "text": f"PO approval: {po_number}"},
-            {"type": "FactSet", "facts": [
-                {"title": "Vendor", "value": vendor},
-                {"title": "Amount", "value": f"{currency} {amount:,.2f}".strip()},
-                {"title": "PO #", "value": po_number},
-            ]},
-        ],
+        "body": body,
         "actions": [_action("Approve", "approve"), _action("Reject", "reject")],
     }
 
@@ -128,6 +195,7 @@ async def send_po_approval(
         return None
     from solden.services.slack_notifications import _post_slack_blocks
 
+    po = _attach_po_memory(po, organization_id)
     blocks = build_po_approval_blocks(po)
     vendor = str(po.get("vendor_name") or "a vendor")
     text = f"Purchase order {po.get('po_number') or _po_id(po)} from {vendor} needs approval"

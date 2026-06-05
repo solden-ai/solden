@@ -54,6 +54,41 @@ def test_card_has_decision_buttons_with_box_type_value():
     assert val["box_type"] == "purchase_order" and val["decision"] == "approve"
 
 
+def test_cards_include_operational_memory_when_present():
+    memory = {
+        "owner_label": "Procurement",
+        "waiting_on": "Operations Director",
+        "waiting_reason": "Budget reallocation required",
+        "next_step": "Operations Director should approve or reject.",
+    }
+    po = {
+        "po_id": "PO-memory-1",
+        "po_number": "PO-memory-1",
+        "vendor_name": "Acme",
+        "total_amount": 1200.0,
+        "currency": "GBP",
+        "operational_memory": memory,
+    }
+
+    slack_text = " ".join(
+        str(block.get("text", {}).get("text") or "")
+        for block in procurement_chat.build_po_approval_blocks(po)
+        if isinstance(block.get("text"), dict)
+    )
+    assert "Current work memory" in slack_text
+    assert "Operations Director" in slack_text
+    assert "Budget reallocation required" in slack_text
+
+    teams_card = procurement_chat.build_po_teams_card(po)
+    teams_text = " ".join(
+        str(block.get("text") or "")
+        for block in teams_card.get("body", [])
+        if isinstance(block, dict)
+    )
+    assert "Current work memory" in teams_text
+    assert "Operations Director" in teams_text
+
+
 def test_send_is_noop_when_flag_off(monkeypatch):
     monkeypatch.setattr(procurement_chat, "is_procurement_chat_enabled", lambda: False)
     out = asyncio.run(procurement_chat.send_po_approval({"po_id": "PO-x"}, ORG))

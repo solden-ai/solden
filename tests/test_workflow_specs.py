@@ -128,6 +128,10 @@ def test_author_activate_create_drive(client):
     assert any(b["id"] == "COI-1" for b in lst["boxes"])
     got = client.get("/api/workspace/workflows/vendor_coi/COI-1").json()
     assert got["state"] == "approved"
+    assert got["memory"]["record_id"] == "vendor_coi:COI-1"
+    assert got["memory"]["work_item_ref"]["label"] == "Globex"
+    assert got["decision_ledger"]
+    assert got["decision_ledger"][-1]["resulting_state"] == "approved"
 
 
 def test_illegal_action_returns_409(client):

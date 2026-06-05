@@ -1,7 +1,7 @@
 /* Solden — Fiori extension component.
  *
  * Boots a single-view SAPUI5 application that renders the Solden
- * Box (state, timeline, exceptions, outcome) for a supplier invoice
+ * Box (state, operational memory, timeline, exceptions, outcome) for a supplier invoice
  * the user is looking at in S/4HANA. The invoice's composite key
  * (CompanyCode + SupplierInvoice + FiscalYear) arrives via URL params
  * — either from a side-by-side launch (a button on the Manage
@@ -35,6 +35,8 @@ sap.ui.define([
             const oBoxModel = new JSONModel({
                 state: "",
                 summary: {},
+                memory: null,
+                decision_ledger: [],
                 timeline: [],
                 exceptions: [],
                 outcome: null,

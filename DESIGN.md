@@ -5,10 +5,11 @@
 - **Box types, not one product:** a workflow is a "box type." Accounts payable (`ap_item`) is the first production box type; procurement / purchase orders and bank reconciliation are peers; tenants declare their own box types from a `WorkflowSpec` with no bespoke code. The buyer-facing product is the memory layer for live work, not any single workflow.
 - **Who it's for:** back-office teams (finance first) at growing companies whose work keeps stalling because the current owner, next step, decision context, and proof live in human memory across too many tools.
 - **Core promise:** your ERP remembers what happened. Solden remembers what's happening. Every step stays on the record, every exception is surfaced, and the trail follows the work wherever the team already operates.
+- **Operational-memory object:** the smallest durable unit is a work item in flight. Solden keeps execution state plus the decision ledger attached to that item: current owner, blocker, waiting condition, next action, confidence, context, proof, and the decisions/rationale that explain why the item is where it is.
 - **Positioning truth:** Solden transcends finance. AP is the live wedge; the same operational-memory pattern applies to procurement, contract review, vendor onboarding, access requests, and any back-office work with steps, approvals, exceptions, and an audit trail (see the public Use cases page). Lead with operational memory for work in progress, not internal platform mechanics.
 - **Category language:** externally, Solden is a system of record for work in progress. "Operational memory" is the insight and promise. Do not present Solden as a generic company brain, knowledge base, automation builder, or broad agent platform.
 - **Primary surfaces today:**
-  - **Render targets** (where decisions happen): Gmail thread panel, Slack and Teams approval cards, NetSuite SuiteApp, SAP Fiori extension, ERP-native follow-ons.
+  - **Render targets** (where decisions happen): Gmail thread panel, Slack and Teams approval cards, NetSuite SuiteApp, SAP Fiori extension, Sage Intacct Platform Services panel, ERP-native follow-ons.
   - **Workspace control center** (`workspace.soldenai.com`): the live view of work in progress, see the Workspace Surface Pattern.
 - **Broader surface model:** Every render target inherits the same embedded-work doctrine. The workspace is not a render target, it's the control center that watches the render targets and intervenes when the agent escalates.
 

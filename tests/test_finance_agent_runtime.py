@@ -762,7 +762,11 @@ def test_execute_route_low_risk_for_approval_success_and_idempotent_replay():
     # Filter out the P3 plan_observed audit (audit 2026-04-28) — that
     # event fires once per sync skill request and is unrelated to the
     # skill's own idempotent audit emission this test guards.
-    skill_rows = [r for r in db.audit_rows if r.get("event_type") != "plan_observed"]
+    skill_rows = [
+        r for r in db.audit_rows
+        if r.get("event_type") != "plan_observed"
+        and not str(r.get("event_type") or "").startswith("memory_event:")
+    ]
     assert len(skill_rows) == 1
 
 
@@ -1033,7 +1037,11 @@ def test_execute_escalate_approval_dedupes_without_incrementing_followup_metadat
     assert result["status"] == "deduped"
     assert result["audit_event_id"]
     assert db.items["ap-route-1"]["metadata"]["approval_escalation_count"] == 2
-    assert db.audit_rows[-1]["event_type"] == "approval_escalation_deduped"
+    non_memory_rows = [
+        row for row in db.audit_rows
+        if not str(row.get("event_type") or "").startswith("memory_event:")
+    ]
+    assert non_memory_rows[-1]["event_type"] == "approval_escalation_deduped"
 
 
 def test_execute_escalate_approval_returns_success_when_audit_append_fails():
@@ -1351,7 +1359,11 @@ def test_execute_retry_recoverable_failures_success_and_replay():
     # Filter out the P3 plan_observed audit (audit 2026-04-28) — that
     # event fires once per sync skill request and is unrelated to the
     # skill's own idempotent audit emission this test guards.
-    skill_rows = [r for r in db.audit_rows if r.get("event_type") != "plan_observed"]
+    skill_rows = [
+        r for r in db.audit_rows
+        if r.get("event_type") != "plan_observed"
+        and not str(r.get("event_type") or "").startswith("memory_event:")
+    ]
     assert len(skill_rows) == 1
 
 

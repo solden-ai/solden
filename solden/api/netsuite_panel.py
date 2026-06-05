@@ -36,6 +36,7 @@ from pydantic import BaseModel, Field
 from solden.core.auth import TokenData
 from solden.core.database import get_db as _get_db
 from solden.core.org_utils import require_org
+from solden.services.operational_memory import build_box_operational_memory_record
 
 logger = logging.getLogger(__name__)
 
@@ -49,169 +50,24 @@ router = APIRouter(prefix="/extension", tags=["netsuite-panel"])
 NETSUITE_PANEL_SOURCE_CHANNEL = "erp_native_netsuite"
 _security = HTTPBearer(auto_error=False)
 
-_TERMINAL_STATES = {"closed", "rejected", "reversed"}
-_HUMAN_WAIT_STATES = {"needs_approval", "needs_second_approval", "needs_info", "failed_post"}
-
-
-def _safe_json_dict(value: Any) -> Dict[str, Any]:
-    if isinstance(value, dict):
-        return value
-    if isinstance(value, str):
-        text = value.strip()
-        if not text:
-            return {}
-        try:
-            parsed = json.loads(text)
-        except (TypeError, json.JSONDecodeError):
-            return {}
-        return parsed if isinstance(parsed, dict) else {}
-    return {}
-
-
-def _humanize_token(value: Any, fallback: str = "") -> str:
-    token = str(value or "").strip()
-    if not token:
-        return fallback
-    return token.replace("_", " ").replace("-", " ").strip().capitalize()
-
-
-def _first_exception_reason(item: Dict[str, Any], exceptions: list, metadata: Dict[str, Any]) -> str:
-    for value in (
-        item.get("exception_reason"),
-        metadata.get("exception_reason"),
-        metadata.get("needs_info_question"),
-        metadata.get("agent_recovery_reason"),
-    ):
-        text = str(value or "").strip()
-        if text:
-            return text
-    for exc in exceptions or []:
-        if not isinstance(exc, dict):
-            continue
-        for key in ("detail", "message", "description", "reason", "title", "code", "exception_code"):
-            text = str(exc.get(key) or "").strip()
-            if text:
-                return _humanize_token(text)
-    code = item.get("exception_code") or metadata.get("exception_code")
-    return _humanize_token(code)
-
-
-def _last_timeline_event(timeline: list) -> Optional[Dict[str, Any]]:
-    for event in reversed(timeline or []):
-        if isinstance(event, dict):
-            return {
-                "type": event.get("event_type") or event.get("type") or event.get("action"),
-                "summary": event.get("summary") or event.get("message") or event.get("title"),
-                "created_at": event.get("created_at") or event.get("ts") or event.get("timestamp"),
-            }
-    return None
-
-
-def _waiting_on(state: str, owner_email: str) -> str:
-    if owner_email:
-        return owner_email
-    if state in {"awaiting_payment", "payment_in_flight"}:
-        return "ERP / payment rail"
-    if state in _HUMAN_WAIT_STATES:
-        return "Finance team"
-    if state in {"received", "validated", "approved", "ready_to_post"}:
-        return "Solden"
-    if state == "posted_to_erp":
-        return "ERP"
-    if state in _TERMINAL_STATES:
-        return "No one"
-    return "Finance team"
-
-
-def _waiting_reason(
-    *,
-    state: str,
-    item: Dict[str, Any],
-    exceptions: list,
-    metadata: Dict[str, Any],
-    outcome: Optional[Dict[str, Any]],
-) -> str:
-    exception_reason = _first_exception_reason(item, exceptions, metadata)
-    if exception_reason:
-        return exception_reason
-    if outcome and isinstance(outcome, dict):
-        text = str(outcome.get("summary") or outcome.get("reason") or "").strip()
-        if text:
-            return text
-    state_reasons = {
-        "received": "The bill has been received and is waiting for validation.",
-        "validated": "The bill passed validation and is waiting for routing.",
-        "needs_approval": "Approval is required before this bill can move forward.",
-        "needs_second_approval": "A second approval is required by policy.",
-        "needs_info": "More information is required before the bill can move forward.",
-        "approved": "The bill is approved and waiting for ERP posting.",
-        "ready_to_post": "The bill is ready to post to the ERP.",
-        "posted_to_erp": "The bill is posted in NetSuite and waiting for payment tracking.",
-        "awaiting_payment": "The bill is waiting for the ERP or payment rail to confirm payment.",
-        "payment_in_flight": "Payment is in flight and waiting for settlement confirmation.",
-        "payment_executed": "Payment has been confirmed and the record is waiting to close.",
-        "payment_failed": "Payment failed and needs review.",
-        "failed_post": "ERP posting failed and needs review.",
-        "closed": "The record is complete.",
-        "rejected": "The record was rejected.",
-        "reversed": "The ERP post was reversed.",
-    }
-    return state_reasons.get(state, _humanize_token(state, "The record is waiting for the next step."))
-
-
-def _next_step(state: str, owner_email: str) -> str:
-    owner = owner_email or "the assigned owner"
-    next_steps = {
-        "received": "Validate extracted bill fields.",
-        "validated": "Route the bill for approval or request missing context.",
-        "needs_approval": f"{owner} should approve, reject, or request info.",
-        "needs_second_approval": f"{owner} should provide the second approval or reject.",
-        "needs_info": f"{owner} should add the missing information.",
-        "approved": "Post the bill to NetSuite.",
-        "ready_to_post": "Post the bill to NetSuite.",
-        "posted_to_erp": "Wait for payment confirmation or close when paid.",
-        "awaiting_payment": "Wait for payment confirmation.",
-        "payment_in_flight": "Wait for settlement confirmation.",
-        "payment_executed": "Close the record after final audit checks.",
-        "payment_failed": "Review the failed payment and retry, reverse, or close.",
-        "failed_post": f"{owner} should fix the ERP posting issue and retry.",
-        "closed": "No next step.",
-        "rejected": "No next step.",
-        "reversed": "No next step.",
-    }
-    return next_steps.get(state, "Review the timeline and decide the next action.")
-
-
 def _build_operational_memory(
     *,
     item: Dict[str, Any],
     timeline: list,
     exceptions: list,
     outcome: Optional[Dict[str, Any]],
+    db: Any = None,
 ) -> Dict[str, Any]:
-    metadata = _safe_json_dict(item.get("metadata"))
-    state = str(item.get("state") or "").strip().lower()
-    owner_email = str(item.get("owner_email") or metadata.get("owner_email") or "").strip()
-    owner = {
-        "id": item.get("owner_id") or metadata.get("owner_id"),
-        "email": owner_email or None,
-        "assigned_at": item.get("owner_assigned_at") or metadata.get("owner_assigned_at"),
-        "source": item.get("owner_source") or metadata.get("owner_source"),
-    }
-    return {
-        "owner": owner,
-        "owner_label": owner_email or "Unassigned",
-        "waiting_on": _waiting_on(state, owner_email),
-        "waiting_reason": _waiting_reason(
-            state=state,
-            item=item,
-            exceptions=exceptions,
-            metadata=metadata,
-            outcome=outcome,
-        ),
-        "next_step": _next_step(state, owner_email),
-        "last_event": _last_timeline_event(timeline),
-    }
+    """Compatibility wrapper for tests and existing NetSuite panel callers."""
+    return build_box_operational_memory_record(
+        db=db,
+        box_type="ap_item",
+        box_id=item.get("id"),
+        item=item,
+        timeline=list(timeline or []),
+        exceptions=list(exceptions or []),
+        outcome=outcome,
+    )
 
 
 # ─── JWT verification ───────────────────────────────────────────────
@@ -454,6 +310,7 @@ def get_ap_item_by_netsuite_bill(
             timeline=timeline,
             exceptions=exceptions,
             outcome=outcome,
+            db=db,
         ),
         "timeline": timeline,
         "exceptions": exceptions,

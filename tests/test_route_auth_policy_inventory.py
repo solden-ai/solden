@@ -36,6 +36,9 @@ EXPECTED_UNAUTHENTICATED_SENSITIVE_ROUTES = {
     # against the JWT's ``iss`` claim, resolved per-tenant.
     ("POST", "/extension/sap/exchange"),
     ("GET", "/extension/ap-items/by-sap-invoice"),
+    ("POST", "/extension/ap-items/by-sap-invoice/approve"),
+    ("POST", "/extension/ap-items/by-sap-invoice/reject"),
+    ("POST", "/extension/ap-items/by-sap-invoice/request-info"),
     # NetSuite SuiteApp panel — Suitelet-minted HMAC JWT verified by
     # the handler (_verify_panel_jwt). See solden/api/netsuite_panel.py.
     # The GET lookup and the three POST action routes all authenticate via
@@ -44,6 +47,13 @@ EXPECTED_UNAUTHENTICATED_SENSITIVE_ROUTES = {
     ("POST", "/extension/ap-items/by-netsuite-bill/{ns_internal_id}/approve"),
     ("POST", "/extension/ap-items/by-netsuite-bill/{ns_internal_id}/reject"),
     ("POST", "/extension/ap-items/by-netsuite-bill/{ns_internal_id}/request-info"),
+    # Sage Intacct Platform Services panel — panel JWT verified by
+    # sage_intacct_panel._verify_panel_jwt against the tenant connection
+    # secret. Same in-handler auth model as NetSuite's HMAC panel.
+    ("GET", "/extension/ap-items/by-sage-intacct-bill/{record_no}"),
+    ("POST", "/extension/ap-items/by-sage-intacct-bill/{record_no}/approve"),
+    ("POST", "/extension/ap-items/by-sage-intacct-bill/{record_no}/reject"),
+    ("POST", "/extension/ap-items/by-sage-intacct-bill/{record_no}/request-info"),
 }
 
 

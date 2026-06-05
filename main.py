@@ -152,6 +152,7 @@ from solden.api.saml import (
 )
 from solden.api.sanctions import router as sanctions_router
 from solden.api.sap_extension import router as sap_extension_router
+from solden.api.sage_intacct_panel import router as sage_intacct_panel_router
 from solden.api.settings import router as settings_router
 from solden.api.slack_invoices import (
     legacy_router as slack_legacy_router,
@@ -645,6 +646,13 @@ STRICT_PROFILE_ALLOWED_EXTENSION_PATHS = {
     "/extension/draft-reply",
     "/extension/sap/exchange",
     "/extension/ap-items/by-sap-invoice",
+    "/extension/ap-items/by-sap-invoice/approve",
+    "/extension/ap-items/by-sap-invoice/reject",
+    "/extension/ap-items/by-sap-invoice/request-info",
+    "/extension/ap-items/by-sage-intacct-bill/{record_no}",
+    "/extension/ap-items/by-sage-intacct-bill/{record_no}/approve",
+    "/extension/ap-items/by-sage-intacct-bill/{record_no}/reject",
+    "/extension/ap-items/by-sage-intacct-bill/{record_no}/request-info",
 }
 
 # ┌────────────────────────────────────────────────────────────────┐
@@ -1118,6 +1126,7 @@ app.include_router(v1_webhooks_router)
 app.include_router(gmail_extension_router)
 app.include_router(netsuite_panel_router)
 app.include_router(sap_extension_router)
+app.include_router(sage_intacct_panel_router)
 app.include_router(slack_invoices_router)
 app.include_router(slack_legacy_router)
 app.include_router(teams_invoices_router)

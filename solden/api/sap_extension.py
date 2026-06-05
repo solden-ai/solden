@@ -47,6 +47,7 @@ from solden.core.auth import create_access_token, decode_token, _token_data_from
 from solden.core.database import get_db as _get_db
 from solden.core.http_client import get_http_client
 from solden.core.org_utils import require_org
+from solden.services.operational_memory import build_box_operational_memory_record
 
 logger = logging.getLogger(__name__)
 
@@ -439,6 +440,16 @@ def get_ap_item_by_sap_invoice(
         except Exception:
             outcome = None
 
+    memory = build_box_operational_memory_record(
+        db=db,
+        box_type="ap_item",
+        box_id=ap_item_id,
+        item=item,
+        timeline=timeline,
+        exceptions=exceptions,
+        outcome=outcome,
+    )
+
     summary = {
         "vendor_name": item.get("vendor_name"),
         "amount": item.get("amount"),
@@ -453,6 +464,8 @@ def get_ap_item_by_sap_invoice(
         "box_type": "ap_item",
         "state": item.get("state"),
         "summary": summary,
+        "memory": memory,
+        "decision_ledger": memory.get("decision_ledger") or [],
         "timeline": timeline,
         "exceptions": exceptions,
         "outcome": outcome,

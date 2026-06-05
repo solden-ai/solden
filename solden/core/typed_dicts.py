@@ -218,6 +218,15 @@ class DecisionContext(TypedDict, total=False):
     policy_version: Optional[str]
     intent: Optional[str]
     intent_input: Dict[str, Any]
+    # Optional product-facing labels used by the operational-memory projection.
+    # These are still captured as structured context, not user-written notes.
+    actor_label: Optional[str]
+    actor_role: Optional[str]
+    actor_team: Optional[str]
+    department: Optional[str]
+    # Optional override when the action surface already generated a precise
+    # memory line from structured workflow data.
+    memory_line: Optional[str]
 
 
 __all__ = [

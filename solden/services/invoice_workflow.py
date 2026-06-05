@@ -1912,6 +1912,7 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
                         "approval_context": context_payload.get("approval_context"),
                     },
                 )
+                self._attach_operational_memory_context(context_payload, ap_item_id)
                 teams_status = self._send_teams_budget_card(invoice, budget_summary, context_payload)
                 if isinstance(teams_status, dict):
                     teams_state = str(teams_status.get("status") or "unknown")
@@ -1975,6 +1976,7 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
                 target_state="needs_approval",
                 correlation_id=correlation_id,
             )
+            self._attach_operational_memory_context(context_payload, ap_item_id)
 
             # ── @mentions notification (best-effort, non-fatal) ─────
             if approval_mentions and ap_item_id:
@@ -2365,6 +2367,7 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
                 requested_by_text=approval_copy.get("requested_by_text"),
                 source_of_truth_text=approval_copy.get("source_of_truth_text"),
                 source_url=approval_copy.get("gmail_url"),
+                operational_memory=(extra_context or {}).get("operational_memory"),
             )
             if isinstance(result, dict):
                 return result
@@ -2372,6 +2375,42 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
         except Exception as exc:
             logger.warning("Failed to send Teams approval card: %s", exc)
             return {"status": "error", "reason": str(exc)}
+
+    def _attach_operational_memory_context(
+        self,
+        context_payload: Dict[str, Any],
+        ap_item_id: Optional[str],
+    ) -> None:
+        """Attach the shared memory projection to approval surfaces."""
+        if not ap_item_id or context_payload.get("operational_memory"):
+            return
+        try:
+            from solden.services.operational_memory import build_box_operational_memory_record
+            memory = build_box_operational_memory_record(
+                db=self.db,
+                box_type="ap_item",
+                box_id=str(ap_item_id),
+            )
+        except Exception as exc:
+            logger.debug("Operational memory projection unavailable for approval card %s: %s", ap_item_id, exc)
+            return
+
+        approval_labels = [
+            str(value).strip()
+            for value in (context_payload.get("approval_assignee_labels") or [])
+            if str(value).strip()
+        ]
+        if approval_labels:
+            waiting_on = ", ".join(approval_labels[:4])
+            memory["waiting_on"] = waiting_on
+            execution_state = memory.setdefault("execution_state", {})
+            if isinstance(execution_state, dict):
+                execution_state["waiting_on"] = waiting_on
+            context_summary = memory.setdefault("context_summary", {})
+            if isinstance(context_summary, dict):
+                context_summary["who_owns_it"] = waiting_on
+        context_payload["operational_memory"] = memory
+        context_payload["decision_ledger"] = memory.get("decision_ledger") or []
 
     def _build_approval_context(
         self,

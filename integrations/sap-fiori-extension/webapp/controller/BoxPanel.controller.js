@@ -14,7 +14,7 @@
  *      backend recognizes and signs against XSUAA's JWKS.
  *   3. _loadBox calls /clearledgr-api/extension/ap-items/by-sap-invoice
  *      with the composite key, populates the Box JSON model, and binds
- *      the view.
+ *      the view, including Solden's operational memory projection.
  *   4. onApprovePress / onRejectPress call SAP-specific action
  *      endpoints under /extension/ap-items/by-sap-invoice/<action>?
  *      company_code=&supplier_invoice=&fiscal_year=. Those endpoints
@@ -185,10 +185,13 @@ sap.ui.define([
                 }
             }
             oSummary._amountFormatted = sFormatted;
+            const oMemory = this._formatOperationalMemory(oData.memory || null);
 
             oBoxModel.setData({
                 state: oData.state || "",
                 summary: oSummary,
+                memory: oMemory,
+                decision_ledger: oData.decision_ledger || [],
                 timeline: oData.timeline || [],
                 exceptions: oData.exceptions || [],
                 outcome: oData.outcome || null,
@@ -197,6 +200,37 @@ sap.ui.define([
                 _loading: false,
                 _error: null,
                 _empty: false
+            });
+        },
+
+        _formatOperationalMemory: function (oMemory) {
+            if (!oMemory || typeof oMemory !== "object") {
+                return null;
+            }
+
+            const oOwner = oMemory.owner || {};
+            const sOwnerLabel = String(
+                oMemory.owner_label
+                || oOwner.label
+                || oOwner.name
+                || oOwner.email
+                || "Unassigned"
+            ).trim();
+            const aNarrative = Array.isArray(oMemory.memory_narrative)
+                ? oMemory.memory_narrative
+                    .map(function (sText) {
+                        return { text: String(sText || "").trim() };
+                    })
+                    .filter(function (oLine) { return !!oLine.text; })
+                : [];
+
+            return Object.assign({}, oMemory, {
+                _ownerLabel: sOwnerLabel || "Unassigned",
+                _waitingOn: String(oMemory.waiting_on || "").trim() || "Not waiting",
+                _waitingReason: String(oMemory.waiting_reason || "").trim() || "No blocker recorded",
+                _nextStep: String(oMemory.next_step || "").trim() || "No next step recorded",
+                _narrative: aNarrative,
+                _hasNarrative: aNarrative.length > 0
             });
         },
 

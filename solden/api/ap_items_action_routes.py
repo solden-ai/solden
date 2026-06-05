@@ -69,6 +69,62 @@ class _SharedProxy:
 shared = _SharedProxy()
 
 
+def _commit_ap_operational_memory(
+    db: Any,
+    *,
+    ap_item_id: str,
+    organization_id: str,
+    item: Dict[str, Any],
+    event_type: str,
+    source: str,
+    actor_id: str,
+    summary: str,
+    rationale: Optional[str] = None,
+    owner: Any = None,
+    dependency: Any = None,
+    evidence: Any = None,
+    next_action: Optional[str] = None,
+    source_refs: Optional[Dict[str, Any]] = None,
+    idempotency_key: Optional[str] = None,
+) -> None:
+    """Best-effort direct-handler operational-memory capture."""
+    try:
+        from solden.services.memory_events import commit_memory_event
+
+        state = str((item or {}).get("state") or (item or {}).get("status") or "").strip()
+        commit_memory_event(
+            db,
+            box_type="ap_item",
+            box_id=ap_item_id,
+            organization_id=organization_id,
+            event_type=event_type,
+            source=source,
+            actor_type="user",
+            actor_id=actor_id,
+            actor_label=actor_id,
+            previous_state=state or None,
+            resulting_state=state or None,
+            owner=owner,
+            dependency=dependency,
+            decision={"type": event_type},
+            rationale=rationale or summary,
+            evidence=evidence,
+            confidence=(item or {}).get("confidence"),
+            human_confirmation_status="confirmed",
+            next_action=next_action,
+            summary=summary,
+            source_refs=source_refs,
+            idempotency_key=idempotency_key,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "Operational memory capture failed for %s/%s: %s",
+            event_type,
+            ap_item_id,
+            exc,
+        )
+
+
 def _dispatch_mention_notifications(
     *, body: str, ap_item_id: str, item: Dict[str, Any], actor_id: str,
     organization_id: str,
@@ -532,6 +588,27 @@ def link_ap_item_source(
             "metadata": request.metadata or {},
         }
     )
+    actor_id = shared._authenticated_actor(_user)
+    _commit_ap_operational_memory(
+        db,
+        ap_item_id=ap_item_id,
+        organization_id=organization_id,
+        item=item,
+        event_type="source_linked",
+        source=str(request.source_type or "workspace_spa").strip() or "workspace_spa",
+        actor_id=actor_id,
+        summary=f"{request.source_type} source linked to the work item.",
+        rationale="A source was linked so Solden can preserve where this work came from.",
+        evidence={
+            "source_type": request.source_type,
+            "source_ref": request.source_ref,
+            "subject": request.subject,
+            "sender": request.sender,
+            "metadata": request.metadata or {},
+        },
+        source_refs={"source_ref": request.source_ref, "source_type": request.source_type},
+        idempotency_key=f"memory-event:source_linked:{ap_item_id}:{request.source_type}:{request.source_ref}",
+    )
     return {"source": source}
 
 
@@ -603,6 +680,26 @@ def link_ap_item_gmail_thread(
         }
     )
     updated = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
+    _commit_ap_operational_memory(
+        db,
+        ap_item_id=ap_item_id,
+        organization_id=organization_id,
+        item=updated,
+        event_type="source_linked",
+        source="gmail",
+        actor_id=actor_id,
+        summary="Gmail thread linked to the work item.",
+        rationale="The Gmail conversation is now attached as evidence and conversation context.",
+        evidence={
+            "thread_id": thread_id,
+            "message_id": message_id,
+            "subject": request.subject,
+            "sender": request.sender,
+            "note": str(request.note or "").strip() or None,
+        },
+        source_refs={"gmail_thread_id": thread_id, "gmail_message_id": message_id},
+        idempotency_key=f"memory-event:gmail_thread_linked:{ap_item_id}:{thread_id}",
+    )
     return {
         "status": "linked",
         "ap_item": shared.build_worklist_item(db, updated),
@@ -697,6 +794,28 @@ def link_ap_item_compose_draft(
         }
     )
     updated = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
+    _commit_ap_operational_memory(
+        db,
+        ap_item_id=ap_item_id,
+        organization_id=organization_id,
+        item=updated,
+        event_type="source_linked",
+        source="gmail",
+        actor_id=actor_id,
+        summary="Gmail compose draft linked to the work item.",
+        rationale="A draft response is now attached to the work item context.",
+        evidence={
+            "draft_id": draft_id,
+            "thread_id": thread_id,
+            "subject": subject,
+            "recipients": recipients,
+            "body_preview": body_preview,
+            "note": str(request.note or "").strip() or None,
+        },
+        next_action="Send or update the draft when the missing context is ready.",
+        source_refs={"gmail_draft_id": draft_id, "gmail_thread_id": thread_id},
+        idempotency_key=f"memory-event:compose_draft_linked:{ap_item_id}:{draft_id or thread_id}",
+    )
     return {
         "status": "linked",
         "ap_item": shared.build_worklist_item(db, updated),
@@ -825,6 +944,33 @@ def create_compose_record(
     )
 
     refreshed = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
+    _commit_ap_operational_memory(
+        db,
+        ap_item_id=ap_item_id,
+        organization_id=organization_id,
+        item=refreshed,
+        event_type="work_item_created",
+        source="gmail",
+        actor_id=actor_id,
+        summary="Work item created from a Gmail compose draft.",
+        rationale="A draft conversation became trackable finance work in Solden.",
+        evidence={
+            "draft_id": draft_id,
+            "thread_id": thread_id,
+            "subject": subject or created.get("subject"),
+            "recipients": recipients,
+            "body_preview": body_preview,
+            "note": note,
+        },
+        dependency={
+            "type": "information_request",
+            "owner": ", ".join(recipients) if recipients else None,
+            "reason": note or "Draft conversation needs finance follow-up.",
+        },
+        next_action="Track the draft conversation until the finance work is resolved.",
+        source_refs={"gmail_draft_id": draft_id, "gmail_thread_id": thread_id},
+        idempotency_key=f"memory-event:compose_record_created:{ap_item_id}",
+    )
     return {
         "status": "created",
         "ap_item": shared.build_worklist_item(db, refreshed),
@@ -946,6 +1092,34 @@ def create_ap_item_task(
                 "note": str(request.note or "").strip() or None,
             },
         }
+    )
+    _commit_ap_operational_memory(
+        db,
+        ap_item_id=ap_item_id,
+        organization_id=organization_id,
+        item=item,
+        event_type="next_action_set",
+        source="workspace_spa",
+        actor_id=actor_id,
+        summary=f"Task created: {task.get('title') or request.title}.",
+        rationale=str(request.note or request.description or "").strip() or "A follow-up task was created.",
+        owner={"email": task.get("assignee_email") or request.assignee_email},
+        dependency={
+            "type": "task",
+            "owner": task.get("assignee_email") or request.assignee_email,
+            "reason": task.get("title") or request.title,
+            "due_date": task.get("due_date") or request.due_date,
+        },
+        evidence={
+            "task_id": task.get("task_id"),
+            "title": task.get("title"),
+            "task_type": task.get("task_type"),
+            "assignee_email": task.get("assignee_email"),
+            "due_date": task.get("due_date"),
+        },
+        next_action=task.get("title") or request.title,
+        source_refs={"task_id": task.get("task_id")},
+        idempotency_key=f"memory-event:task_created:{ap_item_id}:{task.get('task_id')}",
     )
     return {"status": "created", "task": task}
 
@@ -1075,6 +1249,20 @@ def add_ap_item_note(
             },
         }
     )
+    _commit_ap_operational_memory(
+        db,
+        ap_item_id=ap_item_id,
+        organization_id=organization_id,
+        item=item,
+        event_type="context_recorded",
+        source="workspace_spa",
+        actor_id=actor_id,
+        summary="Note added to the work item.",
+        rationale=note["body"],
+        evidence={"note_id": note["id"], "body": note["body"]},
+        source_refs={"note_id": note["id"]},
+        idempotency_key=f"memory-event:record_note_added:{ap_item_id}:{note['id']}",
+    )
 
     # §5.3 @Mentions — parse @email in note body, dispatch notifications
     _dispatch_mention_notifications(
@@ -1127,6 +1315,20 @@ def add_ap_item_comment(
                 "body": comment["body"],
             },
         }
+    )
+    _commit_ap_operational_memory(
+        db,
+        ap_item_id=ap_item_id,
+        organization_id=organization_id,
+        item=item,
+        event_type="context_recorded",
+        source="workspace_spa",
+        actor_id=actor_id,
+        summary="Comment added to the work item.",
+        rationale=comment["body"],
+        evidence={"comment_id": comment["id"], "body": comment["body"]},
+        source_refs={"comment_id": comment["id"]},
+        idempotency_key=f"memory-event:record_comment_added:{ap_item_id}:{comment['id']}",
     )
 
     # §5.3 @Mentions — parse @email in comment body, dispatch notifications
@@ -1191,6 +1393,20 @@ def add_ap_item_file_link(
                 "source": file_entry["source"],
             },
         }
+    )
+    _commit_ap_operational_memory(
+        db,
+        ap_item_id=ap_item_id,
+        organization_id=organization_id,
+        item=item,
+        event_type="evidence_attached",
+        source="workspace_spa",
+        actor_id=actor_id,
+        summary=f"Evidence attached: {file_entry['label']}.",
+        rationale=file_entry.get("note") or "A file or external evidence link was attached.",
+        evidence=file_entry,
+        source_refs={"file_id": file_entry["id"], "file_url": file_entry.get("url")},
+        idempotency_key=f"memory-event:record_file_linked:{ap_item_id}:{file_entry['id']}",
     )
     return {"status": "created", "file": file_entry}
 

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Solden</title>
+    <link rel="stylesheet" href="./panel.css">
+</head>
+<body>
+    <div id="cl-root">
+        <header class="cl-header">
+            <div class="cl-brand">
+                <span class="cl-mark"></span>
+                <span class="cl-wordmark">solden</span>
+            </div>
+            <span id="cl-state-badge" class="cl-badge cl-badge-loading">Loading</span>
+        </header>
+
+        <main>
+            <section id="cl-summary" class="cl-section cl-hidden">
+                <dl class="cl-grid">
+                    <div><dt>Vendor</dt><dd id="cl-vendor">-</dd></div>
+                    <div><dt>Amount</dt><dd id="cl-amount">-</dd></div>
+                    <div><dt>Invoice</dt><dd id="cl-invoice-number">-</dd></div>
+                    <div><dt>Due</dt><dd id="cl-due-date">-</dd></div>
+                </dl>
+            </section>
+
+            <section id="cl-memory" class="cl-section cl-hidden">
+                <h2>Current work</h2>
+                <dl class="cl-memory-grid">
+                    <div><dt>Owner</dt><dd id="cl-owner">-</dd></div>
+                    <div><dt>Waiting on</dt><dd id="cl-waiting-on">-</dd></div>
+                    <div class="cl-memory-wide"><dt>Why</dt><dd id="cl-waiting-reason">-</dd></div>
+                    <div class="cl-memory-wide"><dt>Next</dt><dd id="cl-next-step">-</dd></div>
+                </dl>
+                <ul id="cl-memory-narrative" class="cl-narrative"></ul>
+            </section>
+
+            <section id="cl-actions" class="cl-section cl-hidden">
+                <h2>Actions</h2>
+                <textarea id="cl-action-reason" class="cl-action-reason" rows="2" placeholder="Reason or note"></textarea>
+                <div class="cl-actions">
+                    <button class="cl-btn cl-btn-primary" data-cl-action="approve">Approve</button>
+                    <button class="cl-btn" data-cl-action="request-info">Request info</button>
+                    <button class="cl-btn cl-btn-danger" data-cl-action="reject">Reject</button>
+                </div>
+                <p id="cl-action-status" class="cl-action-status"></p>
+            </section>
+
+            <section id="cl-exceptions-section" class="cl-section cl-hidden">
+                <h2>Exceptions</h2>
+                <ul id="cl-exceptions" class="cl-list"></ul>
+            </section>
+
+            <section id="cl-timeline-section" class="cl-section cl-hidden">
+                <h2>Timeline</h2>
+                <ol id="cl-timeline" class="cl-timeline"></ol>
+            </section>
+
+            <section id="cl-empty" class="cl-section cl-empty cl-hidden">
+                <p>This AP bill was not processed through Solden.</p>
+            </section>
+
+            <section id="cl-error" class="cl-section cl-error cl-hidden">
+                <p id="cl-error-text">Could not load Solden.</p>
+                <button id="cl-retry" class="cl-btn">Retry</button>
+            </section>
+        </main>
+
+        <footer class="cl-footer">
+            <a id="cl-deeplink" href="#" target="_blank" rel="noopener">Open in Solden</a>
+        </footer>
+    </div>
+    <script src="./panel.js"></script>
+</body>
+</html>

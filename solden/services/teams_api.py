@@ -101,6 +101,31 @@ class TeamsAPIClient:
             )
         return rows
 
+    @staticmethod
+    def _operational_memory_rows(memory: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        if not isinstance(memory, dict) or not memory:
+            return []
+        execution_state = memory.get("execution_state")
+        execution_state = execution_state if isinstance(execution_state, dict) else {}
+        owner = str(memory.get("owner_label") or execution_state.get("owner_label") or "").strip()
+        waiting_on = str(memory.get("waiting_on") or execution_state.get("waiting_on") or "").strip()
+        waiting_reason = str(memory.get("waiting_reason") or execution_state.get("waiting_reason") or "").strip()
+        next_step = str(memory.get("next_step") or execution_state.get("next_action") or "").strip()
+        facts = [
+            {"title": "Owner", "value": owner},
+            {"title": "Waiting on", "value": waiting_on},
+            {"title": "Why", "value": waiting_reason},
+            {"title": "Next", "value": next_step},
+        ]
+        facts = [fact for fact in facts if fact["value"]]
+        if not facts:
+            return []
+        return [
+            {"type": "TextBlock", "wrap": True, "weight": "Bolder", "text": "Current work memory"},
+            {"type": "FactSet", "facts": facts[:4]},
+        ]
+
+
     @classmethod
     def build_invoice_budget_card(
         cls,
@@ -117,6 +142,7 @@ class TeamsAPIClient:
         requested_by_text: Optional[str] = None,
         source_of_truth_text: Optional[str] = None,
         source_url: Optional[str] = None,
+        operational_memory: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         status = str((budget or {}).get("status") or "unknown")
         requires_decision = bool((budget or {}).get("requires_decision"))
@@ -147,6 +173,7 @@ class TeamsAPIClient:
                     "text": f"**Why this needs your decision:** {normalized_reason}",
                 }
             )
+        body.extend(cls._operational_memory_rows(operational_memory))
         if next_step_lines:
             body.append({"type": "TextBlock", "wrap": True, "text": "**What happens next**"})
             for line in next_step_lines[:3]:
@@ -406,6 +433,7 @@ class TeamsAPIClient:
         requested_by_text: Optional[str] = None,
         source_of_truth_text: Optional[str] = None,
         source_url: Optional[str] = None,
+        operational_memory: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         card = self.build_invoice_budget_card(
             email_id=email_id,
@@ -420,6 +448,7 @@ class TeamsAPIClient:
             requested_by_text=requested_by_text,
             source_of_truth_text=source_of_truth_text,
             source_url=source_url,
+            operational_memory=operational_memory,
         )
         result = self._post_json(card)
         result["card"] = card

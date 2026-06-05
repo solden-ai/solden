@@ -17,6 +17,7 @@ from solden.core.auth import get_current_user, require_financial_controller
 from solden.core.database import get_db
 from solden.core.money import money_sum, money_to_float
 from solden.services.ap_operator_audit import normalize_operator_audit_events
+from solden.services.operational_memory import build_box_operational_memory_record
 
 
 router = APIRouter()
@@ -444,13 +445,27 @@ def get_ap_item_box(
         except Exception:
             projection = None
         if projection and not _is_projection_stale(db, ap_item_id, projection):
+            exceptions = projection.get("exceptions") or []
+            outcome = projection.get("outcome")
+            timeline = projection.get("timeline_preview") or []
+            memory = build_box_operational_memory_record(
+                db=db,
+                box_type="ap_item",
+                box_id=ap_item_id,
+                item=item,
+                timeline=timeline,
+                exceptions=exceptions,
+                outcome=outcome,
+            )
             return {
                 "box_id": ap_item_id,
                 "box_type": "ap_item",
                 "state": projection.get("state") or item.get("state"),
-                "timeline": projection.get("timeline_preview") or [],
-                "exceptions": projection.get("exceptions") or [],
-                "outcome": projection.get("outcome"),
+                "memory": memory,
+                "decision_ledger": memory.get("decision_ledger") or [],
+                "timeline": timeline,
+                "exceptions": exceptions,
+                "outcome": outcome,
                 "summary": projection.get("summary") or {},
                 "from_projection": True,
                 "projection_updated_at": projection.get("updated_at"),
@@ -478,10 +493,21 @@ def get_ap_item_box(
         except Exception:
             outcome = None
 
+    memory = build_box_operational_memory_record(
+        db=db,
+        box_type="ap_item",
+        box_id=ap_item_id,
+        item=item,
+        timeline=timeline,
+        exceptions=exceptions,
+        outcome=outcome,
+    )
     return {
         "box_id": ap_item_id,
         "box_type": "ap_item",
         "state": item.get("state"),
+        "memory": memory,
+        "decision_ledger": memory.get("decision_ledger") or [],
         "timeline": timeline,
         "exceptions": exceptions,
         "outcome": outcome,
@@ -660,5 +686,3 @@ def get_ap_item_context(
     context = shared._build_context_payload(db, item)
     db.upsert_ap_item_context_cache(ap_item_id, context)
     return context
-
-
