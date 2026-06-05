@@ -130,6 +130,7 @@ describe('HomePage', () => {
 
     expect(screen.getAllByText('Work in progress').length).toBeGreaterThan(0);
     expect(screen.getByText('Operational context')).toBeTruthy();
+    expect(screen.queryByLabelText('Workspace scopes')).toBeNull();
     expect(screen.getAllByText('Field review: Vendor, Amount').length).toBeGreaterThan(0);
     expect(screen.getByText('2 sources linked · Gmail')).toBeTruthy();
     expect(screen.getByText('Requested context')).toBeTruthy();

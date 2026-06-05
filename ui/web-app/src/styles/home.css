@@ -904,7 +904,7 @@
 
 .cl-home-console {
   display: grid;
-  grid-template-columns: 192px minmax(0, 1fr) 356px;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 380px);
   min-height: 620px;
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
@@ -966,6 +966,43 @@
   color: var(--cl-ink-secondary);
 }
 
+.cl-home-console-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  color: var(--cl-ink-muted);
+  font-size: 12px;
+}
+
+.cl-home-console-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.cl-home-console-meta strong {
+  color: var(--cl-ink-primary);
+  font-family: var(--cl-font-mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-home-console-meta button {
+  border: 0;
+  background: transparent;
+  color: var(--cl-mint-strong);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cl-home-console-meta button:hover {
+  text-decoration: underline;
+}
+
 .cl-home-console-search {
   width: min(420px, 42vw);
   flex: 0 1 420px;
@@ -994,13 +1031,6 @@
   background: var(--cl-surface);
 }
 
-.cl-home-console-rail {
-  padding: 22px 14px;
-  border-right: 1px solid var(--cl-border);
-  background: color-mix(in srgb, var(--cl-bg) 72%, var(--cl-surface));
-}
-
-.cl-home-console-section-label,
 .cl-home-context-section-label {
   margin: 0 0 10px;
   font-size: 10px;
@@ -1008,78 +1038,6 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--cl-ink-muted);
-}
-
-.cl-home-console-views-label {
-  margin-top: 28px;
-}
-
-.cl-home-console-scope {
-  width: 100%;
-  min-height: 42px;
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  margin: 2px 0;
-  padding: 7px 8px;
-  border: 1px solid transparent;
-  border-radius: var(--cl-radius-sm);
-  background: transparent;
-  color: var(--cl-ink-secondary);
-  font: inherit;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.1s, border-color 0.1s, color 0.1s;
-}
-
-.cl-home-console-scope:hover,
-.cl-home-console-scope:focus-visible {
-  background: var(--cl-surface);
-  border-color: var(--cl-border);
-  color: var(--cl-ink-primary);
-}
-
-.cl-home-console-scope.is-active {
-  background: var(--cl-teal-soft);
-  border-color: color-mix(in srgb, var(--cl-teal-500) 20%, transparent);
-  color: var(--cl-ink-primary);
-}
-
-.cl-home-console-scope-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--cl-surface);
-  border: 1px solid var(--cl-border);
-  color: var(--cl-ink-muted);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.cl-home-console-scope.is-active .cl-home-console-scope-icon {
-  background: var(--cl-teal-500);
-  border-color: var(--cl-teal-500);
-  color: var(--cl-navy);
-}
-
-.cl-home-console-scope-main {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.cl-home-console-scope-count {
-  font-family: var(--cl-font-mono);
-  font-size: 12px;
-  color: var(--cl-ink-muted);
-  font-variant-numeric: tabular-nums;
 }
 
 .cl-home-workstream {
@@ -1465,7 +1423,7 @@
 
 @media (max-width: 1120px) {
   .cl-home-console {
-    grid-template-columns: 172px minmax(0, 1fr) 328px;
+    grid-template-columns: minmax(0, 1fr) minmax(316px, 340px);
   }
 
   .cl-home-workstream-side {
@@ -1489,35 +1447,6 @@
   .cl-home-console-search {
     width: 100%;
     flex-basis: auto;
-  }
-
-  .cl-home-console-rail {
-    border-right: 0;
-    border-bottom: 1px solid var(--cl-border);
-  }
-
-  .cl-home-console-rail {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    overflow-x: auto;
-    padding: 14px;
-  }
-
-  .cl-home-console-section-label {
-    margin: 0 4px 0 0;
-    flex: 0 0 auto;
-  }
-
-  .cl-home-console-views-label {
-    margin-top: 0;
-    margin-left: 12px;
-  }
-
-  .cl-home-console-scope {
-    width: auto;
-    min-width: 168px;
-    flex: 0 0 auto;
   }
 
   .cl-home-workstream {

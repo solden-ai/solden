@@ -6,7 +6,6 @@ import { useLocation } from 'wouter-preact';
 import { html } from '../../utils/htm.js';
 import { api } from '../../api/client.js';
 import { useBootstrap, useOrgId } from '../../shell/BootstrapContext.js';
-import { hasCapability } from '../../utils/capabilities.js';
 import { formatAmount, formatRelative, displayOrgName } from '../../utils/formatters.js';
 import { accountsPayablePath, accountPayableRecordPath } from '../../utils/record-route.js';
 
@@ -135,14 +134,6 @@ export function HomePage() {
   const workloadState = liveWorkload
     ? { status: 'ready', data: liveWorkload, error: null }
     : workload;
-  const workTypeRows = buildWorkTypeRows({
-    bootstrap,
-    dashboard: dash,
-    exceptionStats: exceptionStats.data,
-    apMetrics: m,
-    inFlight,
-    awaitingApproval,
-  });
   const visibleWorkItems = useMemo(
     () => filterWorkItems(recordItems, workSearch),
     [recordItems, workSearch],
@@ -217,7 +208,6 @@ export function HomePage() {
         onSelect=${setSelectedWorkId}
         search=${workSearch}
         onSearch=${setWorkSearch}
-        workTypeRows=${workTypeRows}
         exceptionCount=${exceptionCount}
         exceptionItems=${exceptionItems}
         activityState=${activity}
@@ -369,7 +359,6 @@ function HomeLiveConsole({
   onSelect,
   search,
   onSearch,
-  workTypeRows,
   exceptionCount,
   exceptionItems,
   activityState,
@@ -391,6 +380,11 @@ function HomeLiveConsole({
           </span>
           <h2>Work in progress</h2>
           <p>Operational memory across inbox, chat, ERP, approvals, and agent actions.</p>
+          <div class="cl-home-console-meta" aria-label="Work context summary">
+            <span><strong>${recordsTotal || 0}</strong> open</span>
+            <span><strong>${exceptionCount || 0}</strong> blocked</span>
+            <button type="button" onClick=${() => navigate('/activity')}>Live context</button>
+          </div>
         </div>
         <label class="cl-home-console-search">
           <span class="sr-only">Search work in progress</span>
@@ -402,43 +396,6 @@ function HomeLiveConsole({
           />
         </label>
       </header>
-
-      <aside class="cl-home-console-rail" aria-label="Workspace scopes">
-        <div class="cl-home-console-section-label">Work types</div>
-        <button
-          type="button"
-          class="cl-home-console-scope is-active"
-          onClick=${() => navigate(accountsPayablePath())}>
-          <span class="cl-home-console-scope-icon">A</span>
-          <span class="cl-home-console-scope-main">All open work</span>
-          <span class="cl-home-console-scope-count">${recordsTotal || 0}</span>
-        </button>
-        ${workTypeRows.map((row) => html`
-          <button
-            type="button"
-            key=${row.id}
-            class="cl-home-console-scope"
-            onClick=${() => row.path && navigate(row.path)}>
-            <span class="cl-home-console-scope-icon">${scopeInitial(row.label)}</span>
-            <span class="cl-home-console-scope-main">${row.label}</span>
-            <span class="cl-home-console-scope-count">
-              ${row.metricValue == null ? row.state || '' : row.metricValue}
-            </span>
-          </button>
-        `)}
-
-        <div class="cl-home-console-section-label cl-home-console-views-label">Views</div>
-        <button type="button" class="cl-home-console-scope" onClick=${() => navigate('/activity')}>
-          <span class="cl-home-console-scope-icon">L</span>
-          <span class="cl-home-console-scope-main">Live context</span>
-          <span class="cl-home-console-scope-count">${activityItems.length || ''}</span>
-        </button>
-        <button type="button" class="cl-home-console-scope" onClick=${() => navigate('/exceptions')}>
-          <span class="cl-home-console-scope-icon">!</span>
-          <span class="cl-home-console-scope-main">Blocked</span>
-          <span class="cl-home-console-scope-count">${exceptionCount || ''}</span>
-        </button>
-      </aside>
 
       <div class="cl-home-workstream">
         <header class="cl-home-workstream-head">
@@ -869,11 +826,6 @@ function activityTarget(row = {}) {
   return '';
 }
 
-function scopeInitial(label) {
-  const raw = String(label || '').trim();
-  return raw ? raw[0].toUpperCase() : '•';
-}
-
 function humanizeToken(value) {
   const s = String(value || '').trim();
   if (!s) return '';
@@ -887,25 +839,6 @@ function humanizeSentence(value) {
   const s = humanizeToken(value);
   if (!s) return '';
   return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-
-// ─── Panel body renderer (loading / error / empty / list) ─────────
-
-function renderPanelBody({ state, items, renderEmpty, renderList }) {
-  if (state.status === 'loading') {
-    return html`<div class="cl-home-skeleton">Loading…</div>`;
-  }
-  if (state.status === 'error') {
-    return html`
-      <div class="cl-home-empty">
-        <div class="cl-home-empty-title cl-home-empty-error">Couldn't load this section.</div>
-        <div class="cl-home-empty-sub">${state.error || 'Try again in a moment.'}</div>
-      </div>
-    `;
-  }
-  if (!items || items.length === 0) return renderEmpty();
-  return renderList();
 }
 
 
@@ -1073,14 +1006,6 @@ function StatusCell({ label, integration, fallbackLabel }) {
 
 // ─── Exception queue helpers ──────────────────────────────────────
 
-function humanizeExceptionType(t) {
-  const s = String(t || '').toLowerCase();
-  if (!s) return 'Exception';
-  return s
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
 function humanizeWorkType(t) {
   const s = String(t || '').toLowerCase();
   if (s === 'ap_item') return 'Accounts Payable';
@@ -1093,130 +1018,8 @@ function humanizeWorkType(t) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function exceptionHeadline(row = {}) {
-  const summary = row.box_summary || {};
-  const vendor = row.vendor_name || row.vendor || summary.vendor_name || row.metadata?.vendor_name;
-  const reference = summary.invoice_number || summary.reference || summary.po_number || row.box_id;
-  if (vendor && reference) return `${vendor} · ${reference}`;
-  if (vendor) return vendor;
-  if (reference) return `${humanizeWorkType(row.box_type)} · ${String(reference).slice(0, 18)}`;
-  return 'Record not summarized';
-}
-
-function exceptionTarget(row = {}) {
-  if (row.box_type === 'ap_item' && row.box_id) {
-    return accountPayableRecordPath(row.box_id);
-  }
-  if (row.synthetic && row.metadata?.vendor_name) {
-    return `/vendors/${encodeURIComponent(row.metadata.vendor_name)}`;
-  }
-  if (row.box_type === 'vendor_onboarding_session' && row.metadata?.vendor_name) {
-    return `/vendors/${encodeURIComponent(row.metadata.vendor_name)}`;
-  }
-  return '/exceptions';
-}
-
-function exceptionAgeDays(raisedAt) {
-  if (!raisedAt) return 0;
-  const t = new Date(raisedAt).getTime();
-  if (isNaN(t)) return 0;
-  return Math.max(0, Math.round((Date.now() - t) / 86400000));
-}
-
-function severityTone(sev) {
-  const s = String(sev || '').toLowerCase();
-  if (s === 'critical' || s === 'high') return 'warn';
-  if (s === 'low') return 'good';
-  return 'pending';
-}
-
 function safeMetric(value) {
   if (value === null || value === undefined || value === '') return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
-}
-
-function exceptionCountFor(stats = {}, boxType) {
-  const byBoxType = stats?.by_box_type || {};
-  return safeMetric(byBoxType[boxType]) || 0;
-}
-
-function buildWorkTypeRows({
-  bootstrap,
-  dashboard,
-  exceptionStats,
-  apMetrics,
-  inFlight,
-  awaitingApproval,
-}) {
-  const apExceptions = exceptionCountFor(exceptionStats, 'ap_item');
-  const procurementExceptions = exceptionCountFor(exceptionStats, 'purchase_order');
-  const vendorOnboardingExceptions = exceptionCountFor(exceptionStats, 'vendor_onboarding_session');
-  const procurementOpen = safeMetric(
-    dashboard?.procurement_in_flight
-    ?? dashboard?.purchase_orders_in_flight
-    ?? apMetrics?.purchase_orders_in_flight
-  );
-  const canViewProcurement = hasCapability(bootstrap, 'view_procurement') || procurementExceptions > 0 || procurementOpen !== null;
-  const canViewBuilder = hasCapability(bootstrap, 'view_workflow_builder');
-
-  const rows = [
-    {
-      id: 'ap_item',
-      label: 'Accounts Payable',
-      sub: 'Bills, approvals, ERP posting, payment readiness',
-      metricValue: safeMetric(inFlight) ?? 0,
-      metricLabel: 'open records',
-      detail: apExceptions > 0
-        ? `${apExceptions} exception${apExceptions === 1 ? '' : 's'}`
-        : awaitingApproval > 0
-          ? `${awaitingApproval} approval wait${awaitingApproval === 1 ? '' : 's'}`
-          : 'Moving',
-      tone: apExceptions > 0 ? 'warn' : awaitingApproval > 0 ? 'pending' : 'good',
-      path: accountsPayablePath(),
-    },
-  ];
-
-  if (canViewProcurement) {
-    rows.push({
-      id: 'purchase_order',
-      label: 'Procurement',
-      sub: 'Purchase orders, requester approvals, receiving checks',
-      metricValue: procurementOpen,
-      metricLabel: 'open POs',
-      state: procurementOpen === null ? 'Enabled' : 'Tracking',
-      detail: procurementExceptions > 0
-        ? `${procurementExceptions} exception${procurementExceptions === 1 ? '' : 's'}`
-        : 'Monitored',
-      tone: procurementExceptions > 0 ? 'warn' : 'good',
-      path: '/procurement',
-    });
-  }
-
-  rows.push({
-    id: 'vendor_onboarding_session',
-    label: 'Vendor Onboarding',
-    sub: 'Bank details, tax forms, activation waits',
-    metricValue: vendorOnboardingExceptions,
-    metricLabel: 'open signals',
-    detail: vendorOnboardingExceptions > 0 ? 'Needs review' : 'Monitored',
-    tone: vendorOnboardingExceptions > 0 ? 'warn' : 'good',
-    path: '/vendors',
-  });
-
-  if (canViewBuilder) {
-    rows.push({
-      id: 'custom_work_types',
-      label: 'Custom Work Types',
-      sub: 'Contract reviews, access requests, bank reconciliation',
-      metricValue: null,
-      metricLabel: '',
-      state: 'Builder',
-      detail: 'Ready to configure',
-      tone: 'neutral',
-      path: '/workflows',
-    });
-  }
-
-  return rows;
 }
