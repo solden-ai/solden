@@ -54,35 +54,47 @@
               </div>
             </div>
 
-            <div class="ix-hero-record" aria-label="Live Solden work record" data-reveal data-reveal-delay="1">
-              <div class="ix-hero-record__top">
-                <span>Work record</span>
-                <strong>Waiting on approval</strong>
+            <div class="ix-hero-artifact" data-reveal data-reveal-delay="1">
+              <div class="ix-hero-surface ix-hero-surface--source" aria-hidden="true">
+                <span>Source</span>
+                <strong>Slack · #ops</strong>
+                <small>Quote, requester, attachment, and budget context captured.</small>
               </div>
-              <div class="ix-hero-record__body">
-                <div class="ix-hero-record__subject">
-                  <span>Purchase request</span>
-                  <h2>PR-4821 · Facilities repair</h2>
-                  <p>Captured from chat with vendor quote, budget context, and ERP supplier match attached.</p>
+              <div class="ix-hero-record" aria-label="Live Solden work record">
+                <div class="ix-hero-record__top">
+                  <span>Work record</span>
+                  <strong>Waiting on approval</strong>
                 </div>
-                <dl class="ix-hero-record__fields">
-                  <div><dt>Owner</dt><dd>Department manager</dd></div>
-                  <div><dt>Blocker</dt><dd>Approval needed before ERP writeback</dd></div>
-                  <div><dt>Next</dt><dd>Approve, hold, or request correction</dd></div>
-                </dl>
-                <div class="ix-hero-record__route" aria-label="Work route">
-                  <span>Inbox</span>
-                  <span>Chat</span>
-                  <span>Approvals</span>
-                  <span>ERP</span>
-                  <span>Audit</span>
+                <div class="ix-hero-record__body">
+                  <div class="ix-hero-record__subject">
+                    <span>Purchase request</span>
+                    <h2>PR-4821 · Facilities repair</h2>
+                    <p>Captured from chat with vendor quote, budget context, and ERP supplier match attached.</p>
+                  </div>
+                  <dl class="ix-hero-record__fields">
+                    <div><dt>Owner</dt><dd>Department manager</dd></div>
+                    <div><dt>Blocker</dt><dd>Approval needed before ERP writeback</dd></div>
+                    <div><dt>Next</dt><dd>Approve, hold, or request correction</dd></div>
+                  </dl>
+                  <div class="ix-hero-record__route" aria-label="Work route">
+                    <span>Inbox</span>
+                    <span>Chat</span>
+                    <span>Approvals</span>
+                    <span>ERP</span>
+                    <span>Audit</span>
+                  </div>
+                  <ol class="ix-hero-record__events">
+                    <li><strong>Captured</strong><span>Quote and request pulled from chat</span></li>
+                    <li><strong>Checked</strong><span>Vendor and policy context attached</span></li>
+                    <li><strong>Waiting</strong><span>Owner has the next decision</span></li>
+                    <li><strong>Ready</strong><span>ERP writeback resumes after approval</span></li>
+                  </ol>
                 </div>
-                <ol class="ix-hero-record__events">
-                  <li><strong>Captured</strong><span>Quote and request pulled from chat</span></li>
-                  <li><strong>Checked</strong><span>Vendor and policy context attached</span></li>
-                  <li><strong>Waiting</strong><span>Owner has the next decision</span></li>
-                  <li><strong>Ready</strong><span>ERP writeback resumes after approval</span></li>
-                </ol>
+              </div>
+              <div class="ix-hero-surface ix-hero-surface--erp" aria-hidden="true">
+                <span>Writeback</span>
+                <strong>ERP record queued</strong>
+                <small>NetSuite / SAP / Sage update waits for approval clearance.</small>
               </div>
             </div>
           </div>
