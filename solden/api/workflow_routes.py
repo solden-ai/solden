@@ -85,6 +85,13 @@ class BoxCreate(BaseModel):
 
 class ActionBody(BaseModel):
     reason: str = Field("", max_length=2000)
+    source: str = Field("workspace_workflow", max_length=200)
+    summary: str = Field("", max_length=2000)
+    owner: Any = None
+    dependency: Any = None
+    evidence: Any = None
+    next_action: str = Field("", max_length=2000)
+    source_refs: Dict[str, Any] = Field(default_factory=dict)
 
 
 @router.get("/workflows/{box_type}")
@@ -164,7 +171,16 @@ def act_on_box(
     try:
         return db.update_generic_box_state(
             box_type, box_id, target,
-            actor_id=_actor_id(_user), reason=body.reason.strip(),
+            actor_id=_actor_id(_user),
+            reason=body.reason.strip(),
+            action=action,
+            source=body.source.strip() or "workspace_workflow",
+            summary=body.summary.strip() or None,
+            owner=body.owner or None,
+            dependency=body.dependency or None,
+            evidence=body.evidence,
+            next_action=body.next_action.strip() or None,
+            source_refs=body.source_refs or None,
         )
     except IllegalWorkflowTransitionError as exc:
         raise HTTPException(status_code=409, detail=str(exc))

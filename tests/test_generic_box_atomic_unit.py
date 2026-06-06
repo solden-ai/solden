@@ -264,4 +264,8 @@ def test_update_generic_box_state_commits_state_and_audit_together():
     assert db.audit_events[-1]["prev_state"] == "draft"
     assert db.audit_events[-1]["new_state"] == "review"
     assert db.audit_events[-1]["decision_reason"] == "ready"
+    assert db.audit_events[-1]["payload_json"]["memory_event"]["event_type"] == "review"
+    assert db.audit_events[-1]["payload_json"]["memory_event"]["state"]["before"] == "draft"
+    assert db.audit_events[-1]["payload_json"]["memory_event"]["state"]["after"] == "review"
+    assert db.audit_events[-1]["payload_json"]["decision_context"]["ui_surface"] == "workspace_workflow"
     assert db.webhook_events == [db.audit_events[-1]["id"]]

@@ -121,7 +121,17 @@ def test_author_activate_create_drive(client):
     # Drive it through the declared lifecycle.
     s = client.post("/api/workspace/workflows/vendor_coi/COI-1/submit", json={})
     assert s.status_code == 200 and s.json()["state"] == "submitted"
-    a = client.post("/api/workspace/workflows/vendor_coi/COI-1/approve", json={})
+    a = client.post(
+        "/api/workspace/workflows/vendor_coi/COI-1/approve",
+        json={
+            "reason": "Risk approved the insurance evidence",
+            "summary": "Risk approved the vendor COI.",
+            "owner": {"label": "Risk team", "email": "risk@acme.test"},
+            "evidence": {"source": "workspace", "ref": "coi-policy-P-9"},
+            "next_action": "Archive the evidence and continue onboarding",
+            "source_refs": {"document_id": "coi-policy-P-9"},
+        },
+    )
     assert a.status_code == 200 and a.json()["state"] == "approved"
     # List + get.
     lst = client.get("/api/workspace/workflows/vendor_coi").json()
@@ -130,6 +140,9 @@ def test_author_activate_create_drive(client):
     assert got["state"] == "approved"
     assert got["memory"]["record_id"] == "vendor_coi:COI-1"
     assert got["memory"]["work_item_ref"]["label"] == "Globex"
+    assert got["memory"]["context_summary"]["who_owns_it"] == "Risk team"
+    assert got["memory"]["context_summary"]["next_action"] == "Archive the evidence and continue onboarding"
+    assert got["memory"]["proof"]["memory_evidence"]["ref"] == "coi-policy-P-9"
     assert got["decision_ledger"]
     assert got["decision_ledger"][-1]["resulting_state"] == "approved"
 

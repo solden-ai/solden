@@ -30,6 +30,61 @@ from solden.core.workflow_spec import (
 logger = logging.getLogger(__name__)
 
 
+def _clean_text(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _generic_memory_owner(
+    existing: Dict[str, Any],
+    patch: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    """Best-effort owner inference for declarative Box memory events."""
+    merged = {**(existing or {}), **(patch or {})}
+    for key in (
+        "owner",
+        "owner_email",
+        "owner_label",
+        "assignee_email",
+        "assigned_to_email",
+        "assigned_to",
+        "approver_email",
+        "approver",
+    ):
+        raw = merged.get(key)
+        if isinstance(raw, dict):
+            return {str(k): v for k, v in raw.items() if v not in (None, "", [], {})}
+        text = _clean_text(raw)
+        if not text:
+            continue
+        if "@" in text:
+            return {"email": text, "label": text}
+        return {"label": text}
+    return None
+
+
+def _generic_dependency_payload(
+    *,
+    provided: Any,
+    owner: Optional[Dict[str, Any]],
+    reason: str,
+    box_type: str,
+    target_state: str,
+    exception_state: Optional[str],
+) -> Optional[Any]:
+    if provided not in (None, "", [], {}):
+        return provided
+    if exception_state and target_state == exception_state:
+        owner_label = ""
+        if isinstance(owner, dict):
+            owner_label = _clean_text(owner.get("label") or owner.get("email"))
+        return {
+            "type": "blocker",
+            "owner": owner_label or "Assigned owner",
+            "reason": reason or f"{box_type} entered {target_state}",
+        }
+    return None
+
+
 class GenericBoxStore:
     """Mixin: declarative-Box CRUD over the ``boxes`` table. Combined into SoldenDB."""
 
@@ -291,6 +346,14 @@ class GenericBoxStore:
         *,
         actor_id: str,
         reason: str = "",
+        action: Optional[str] = None,
+        source: str = "workspace_workflow",
+        owner: Any = None,
+        dependency: Any = None,
+        evidence: Any = None,
+        next_action: Optional[str] = None,
+        summary: Optional[str] = None,
+        source_refs: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Advance a declarative Box, validating against its *pinned* spec.
 
@@ -340,6 +403,56 @@ class GenericBoxStore:
         }
 
         now = datetime.now(timezone.utc).isoformat()
+        inferred_owner = owner if owner not in (None, "", [], {}) else _generic_memory_owner(existing, patch)
+        inferred_dependency = _generic_dependency_payload(
+            provided=dependency,
+            owner=inferred_owner if isinstance(inferred_owner, dict) else None,
+            reason=str(reason or "").strip(),
+            box_type=box_type,
+            target_state=target_state,
+            exception_state=spec.exception_state,
+        )
+        memory_summary = (
+            str(summary or "").strip()
+            or str(reason or "").strip()
+            or f"{box_type.replace('_', ' ')} moved to {target_state.replace('_', ' ')}."
+        )
+        memory_payload: Dict[str, Any] = {}
+        try:
+            from solden.services.memory_events import build_memory_event_payload
+
+            memory_payload = build_memory_event_payload(
+                box_type=box_type,
+                box_id=box_id,
+                organization_id=organization_id,
+                event_type=str(action or target_state or "state_changed"),
+                source=str(source or "").strip() or "workspace_workflow",
+                actor_type="user",
+                actor_id=actor_id,
+                actor_label=actor_id,
+                previous_state=current_state,
+                resulting_state=target_state,
+                owner=inferred_owner,
+                dependency=inferred_dependency,
+                decision={
+                    "type": str(action or target_state or "state_changed"),
+                    "resulting_state": target_state,
+                },
+                rationale=str(reason or "").strip() or memory_summary,
+                evidence=evidence,
+                human_confirmation_status="confirmed",
+                next_action=next_action,
+                summary=memory_summary,
+                source_refs=source_refs,
+                occurred_at=now,
+            )
+            memory_payload["spec_version"] = spec_version
+        except Exception as exc:
+            logger.debug(
+                "[GenericBoxStore] memory payload build failed for %s/%s: %s",
+                box_type, box_id, exc,
+            )
+            memory_payload = {"spec_version": spec_version}
         event_id: Optional[str] = None
         with self.connect() as conn:
             try:
@@ -367,6 +480,9 @@ class GenericBoxStore:
                     "organization_id": organization_id,
                     "policy_version": spec.policy_version,
                     "decision_reason": reason or None,
+                    "payload_json": memory_payload,
+                    "external_refs": source_refs or {},
+                    "source": str(source or "").strip() or "workspace_workflow",
                     "idempotency_key": f"box-{target_state}:{box_id}:{now}",
                 })
                 conn.commit()

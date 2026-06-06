@@ -7,6 +7,7 @@ back through the Gmail extension or admin route names.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
@@ -32,9 +33,11 @@ from solden.core.auth import (
 )
 from solden.core.database import get_db
 from solden.services.ap_item_service import build_worklist_item, build_worklist_items
+from solden.services.operational_memory import build_box_operational_memory_record
 
 
 router = APIRouter(prefix="/api/workspace", tags=["workspace-records"])
+logger = logging.getLogger(__name__)
 
 _WORKSPACE_EXCEPTION_PAGE_SIZE = 50
 
@@ -222,6 +225,7 @@ async def list_workspace_records(
     sort_dir: str = Query(default="desc"),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0, le=100000),
+    include_memory: bool = Query(default=False),
     user: TokenData = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """Return the workspace AP record directory payload."""
@@ -295,6 +299,27 @@ async def list_workspace_records(
 
     items = raw_items
     normalized = build_worklist_items(db, items, build_item=build_worklist_item)
+    if include_memory:
+        for row in normalized:
+            ap_item_id = str((row or {}).get("id") or "").strip()
+            if not ap_item_id:
+                continue
+            try:
+                memory = build_box_operational_memory_record(
+                    db=db,
+                    box_type="ap_item",
+                    box_id=ap_item_id,
+                    item=row,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(
+                    "workspace records memory projection failed for %s: %s",
+                    ap_item_id,
+                    exc,
+                )
+                continue
+            row["memory"] = memory
+            row["decision_ledger"] = memory.get("decision_ledger") or []
     if hasattr(db, "ap_record_slice_counts"):
         slice_counts = db.ap_record_slice_counts(org_id, entity_id=entity_id)
     else:

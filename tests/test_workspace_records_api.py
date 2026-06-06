@@ -11,6 +11,7 @@ from main import app
 from solden.api import workspace_records as workspace_module
 from solden.core import database as db_module
 from solden.core.auth import TokenData
+from solden.services.memory_events import commit_memory_event
 
 
 @pytest.fixture()
@@ -142,3 +143,50 @@ def test_workspace_records_blocker_filter_handles_metadata_json(client, db, org_
     body = resp.json()
     assert body["total"] == 1
     assert body["items"][0]["vendor_name"] == "Manual Review Vendor"
+
+
+def test_workspace_records_can_include_operational_memory(client, db, org_id):
+    item = _seed_item(
+        db,
+        organization_id=org_id,
+        vendor_name="Memory Systems",
+        state="needs_info",
+        amount=1200,
+    )
+    commit_memory_event(
+        db,
+        box_type="ap_item",
+        box_id=item["id"],
+        organization_id=org_id,
+        event_type="request_info",
+        source="gmail",
+        actor_type="user",
+        actor_id="controller@acme.com",
+        owner={"label": "Controller", "email": "controller@acme.com"},
+        dependency={
+            "type": "information_request",
+            "owner": "Vendor",
+            "reason": "Vendor needs to send the missing PO",
+        },
+        decision={"type": "request_info"},
+        rationale="Vendor needs to send the missing PO",
+        evidence={"gmail_message_id": "msg-memory-1"},
+        next_action="Wait for vendor response",
+        summary="Controller requested the missing PO from the vendor.",
+        source_refs={"gmail_message_id": "msg-memory-1"},
+        idempotency_key=f"memory-event:{item['id']}:request-info",
+    )
+
+    resp = client.get("/api/workspace/records?include_memory=true&limit=1&offset=0")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["items"][0]["id"] == item["id"]
+    memory = body["items"][0]["memory"]
+    assert memory["record_id"] == f"ap_item:{item['id']}"
+    assert memory["context_summary"]["what_is_happening"] == (
+        "Controller requested the missing PO from the vendor."
+    )
+    assert memory["context_summary"]["why_it_is_happening"] == "Vendor needs to send the missing PO"
+    assert memory["context_summary"]["next_action"] == "Wait for vendor response"
+    assert body["items"][0]["decision_ledger"][0]["source_surface"] == "gmail"

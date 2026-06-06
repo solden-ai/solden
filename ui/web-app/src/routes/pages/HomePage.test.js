@@ -60,6 +60,38 @@ describe('HomePage', () => {
               next_action: 'request_info',
               source_count: 2,
               primary_source: { source_type: 'gmail_thread' },
+              memory: {
+                execution_state: {
+                  owner_label: 'Controller Ops',
+                  next_action: 'Wait for vendor response',
+                  dependencies: [
+                    {
+                      type: 'memory_dependency',
+                      detail: {
+                        owner: 'Vendor',
+                        reason: 'Vendor needs to send the missing PO',
+                      },
+                    },
+                  ],
+                },
+                context_summary: {
+                  what_is_happening: 'Controller requested the missing PO from the vendor.',
+                  why_it_is_happening: 'Vendor needs to send the missing PO',
+                  who_owns_it: 'Controller Ops',
+                  next_action: 'Wait for vendor response',
+                  where_it_happened: ['gmail'],
+                  latest_decision: {
+                    decision_type: 'request_info',
+                    decided_at: '2026-06-05T12:00:00Z',
+                  },
+                  evidence: {
+                    decision_refs: [{ gmail_message_id: 'msg-memory-1' }],
+                  },
+                },
+                proof: {
+                  memory_evidence: { gmail_message_id: 'msg-memory-1' },
+                },
+              },
               field_review_blockers: [
                 { field: 'vendor', reason: 'critical_field_low_confidence' },
                 { field: 'amount', reason: 'critical_field_low_confidence' },
@@ -132,8 +164,14 @@ describe('HomePage', () => {
     expect(screen.getByText('Operational context')).toBeTruthy();
     expect(screen.queryByLabelText('Workspace scopes')).toBeNull();
     expect(screen.getAllByText('Field review: Vendor, Amount').length).toBeGreaterThan(0);
-    expect(screen.getByText('2 sources linked · Gmail')).toBeTruthy();
+    expect(screen.getByText('Controller Ops')).toBeTruthy();
+    expect(screen.getAllByText('Wait for vendor response').length).toBeGreaterThan(0);
+    expect(screen.getByText('Evidence linked · Gmail')).toBeTruthy();
     expect(screen.getByText('Requested context')).toBeTruthy();
+    expect(api.mock.calls.some(([path]) => (
+      String(path).startsWith('/api/workspace/records?')
+      && String(path).includes('include_memory=true')
+    ))).toBe(true);
     expect([...document.querySelectorAll('.cl-home-owner-avatar')]
       .some((node) => node.textContent.trim() === '—')).toBe(false);
     expect(document.body.textContent).not.toContain('critical_field_low_confidence');

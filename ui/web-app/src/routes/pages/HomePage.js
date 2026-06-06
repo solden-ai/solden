@@ -71,7 +71,7 @@ export function HomePage() {
 
   const orgQuery = `organization_id=${encodeURIComponent(orgId)}`;
   const metrics = useEndpoint(`/api/ap/items/metrics/aggregation?${orgQuery}&vendor_limit=5`, [orgId]);
-  const records = useEndpoint(`/api/workspace/records?${orgQuery}&active_slice_id=all_open&limit=8&sort_col=queue_age&sort_dir=desc`, [orgId]);
+  const records = useEndpoint(`/api/workspace/records?${orgQuery}&active_slice_id=all_open&limit=8&sort_col=queue_age&sort_dir=desc&include_memory=true`, [orgId]);
   const workload = useEndpoint('/api/workspace/dashboard/approver-workload', [orgId]);
   const exceptions = useEndpoint('/api/workspace/exceptions?limit=10', [orgId]);
   const exceptionStats = useEndpoint('/api/workspace/exceptions/stats', [orgId]);
@@ -694,13 +694,46 @@ function compactPersonLabel(value) {
   return raw.split('@')[0].replace(/[._-]+/g, ' ').trim() || raw;
 }
 
+function displayMemoryText(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  return /[_-]/.test(raw) ? humanizeSentence(raw) : raw;
+}
+
+function memoryRecord(item = {}) {
+  return item?.memory && typeof item.memory === 'object' ? item.memory : {};
+}
+
+function memoryExecution(item = {}) {
+  const execution = memoryRecord(item).execution_state;
+  return execution && typeof execution === 'object' ? execution : {};
+}
+
+function memoryContext(item = {}) {
+  const context = memoryRecord(item).context_summary;
+  return context && typeof context === 'object' ? context : {};
+}
+
+function latestMemoryDecision(item = {}) {
+  const latest = memoryContext(item).latest_decision;
+  return latest && typeof latest === 'object' ? latest : {};
+}
+
 function workOwnerLabel(item = {}) {
+  const execution = memoryExecution(item);
+  const context = memoryContext(item);
+  const memoryOwner = execution.owner_label || context.who_owns_it || execution.owner?.label || execution.owner?.email || '';
+  if (memoryOwner) return compactPersonLabel(memoryOwner) || memoryOwner;
   const pending = Array.isArray(item.approval_pending_assignees) ? item.approval_pending_assignees : [];
   const owner = item.owner_email || item.owner || item.assigned_to_email || pending[0] || '';
   return compactPersonLabel(owner) || 'Unassigned';
 }
 
 function workOwnerTitle(item = {}) {
+  const execution = memoryExecution(item);
+  const context = memoryContext(item);
+  const memoryOwner = execution.owner_label || context.who_owns_it || execution.owner?.email || '';
+  if (memoryOwner) return String(memoryOwner);
   const pending = Array.isArray(item.approval_pending_assignees) ? item.approval_pending_assignees : [];
   return String(item.owner_email || item.owner || item.assigned_to_email || pending[0] || 'Unassigned');
 }
@@ -716,6 +749,8 @@ function ownerInitials(item = {}) {
 }
 
 function workNextStepLabel(item = {}) {
+  const memoryNext = String(memoryContext(item).next_action || memoryExecution(item).next_action || '').trim();
+  if (memoryNext) return displayMemoryText(memoryNext);
   const action = String(item.next_action || '').trim().toLowerCase();
   if (HOME_NEXT_STEP_LABELS[action]) return HOME_NEXT_STEP_LABELS[action];
   if (item.workflow_paused_reason) return 'Resolve blocker';
@@ -731,6 +766,18 @@ function workNextStepLabel(item = {}) {
 function workBlockerLabel(item = {}) {
   const fieldSummary = fieldReviewSummary(item);
   if (fieldSummary) return fieldSummary;
+  const context = memoryContext(item);
+  const execution = memoryExecution(item);
+  const blockedOn = Array.isArray(context.blocked_on) ? context.blocked_on : [];
+  if (blockedOn.length) return displayMemoryText(blockedOn[0]);
+  const dependencies = Array.isArray(execution.dependencies) ? execution.dependencies : [];
+  const activeDependency = dependencies.find((dep) => dep && (dep.type === 'open_exception' || dep.type === 'memory_dependency'));
+  if (activeDependency) {
+    const detail = activeDependency.detail && typeof activeDependency.detail === 'object'
+      ? activeDependency.detail
+      : activeDependency;
+    return displayMemoryText(detail.reason || detail.exception_type || detail.type || 'Blocked');
+  }
   const paused = String(item.workflow_paused_reason || '').trim();
   if (paused) return humanizeSentence(paused);
   const exception = String(item.exception_code || '').trim();
@@ -758,6 +805,15 @@ function fieldReviewSummary(item = {}) {
 }
 
 function workEvidenceLabel(item = {}) {
+  const context = memoryContext(item);
+  const evidence = context.evidence && typeof context.evidence === 'object' ? context.evidence : {};
+  const decisionRefs = Array.isArray(evidence.decision_refs) ? evidence.decision_refs.filter(Boolean) : [];
+  const memoryEvidence = memoryRecord(item).proof?.memory_evidence;
+  if (decisionRefs.length || memoryEvidence || evidence.attachment_url || evidence.attachment_content_hash) {
+    const surfaces = Array.isArray(context.where_it_happened) ? context.where_it_happened.filter(Boolean) : [];
+    const surface = surfaces.length ? surfaces.map(surfaceLabel).join(', ') : workItemSurface(item);
+    return `Evidence linked · ${surface}`;
+  }
   const count = safeMetric(item.source_count);
   const source = workItemSurface(item);
   if (count && count > 0) {
@@ -768,11 +824,16 @@ function workEvidenceLabel(item = {}) {
 }
 
 function workItemSurface(item = {}) {
+  const context = memoryContext(item);
+  const surfaces = Array.isArray(context.where_it_happened) ? context.where_it_happened.filter(Boolean) : [];
+  if (surfaces.length) return surfaceLabel(surfaces[surfaces.length - 1]);
   const source = item.primary_source || {};
   return surfaceLabel(source.source_type || source.type || item.source_type || item.surface || item.erp_type || 'workspace');
 }
 
 function workChangedLabel(item = {}) {
+  const latest = latestMemoryDecision(item);
+  if (latest.decided_at) return fmtRelative(latest.decided_at);
   const stamp = item.updated_at || item.queue_entered_at || item.received_at || item.created_at;
   return stamp ? fmtRelative(stamp) : 'No timestamp';
 }
