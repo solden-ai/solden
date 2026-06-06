@@ -96,6 +96,7 @@ from solden.api.dual_approval import router as dual_approval_router
 from solden.api.erp_connection_ops import (
     router as erp_connection_ops_router,
 )
+from solden.api.erp_memory_surface import router as erp_memory_surface_router
 from solden.api.erp_webhooks import router as erp_webhooks_router
 from solden.api.fraud_controls import router as fraud_controls_router
 from solden.api.match_config import router as match_config_router
@@ -654,6 +655,10 @@ STRICT_PROFILE_ALLOWED_EXTENSION_PATHS = {
     "/extension/ap-items/by-sage-intacct-bill/{record_no}/approve",
     "/extension/ap-items/by-sage-intacct-bill/{record_no}/reject",
     "/extension/ap-items/by-sage-intacct-bill/{record_no}/request-info",
+    "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}",
+    "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/approve",
+    "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/reject",
+    "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/request-info",
 }
 
 # ┌────────────────────────────────────────────────────────────────┐
@@ -954,6 +959,8 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         r"^/auth/users/[^/]+/role$",
         r"^/extension/ap/[^/]+/explain$",
         r"^/extension/ap-items/by-netsuite-bill/[^/]+$",
+        r"^/extension/ap-items/by-erp-reference/[^/]+/[^/]+$",
+        r"^/extension/ap-items/by-erp-reference/[^/]+/[^/]+/(approve|reject|request-info)$",
         r"^/extension/by-thread/[^/]+/recover$",
         r"^/extension/invoice-pipeline/[^/]+$",
         r"^/extension/invoice-status/[^/]+$",
@@ -1129,6 +1136,7 @@ app.include_router(gmail_extension_router)
 app.include_router(netsuite_panel_router)
 app.include_router(sap_extension_router)
 app.include_router(sage_intacct_panel_router)
+app.include_router(erp_memory_surface_router)
 app.include_router(slack_invoices_router)
 app.include_router(slack_legacy_router)
 app.include_router(teams_invoices_router)

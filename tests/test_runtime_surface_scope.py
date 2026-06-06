@@ -287,7 +287,10 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         # surfaces for workspace and Gmail/sidebar observations, and this pass
         # reconciles the strict-profile count after embedded memory surfaces
         # landed. Cap 467 -> 472.
-        assert len(paths) <= 472
+        # 2026-06-06: provider-neutral ERP memory/action surface brings
+        # QuickBooks, Xero, and Sage Accounting onto the same memory contract
+        # as NetSuite/SAP/Sage Intacct. Cap 472 -> 476.
+        assert len(paths) <= 476
         assert not any(path.startswith("/config/") for path in paths)
         assert "/erp/status/{organization_id}" not in paths
         assert "/erp/quickbooks/connect" not in paths
@@ -301,6 +304,10 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         assert "/api/workspace/integrations/erp/{erp_type}/rotate-credentials" in paths
         assert "/api/workspace/memory-events/capture" in paths
         assert "/extension/memory-events/capture" in paths
+        assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}" in paths
+        assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/approve" in paths
+        assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/reject" in paths
+        assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/request-info" in paths
         assert "/marketplace/apps" not in paths
         # OAuth callbacks remain available for admin ERP install flows.
         assert "/erp/quickbooks/callback" in paths

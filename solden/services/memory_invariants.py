@@ -62,6 +62,17 @@ PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
         path="solden/api/gmail_extension.py",
         required_tokens=("/memory-events/capture", "capture_operational_memory_event"),
     ),
+    MemoryCoverageSurface(
+        name="erp_memory_surface_api",
+        path="solden/api/erp_memory_surface.py",
+        required_tokens=(
+            "build_box_operational_memory_record",
+            "dispatch_runtime_intent",
+            "erp_native_quickbooks",
+            "erp_native_xero",
+            "erp_native_sage_accounting",
+        ),
+    ),
 )
 
 
