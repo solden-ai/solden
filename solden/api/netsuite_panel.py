@@ -36,6 +36,7 @@ from pydantic import BaseModel, Field
 from solden.core.auth import TokenData
 from solden.core.database import get_db as _get_db
 from solden.core.org_utils import require_org
+from solden.services.memory_surface import build_surface_memory_snapshot
 from solden.services.operational_memory import build_box_operational_memory_record
 
 logger = logging.getLogger(__name__)
@@ -299,18 +300,25 @@ def get_ap_item_by_netsuite_bill(
         "due_date": item.get("due_date"),
     }
 
+    memory = _build_operational_memory(
+        item=item,
+        timeline=timeline,
+        exceptions=exceptions,
+        outcome=outcome,
+        db=db,
+    )
+
     return {
         "ap_item_id": ap_item_id,
         "box_id": ap_item_id,
         "box_type": "ap_item",
         "state": item.get("state"),
         "summary": summary,
-        "memory": _build_operational_memory(
+        "memory": memory,
+        "surface_memory": build_surface_memory_snapshot(
+            memory,
             item=item,
-            timeline=timeline,
-            exceptions=exceptions,
-            outcome=outcome,
-            db=db,
+            surface=NETSUITE_PANEL_SOURCE_CHANNEL,
         ),
         "timeline": timeline,
         "exceptions": exceptions,

@@ -10,6 +10,10 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 from solden.core.utils import safe_float
+from solden.services.memory_surface import (
+    adaptive_card_memory_facts,
+    build_surface_memory_snapshot,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -105,29 +109,21 @@ class TeamsAPIClient:
     def _operational_memory_rows(memory: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if not isinstance(memory, dict) or not memory:
             return []
-        execution_state = memory.get("execution_state")
-        execution_state = execution_state if isinstance(execution_state, dict) else {}
-        owner = str(memory.get("owner_label") or execution_state.get("owner_label") or "").strip()
-        waiting_on = str(memory.get("waiting_on") or execution_state.get("waiting_on") or "").strip()
-        waiting_reason = str(memory.get("waiting_reason") or execution_state.get("waiting_reason") or "").strip()
-        next_step = str(memory.get("next_step") or execution_state.get("next_action") or "").strip()
-        facts = [
-            {"title": "Owner", "value": owner},
-            {"title": "Waiting on", "value": waiting_on},
-            {"title": "Why", "value": waiting_reason},
-            {"title": "Next", "value": next_step},
-        ]
-        facts = [fact for fact in facts if fact["value"]]
+        facts = adaptive_card_memory_facts(
+            memory,
+            labels=("Status", "Owner", "Waiting on", "Why", "Decision", "Evidence", "Next"),
+            max_facts=7,
+        )
         if not facts:
             return []
         summary = " | ".join(
             f"{fact['title']}: {fact['value']}"
-            for fact in facts[:4]
+            for fact in facts[:6]
         )
         return [
-            {"type": "TextBlock", "wrap": True, "weight": "Bolder", "text": "Current work memory"},
+            {"type": "TextBlock", "wrap": True, "weight": "Bolder", "text": "Solden memory"},
             {"type": "TextBlock", "wrap": True, "isSubtle": True, "text": summary},
-            {"type": "FactSet", "facts": facts[:4]},
+            {"type": "FactSet", "facts": facts[:6]},
         ]
 
 
@@ -271,6 +267,19 @@ class TeamsAPIClient:
                     "type": "Action.OpenUrl",
                     "title": "Open Gmail context",
                     "url": gmail_url,
+                }
+            )
+        memory_url = str(
+            build_surface_memory_snapshot(operational_memory).get("full_memory_url")
+            if isinstance(operational_memory, dict)
+            else ""
+        ).strip()
+        if memory_url and memory_url != gmail_url:
+            actions.append(
+                {
+                    "type": "Action.OpenUrl",
+                    "title": "Open Solden memory",
+                    "url": memory_url,
                 }
             )
 

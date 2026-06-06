@@ -20,8 +20,12 @@ def test_sap_fiori_panel_renders_operational_memory():
     assert "_formatOperationalMemory" in controller
     assert "memory: oMemory" in controller
     assert "decision_ledger: oData.decision_ledger || []" in controller
-    assert 'headerText="Current work"' in view
+    assert 'headerText="Solden memory"' in view
     assert "box>/memory/_waitingReason" in view
+    assert "box>/memory/_decision" in view
+    assert "box>/memory/_evidence" in view
+    assert "box>/memory/_auditHref" in view
     assert "box>/memory/_narrative" in view
+    assert "oData.surface_memory || null" in controller
     assert ".cl-memory-grid" in css
     assert "#18BFB0" in css or "#18BFB0" in view

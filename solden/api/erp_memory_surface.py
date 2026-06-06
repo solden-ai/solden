@@ -19,6 +19,7 @@ from solden.core.auth import get_current_user
 from solden.core.database import get_db as _get_db
 from solden.core.org_utils import require_org
 from solden.services.operational_memory import build_box_operational_memory_record
+from solden.services.memory_surface import build_surface_memory_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -179,6 +180,11 @@ def _build_memory_response(
         exceptions=exceptions,
         outcome=outcome,
     )
+    surface_memory = build_surface_memory_snapshot(
+        memory,
+        item=item,
+        surface=f"erp_native_{erp_type}",
+    )
     return {
         "ap_item_id": ap_item_id,
         "box_id": ap_item_id,
@@ -193,6 +199,7 @@ def _build_memory_response(
         },
         "memory": memory,
         "operational_memory": memory,
+        "surface_memory": surface_memory,
         "decision_ledger": memory.get("decision_ledger") or [],
         "timeline": timeline,
         "exceptions": exceptions,
@@ -202,6 +209,7 @@ def _build_memory_response(
         "surface": {
             "source_channel": _SOURCE_CHANNELS[erp_type],
             "contract": "erp_memory_surface.v1",
+            "memory_contract": surface_memory.get("contract"),
         },
     }
 

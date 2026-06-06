@@ -111,10 +111,15 @@ def test_netsuite_panel_renders_current_work_memory_fields():
         "cl-owner",
         "cl-waiting-on",
         "cl-waiting-reason",
+        "cl-decision",
+        "cl-evidence",
         "cl-next-step",
+        "cl-changed",
+        "cl-audit-link",
     ):
         assert dom_id in html
-    assert "renderMemory(data.memory" in js
+    assert "renderMemory(data.memory || null, data.surface_memory || null)" in js
+    assert "Solden memory" in html
     assert "/accounts-payable/" in js
     assert "app.soldenai.com/ap-items" not in js
 

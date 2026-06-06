@@ -84,9 +84,14 @@ def test_quickbooks_erp_reference_returns_live_operational_memory():
     assert body["erp_type"] == "quickbooks"
     assert body["erp_reference"] == "QB-BILL-100"
     assert body["surface"]["source_channel"] == "erp_native_quickbooks"
+    assert body["surface"]["memory_contract"] == "solden_memory_surface.v1"
     assert body["memory"]["record_id"] == "ap_item:AP-QB-MEMORY"
     assert body["memory"]["context_summary"]["who_owns_it"] == "Controller"
     assert body["memory"]["context_summary"]["next_action"] == "Controller approval"
+    assert body["surface_memory"]["owner"] == "Controller"
+    assert body["surface_memory"]["why"] == "Amount exceeds the auto-posting threshold."
+    assert body["surface_memory"]["next"] == "Controller approval"
+    assert body["surface_memory"]["full_memory_url"].endswith("/records/AP-QB-MEMORY")
     assert body["operational_memory"] == body["memory"]
     assert body["decision_ledger"]
 

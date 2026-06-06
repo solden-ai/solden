@@ -22,6 +22,11 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from solden.core.feature_flags import is_procurement_chat_enabled
+from solden.services.memory_surface import (
+    adaptive_card_memory_facts,
+    build_surface_memory_snapshot,
+    render_slack_memory_summary,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,24 +38,6 @@ def _po_id(po: Dict[str, Any]) -> str:
 def _memory_from_box(po: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     memory = po.get("operational_memory") or po.get("memory")
     return memory if isinstance(memory, dict) and memory else None
-
-
-def _memory_lines(memory: Optional[Dict[str, Any]]) -> List[str]:
-    if not isinstance(memory, dict) or not memory:
-        return []
-    execution_state = memory.get("execution_state")
-    execution_state = execution_state if isinstance(execution_state, dict) else {}
-    values = [
-        ("Owner", memory.get("owner_label") or execution_state.get("owner_label")),
-        ("Waiting on", memory.get("waiting_on") or execution_state.get("waiting_on")),
-        ("Why", memory.get("waiting_reason") or execution_state.get("waiting_reason")),
-        ("Next", memory.get("next_step") or execution_state.get("next_action")),
-    ]
-    return [
-        f"*{label}:* {str(value).strip()}"
-        for label, value in values
-        if str(value or "").strip()
-    ]
 
 
 def _attach_po_memory(po: Dict[str, Any], organization_id: str) -> Dict[str, Any]:
@@ -114,11 +101,17 @@ def build_po_approval_blocks(po: Dict[str, Any]) -> List[Dict[str, Any]]:
             ],
         },
     ]
-    memory_lines = _memory_lines(_memory_from_box(po))
-    if memory_lines:
+    memory_text = render_slack_memory_summary(
+        _memory_from_box(po),
+        item=po,
+        heading="Solden memory",
+        labels=("Status", "Owner", "Waiting on", "Why", "Decision", "Evidence", "Next"),
+        max_facts=7,
+    )
+    if memory_text:
         blocks.append({
             "type": "section",
-            "text": {"type": "mrkdwn", "text": "*Current work memory:*\n" + "\n".join(memory_lines[:4])},
+            "text": {"type": "mrkdwn", "text": memory_text[:2900]},
         })
     blocks.append(
         {
@@ -162,22 +155,30 @@ def build_po_teams_card(po: Dict[str, Any]) -> Dict[str, Any]:
             {"title": "PO #", "value": po_number},
         ]},
     ]
-    memory_lines = [
-        line.replace("*", "")
-        for line in _memory_lines(_memory_from_box(po))
-    ]
-    if memory_lines:
-        body.append({"type": "TextBlock", "wrap": True, "weight": "Bolder", "text": "Current work memory"})
-        body.extend(
-            {"type": "TextBlock", "wrap": True, "spacing": "None", "text": line}
-            for line in memory_lines[:4]
-        )
+    memory = _memory_from_box(po)
+    memory_facts = adaptive_card_memory_facts(
+        memory,
+        item=po,
+        labels=("Status", "Owner", "Waiting on", "Why", "Decision", "Evidence", "Next"),
+        max_facts=7,
+    )
+    if memory_facts:
+        body.append({"type": "TextBlock", "wrap": True, "weight": "Bolder", "text": "Solden memory"})
+        body.append({"type": "FactSet", "facts": memory_facts})
+    memory_url = build_surface_memory_snapshot(memory, item=po).get("full_memory_url") if memory else ""
 
     return {
         "type": "AdaptiveCard",
         "version": "1.4",
         "body": body,
-        "actions": [_action("Approve", "approve"), _action("Reject", "reject")],
+        "actions": [
+            _action("Approve", "approve"),
+            _action("Reject", "reject"),
+            *(
+                [{"type": "Action.OpenUrl", "title": "Open Solden memory", "url": memory_url}]
+                if memory_url else []
+            ),
+        ],
     }
 
 

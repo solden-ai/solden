@@ -422,6 +422,8 @@ def test_generic_workflow_read_route_attaches_memory(monkeypatch):
     assert response["state"] == "submitted"
     assert response["memory"]["record_id"] == "vendor_coi:COI-memory-1"
     assert response["memory"]["work_item_ref"]["label"] == "Globex"
+    assert response["surface_memory"]["contract"] == "solden_memory_surface.v1"
+    assert response["surface_memory"]["work_item"] == "Globex"
     assert response["decision_ledger"][0]["source_surface"] == "web"
 
 

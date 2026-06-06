@@ -47,6 +47,7 @@ from solden.core.auth import create_access_token, decode_token, _token_data_from
 from solden.core.database import get_db as _get_db
 from solden.core.http_client import get_http_client
 from solden.core.org_utils import require_org
+from solden.services.memory_surface import build_surface_memory_snapshot
 from solden.services.operational_memory import build_box_operational_memory_record
 
 logger = logging.getLogger(__name__)
@@ -465,6 +466,11 @@ def get_ap_item_by_sap_invoice(
         "state": item.get("state"),
         "summary": summary,
         "memory": memory,
+        "surface_memory": build_surface_memory_snapshot(
+            memory,
+            item=item,
+            surface=SAP_PANEL_SOURCE_CHANNEL,
+        ),
         "decision_ledger": memory.get("decision_ledger") or [],
         "timeline": timeline,
         "exceptions": exceptions,

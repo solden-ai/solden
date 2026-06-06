@@ -142,6 +142,11 @@ def test_sage_intacct_panel_returns_operational_memory(monkeypatch):
     assert payload["ap_item_id"] == "AP-sage-1"
     assert payload["memory"]["record_id"] == "ap_item:AP-sage-1"
     assert payload["memory"]["waiting_on"] == "controller@example.com"
+    assert payload["surface_memory"]["contract"] == "solden_memory_surface.v1"
+    assert payload["surface_memory"]["owner"] == "controller@example.com"
+    assert payload["surface_memory"]["decision"] == (
+        "Solden routed the work item for approval because policy approval required."
+    )
     assert payload["decision_ledger"][0]["source_surface"] == "erp_native_sage_intacct"
 
 
@@ -198,8 +203,11 @@ def test_sage_intacct_platform_app_calls_panel_endpoint():
     css = _read(f"{SAGE_INTACCT_ROOT}/ui/panel.css")
     readme = _read(f"{SAGE_INTACCT_ROOT}/README.md")
 
-    assert "Current work" in html
+    assert "Solden memory" in html
     assert "cl-memory" in html
+    assert "cl-decision" in html
+    assert "cl-evidence" in html
+    assert "cl-audit-link" in html
     assert 'data-cl-action="approve"' in html
     assert 'data-cl-action="request-info"' in html
     assert 'data-cl-action="reject"' in html
@@ -207,5 +215,6 @@ def test_sage_intacct_platform_app_calls_panel_endpoint():
     assert "method: 'POST'" in js
     assert "record_no" in js
     assert "company_id" in js
+    assert "data.surface_memory || null" in js
     assert "--cl-teal-500" in css
     assert "Sage Business Cloud Accounting is not covered here" in readme

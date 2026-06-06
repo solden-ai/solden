@@ -65,17 +65,58 @@
         show('cl-summary');
     }
 
-    function renderMemory(memory) {
+    function displayMemoryValue(value) {
+        if (!value) return '';
+        if (Array.isArray(value)) {
+            return value.map(displayMemoryValue).filter(Boolean).join(', ');
+        }
+        if (typeof value === 'object') {
+            return String(
+                value.summary
+                || value.label
+                || value.name
+                || value.email
+                || value.id
+                || ''
+            ).trim();
+        }
+        return String(value || '').trim();
+    }
+
+    function evidenceFallback(memory) {
+        const context = (memory && memory.context_summary) || {};
+        const evidence = context.evidence || {};
+        const proof = (memory && memory.proof) || {};
+        const direct = displayMemoryValue(evidence.memory_evidence || proof.memory_evidence || memory.evidence);
+        if (direct) return direct;
+        if (Array.isArray(evidence.decision_refs) && evidence.decision_refs.length) return 'Decision evidence linked';
+        if (evidence.attachment_url || proof.attachment_url) return 'Attachment linked';
+        if (evidence.attachment_content_hash || proof.attachment_content_hash) return 'Attachment hash verified';
+        if (evidence.field_confidences || proof.field_confidences) return 'Field evidence linked';
+        return '';
+    }
+
+    function renderMemory(memory, surfaceMemory) {
         if (!memory) {
             hide('cl-memory');
             return;
         }
+        surfaceMemory = surfaceMemory || {};
         const owner = memory.owner || {};
         const execution = memory.execution_state || {};
-        setText('cl-owner', memory.owner_label || execution.owner_label || owner.email || 'Unassigned');
-        setText('cl-waiting-on', memory.waiting_on || execution.waiting_on);
-        setText('cl-waiting-reason', memory.waiting_reason || execution.waiting_reason);
-        setText('cl-next-step', memory.next_step || execution.next_action);
+        const context = memory.context_summary || {};
+        const latestDecision = context.latest_decision || (Array.isArray(memory.decision_ledger) ? memory.decision_ledger[memory.decision_ledger.length - 1] : {}) || {};
+        setText('cl-owner', surfaceMemory.owner || memory.owner_label || execution.owner_label || owner.email || 'Unassigned');
+        setText('cl-waiting-on', memory.waiting_on || execution.waiting_on || surfaceMemory.owner);
+        setText('cl-waiting-reason', surfaceMemory.why || memory.waiting_reason || execution.waiting_reason);
+        setText('cl-decision', surfaceMemory.decision || latestDecision.summary || latestDecision.decision_type || 'No decision recorded');
+        setText('cl-evidence', surfaceMemory.evidence || evidenceFallback(memory) || 'No evidence linked');
+        setText('cl-next-step', surfaceMemory.next || memory.next_step || execution.next_action);
+        setText('cl-changed', surfaceMemory.changed || context.what_changed_since_last_step || 'No change recorded');
+        const auditLink = $('cl-audit-link');
+        if (auditLink && surfaceMemory.full_memory_url) {
+            auditLink.href = surfaceMemory.full_memory_url;
+        }
 
         const list = $('cl-memory-narrative');
         if (list) {
@@ -280,7 +321,7 @@
             const data = await res.json();
             setState(data.state);
             renderSummary(data.summary || {});
-            renderMemory(data.memory);
+            renderMemory(data.memory, data.surface_memory || null);
             renderActions(data);
             renderExceptions(data.exceptions || []);
             renderTimeline(data.timeline || []);

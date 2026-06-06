@@ -685,10 +685,15 @@ def test_slack_and_teams_card_builders_include_request_info_action():
             "Reject: records the rejection.",
         ],
         operational_memory={
+            "box_id": "thread-123",
             "owner_label": "AP Manager",
             "waiting_on": "controller@example.com",
             "waiting_reason": "PO match required",
             "next_step": "Controller should approve, reject, or request info.",
+            "context_summary": {
+                "latest_decision": {"summary": "Agent routed the invoice for controller approval."},
+                "evidence": {"memory_evidence": {"gmail_message_id": "msg-123"}},
+            },
         },
     )
     teams_content = teams_card["attachments"][0]["content"]
@@ -704,8 +709,10 @@ def test_slack_and_teams_card_builders_include_request_info_action():
     assert "What happens next" in body_text
     assert "Raised by Solden" in body_text
     assert "Open in Gmail" in body_text
-    assert "Current work memory" in body_text
+    assert "Solden memory" in body_text
     assert "controller@example.com" in body_text
+    assert "Agent routed the invoice for controller approval." in body_text
+    assert "gmail message id: msg-123" in body_text
 
     teams_budget_card = TeamsAPIClient.build_invoice_budget_card(
         email_id="thread-123",
@@ -744,10 +751,15 @@ def test_invoice_workflow_slack_blocks_include_request_info_for_standard_and_bud
         extra_context={
             "budget": {"status": "healthy", "requires_decision": False},
             "operational_memory": {
+                "box_id": "thread-card-1",
                 "owner_label": "AP Manager",
                 "waiting_on": "controller@example.com",
                 "waiting_reason": "PO match required",
                 "next_step": "Controller should approve, reject, or request info.",
+                "context_summary": {
+                    "latest_decision": {"summary": "Agent routed the invoice for controller approval."},
+                    "evidence": {"memory_evidence": {"gmail_message_id": "msg-card-1"}},
+                },
             },
         },
     )
@@ -769,8 +781,10 @@ def test_invoice_workflow_slack_blocks_include_request_info_for_standard_and_bud
     assert "Why this needs your decision" in standard_text
     assert "Recommended decision" in standard_text
     assert "What happens next" in standard_text
-    assert "Current work memory" in standard_text
+    assert "Solden memory" in standard_text
     assert "controller@example.com" in standard_text
+    assert "Agent routed the invoice for controller approval." in standard_text
+    assert "gmail message id: msg-card-1" in standard_text
     assert "Raised by Solden" in standard_context_text
     assert "Open in Gmail" in standard_context_text
 

@@ -33,6 +33,7 @@ from solden.core.workflow_spec import (
     IllegalWorkflowTransitionError,
     resolve_spec,
 )
+from solden.services.memory_surface import build_surface_memory_snapshot
 from solden.services.operational_memory import build_box_operational_memory_record
 
 logger = logging.getLogger(__name__)
@@ -144,7 +145,16 @@ def get_box(box_type: str, box_id: str, _user=Depends(get_current_user)) -> Dict
         box_id=box_id,
         item=box,
     )
-    return {**box, "memory": memory, "decision_ledger": memory.get("decision_ledger") or []}
+    return {
+        **box,
+        "memory": memory,
+        "surface_memory": build_surface_memory_snapshot(
+            memory,
+            item=box,
+            surface="workspace_workflow",
+        ),
+        "decision_ledger": memory.get("decision_ledger") or [],
+    }
 
 
 @router.post("/workflows/{box_type}/{box_id}/{action}")

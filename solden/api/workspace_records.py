@@ -36,6 +36,7 @@ from solden.core.database import get_db
 from solden.services.ap_item_service import build_worklist_item, build_worklist_items
 from solden.services.operational_memory_capture import capture_operational_memory_event
 from solden.services.operational_memory import build_box_operational_memory_record
+from solden.services.memory_surface import build_surface_memory_snapshot
 
 
 router = APIRouter(prefix="/api/workspace", tags=["workspace-records"])
@@ -346,6 +347,11 @@ async def list_workspace_records(
                 )
                 continue
             row["memory"] = memory
+            row["surface_memory"] = build_surface_memory_snapshot(
+                memory,
+                item=row,
+                surface="workspace",
+            )
             row["decision_ledger"] = memory.get("decision_ledger") or []
     if hasattr(db, "ap_record_slice_counts"):
         slice_counts = db.ap_record_slice_counts(org_id, entity_id=entity_id)

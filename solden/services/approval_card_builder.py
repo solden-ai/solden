@@ -13,6 +13,8 @@ import json
 import logging
 from typing import Any, Dict, List, Optional
 
+from solden.services.memory_surface import render_slack_memory_summary
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -398,39 +400,12 @@ def _render_je_preview_block(preview: Dict[str, Any]) -> str:
 
 
 def _operational_memory_card_text(memory: Any) -> str:
-    if not isinstance(memory, dict) or not memory:
-        return ""
-
-    execution_state = memory.get("execution_state")
-    execution_state = execution_state if isinstance(execution_state, dict) else {}
-    owner_dict = memory.get("owner")
-    owner_dict = owner_dict if isinstance(owner_dict, dict) else {}
-    owner = str(
-        memory.get("owner_label")
-        or execution_state.get("owner_label")
-        or owner_dict.get("email")
-    ).strip()
-    waiting_on = str(memory.get("waiting_on") or execution_state.get("waiting_on") or "").strip()
-    waiting_reason = str(memory.get("waiting_reason") or execution_state.get("waiting_reason") or "").strip()
-    next_step = str(memory.get("next_step") or execution_state.get("next_action") or "").strip()
-    lines = []
-    if owner:
-        lines.append(f"*Owner:* {owner}")
-    if waiting_on:
-        lines.append(f"*Waiting on:* {waiting_on}")
-    if waiting_reason:
-        lines.append(f"*Why:* {waiting_reason}")
-    if next_step:
-        lines.append(f"*Next:* {next_step}")
-
-    narrative = memory.get("memory_narrative")
-    if isinstance(narrative, list):
-        recent = [str(line).strip() for line in narrative[:2] if str(line).strip()]
-        if recent:
-            lines.append("*Recent context:*\n" + "\n".join(f"• {line}" for line in recent))
-    if not lines:
-        return ""
-    return "*Current work memory:*\n" + "\n".join(lines)
+    return render_slack_memory_summary(
+        memory,
+        heading="Solden memory",
+        labels=("Status", "Owner", "Waiting on", "Why", "Decision", "Evidence", "Next"),
+        max_facts=7,
+    )
 
 
 def build_approval_blocks(

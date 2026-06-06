@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 from solden.core.http_client import get_http_client
+from solden.services.memory_surface import adaptive_card_memory_facts
 
 logger = logging.getLogger(__name__)
 
@@ -30,78 +31,12 @@ _token_cache: Dict[str, Any] = {}
 _DEFAULT_SERVICE_URL = "https://smba.trafficmanager.net/amer"
 
 
-def _dict_value(value: Any) -> Dict[str, Any]:
-    return value if isinstance(value, dict) else {}
-
-
-def _memory_text(*values: Any) -> str:
-    for value in values:
-        if isinstance(value, list):
-            text = " · ".join(_memory_text(entry) for entry in value if _memory_text(entry))
-            if text:
-                return text
-            continue
-        if isinstance(value, dict):
-            text = _memory_text(
-                value.get("summary"),
-                value.get("label"),
-                value.get("name"),
-                value.get("email"),
-                value.get("id"),
-            )
-            if text:
-                return text
-            continue
-        text = str(value or "").strip()
-        if text:
-            return text
-    return ""
-
-
 def _operational_memory_facts(memory: Dict[str, Any]) -> List[Dict[str, str]]:
-    if not isinstance(memory, dict) or not memory:
-        return []
-    execution = _dict_value(memory.get("execution_state"))
-    context = _dict_value(memory.get("context_summary"))
-    latest_decision = _dict_value(context.get("latest_decision"))
-    facts = [
-        (
-            "Owner",
-            _memory_text(
-                context.get("who_owns_it"),
-                memory.get("waiting_on"),
-                execution.get("waiting_on"),
-                memory.get("owner_label"),
-                execution.get("owner_label"),
-            ),
-        ),
-        (
-            "Why",
-            _memory_text(
-                context.get("why_it_is_happening"),
-                memory.get("waiting_reason"),
-                execution.get("waiting_reason"),
-                latest_decision.get("summary"),
-            ),
-        ),
-        (
-            "Decision",
-            _memory_text(latest_decision.get("summary")),
-        ),
-        (
-            "Next",
-            _memory_text(
-                context.get("next_action"),
-                memory.get("next_step"),
-                execution.get("next_action"),
-            ),
-        ),
-    ]
-    return [
-        {"title": title, "value": value[:220]}
-        for title, value in facts
-        if value
-    ]
+    return adaptive_card_memory_facts(
+        memory,
+        labels=("Status", "Owner", "Waiting on", "Why", "Decision", "Evidence", "Next"),
+        max_facts=7,
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -53,6 +53,7 @@ from solden.core.idempotency import (
     save_idempotent_response,
 )
 from solden.core.utils import safe_int
+from solden.services.memory_surface import build_surface_memory_snapshot
 from solden.services.operational_memory_capture import capture_operational_memory_event
 
 logger = logging.getLogger(__name__)
@@ -233,6 +234,11 @@ def _build_worklist_item_with_memory(db: Any, item: Dict[str, Any]) -> Dict[str,
         return payload
     payload["memory"] = memory
     payload["operational_memory"] = memory
+    payload["surface_memory"] = build_surface_memory_snapshot(
+        memory,
+        item=payload,
+        surface="gmail",
+    )
     payload["decision_ledger"] = memory.get("decision_ledger") or []
     return payload
 

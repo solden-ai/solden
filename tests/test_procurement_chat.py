@@ -56,10 +56,15 @@ def test_card_has_decision_buttons_with_box_type_value():
 
 def test_cards_include_operational_memory_when_present():
     memory = {
+        "box_id": "PO-memory-1",
         "owner_label": "Procurement",
         "waiting_on": "Operations Director",
         "waiting_reason": "Budget reallocation required",
         "next_step": "Operations Director should approve or reject.",
+        "context_summary": {
+            "latest_decision": {"summary": "Finance requested a budget reallocation."},
+            "evidence": {"memory_evidence": {"slack_thread": "C123/1700000000.000"}},
+        },
     }
     po = {
         "po_id": "PO-memory-1",
@@ -75,9 +80,12 @@ def test_cards_include_operational_memory_when_present():
         for block in procurement_chat.build_po_approval_blocks(po)
         if isinstance(block.get("text"), dict)
     )
-    assert "Current work memory" in slack_text
+    assert "Solden memory" in slack_text
     assert "Operations Director" in slack_text
     assert "Budget reallocation required" in slack_text
+    assert "Finance requested a budget reallocation." in slack_text
+    assert "slack thread: C123/1700000000.000" in slack_text
+    assert "Open in Solden" in slack_text
 
     teams_card = procurement_chat.build_po_teams_card(po)
     teams_text = " ".join(
@@ -85,8 +93,17 @@ def test_cards_include_operational_memory_when_present():
         for block in teams_card.get("body", [])
         if isinstance(block, dict)
     )
-    assert "Current work memory" in teams_text
-    assert "Operations Director" in teams_text
+    teams_facts = " ".join(
+        str(fact.get("value") or "")
+        for block in teams_card.get("body", [])
+        if isinstance(block, dict)
+        for fact in (block.get("facts") or [])
+        if isinstance(fact, dict)
+    )
+    assert "Solden memory" in teams_text
+    assert "Operations Director" in teams_facts
+    assert "Finance requested a budget reallocation." in teams_facts
+    assert any(action.get("title") == "Open Solden memory" for action in teams_card.get("actions", []))
 
 
 def test_send_is_noop_when_flag_off(monkeypatch):

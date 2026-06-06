@@ -71,7 +71,7 @@
         <!-- Operational memory -->
         <Panel
             visible="{= !${box>/_loading} &amp;&amp; !${box>/_empty} &amp;&amp; !${box>/_error} &amp;&amp; !!${box>/memory}}"
-            headerText="Current work"
+            headerText="Solden memory"
             expandable="false"
             class="cl-section cl-memory">
             <VBox>
@@ -93,8 +93,24 @@
                         <Text text="{box>/memory/_waitingReason}" wrapping="true" class="cl-memory-value"/>
                     </VBox>
                     <VBox class="cl-memory-cell cl-memory-wide">
+                        <Label text="Decision" class="cl-memory-label"/>
+                        <Text text="{box>/memory/_decision}" wrapping="true" class="cl-memory-value"/>
+                    </VBox>
+                    <VBox class="cl-memory-cell cl-memory-wide">
+                        <Label text="Evidence" class="cl-memory-label"/>
+                        <Text text="{box>/memory/_evidence}" wrapping="true" class="cl-memory-value"/>
+                    </VBox>
+                    <VBox class="cl-memory-cell cl-memory-wide">
                         <Label text="Next" class="cl-memory-label"/>
                         <Text text="{box>/memory/_nextStep}" wrapping="true" class="cl-memory-value"/>
+                    </VBox>
+                    <VBox class="cl-memory-cell">
+                        <Label text="Changed" class="cl-memory-label"/>
+                        <Text text="{box>/memory/_changed}" wrapping="true" class="cl-memory-value"/>
+                    </VBox>
+                    <VBox class="cl-memory-cell">
+                        <Label text="Audit trail" class="cl-memory-label"/>
+                        <Link text="Open record" href="{box>/memory/_auditHref}" target="_blank"/>
                     </VBox>
                 </l:Grid>
                 <List

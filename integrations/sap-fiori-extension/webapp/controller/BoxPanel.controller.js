@@ -185,7 +185,7 @@ sap.ui.define([
                 }
             }
             oSummary._amountFormatted = sFormatted;
-            const oMemory = this._formatOperationalMemory(oData.memory || null);
+            const oMemory = this._formatOperationalMemory(oData.memory || null, oData.surface_memory || null);
 
             oBoxModel.setData({
                 state: oData.state || "",
@@ -203,14 +203,68 @@ sap.ui.define([
             });
         },
 
-        _formatOperationalMemory: function (oMemory) {
+        _displayMemoryValue: function (vValue) {
+            if (!vValue) {
+                return "";
+            }
+            if (Array.isArray(vValue)) {
+                return vValue
+                    .map(this._displayMemoryValue.bind(this))
+                    .filter(function (sText) { return !!sText; })
+                    .join(", ");
+            }
+            if (typeof vValue === "object") {
+                return String(
+                    vValue.summary
+                    || vValue.label
+                    || vValue.name
+                    || vValue.email
+                    || vValue.id
+                    || ""
+                ).trim();
+            }
+            return String(vValue || "").trim();
+        },
+
+        _evidenceFallback: function (oMemory) {
+            const oContext = (oMemory && oMemory.context_summary) || {};
+            const oEvidence = oContext.evidence || {};
+            const oProof = (oMemory && oMemory.proof) || {};
+            const sDirect = this._displayMemoryValue(oEvidence.memory_evidence || oProof.memory_evidence || oMemory.evidence);
+            if (sDirect) {
+                return sDirect;
+            }
+            if (Array.isArray(oEvidence.decision_refs) && oEvidence.decision_refs.length) {
+                return "Decision evidence linked";
+            }
+            if (oEvidence.attachment_url || oProof.attachment_url) {
+                return "Attachment linked";
+            }
+            if (oEvidence.attachment_content_hash || oProof.attachment_content_hash) {
+                return "Attachment hash verified";
+            }
+            if (oEvidence.field_confidences || oProof.field_confidences) {
+                return "Field evidence linked";
+            }
+            return "";
+        },
+
+        _formatOperationalMemory: function (oMemory, oSurfaceMemory) {
             if (!oMemory || typeof oMemory !== "object") {
                 return null;
             }
 
+            oSurfaceMemory = oSurfaceMemory || {};
             const oOwner = oMemory.owner || {};
+            const oExecution = oMemory.execution_state || {};
+            const oContext = oMemory.context_summary || {};
+            const oLatestDecision = oContext.latest_decision
+                || (Array.isArray(oMemory.decision_ledger) ? oMemory.decision_ledger[oMemory.decision_ledger.length - 1] : {})
+                || {};
             const sOwnerLabel = String(
-                oMemory.owner_label
+                oSurfaceMemory.owner
+                || oMemory.owner_label
+                || oExecution.owner_label
                 || oOwner.label
                 || oOwner.name
                 || oOwner.email
@@ -226,9 +280,13 @@ sap.ui.define([
 
             return Object.assign({}, oMemory, {
                 _ownerLabel: sOwnerLabel || "Unassigned",
-                _waitingOn: String(oMemory.waiting_on || "").trim() || "Not waiting",
-                _waitingReason: String(oMemory.waiting_reason || "").trim() || "No blocker recorded",
-                _nextStep: String(oMemory.next_step || "").trim() || "No next step recorded",
+                _waitingOn: String(oMemory.waiting_on || oExecution.waiting_on || oSurfaceMemory.owner || "").trim() || "Not waiting",
+                _waitingReason: String(oSurfaceMemory.why || oMemory.waiting_reason || oExecution.waiting_reason || "").trim() || "No blocker recorded",
+                _decision: String(oSurfaceMemory.decision || oLatestDecision.summary || oLatestDecision.decision_type || "").trim() || "No decision recorded",
+                _evidence: String(oSurfaceMemory.evidence || this._evidenceFallback(oMemory) || "").trim() || "No evidence linked",
+                _nextStep: String(oSurfaceMemory.next || oMemory.next_step || oExecution.next_action || "").trim() || "No next step recorded",
+                _changed: String(oSurfaceMemory.changed || oContext.what_changed_since_last_step || "").trim() || "No change recorded",
+                _auditHref: String(oSurfaceMemory.full_memory_url || "").trim(),
                 _narrative: aNarrative,
                 _hasNarrative: aNarrative.length > 0
             });

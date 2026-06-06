@@ -189,4 +189,10 @@ def test_workspace_records_can_include_operational_memory(client, db, org_id):
     )
     assert memory["context_summary"]["why_it_is_happening"] == "Vendor needs to send the missing PO"
     assert memory["context_summary"]["next_action"] == "Wait for vendor response"
+    assert body["items"][0]["surface_memory"]["contract"] == "solden_memory_surface.v1"
+    assert body["items"][0]["surface_memory"]["owner"] == "Vendor"
+    assert body["items"][0]["surface_memory"]["decision"] == (
+        "Controller requested the missing PO from the vendor."
+    )
+    assert "gmail message id: msg-memory-1" in body["items"][0]["surface_memory"]["evidence"]
     assert body["items"][0]["decision_ledger"][0]["source_surface"] == "gmail"
