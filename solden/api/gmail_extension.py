@@ -202,6 +202,39 @@ def build_worklist_items(*args, **kwargs):
     return _build_worklist_items(*args, **kwargs)
 
 
+def build_box_operational_memory_record(*args, **kwargs):
+    from solden.services.operational_memory import (
+        build_box_operational_memory_record as _build_box_operational_memory_record,
+    )
+
+    return _build_box_operational_memory_record(*args, **kwargs)
+
+
+def _build_worklist_item_with_memory(db: Any, item: Dict[str, Any]) -> Dict[str, Any]:
+    payload = build_worklist_item(db, item)
+    ap_item_id = str(payload.get("id") or item.get("id") or "").strip()
+    if not ap_item_id:
+        return payload
+    try:
+        memory = build_box_operational_memory_record(
+            db=db,
+            box_type="ap_item",
+            box_id=ap_item_id,
+            item=payload,
+        )
+    except Exception as exc:
+        logger.debug(
+            "Gmail extension memory projection failed for %s: %s",
+            ap_item_id,
+            exc,
+        )
+        return payload
+    payload["memory"] = memory
+    payload["operational_memory"] = memory
+    payload["decision_ledger"] = memory.get("decision_ledger") or []
+    return payload
+
+
 async def _recover_ap_item_for_thread(
     db: Any,
     *,
@@ -850,7 +883,11 @@ async def get_ap_item_by_thread(
     item = db.get_ap_item_by_thread(org_id, thread_id)
     if not item:
         return {"found": False, "thread_id": thread_id, "item": None}
-    return {"found": True, "thread_id": thread_id, "item": build_worklist_item(db, item)}
+    return {
+        "found": True,
+        "thread_id": thread_id,
+        "item": _build_worklist_item_with_memory(db, item),
+    }
 
 
 @router.post("/by-thread/{thread_id}/recover")
@@ -878,7 +915,7 @@ async def recover_ap_item_by_thread(
         "found": True,
         "recovered": recovered,
         "thread_id": thread_id,
-        "item": build_worklist_item(db, item),
+        "item": _build_worklist_item_with_memory(db, item),
     }
 
 
@@ -1904,7 +1941,7 @@ async def get_invoice_status(
 
     if not status:
         raise HTTPException(status_code=404, detail="Invoice not found")
-    return status
+    return _build_worklist_item_with_memory(db, status)
 
 
 @router.get("/invoice-pipeline/{organization_id}")

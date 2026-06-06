@@ -357,6 +357,42 @@ describe('getAgentMemoryView', () => {
     assert.equal(view.nextActionActorLabel, 'Approver');
     assert.deepEqual(view.reasonCodes, []);
   });
+
+  it('renders canonical operational memory when agent memory is absent', () => {
+    const view = getAgentMemoryView({
+      state: 'validated',
+      memory: {
+        current_state: 'validated',
+        waiting_on: 'Operations Director',
+        waiting_reason: 'Finance requested a budget reallocation.',
+        next_step: 'Controller sign-off',
+        execution_state: {
+          owner_label: 'Maya R.',
+          waiting_on: 'Operations Director',
+          waiting_reason: 'Finance requested a budget reallocation.',
+          next_action: 'Controller sign-off',
+        },
+        context_summary: {
+          why_it_is_happening: 'Finance requested a budget reallocation.',
+          who_owns_it: 'Operations Director',
+          next_action: 'Controller sign-off',
+          latest_decision: {
+            decision_type: 'request_budget_reallocation',
+            summary: 'Finance requested a budget reallocation.',
+          },
+          evidence: {
+            decision_refs: [{ id: 'evt_1' }],
+          },
+        },
+      },
+    });
+
+    assert.equal(view.hasMemory, true);
+    assert.equal(view.nextActionLabel, 'Controller sign-off');
+    assert.equal(view.beliefReason, 'Finance requested a budget reallocation.');
+    assert.equal(view.nextActionOwnerLabel, 'Operations Director');
+    assert.deepEqual(view.evidence.decision_refs, [{ id: 'evt_1' }]);
+  });
 });
 
 describe('getReasonSheetDefaults', () => {

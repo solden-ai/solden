@@ -810,6 +810,18 @@ class SoldenQueueManager {
         if (!response.ok) return null;
         const payload = await response.json();
         this.contextByItem.set(apItemId, payload || null);
+        const memory = payload?.memory || payload?.operational_memory || null;
+        if (memory && Array.isArray(this.queue)) {
+          const existing = this.queue.find((entry) => String(entry?.id || '') === String(apItemId));
+          if (existing) {
+            this.upsertQueueItem({
+              ...existing,
+              memory,
+              operational_memory: memory,
+              decision_ledger: payload?.decision_ledger || existing.decision_ledger || [],
+            });
+          }
+        }
         this.emitQueueUpdated();
         return payload || null;
       } catch (_) {

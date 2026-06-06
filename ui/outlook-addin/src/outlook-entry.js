@@ -164,6 +164,74 @@ function StatePill({ state }) {
   return html`<span class="cl-state-pill ${state}">${label}</span>`;
 }
 
+function normalizeMemorySection(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function memoryText(...values) {
+  for (const value of values) {
+    if (Array.isArray(value)) {
+      const text = value.map((entry) => memoryText(entry)).filter(Boolean).join(' · ');
+      if (text) return text;
+      continue;
+    }
+    if (value && typeof value === 'object') {
+      const text = memoryText(value.summary, value.label, value.name, value.email, value.id);
+      if (text) return text;
+      continue;
+    }
+    const text = String(value ?? '').trim();
+    if (text) return text;
+  }
+  return '';
+}
+
+function MemoryPanel({ memory }) {
+  const record = normalizeMemorySection(memory);
+  if (!Object.keys(record).length) return null;
+
+  const execution = normalizeMemorySection(record.execution_state);
+  const context = normalizeMemorySection(record.context_summary);
+  const latestDecision = normalizeMemorySection(context.latest_decision);
+  const evidence = normalizeMemorySection(context.evidence || record.proof);
+  const evidenceLabel = evidence.attachment_content_hash
+    ? 'Attachment verified'
+    : evidence.attachment_url
+      ? 'Attachment linked'
+      : Array.isArray(evidence.decision_refs) && evidence.decision_refs.length
+        ? `${evidence.decision_refs.length} decision reference${evidence.decision_refs.length === 1 ? '' : 's'}`
+        : '';
+  const rows = [
+    ['Owner', memoryText(context.who_owns_it, record.waiting_on, execution.waiting_on, record.owner_label, execution.owner_label)],
+    ['Why', memoryText(context.why_it_is_happening, record.waiting_reason, execution.waiting_reason, latestDecision.summary)],
+    ['Decision', memoryText(latestDecision.summary)],
+    ['Next', memoryText(context.next_action, record.next_step, execution.next_action)],
+    ['Evidence', evidenceLabel],
+  ].filter(([, value]) => Boolean(value));
+  const recent = Array.isArray(record.memory_narrative)
+    ? record.memory_narrative.map((line) => String(line || '').trim()).filter(Boolean).slice(0, 2)
+    : [];
+
+  if (!rows.length && !recent.length) return null;
+
+  return html`
+    <div class="cl-memory-panel">
+      <div class="cl-memory-kicker">Operational memory</div>
+      ${rows.map(([label, value]) => html`
+        <div class="cl-memory-row">
+          <span>${label}</span>
+          <strong>${value}</strong>
+        </div>
+      `)}
+      ${recent.length > 0 && html`
+        <div class="cl-memory-recent">
+          ${recent.map((line) => html`<div>${line}</div>`)}
+        </div>
+      `}
+    </div>
+  `;
+}
+
 function FieldCheck({ label, value, confidence }) {
   const cls = !value ? 'error' : (confidence && confidence < 0.85) ? 'warn' : 'ok';
   const icon = cls === 'ok' ? '\u2713' : cls === 'warn' ? '?' : '\u2717';
@@ -193,6 +261,7 @@ function InvoiceCard({ item, onAction }) {
         <${FieldCheck} label="Due date" value=${item.due_date} confidence=${fc.due_date}/>
         <${FieldCheck} label="PO" value=${item.po_number} confidence=${fc.po_number}/>
       </div>
+      <${MemoryPanel} memory=${item.memory || item.operational_memory}/>
       <div class="cl-actions">
         ${item.state === 'validated' && html`
           <button class="cl-btn-primary" onClick=${() => onAction('submit-for-approval', item)}>
@@ -273,6 +342,39 @@ function App() {
   const [timeline, setTimeline] = useState([]);
   const [error, setError] = useState(null);
 
+  const loadOperationalRecord = useCallback(async (item) => {
+    if (!item?.id) {
+      setCurrentItem(item || null);
+      setTimeline([]);
+      return item || null;
+    }
+    setCurrentItem(item);
+    try {
+      const box = await backendFetch(`/api/ap/items/${encodeURIComponent(item.id)}/box?fresh=true`);
+      const memory = box?.memory || item.memory || item.operational_memory || null;
+      const hydrated = {
+        ...item,
+        memory,
+        operational_memory: memory,
+        decision_ledger: box?.decision_ledger || item.decision_ledger || [],
+        box,
+      };
+      setCurrentItem(hydrated);
+      setTimeline(Array.isArray(box?.timeline) ? box.timeline : []);
+      return hydrated;
+    } catch (e) {
+      console.warn('Operational memory load failed:', e);
+      try {
+        const audit = await backendFetch(`/api/ap/items/${encodeURIComponent(item.id)}/audit`);
+        setTimeline(audit.events || []);
+      } catch (auditError) {
+        console.warn('Timeline load failed:', auditError);
+        setTimeline([]);
+      }
+      return item;
+    }
+  }, []);
+
   // Initialize
   useEffect(() => {
     (async () => {
@@ -296,16 +398,10 @@ function App() {
           // If we have a current email, try to find its AP item
           if (ctx && ctx.itemId) {
             try {
-              const item = await backendFetch(`/extension/by-thread/${encodeURIComponent(ctx.conversationId || ctx.itemId)}`);
-              if (item && item.id) {
-                setCurrentItem(item);
-                // Load timeline
-                try {
-                  const audit = await backendFetch(`/api/ap/items/${item.id}/audit`);
-                  setTimeline(audit.events || []);
-                } catch (e) {
-                  console.warn('Timeline load failed:', e);
-                }
+              const lookup = await backendFetch(`/extension/by-thread/${encodeURIComponent(ctx.conversationId || ctx.itemId)}`);
+              const foundItem = lookup?.item || (lookup?.id ? lookup : null);
+              if (foundItem?.id) {
+                await loadOperationalRecord(foundItem);
               }
             } catch (e) {
               // No AP item for this email — that's fine
@@ -318,7 +414,7 @@ function App() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [loadOperationalRecord]);
 
   const handleConnect = useCallback(() => {
     // Open auth in dialog
@@ -388,7 +484,7 @@ function App() {
           <${Timeline} events=${timeline}/>
         `
         : html`
-          <${WorkList} items=${worklist} onSelect=${(item) => setCurrentItem(item)}/>
+          <${WorkList} items=${worklist} onSelect=${loadOperationalRecord}/>
         `
       }
       ${error && html`

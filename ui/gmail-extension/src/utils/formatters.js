@@ -460,6 +460,76 @@ function normalizeAgentMemorySection(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
+function firstMemoryText(...values) {
+  for (const value of values) {
+    if (Array.isArray(value)) {
+      const text = value.map((entry) => firstMemoryText(entry)).filter(Boolean).join(' · ');
+      if (text) return text;
+      continue;
+    }
+    if (value && typeof value === 'object') {
+      const text = firstMemoryText(
+        value.summary,
+        value.label,
+        value.name,
+        value.email,
+        value.id,
+      );
+      if (text) return text;
+      continue;
+    }
+    const text = String(value ?? '').trim();
+    if (text) return text;
+  }
+  return '';
+}
+
+function canonicalMemoryToAgentMemory(item = {}) {
+  const memory = normalizeAgentMemorySection(
+    item?.memory
+    || item?.operational_memory
+    || item?.context?.memory
+    || item?.context_payload?.memory
+  );
+  if (Object.keys(memory).length === 0) return {};
+
+  const execution = normalizeAgentMemorySection(memory.execution_state);
+  const context = normalizeAgentMemorySection(memory.context_summary);
+  const latestDecision = normalizeAgentMemorySection(context.latest_decision);
+  const evidence = normalizeAgentMemorySection(context.evidence || memory.proof);
+  const currentState = firstMemoryText(memory.current_state, item?.state, item?.status);
+  const reason = firstMemoryText(
+    context.why_it_is_happening,
+    memory.waiting_reason,
+    execution.waiting_reason,
+    latestDecision.summary,
+    context.what_is_happening,
+  );
+
+  return {
+    current_state: currentState,
+    status: currentState,
+    next_action: {
+      type: firstMemoryText(latestDecision.decision_type, latestDecision.resulting_state),
+      label: firstMemoryText(context.next_action, memory.next_step, execution.next_action),
+      owner: firstMemoryText(
+        context.who_owns_it,
+        memory.waiting_on,
+        execution.waiting_on,
+        memory.owner_label,
+        execution.owner_label,
+      ),
+    },
+    summary: {
+      reason,
+    },
+    episode: {
+      summary: firstMemoryText(context.what_is_happening, latestDecision.summary),
+    },
+    evidence,
+  };
+}
+
 function formatAgentStateLabel(value) {
   const token = String(value || '').trim().toLowerCase();
   if (!token) return '';
@@ -621,7 +691,10 @@ function summarizeAgentHighlights(item = {}, reasonCodes = [], confidenceBlocker
 }
 
 export function getAgentMemoryView(item = {}) {
-  const memory = normalizeAgentMemorySection(item?.agent_memory);
+  const canonicalMemory = canonicalMemoryToAgentMemory(item);
+  const memory = Object.keys(canonicalMemory).length > 0
+    ? canonicalMemory
+    : normalizeAgentMemorySection(item?.agent_memory);
   const profile = Object.keys(normalizeAgentMemorySection(item?.agent_profile)).length > 0
     ? normalizeAgentMemorySection(item?.agent_profile)
     : normalizeAgentMemorySection(memory.profile);

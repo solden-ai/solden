@@ -1403,6 +1403,9 @@ class TestGmailWebhooks:
         assert payload["found"] is True
         assert payload["recovered"] is True
         assert payload["item"]["thread_id"] == "thread-1"
+        assert payload["item"]["memory"]["box_id"] == payload["item"]["id"]
+        assert payload["item"]["operational_memory"]["record_id"].startswith("ap_item:")
+        assert isinstance(payload["item"]["decision_ledger"], list)
         assert payload["item"]["message_id"] == "msg-thread-1"
         assert payload["item"]["vendor_name"] == "Acme Corp"
         assert payload["item"]["primary_source"]["thread_id"] == "thread-1"

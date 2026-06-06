@@ -1,8 +1,9 @@
 /* Solden Outlook Add-in — matches Gmail extension styling */
 
 :root {
-  --cl-mint: #00D67E;
-  --cl-navy: #0A1628;
+  --cl-navy: #001137;
+  --cl-teal-500: #18BFB0;
+  --cl-mint: var(--cl-teal-500);
   --cl-bg: #FFFFFF;
   --cl-surface: #F8F9FA;
   --cl-border: #E5E7EB;
@@ -183,6 +184,55 @@ body {
 .cl-field.ok { color: var(--cl-success); }
 .cl-field.warn { color: var(--cl-warning); }
 .cl-field.error { color: var(--cl-error); }
+
+/* Operational memory */
+.cl-memory-panel {
+  margin-top: 12px;
+  border: 1px solid var(--cl-border);
+  border-radius: 8px;
+  background: #FBFCFD;
+  overflow: hidden;
+}
+
+.cl-memory-kicker {
+  padding: 8px 10px;
+  color: var(--cl-text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.cl-memory-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--cl-border);
+  font-size: 12px;
+}
+
+.cl-memory-row span {
+  color: var(--cl-text-secondary);
+}
+
+.cl-memory-row strong {
+  min-width: 0;
+  color: var(--cl-navy);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.cl-memory-recent {
+  padding: 8px 10px;
+  color: var(--cl-text-secondary);
+  font-size: 12px;
+}
+
+.cl-memory-recent div + div {
+  margin-top: 4px;
+}
 
 /* Timeline */
 .cl-timeline {

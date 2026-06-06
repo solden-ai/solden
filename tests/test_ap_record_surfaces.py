@@ -1164,6 +1164,9 @@ def test_context_endpoint_includes_related_records_and_source_groups(client, db)
     related = payload["related_records"]
     source_groups = payload["email"]["source_groups"]
 
+    assert payload["memory"]["box_id"] == current["id"]
+    assert payload["operational_memory"]["record_id"] == f"ap_item:{current['id']}"
+    assert isinstance(payload["decision_ledger"], list)
     assert any(item["id"] == duplicate["id"] for item in related["same_invoice_number_items"])
     assert any(item["id"] == vendor_recent["id"] for item in related["vendor_recent_items"])
     assert related["supersession"]["previous_item"]["id"] == previous["id"]

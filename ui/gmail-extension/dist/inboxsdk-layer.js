@@ -1,4 +1,4 @@
-/* clearledgr-source-fingerprint:d9e8d1e0529f70f507dc5909c18ad3352874f14a79f585d707633cf8a41ee332 */
+/* clearledgr-source-fingerprint:64c907a051496ec90abbaf0f0da1de8e4bb92572702134881405f74359df51b9 */
 (() => {
   var __create = Object.create;
   var __getProtoOf = Object.getPrototypeOf;
@@ -54036,6 +54036,18 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
             return null;
           const payload = await response.json();
           this.contextByItem.set(apItemId, payload || null);
+          const memory = payload?.memory || payload?.operational_memory || null;
+          if (memory && Array.isArray(this.queue)) {
+            const existing = this.queue.find((entry) => String(entry?.id || "") === String(apItemId));
+            if (existing) {
+              this.upsertQueueItem({
+                ...existing,
+                memory,
+                operational_memory: memory,
+                decision_ledger: payload?.decision_ledger || existing.decision_ledger || []
+              });
+            }
+          }
           this.emitQueueUpdated();
           return payload || null;
         } catch (_2) {

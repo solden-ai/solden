@@ -30,6 +30,80 @@ _token_cache: Dict[str, Any] = {}
 _DEFAULT_SERVICE_URL = "https://smba.trafficmanager.net/amer"
 
 
+def _dict_value(value: Any) -> Dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _memory_text(*values: Any) -> str:
+    for value in values:
+        if isinstance(value, list):
+            text = " · ".join(_memory_text(entry) for entry in value if _memory_text(entry))
+            if text:
+                return text
+            continue
+        if isinstance(value, dict):
+            text = _memory_text(
+                value.get("summary"),
+                value.get("label"),
+                value.get("name"),
+                value.get("email"),
+                value.get("id"),
+            )
+            if text:
+                return text
+            continue
+        text = str(value or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _operational_memory_facts(memory: Dict[str, Any]) -> List[Dict[str, str]]:
+    if not isinstance(memory, dict) or not memory:
+        return []
+    execution = _dict_value(memory.get("execution_state"))
+    context = _dict_value(memory.get("context_summary"))
+    latest_decision = _dict_value(context.get("latest_decision"))
+    facts = [
+        (
+            "Owner",
+            _memory_text(
+                context.get("who_owns_it"),
+                memory.get("waiting_on"),
+                execution.get("waiting_on"),
+                memory.get("owner_label"),
+                execution.get("owner_label"),
+            ),
+        ),
+        (
+            "Why",
+            _memory_text(
+                context.get("why_it_is_happening"),
+                memory.get("waiting_reason"),
+                execution.get("waiting_reason"),
+                latest_decision.get("summary"),
+            ),
+        ),
+        (
+            "Decision",
+            _memory_text(latest_decision.get("summary")),
+        ),
+        (
+            "Next",
+            _memory_text(
+                context.get("next_action"),
+                memory.get("next_step"),
+                execution.get("next_action"),
+            ),
+        ),
+    ]
+    return [
+        {"title": title, "value": value[:220]}
+        for title, value in facts
+        if value
+    ]
+
+
 # ---------------------------------------------------------------------------
 # OAuth token management
 # ---------------------------------------------------------------------------
@@ -377,9 +451,16 @@ def build_finance_summary_reply_activity(
     amount = item.get("amount", 0)
     currency = str(item.get("currency") or "USD")
     invoice_number = str(item.get("invoice_number") or "N/A")
+    operational_memory = item.get("memory") or item.get("operational_memory")
+    operational_memory = operational_memory if isinstance(operational_memory, dict) else {}
     agent_memory = item.get("agent_memory") if isinstance(item.get("agent_memory"), dict) else {}
     agent_profile = item.get("agent_profile") if isinstance(item.get("agent_profile"), dict) else {}
     agent_next_action = item.get("agent_next_action") if isinstance(item.get("agent_next_action"), dict) else {}
+    memory_facts = _operational_memory_facts(operational_memory)
+    memory_next = next(
+        (fact["value"] for fact in memory_facts if fact.get("title") == "Next"),
+        "",
+    )
     try:
         amount_value = float(amount)
     except (TypeError, ValueError):
@@ -403,7 +484,7 @@ def build_finance_summary_reply_activity(
                 {"title": "Vendor", "value": vendor},
                 {"title": "Amount", "value": f"{currency} {amount_value:,.2f}"},
                 {"title": "Invoice #", "value": invoice_number},
-                {"title": "Next", "value": str(agent_next_action.get("label") or agent_next_action.get("type") or "Review current AP state")},
+                {"title": "Next", "value": str(memory_next or agent_next_action.get("label") or agent_next_action.get("type") or "Review current AP state")},
                 {"title": "Agent", "value": str(agent_profile.get("name") or "Solden AP Agent")},
             ],
         },
@@ -413,6 +494,15 @@ def build_finance_summary_reply_activity(
             "wrap": True,
         },
     ]
+
+    if memory_facts:
+        card_body.insert(
+            2,
+            {
+                "type": "FactSet",
+                "facts": memory_facts[:4],
+            },
+        )
 
     belief = agent_memory.get("belief") if isinstance(agent_memory.get("belief"), dict) else {}
     belief_reason = str(belief.get("reason") or "").strip()

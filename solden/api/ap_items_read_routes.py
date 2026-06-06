@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
+import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -21,6 +22,7 @@ from solden.services.operational_memory import build_box_operational_memory_reco
 
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def _session_org(user: Any) -> str:
@@ -60,6 +62,35 @@ class _SharedProxy:
 
 
 shared = _SharedProxy()
+
+
+def _attach_operational_memory_context(
+    db: Any,
+    item: Dict[str, Any],
+    context: Dict[str, Any],
+) -> Dict[str, Any]:
+    payload = dict(context or {})
+    ap_item_id = str(item.get("id") or "").strip()
+    if not ap_item_id:
+        return payload
+    try:
+        memory = build_box_operational_memory_record(
+            db=db,
+            box_type="ap_item",
+            box_id=ap_item_id,
+            item=item,
+        )
+    except Exception as exc:
+        logger.debug(
+            "AP item context memory projection failed for %s: %s",
+            ap_item_id,
+            exc,
+        )
+        return payload
+    payload["memory"] = memory
+    payload["operational_memory"] = memory
+    payload["decision_ledger"] = memory.get("decision_ledger") or []
+    return payload
 
 
 @router.get("/upcoming")
@@ -681,8 +712,8 @@ def get_ap_item_context(
                     freshness["age_seconds"] = age_seconds
                     freshness["is_stale"] = age_seconds > 300
                     context["freshness"] = freshness
-                return context
+                return _attach_operational_memory_context(db, item, context)
 
     context = shared._build_context_payload(db, item)
     db.upsert_ap_item_context_cache(ap_item_id, context)
-    return context
+    return _attach_operational_memory_context(db, item, context)

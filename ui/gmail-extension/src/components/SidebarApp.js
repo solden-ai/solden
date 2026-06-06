@@ -1082,6 +1082,10 @@ function WorkPanel({ item, queueManager }) {
   }
   const metaLine = metaParts.join(' · ');
   const contextPayload = item?.id ? s.contextState.get(item.id) || null : null;
+  const operationalMemory = item?.memory || item?.operational_memory || contextPayload?.memory || contextPayload?.operational_memory || null;
+  const itemWithMemory = operationalMemory
+    ? { ...(item || {}), memory: operationalMemory, operational_memory: operationalMemory }
+    : item;
   const budgetContext = normalizeBudgetContext(contextPayload || {}, item);
   const blockers = getBlockers(item, state, budgetContext, documentType);
   const fieldReviewBlockers = getFieldReviewBlockers(item);
@@ -1109,7 +1113,7 @@ function WorkPanel({ item, queueManager }) {
   const smartDefault = item?.exception_code ? getExceptionReason(item.exception_code) : '';
   const canOpenSource = Boolean(getSourceThreadId(item) || getSourceMessageId(item) || item.subject);
   const entityNeedsReview = needsEntityRouting(item, state, documentType);
-  const agentView = getAgentMemoryView(item);
+  const agentView = getAgentMemoryView(itemWithMemory);
   const tasks = item?.id ? (s.tasksState.get(item.id) || []) : [];
   const notes = item?.id ? (s.notesState.get(item.id) || []) : [];
   const comments = item?.id ? (s.commentsState.get(item.id) || []) : [];
