@@ -212,6 +212,10 @@ def test_apply_resolved_owner_writes_columns_and_audit_event(db):
     assert owner_events, "owner_changed audit event must be written"
     body = owner_events[-1].get("payload_json") or {}
     assert body.get("owner_email") == "controller@example.com"
+    memory_event = body["memory_event"]
+    assert memory_event["event_type"] == "owner_changed"
+    assert memory_event["execution_state"]["owner"]["email"] == "controller@example.com"
+    assert memory_event["decision"]["type"] == "owner_changed"
 
 
 def test_apply_resolved_owner_is_atomic_on_audit_failure(db, monkeypatch):

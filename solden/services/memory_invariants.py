@@ -29,6 +29,15 @@ PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
         required_tokens=("_commit_intent_memory_event", "commit_runtime_memory_event"),
     ),
     MemoryCoverageSurface(
+        name="audit_event_funnel",
+        path="solden/core/stores/ap_store.py",
+        required_tokens=(
+            "_ensure_memory_payload_for_audit_event",
+            "append_audit_event",
+            "set_ap_item_owner_atomic",
+        ),
+    ),
+    MemoryCoverageSurface(
         name="erp_intake",
         path="solden/services/intake_adapter.py",
         required_tokens=("_capture_intake_memory_event", "capture_operational_memory_event"),

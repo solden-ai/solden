@@ -33,6 +33,37 @@ class TestListBoxAuditEvents:
         assert events[0].get("box_id") == "ap-r1"
         assert events[0].get("box_type") == "ap_item"
 
+    def test_append_audit_event_promotes_plain_audit_row_to_memory_event(self, tmp_path, monkeypatch):
+        db = _fresh_db(tmp_path, monkeypatch)
+
+        event = db.append_audit_event({
+            "ap_item_id": "ap-memory-funnel",
+            "event_type": "field_review_requested",
+            "actor_type": "agent",
+            "actor_id": "field_review",
+            "organization_id": "test-org",
+            "source": "workspace",
+            "decision_reason": "Vendor and amount need human review.",
+            "payload_json": {
+                "column_updates": {
+                    "vendor_name": "Google Cloud EMEA Limited",
+                    "amount": 40.50,
+                },
+            },
+            "external_refs": {
+                "gmail_message_id": "msg-memory-funnel",
+            },
+        })
+
+        payload = event["payload_json"]
+        memory_event = payload["memory_event"]
+        assert memory_event["work_item"]["box_id"] == "ap-memory-funnel"
+        assert memory_event["source"]["surface"] == "workspace"
+        assert memory_event["decision"]["type"] == "field_review_requested"
+        assert memory_event["rationale"] == "Vendor and amount need human review."
+        assert memory_event["changes"]["field_updates"]["amount"] == 40.50
+        assert payload["decision_context"]["intent"] == "field_review_requested"
+
     def test_list_ap_audit_events_delegates_to_generic(self, tmp_path, monkeypatch):
         db = _fresh_db(tmp_path, monkeypatch)
         db.append_audit_event({

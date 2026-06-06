@@ -633,10 +633,23 @@ def _first_display_value(value: Any) -> str:
 def _change_summary(entry: Optional[Dict[str, Any]]) -> Optional[str]:
     if not entry:
         return None
+    memory_event = entry.get("memory_event")
+    memory_event = memory_event if isinstance(memory_event, dict) else {}
+    changes = memory_event.get("changes")
+    changes = changes if isinstance(changes, dict) else {}
     previous_state = entry.get("previous_state")
     resulting_state = entry.get("resulting_state")
+    if not previous_state:
+        previous_state = changes.get("previous_state")
+    if not resulting_state:
+        resulting_state = changes.get("resulting_state")
     if previous_state and resulting_state:
         return f"{previous_state} -> {resulting_state}"
+    field_updates = changes.get("field_updates")
+    if isinstance(field_updates, dict) and field_updates:
+        fields = ", ".join(str(key) for key in sorted(field_updates.keys())[:6])
+        suffix = "..." if len(field_updates) > 6 else ""
+        return f"Updated fields: {fields}{suffix}"
     return entry.get("summary")
 
 

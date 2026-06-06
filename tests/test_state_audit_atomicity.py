@@ -70,6 +70,16 @@ def test_state_and_audit_commit_together_on_success(db):
     assert transitions[0]["prev_state"] == "received"
     assert transitions[0]["new_state"] == "validated"
 
+    payload = transitions[0]["payload_json"]
+    memory_event = payload["memory_event"]
+    assert memory_event["work_item"]["box_id"] == "AP-ATOM-1"
+    assert memory_event["event_type"] == "state_transition"
+    assert memory_event["state"]["before"] == "received"
+    assert memory_event["state"]["after"] == "validated"
+    assert memory_event["changes"]["previous_state"] == "received"
+    assert memory_event["changes"]["resulting_state"] == "validated"
+    assert payload["decision_context"]["intent"] == "state_transition"
+
 
 def test_no_torn_state_when_audit_insert_fails(db):
     """If the audit_events INSERT raises mid-commit, the ap_items
