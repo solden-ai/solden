@@ -11,6 +11,8 @@ import hashlib
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
+from solden.services.memory_invariants import assert_memory_event_payload
+
 
 MEMORY_EVENT_SCHEMA_VERSION = "1.0"
 MEMORY_EVENT_PREFIX = "memory_event:"
@@ -336,6 +338,7 @@ def commit_memory_event(
         external_refs=external_refs,
         occurred_at=occurred_at,
     )
+    assert_memory_event_payload(payload_json)
     decision_reason = payload_json.get("reason")
     audit_payload = {
         "box_type": resolved_box_type,
