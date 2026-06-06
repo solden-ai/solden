@@ -1,5 +1,5 @@
 /**
- * Solden AP v1 InboxSDK Layer — Preact + HTM
+ * Solden v1 InboxSDK Layer — Preact + HTM
  *
  * Entry point for the Gmail extension sidebar. Handles InboxSDK integration
  * and mounts the Preact component tree into the sidebar container.
@@ -129,7 +129,7 @@ async function ensureSidebarPanelView() {
 
   const logoUrl = getAssetUrl(LOGO_PATH);
   sidebarPanelViewPromise = sdk.Global.addSidebarContentPanel({
-    title: 'Solden AP',
+    title: 'Solden',
     iconUrl: logoUrl || null,
     el: sidebarContainer,
     hideTitleBar: false,

@@ -328,6 +328,7 @@ describe('getAgentMemoryView', () => {
     assert.equal(view.beliefReason, 'Review due date before this invoice moves forward.');
     assert.equal(view.nextActionResponsibility, 'Needs your review');
     assert.equal(view.nextActionActorLabel, 'You');
+    assert.equal(view.decisionLabel, 'Hold until field checks are confirmed');
     assert.equal(view.stateSummaryLabel, 'Received');
     assert.deepEqual(view.reasonCodes, []);
     assert.equal(view.highlights.includes('Due Date still needs confirmation'), true);
@@ -391,6 +392,8 @@ describe('getAgentMemoryView', () => {
     assert.equal(view.nextActionLabel, 'Controller sign-off');
     assert.equal(view.beliefReason, 'Finance requested a budget reallocation.');
     assert.equal(view.nextActionOwnerLabel, 'Operations Director');
+    assert.equal(view.decisionLabel, 'Finance requested a budget reallocation.');
+    assert.equal(view.evidenceLabel, 'Decision record');
     assert.deepEqual(view.evidence.decision_refs, [{ id: 'evt_1' }]);
   });
 });

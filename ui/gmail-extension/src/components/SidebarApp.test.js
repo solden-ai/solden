@@ -13,8 +13,8 @@
 // here so anyone re-introducing the richer in-sidebar layout knows
 // what shape the previous spec expected:
 //
-//   - "What happens next" / "Before Solden continues" agent-memory
-//     section (AgentViewSection) — currently lives in dead WorkPanel
+//   - richer secondary WorkPanel memory cards; ThreadSidebar owns the
+//     live memory summary now
 //   - Related-records / Tasks / Notes / Files sub-sections
 //   - Read-only viewer copy ("Read-only view" + suppressed actions)
 //   - Operator-override disclosure for routine pending approvals
@@ -155,9 +155,22 @@ describe('SidebarApp', () => {
     const view = mount(h(SidebarApp, { queueManager: createQueueManager() }));
     await flushTicks(3);
 
+    const waitForText = async (regex, maxTicks = 12) => {
+      for (let i = 0; i < maxTicks; i += 1) {
+        if (regex.test(getTextContent(view.container))) return true;
+        await flushTicks(1);
+      }
+      return false;
+    };
+
     // Shell: branded header + ThreadSidebar surface with the item's
     // vendor name visible.
-    assert.match(getTextContent(view.container), /Solden AP/);
+    assert.match(getTextContent(view.container), /Solden/);
+    assert.match(getTextContent(view.container), /AP Workflow/);
+    assert.ok(await waitForText(/Memory Summary/));
+    assert.ok(await waitForText(/Owner/));
+    assert.ok(await waitForText(/Decision/));
+    assert.ok(await waitForText(/Evidence/));
     assert.ok(view.container.querySelector('.cl-thread-sidebar'),
       'ThreadSidebar should mount when an item is selected');
     assert.match(getTextContent(view.container), /Acme Supplies/);

@@ -183,9 +183,9 @@ function ScanStatus() {
   let tone = '';
 
   if (state === 'initializing') text = 'Setting up Solden\u2026';
-  else if (state === 'scanning') text = 'Checking inbox for new invoices\u2026';
+  else if (state === 'scanning') text = 'Checking inbox for work updates\u2026';
   else if (state === 'auth_required') {
-    text = 'Gmail access is needed to monitor for new invoices.';
+    text = 'Gmail access is needed to monitor work from this inbox.';
     tone = 'warning';
   } else if (state === 'blocked') {
     text = 'Complete Gmail setup to start processing invoices.';
@@ -207,7 +207,7 @@ function ScanStatus() {
   }
 
   if (state !== 'auth_required' && gmail?.requires_reconnect) {
-    text = 'Gmail connection lost. Reconnect to resume invoice processing.';
+    text = 'Gmail connection lost. Reconnect to resume inbox monitoring.';
     tone = 'warning';
   }
 
@@ -580,7 +580,17 @@ function AuthPrompt({ queueManager }) {
   `;
 }
 
-function AgentViewSection({ view, item, fallbackNextMove = 'Review this record' }) {
+function evidenceLabelFromChecklist(entries = []) {
+  if (!Array.isArray(entries)) return '';
+  return entries
+    .filter((entry) => entry && entry.status === 'ok')
+    .map((entry) => String(entry.label || '').trim())
+    .filter(Boolean)
+    .slice(0, 4)
+    .join(' · ');
+}
+
+function AgentViewSection({ view, item, fallbackNextMove = 'Review this record', evidenceEntries = [] }) {
   if (!view?.hasContext) return null;
   const needsReview = Boolean(item?.requires_field_review || view.nextActionType === 'human_field_review');
   const uncertaintyLabel = view.highlights.slice(0, 2).join(' · ');
@@ -588,23 +598,36 @@ function AgentViewSection({ view, item, fallbackNextMove = 'Review this record' 
   const whyNow = view.beliefReason || (needsReview
     ? 'Solden paused because this invoice still needs a quick check before it can continue.'
     : 'Solden is holding the current workflow context on this record.');
-  const ownerLine = view.nextActionResponsibility || '';
+  const ownerLine = view.nextActionOwnerLabel || view.nextActionActorLabel || view.nextActionResponsibility || 'Unassigned';
+  const decisionLine = view.decisionLabel || (needsReview ? 'Hold until review is complete' : 'No decision recorded yet');
+  const evidenceLine = view.evidenceLabel || evidenceLabelFromChecklist(evidenceEntries) || 'No proof linked yet';
+  const statusLine = view.stateSummaryLabel || view.currentStateLabel || view.statusLabel || getStateLabel(item?.state);
   const tone = uncertaintyLabel ? 'warning' : 'good';
-  const sectionTitle = needsReview ? 'Before Solden continues' : 'What happens next';
-  const reasonLabel = needsReview ? 'Why it paused' : 'Why it is waiting';
 
   return html`
-    <div class="cl-section" aria-label=${sectionTitle}>
-      <div class="cl-section-title">${sectionTitle}</div>
-      <div class="cl-operator-brief" data-tone=${tone}>
+    <div class="cl-section" aria-label="Memory summary">
+      <div class="cl-section-title">Memory summary</div>
+      <div class="cl-operator-brief cl-memory-summary" data-tone=${tone}>
+        <div class="cl-memory-summary-story">${whyNow}</div>
+        <div class="cl-operator-brief-row">
+          <div class="cl-operator-brief-label">Status</div>
+          <div class="cl-operator-brief-text">${statusLine}</div>
+        </div>
+        <div class="cl-operator-brief-row">
+          <div class="cl-operator-brief-label">Owner</div>
+          <div class="cl-operator-brief-text">${ownerLine}</div>
+        </div>
+        <div class="cl-operator-brief-row">
+          <div class="cl-operator-brief-label">Decision</div>
+          <div class="cl-operator-brief-text">${decisionLine}</div>
+        </div>
+        <div class="cl-operator-brief-row">
+          <div class="cl-operator-brief-label">Evidence</div>
+          <div class="cl-operator-brief-text">${evidenceLine}</div>
+        </div>
         <div class="cl-operator-brief-row">
           <div class="cl-operator-brief-label">Next step</div>
           <div class="cl-operator-brief-text">${nextMove}</div>
-          ${ownerLine && html`<div class="cl-operator-brief-outcome">${ownerLine}</div>`}
-        </div>
-        <div class="cl-operator-brief-row">
-          <div class="cl-operator-brief-label">${reasonLabel}</div>
-          <div class="cl-operator-brief-text">${whyNow}</div>
         </div>
         ${uncertaintyLabel && html`
           <div class="cl-operator-brief-row">
@@ -1461,7 +1484,12 @@ function WorkPanel({ item, queueManager }) {
         </div>
       `}
 
-      <${AgentViewSection} view=${agentView} item=${item} fallbackNextMove=${fallbackNextMove} />
+      <${AgentViewSection}
+        view=${agentView}
+        item=${item}
+        fallbackNextMove=${fallbackNextMove}
+        evidenceEntries=${evidence}
+      />
 
       ${Array.isArray(item?.line_items) && item.line_items.length > 0 && html`
         <details class="cl-section cl-disclosure">
@@ -2283,7 +2311,8 @@ export default function SidebarApp({ queueManager }) {
       <div class="cl-header">
         <div class="cl-title">
           ${logoUrl && html`<img class="cl-logo" src=${logoUrl} alt="Solden" onError=${(e) => e.target.remove()} />`}
-          Solden AP
+          <span class="cl-title-product">Solden</span>
+          <span class="cl-title-context">AP Workflow</span>
         </div>
         <div class="cl-header-right">
           ${hasQueueNavigation

@@ -5,25 +5,35 @@ import fs from 'node:fs';
 const source = fs.readFileSync(new URL('./ThreadSidebar.js', import.meta.url), 'utf8');
 
 describe('ThreadSidebar contract', () => {
-  it('renders the four fixed sections in thesis §6.6 order', () => {
-    // InvoiceSection → MatchSection → VendorSection → AgentActionsSection
+  it('renders the fixed sections in memory-first order', () => {
+    // MemorySummarySection → ActionBarSection → InvoiceSection → MatchSection → VendorSection → AgentActionsSection
+    const memoryIdx = source.indexOf('MemorySummarySection');
+    const actionIdx = source.indexOf('ActionBarSection');
     const invoiceIdx = source.indexOf('InvoiceSection');
     const matchIdx = source.indexOf('MatchSection');
     const vendorIdx = source.indexOf('VendorSection');
     const agentIdx = source.indexOf('AgentActionsSection');
-    assert.ok(invoiceIdx > 0 && matchIdx > 0 && vendorIdx > 0 && agentIdx > 0,
-      'expected all four section components defined');
-    // The usage order inside the main component must be Invoice → Match → Vendor → ... → Agent.
-    const bodyStart = source.indexOf('<div class="cl-thread-sidebar">', source.indexOf('function ThreadSidebar'));
-    const bodyEnd = source.indexOf('</div>', bodyStart + 10);
+    assert.ok(memoryIdx > 0 && actionIdx > 0 && invoiceIdx > 0 && matchIdx > 0 && vendorIdx > 0 && agentIdx > 0,
+      'expected memory, action, invoice, match, vendor, and timeline sections defined');
     // Find the main component JSX block (last occurrence which is the render return)
-    const jsx = source.substring(source.indexOf('<${InvoiceSection}'));
+    const jsx = source.substring(source.indexOf('<${MemorySummarySection}'));
+    const memUse = jsx.indexOf('<${MemorySummarySection}');
+    const actUse = jsx.indexOf('<${ActionBarSection}');
     const iUse = jsx.indexOf('<${InvoiceSection}');
     const mUse = jsx.indexOf('<${MatchSection}');
     const vUse = jsx.indexOf('<${VendorSection}');
     const aUse = jsx.indexOf('<${AgentActionsSection}');
-    assert.ok(iUse >= 0 && mUse > iUse && vUse > mUse && aUse > vUse,
-      'sections must render in Invoice → Match → Vendor → Agent order');
+    assert.ok(memUse >= 0 && actUse > memUse && iUse > actUse && mUse > iUse && vUse > mUse && aUse > vUse,
+      'sections must render in Memory Summary → Actions → Invoice → Match → Vendor → Memory Timeline order');
+  });
+
+  it('renders operational-memory fields before invoice details', () => {
+    assert.match(source, /function MemorySummarySection\(\{ item \}\)/);
+    assert.match(source, /getAgentMemoryView\(item \|\| \{\}\)/);
+    assert.match(source, /Memory Summary/);
+    for (const label of ['Owner', 'Decision', 'Evidence', 'Next']) {
+      assert.match(source, new RegExp(`>${label}<`));
+    }
   });
 
   it('renders an override-window banner with a live countdown and Undo button', () => {
@@ -194,12 +204,12 @@ describe('ThreadSidebar contract', () => {
     assert.ok(propsBlock[0].includes('\n  actions,'), 'must accept actions prop');
     assert.ok(propsBlock[0].includes('\n  actionBusy,'), 'must accept actionBusy prop');
     assert.ok(propsBlock[0].includes('\n  onIntent,'), 'must accept onIntent prop');
-    // Mounted after the conditional banners, before InvoiceSection.
+    // Mounted after the Memory Summary, before InvoiceSection.
     const sectionIdx = source.indexOf('<${ActionBarSection}');
-    const fraudIdx = source.indexOf('<${FraudFlagsBanner}');
+    const memoryIdx = source.indexOf('<${MemorySummarySection}');
     const invoiceIdx = source.indexOf('<${InvoiceSection}');
-    assert.ok(sectionIdx > fraudIdx && sectionIdx < invoiceIdx,
-      'ActionBar must sit between FraudFlagsBanner and InvoiceSection');
+    assert.ok(sectionIdx > memoryIdx && sectionIdx < invoiceIdx,
+      'ActionBar must sit between MemorySummarySection and InvoiceSection');
   });
 
   it('carries the canonical intent vocabulary in lockstep with the backend', () => {

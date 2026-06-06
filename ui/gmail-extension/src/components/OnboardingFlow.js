@@ -40,9 +40,9 @@ function AuthModal({ onSignIn, pending, onDismiss, errorMessage }) {
       <div class="cl-onboard-modal">
         <div style="text-align:center;margin-bottom:20px;">
           ${LOGO_URL ? html`<img src=${LOGO_URL} alt="" style="width:48px;height:48px;margin-bottom:12px;" />` : ''}
-          <h2 style="font:700 20px/1.3 'Instrument Sans','DM Sans',sans-serif;color:#001137;margin:0 0 8px;">Solden AP</h2>
+          <h2 style="font:700 20px/1.3 'Instrument Sans','DM Sans',sans-serif;color:#001137;margin:0 0 8px;">Solden</h2>
           <p style="font:400 14px/1.5 'DM Sans',sans-serif;color:#475569;margin:0;max-width:320px;">
-            Solden helps your finance team process invoices inside Gmail.
+            Solden keeps the live memory of AP work inside Gmail.
             Use your Google account to start.
           </p>
         </div>

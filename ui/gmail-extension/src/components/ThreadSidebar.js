@@ -6,11 +6,13 @@
  *   0. (conditional) Override Window       — live countdown + Undo
  *   0. (conditional) Waiting               — why the agent is paused
  *   0. (conditional) Fraud Flags           — active IBAN/domain/velocity flags
- *   1. Invoice        — amount due, reference, PO, due date, terms
- *   2. 3-Way Match    — PO / GRN / Invoice rows + tolerance
- *   3. Vendor         — name, spend, risk, IBAN status
- *   4. Linked Records — linked onboarding / sibling invoices
- *   5. Agent Actions  — condensed timeline
+ *   1. Memory Summary — status, owner, decision, evidence, next step
+ *   2. Actions        — legal runtime intents for the current memory state
+ *   3. Invoice        — amount due, reference, PO, due date, terms
+ *   4. 3-Way Match    — PO / GRN / Invoice rows + tolerance
+ *   5. Vendor         — name, spend, risk, IBAN status
+ *   6. Linked Records — linked onboarding / sibling invoices
+ *   7. Memory Timeline — condensed work history
  *
  * Design rules from the thesis:
  *   - "Solden sidebar has four fixed sections in strict order"
@@ -27,7 +29,7 @@ import { useState, useEffect, useRef } from 'preact/hooks';
 import InviteVendorModal from './InviteVendorModal.js';
 import BudgetPausedBanner from './BudgetPausedBanner.js';
 import { workspaceItemUrl } from '../utils/workspace-link.js';
-import { formatTimeAgo, formatAmount as fmtAmount } from '../utils/formatters.js';
+import { formatTimeAgo, formatAmount as fmtAmount, getAgentMemoryView } from '../utils/formatters.js';
 
 // ---------------------------------------------------------------------------
 // CSS
@@ -41,6 +43,41 @@ const THREAD_SIDEBAR_CSS = `
 .cl-ts-section-title {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.04em; color: #5C6B7A; margin-bottom: 8px;
+}
+.cl-ts-memory-summary {
+  background: #FBFCFD;
+  border-bottom: 1px solid #E2E8F0;
+}
+.cl-ts-memory-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  max-width: 100%; padding: 3px 9px; border-radius: 999px;
+  background: #DDF7F3; color: #001137;
+  font-size: 11px; font-weight: 700; line-height: 1.3;
+}
+.cl-ts-memory-dot {
+  width: 6px; height: 6px; border-radius: 999px; background: #18BFB0;
+  flex-shrink: 0;
+}
+.cl-ts-memory-story {
+  margin-top: 8px;
+  font-size: 13px; font-weight: 600; color: #001137;
+  line-height: 1.45;
+}
+.cl-ts-memory-grid {
+  display: grid; grid-template-columns: 1fr; gap: 7px;
+  margin-top: 10px;
+}
+.cl-ts-memory-row {
+  display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 10px;
+  align-items: start; padding-top: 7px; border-top: 1px dashed #E2E8F0;
+}
+.cl-ts-memory-label {
+  font-size: 10px; font-weight: 700; color: #5C6B7A;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.cl-ts-memory-value {
+  font-size: 12px; color: #001137; font-weight: 600;
+  line-height: 1.4; text-align: right;
 }
 .cl-ts-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
 .cl-ts-label { font-size: 12px; color: #5C6B7A; }
@@ -811,6 +848,47 @@ function ResubmissionBanner({ item }) {
 // Section components
 // ---------------------------------------------------------------------------
 
+function MemorySummarySection({ item }) {
+  const view = getAgentMemoryView(item || {});
+  if (!view?.hasContext) return null;
+
+  const status = view.stateSummaryLabel || view.currentStateLabel || view.statusLabel || humanizeEventType(item?.state, { fallback: 'Received' });
+  const story = view.beliefReason || 'Solden is holding the current work context on this record.';
+  const owner = view.nextActionOwnerLabel || view.nextActionActorLabel || view.nextActionResponsibility || 'Unassigned';
+  const decision = view.decisionLabel || (item?.requires_field_review ? 'Hold until review is complete' : 'No decision recorded yet');
+  const evidence = view.evidenceLabel || 'No proof linked yet';
+  const next = view.nextActionLabel || item?.next_action || 'Review this record';
+
+  return html`
+    <div class="cl-ts-section cl-ts-memory-summary" aria-label="Memory summary">
+      <div class="cl-ts-section-title">Memory Summary</div>
+      <div class="cl-ts-memory-status">
+        <span class="cl-ts-memory-dot"></span>
+        <span>${status}</span>
+      </div>
+      <div class="cl-ts-memory-story">${story}</div>
+      <div class="cl-ts-memory-grid">
+        <div class="cl-ts-memory-row">
+          <div class="cl-ts-memory-label">Owner</div>
+          <div class="cl-ts-memory-value">${owner}</div>
+        </div>
+        <div class="cl-ts-memory-row">
+          <div class="cl-ts-memory-label">Decision</div>
+          <div class="cl-ts-memory-value">${decision}</div>
+        </div>
+        <div class="cl-ts-memory-row">
+          <div class="cl-ts-memory-label">Evidence</div>
+          <div class="cl-ts-memory-value">${evidence}</div>
+        </div>
+        <div class="cl-ts-memory-row">
+          <div class="cl-ts-memory-label">Next</div>
+          <div class="cl-ts-memory-value">${next}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function InvoiceSection({ item }) {
   return html`
     <div class="cl-ts-section">
@@ -976,7 +1054,7 @@ function AgentActionsSection({ item, auditEvents }) {
   return html`
     <div class="cl-ts-section">
       <div class="cl-ts-section-title">
-        <img src="${agentIconUrl()}" alt="" class="cl-ts-section-icon" />Agent Actions
+        <img src="${agentIconUrl()}" alt="" class="cl-ts-section-icon" />Memory Timeline
       </div>
       ${events.length > 0
         ? html`
@@ -1014,7 +1092,7 @@ function AgentActionsSection({ item, auditEvents }) {
             <button class="cl-ts-expand-btn">Show all ${auditEvents.length} actions</button>
           ` : ''}
         `
-        : html`<div style="font-size: 12px; color: #94A3B8;">No agent actions yet</div>`
+        : html`<div style="font-size: 12px; color: #94A3B8;">No memory timeline yet</div>`
       }
     </div>
   `;
@@ -1353,7 +1431,7 @@ export function ThreadSidebar({
   };
 
   // Click handler for reference chips inside answers. Looks up the
-  // timestamp in the Agent Actions section and scrolls to it with a
+  // timestamp in the Memory Timeline section and scrolls to it with a
   // brief highlight so the user can see which action was cited.
   const handleReferenceClick = (ref) => {
     if (!ref) return;
@@ -1396,6 +1474,7 @@ export function ThreadSidebar({
       <${WaitingBanner} waiting=${item.waiting_condition} />
       <${FraudFlagsBanner} flags=${item.fraud_flags} />
 
+      <${MemorySummarySection} item=${item} />
       <${ActionBarSection}
         actions=${actions}
         busy=${actionBusy}

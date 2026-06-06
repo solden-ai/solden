@@ -106,6 +106,23 @@ export const SIDEBAR_CSS = `
         align-items: center;
         gap: 8px;
       }
+      .cl-title-product {
+        color: var(--cl-primary);
+      }
+      .cl-title-context {
+        display: inline-flex;
+        align-items: center;
+        min-height: 18px;
+        padding: 1px 7px;
+        border: 1px solid var(--cl-border);
+        border-radius: 999px;
+        background: var(--cl-surface);
+        color: var(--cl-secondary);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
       .cl-logo {
         width: 20px;
         height: 20px;
@@ -896,6 +913,19 @@ export const SIDEBAR_CSS = `
       .cl-operator-brief[data-tone="good"] {
         border-color: #a7e3d0;
         background: var(--cl-green-soft);
+      }
+      .cl-memory-summary {
+        gap: 0;
+      }
+      .cl-memory-summary-story {
+        padding: 9px 11px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.5;
+        color: var(--cl-primary);
+      }
+      .cl-memory-summary-story + .cl-operator-brief-row {
+        border-top: 1px dashed var(--cl-border);
       }
       .cl-operator-brief-row {
         display: flex;

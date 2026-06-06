@@ -484,6 +484,47 @@ function firstMemoryText(...values) {
   return '';
 }
 
+function formatMemoryDecisionLabel(value) {
+  const explicit = String(value || '').trim();
+  if (!explicit || isInternalAgentMemoryReason(explicit)) return '';
+  if (/[_:]/.test(explicit) && !explicit.includes(' ')) return humanizeSnakeText(explicit);
+  return explicit;
+}
+
+function pushUniqueLabel(labels, label) {
+  const text = String(label || '').trim();
+  if (!text || labels.includes(text)) return;
+  labels.push(text);
+}
+
+function formatMemoryEvidenceLabel(evidence = {}, item = {}) {
+  const labels = [];
+  const sourceLabels = Array.isArray(evidence.sources)
+    ? evidence.sources
+      .map((entry) => firstMemoryText(entry?.label, entry?.type, entry?.source, entry))
+      .filter(Boolean)
+    : [];
+  sourceLabels.forEach((label) => pushUniqueLabel(labels, label));
+
+  if (Array.isArray(evidence.decision_refs) && evidence.decision_refs.length > 0) {
+    pushUniqueLabel(labels, evidence.decision_refs.length === 1 ? 'Decision record' : `${evidence.decision_refs.length} decision records`);
+  }
+  if (firstMemoryText(evidence.email_thread, evidence.gmail_thread, evidence.source_email, evidence.thread_id, item?.thread_id, item?.subject)) {
+    pushUniqueLabel(labels, 'Gmail thread');
+  }
+  if (firstMemoryText(evidence.vendor_record, evidence.vendor_master, item?.vendor_id, item?.vendor_record_id)) {
+    pushUniqueLabel(labels, 'Vendor record');
+  }
+  if (firstMemoryText(evidence.match_check, evidence.match_result, item?.match_status, item?.three_way_match_status, item?.po_number)) {
+    pushUniqueLabel(labels, 'Match check');
+  }
+  if (firstMemoryText(evidence.attachment, evidence.document, item?.attachment_count, item?.has_attachment)) {
+    pushUniqueLabel(labels, 'Attachment');
+  }
+
+  return labels.slice(0, 4).join(' · ');
+}
+
 function canonicalMemoryToAgentMemory(item = {}) {
   const memory = normalizeAgentMemorySection(
     item?.memory
@@ -525,6 +566,10 @@ function canonicalMemoryToAgentMemory(item = {}) {
     },
     episode: {
       summary: firstMemoryText(context.what_is_happening, latestDecision.summary),
+    },
+    decision: {
+      type: firstMemoryText(latestDecision.decision_type, latestDecision.type, latestDecision.resulting_state),
+      label: firstMemoryText(latestDecision.summary, latestDecision.decision, latestDecision.rationale, latestDecision.decision_type),
     },
     evidence,
   };
@@ -731,6 +776,19 @@ export function getAgentMemoryView(item = {}) {
   const beliefReason = formatAgentBeliefReason(String(summary.reason || belief.reason || episode.summary || '').trim(), item);
   const autonomyLevel = String(profile.autonomy_level || '').trim();
   const nextActionOwner = String(nextAction.owner || '').trim();
+  const decision = normalizeAgentMemorySection(memory.decision || memory.latest_decision);
+  const memoryDecisionLabel = formatMemoryDecisionLabel(firstMemoryText(
+    decision.label,
+    decision.summary,
+    decision.reason,
+    decision.type,
+    decision.decision_type,
+  ));
+  const decisionLabel = memoryDecisionLabel
+    || (item?.requires_field_review || nextActionType === 'human_field_review'
+      ? 'Hold until field checks are confirmed'
+      : '');
+  const evidenceLabel = formatMemoryEvidenceLabel(evidence, item);
   const mission = String(profile.mission || '').trim();
   const doctrineVersion = String(profile.doctrine_version || '').trim();
   const riskPosture = String(profile.risk_posture || '').trim();
@@ -752,6 +810,8 @@ export function getAgentMemoryView(item = {}) {
       || beliefReason
       || currentState
       || status
+      || decisionLabel
+      || evidenceLabel
       || highlights.length
     ),
     profile,
@@ -761,7 +821,7 @@ export function getAgentMemoryView(item = {}) {
     episode,
     uncertainties,
     evidence,
-    name: String(profile.name || '').trim() || 'Solden AP Agent',
+    name: String(profile.name || '').trim() || 'Solden Agent',
     mission,
     doctrineVersion,
     riskPosture,
@@ -780,6 +840,9 @@ export function getAgentMemoryView(item = {}) {
     nextActionOwnerLabel: nextActionOwner ? humanizeSnakeText(nextActionOwner) : '',
     nextActionActorLabel: formatAgentActionActor(nextActionOwner, item, nextActionType, currentState, status),
     nextActionResponsibility: formatAgentResponsibility(nextActionOwner, item, nextActionType, currentState, status),
+    decision,
+    decisionLabel,
+    evidenceLabel,
     reasonCodes,
     highlights,
     confidenceBlockers,

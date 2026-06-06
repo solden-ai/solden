@@ -1,4 +1,4 @@
-/* clearledgr-source-fingerprint:64c907a051496ec90abbaf0f0da1de8e4bb92572702134881405f74359df51b9 */
+/* clearledgr-source-fingerprint:826573e9aa0a4436edcaacb0b0bdca0ac6eda89488be2eee050d85b10533d46d */
 (() => {
   var __create = Object.create;
   var __getProtoOf = Object.getPrototypeOf;
@@ -55631,6 +55631,23 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
         align-items: center;
         gap: 8px;
       }
+      .cl-title-product {
+        color: var(--cl-primary);
+      }
+      .cl-title-context {
+        display: inline-flex;
+        align-items: center;
+        min-height: 18px;
+        padding: 1px 7px;
+        border: 1px solid var(--cl-border);
+        border-radius: 999px;
+        background: var(--cl-surface);
+        color: var(--cl-secondary);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
       .cl-logo {
         width: 20px;
         height: 20px;
@@ -56421,6 +56438,19 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       .cl-operator-brief[data-tone="good"] {
         border-color: #a7e3d0;
         background: var(--cl-green-soft);
+      }
+      .cl-memory-summary {
+        gap: 0;
+      }
+      .cl-memory-summary-story {
+        padding: 9px 11px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.5;
+        color: var(--cl-primary);
+      }
+      .cl-memory-summary-story + .cl-operator-brief-row {
+        border-top: 1px dashed var(--cl-border);
       }
       .cl-operator-brief-row {
         display: flex;
@@ -58212,6 +58242,184 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       return "";
     }
   }
+  function humanizeSnakeText(value) {
+    return String(value || "").replace(/_/g, " ").trim().replace(/\b\w/g, (ch) => ch.toUpperCase());
+  }
+  function normalizeAgentMemoryToken(value) {
+    return String(value || "").trim().toLowerCase().replace(/[-\s]+/g, "_");
+  }
+  function isInternalAgentMemoryReason(value) {
+    const token = normalizeAgentMemoryToken(value);
+    if (!token)
+      return false;
+    return token.startsWith("ap_") || token.startsWith("gate:") || token.includes("field_review_required") || token === "ap_skill_not_ready" || token === "legal_transition_correctness" || token === "operator_acceptance" || token === "enabled_connector_readiness";
+  }
+  var FIELD_LABELS = {
+    amount: "Amount",
+    currency: "Currency",
+    invoice_number: "Invoice number",
+    vendor: "Vendor",
+    invoice_date: "Invoice date",
+    due_date: "Due date",
+    document_type: "Document type"
+  };
+  var SOURCE_LABELS = {
+    email: "Email",
+    attachment: "Invoice attachment",
+    llm: "Current invoice parse",
+    parser: "Current invoice parse",
+    current_parse: "Current invoice parse",
+    ocr: "Current invoice parse"
+  };
+  function getFieldLabel(field) {
+    const token = String(field || "").trim().toLowerCase();
+    if (!token)
+      return "Field";
+    return FIELD_LABELS[token] || humanizeSnakeText(token);
+  }
+  function getSourceLabel(source) {
+    const token = String(source || "").trim().toLowerCase();
+    if (!token)
+      return "Source";
+    return SOURCE_LABELS[token] || humanizeSnakeText(token);
+  }
+  function formatFieldReviewValue(field, value, currency = "") {
+    if (value === null || value === undefined || value === "")
+      return "Not found";
+    if (String(field || "").trim().toLowerCase() === "amount") {
+      const numeric = Number(value);
+      if (Number.isFinite(numeric))
+        return formatAmount(numeric, currency);
+    }
+    return String(value);
+  }
+  function getCurrentFieldReviewValue(item = {}, field = "") {
+    const token = String(field || "").trim().toLowerCase();
+    if (token === "vendor")
+      return item?.vendor_name || item?.vendor || null;
+    if (token === "document_type")
+      return item?.document_type || null;
+    return item?.[token] ?? null;
+  }
+  function inferFieldReviewSource(currentValue, emailValue, attachmentValue) {
+    if (currentValue !== null && currentValue !== undefined && currentValue !== "") {
+      if (attachmentValue !== null && attachmentValue !== undefined && attachmentValue !== "" && currentValue === attachmentValue) {
+        return "attachment";
+      }
+      if (emailValue !== null && emailValue !== undefined && emailValue !== "" && currentValue === emailValue) {
+        return "email";
+      }
+    }
+    return "";
+  }
+  function getFieldReviewBlockers(item = {}) {
+    const existing = Array.isArray(item?.field_review_blockers) ? item.field_review_blockers : [];
+    if (existing.length > 0)
+      return existing;
+    const provenance = item?.field_provenance && typeof item.field_provenance === "object" ? item.field_provenance : {};
+    const evidence = item?.field_evidence && typeof item.field_evidence === "object" ? item.field_evidence : {};
+    const conflicts = Array.isArray(item?.source_conflicts) ? item.source_conflicts : [];
+    const blockers = [];
+    const seen = new Set;
+    const currency = normalizeCurrencyCode(item?.currency);
+    for (const conflict of conflicts) {
+      if (!conflict || typeof conflict !== "object" || !conflict.blocking)
+        continue;
+      const field = String(conflict.field || "").trim().toLowerCase();
+      if (!field)
+        continue;
+      const provenanceEntry = provenance[field] && typeof provenance[field] === "object" ? provenance[field] : {};
+      const evidenceEntry = evidence[field] && typeof evidence[field] === "object" ? evidence[field] : {};
+      const values = conflict.values && typeof conflict.values === "object" ? conflict.values : {};
+      const winningSource = String(provenanceEntry.source || conflict.preferred_source || evidenceEntry.source || "attachment").trim().toLowerCase() || "attachment";
+      const winningValue = provenanceEntry.value ?? evidenceEntry.selected_value ?? values[winningSource];
+      const fieldLabel = getFieldLabel(field);
+      const winnerLabel = getSourceLabel(winningSource);
+      const attachmentName = String(evidenceEntry.attachment_name || "").trim();
+      let winnerReason = `${winnerLabel} is currently selected.`;
+      if (winningSource === "attachment" && attachmentName) {
+        winnerReason = `${winnerLabel} is currently selected from ${attachmentName}.`;
+      }
+      blockers.push({
+        kind: "source_conflict",
+        field,
+        field_label: fieldLabel,
+        email_value: values.email ?? evidenceEntry.email_value ?? null,
+        email_value_display: formatFieldReviewValue(field, values.email ?? evidenceEntry.email_value, currency),
+        attachment_value: values.attachment ?? evidenceEntry.attachment_value ?? null,
+        attachment_value_display: formatFieldReviewValue(field, values.attachment ?? evidenceEntry.attachment_value, currency),
+        winning_source: winningSource,
+        winning_source_label: winnerLabel,
+        winning_value: winningValue,
+        winning_value_display: formatFieldReviewValue(field, winningValue, currency),
+        reason: String(conflict.reason || "source_value_mismatch"),
+        reason_label: "Email and attachment do not match.",
+        paused_reason: `Check ${fieldLabel.toLowerCase()} because the email and attachment do not match.`,
+        winner_reason: winnerReason
+      });
+      seen.add(field);
+    }
+    const confidenceBlockers = Array.isArray(item?.confidence_blockers) ? item.confidence_blockers : [];
+    for (const blocker of confidenceBlockers) {
+      const field = String(typeof blocker === "string" ? blocker : blocker?.field || blocker?.code || "").trim().toLowerCase();
+      if (!field || seen.has(field))
+        continue;
+      const fieldLabel = getFieldLabel(field);
+      const provenanceEntry = provenance[field] && typeof provenance[field] === "object" ? provenance[field] : {};
+      const evidenceEntry = evidence[field] && typeof evidence[field] === "object" ? evidence[field] : {};
+      const candidateValues = provenanceEntry.candidates && typeof provenanceEntry.candidates === "object" ? provenanceEntry.candidates : {};
+      const confidenceValue = typeof blocker === "object" ? blocker?.confidence : null;
+      const confidencePct = typeof blocker === "object" ? blocker?.confidence_pct ?? (confidenceValue !== null && confidenceValue !== undefined && confidenceValue !== "" ? Math.round(Number(confidenceValue) * 100) : null) : null;
+      const thresholdPct = typeof blocker === "object" ? blocker?.threshold_pct ?? 95 : 95;
+      let currentSource = String(provenanceEntry.source || evidenceEntry.source || "").trim().toLowerCase();
+      const currentValue = provenanceEntry.value ?? evidenceEntry.selected_value ?? getCurrentFieldReviewValue(item, field);
+      const emailValue = candidateValues.email ?? evidenceEntry.email_value ?? null;
+      const attachmentValue = candidateValues.attachment ?? evidenceEntry.attachment_value ?? null;
+      if (!currentSource)
+        currentSource = inferFieldReviewSource(currentValue, emailValue, attachmentValue);
+      blockers.push({
+        kind: "confidence",
+        field,
+        field_label: fieldLabel,
+        reason: String(typeof blocker === "object" ? blocker?.reason || blocker?.code || "critical_field_review_required" : "critical_field_review_required"),
+        reason_label: "A person needs to confirm this field before the invoice can move forward.",
+        paused_reason: confidencePct !== null && confidencePct !== undefined && thresholdPct !== null && thresholdPct !== undefined ? `Review ${fieldLabel.toLowerCase()} before this invoice moves forward.` : `Review ${fieldLabel.toLowerCase()} before this invoice moves forward.`,
+        current_value: currentValue,
+        current_value_display: formatFieldReviewValue(field, currentValue, currency),
+        current_source: currentSource || null,
+        current_source_label: currentSource ? getSourceLabel(currentSource) : "",
+        email_value: emailValue,
+        email_value_display: formatFieldReviewValue(field, emailValue, currency),
+        attachment_value: attachmentValue,
+        attachment_value_display: formatFieldReviewValue(field, attachmentValue, currency),
+        confidence: confidenceValue,
+        confidence_pct: confidencePct,
+        threshold_pct: thresholdPct,
+        winner_reason: confidencePct !== null && confidencePct !== undefined && thresholdPct !== null && thresholdPct !== undefined ? `Solden read ${formatFieldReviewValue(field, currentValue, currency)}${currentSource ? ` from the ${getSourceLabel(currentSource).toLowerCase()}` : ""}. Because ${fieldLabel.toLowerCase()} is a critical field, a person needs to confirm it before approval continues.` : `Solden needs the ${fieldLabel.toLowerCase()} confirmed before this invoice can continue.`,
+        auto_check_note: confidencePct !== null && confidencePct !== undefined && thresholdPct !== null && thresholdPct !== undefined ? `Auto-pass rule: ${thresholdPct}% minimum. This read scored ${confidencePct}%.` : ""
+      });
+      seen.add(field);
+    }
+    return blockers;
+  }
+  function getWorkflowPauseReason(item = {}) {
+    const explicit = String(item?.workflow_paused_reason || "").trim();
+    if (explicit && !isInternalAgentMemoryReason(explicit))
+      return explicit;
+    const blockers = getFieldReviewBlockers(item);
+    if (blockers.length === 0 && !item?.requires_field_review)
+      return "";
+    const fieldLabels = blockers.map((blocker) => String(blocker?.field_label || "").trim().toLowerCase()).filter(Boolean);
+    if (fieldLabels.length === 0)
+      return "Review extracted invoice details to ensure accuracy.";
+    if (fieldLabels.length === 1) {
+      const hasSourceConflict2 = blockers.some((blocker) => blocker?.kind === "source_conflict");
+      return hasSourceConflict2 ? `Review ${fieldLabels[0]} before this invoice moves forward because the email and attachment do not match.` : `Review ${fieldLabels[0]} before this invoice moves forward.`;
+    }
+    const summary = `${fieldLabels.slice(0, -1).join(", ")} and ${fieldLabels[fieldLabels.length - 1]}`;
+    const hasSourceConflict = blockers.some((blocker) => blocker?.kind === "source_conflict");
+    return hasSourceConflict ? `Review ${summary} before this invoice moves forward because the email and attachment do not match.` : `Review ${summary} before this invoice moves forward.`;
+  }
   function readLocalStorage(key) {
     try {
       return String(window?.localStorage?.getItem(key) || "").trim();
@@ -58233,6 +58441,327 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     } catch {
       return "";
     }
+  }
+  var AGENT_REASON_CODE_LABELS = {
+    vendor_unscored: "Vendor details need review",
+    field_review_required: "",
+    confidence_field_review_required: "",
+    blocking_source_conflicts: "Email and attachment do not match",
+    linked_finance_effect_review_required: "Credits or payments still need review",
+    linked_credit_adjustment_present: "Linked credit changes the payable amount",
+    linked_cash_application_present: "Linked cash activity changes settlement",
+    linked_over_credit: "Linked credits exceed the invoice amount",
+    linked_overpayment: "Linked cash exceeds the remaining balance",
+    linked_refund_exceeds_cash_out: "Linked refund exceeds recorded cash out",
+    ap_skill_not_ready: "",
+    legal_transition_correctness: "",
+    "gate:legal_transition_correctness": ""
+  };
+  function normalizeAgentMemorySection(value) {
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  }
+  function firstMemoryText(...values) {
+    for (const value of values) {
+      if (Array.isArray(value)) {
+        const text2 = value.map((entry) => firstMemoryText(entry)).filter(Boolean).join(" · ");
+        if (text2)
+          return text2;
+        continue;
+      }
+      if (value && typeof value === "object") {
+        const text2 = firstMemoryText(value.summary, value.label, value.name, value.email, value.id);
+        if (text2)
+          return text2;
+        continue;
+      }
+      const text = String(value ?? "").trim();
+      if (text)
+        return text;
+    }
+    return "";
+  }
+  function formatMemoryDecisionLabel(value) {
+    const explicit = String(value || "").trim();
+    if (!explicit || isInternalAgentMemoryReason(explicit))
+      return "";
+    if (/[_:]/.test(explicit) && !explicit.includes(" "))
+      return humanizeSnakeText(explicit);
+    return explicit;
+  }
+  function pushUniqueLabel(labels, label) {
+    const text = String(label || "").trim();
+    if (!text || labels.includes(text))
+      return;
+    labels.push(text);
+  }
+  function formatMemoryEvidenceLabel(evidence = {}, item = {}) {
+    const labels = [];
+    const sourceLabels = Array.isArray(evidence.sources) ? evidence.sources.map((entry) => firstMemoryText(entry?.label, entry?.type, entry?.source, entry)).filter(Boolean) : [];
+    sourceLabels.forEach((label) => pushUniqueLabel(labels, label));
+    if (Array.isArray(evidence.decision_refs) && evidence.decision_refs.length > 0) {
+      pushUniqueLabel(labels, evidence.decision_refs.length === 1 ? "Decision record" : `${evidence.decision_refs.length} decision records`);
+    }
+    if (firstMemoryText(evidence.email_thread, evidence.gmail_thread, evidence.source_email, evidence.thread_id, item?.thread_id, item?.subject)) {
+      pushUniqueLabel(labels, "Gmail thread");
+    }
+    if (firstMemoryText(evidence.vendor_record, evidence.vendor_master, item?.vendor_id, item?.vendor_record_id)) {
+      pushUniqueLabel(labels, "Vendor record");
+    }
+    if (firstMemoryText(evidence.match_check, evidence.match_result, item?.match_status, item?.three_way_match_status, item?.po_number)) {
+      pushUniqueLabel(labels, "Match check");
+    }
+    if (firstMemoryText(evidence.attachment, evidence.document, item?.attachment_count, item?.has_attachment)) {
+      pushUniqueLabel(labels, "Attachment");
+    }
+    return labels.slice(0, 4).join(" · ");
+  }
+  function canonicalMemoryToAgentMemory(item = {}) {
+    const memory = normalizeAgentMemorySection(item?.memory || item?.operational_memory || item?.context?.memory || item?.context_payload?.memory);
+    if (Object.keys(memory).length === 0)
+      return {};
+    const execution = normalizeAgentMemorySection(memory.execution_state);
+    const context = normalizeAgentMemorySection(memory.context_summary);
+    const latestDecision = normalizeAgentMemorySection(context.latest_decision);
+    const evidence = normalizeAgentMemorySection(context.evidence || memory.proof);
+    const currentState = firstMemoryText(memory.current_state, item?.state, item?.status);
+    const reason = firstMemoryText(context.why_it_is_happening, memory.waiting_reason, execution.waiting_reason, latestDecision.summary, context.what_is_happening);
+    return {
+      current_state: currentState,
+      status: currentState,
+      next_action: {
+        type: firstMemoryText(latestDecision.decision_type, latestDecision.resulting_state),
+        label: firstMemoryText(context.next_action, memory.next_step, execution.next_action),
+        owner: firstMemoryText(context.who_owns_it, memory.waiting_on, execution.waiting_on, memory.owner_label, execution.owner_label)
+      },
+      summary: {
+        reason
+      },
+      episode: {
+        summary: firstMemoryText(context.what_is_happening, latestDecision.summary)
+      },
+      decision: {
+        type: firstMemoryText(latestDecision.decision_type, latestDecision.type, latestDecision.resulting_state),
+        label: firstMemoryText(latestDecision.summary, latestDecision.decision, latestDecision.rationale, latestDecision.decision_type)
+      },
+      evidence
+    };
+  }
+  function formatAgentStateLabel(value) {
+    const token = String(value || "").trim().toLowerCase();
+    if (!token)
+      return "";
+    return STATE_LABELS[token] ? getStateLabel(token) : humanizeSnakeText(token);
+  }
+  function formatAgentStateSummary(currentState = "", status = "") {
+    const labels = Array.from(new Set([
+      formatAgentStateLabel(currentState),
+      formatAgentStateLabel(status)
+    ].filter(Boolean)));
+    return labels.join(" · ");
+  }
+  function formatAgentReasonCode(value) {
+    const token = normalizeAgentMemoryToken(value);
+    if (!token)
+      return "";
+    if (Object.prototype.hasOwnProperty.call(AGENT_REASON_CODE_LABELS, token)) {
+      return AGENT_REASON_CODE_LABELS[token];
+    }
+    if (isInternalAgentMemoryReason(token))
+      return "";
+    return humanizeSnakeText(token);
+  }
+  function buildFieldReviewNextStep(item = {}) {
+    const blockers = getFieldReviewBlockers(item);
+    const fieldLabels = blockers.map((blocker) => String(blocker?.field_label || "").trim().toLowerCase()).filter(Boolean);
+    const uniqueLabels = Array.from(new Set(fieldLabels));
+    if (uniqueLabels.length === 0)
+      return "Check the invoice details";
+    if (uniqueLabels.length === 1)
+      return `Confirm the ${uniqueLabels[0]}`;
+    if (uniqueLabels.length === 2)
+      return `Confirm the ${uniqueLabels[0]} and ${uniqueLabels[1]}`;
+    return `Confirm ${uniqueLabels.length} invoice details`;
+  }
+  function formatAgentNextActionLabel(value, item = {}, nextActionType = "", currentState = "", status = "") {
+    const explicit = String(value || "").trim();
+    const typeToken = normalizeAgentMemoryToken(nextActionType);
+    const stateToken = normalizeAgentMemoryToken(currentState || status || item?.state || "");
+    if (item?.requires_field_review || typeToken === "human_field_review" || isInternalAgentMemoryReason(explicit)) {
+      return buildFieldReviewNextStep(item);
+    }
+    if (typeToken === "await_approval" || stateToken === "needs_approval" || stateToken === "pending_approval") {
+      return "Approval request sent, waiting for decision";
+    }
+    if (typeToken === "await_vendor_info" || stateToken === "needs_info") {
+      return "Solden is waiting for vendor to respond";
+    }
+    if (typeToken === "operator_recovery") {
+      return "Review the blocking issue and take action";
+    }
+    if (typeToken === "monitor_completion") {
+      return "Solden is completing the final steps";
+    }
+    if (typeToken === "reprocess_after_correction") {
+      return "Solden is rerunning this invoice with the corrected details";
+    }
+    if (typeToken === "manual_review") {
+      return "Review this record";
+    }
+    if (explicit && !isInternalAgentMemoryReason(explicit))
+      return explicit;
+    return "Review this record";
+  }
+  function formatAgentBeliefReason(value, item = {}) {
+    const explicit = String(value || "").trim();
+    const token = normalizeAgentMemoryToken(explicit || item?.state || "");
+    if (item?.requires_field_review || isInternalAgentMemoryReason(explicit)) {
+      return getWorkflowPauseReason(item) || "Check the invoice details before Solden continues.";
+    }
+    if (!explicit) {
+      if (token === "pending_approval" || token === "needs_approval") {
+        return "Approval has already been requested. Solden is waiting for the approver response.";
+      }
+      if (token === "needs_info") {
+        return "Missing details needed before this invoice can continue.";
+      }
+      if (token === "failed_post") {
+        return "Posting failed. Solden needs a retry or ERP connection check before it can continue.";
+      }
+      return "";
+    }
+    if (token === "pending_approval" || token === "needs_approval" || token === "awaiting_approval_response") {
+      return "Approval has already been requested. Solden is waiting for the approver response.";
+    }
+    if (token === "needs_info" || token === "await_vendor_info") {
+      return "Missing details needed before this invoice can continue.";
+    }
+    if (token === "failed_post" || token === "erp_post_failed") {
+      return "Posting failed. Solden needs a retry or ERP connection check before it can continue.";
+    }
+    return explicit;
+  }
+  function formatAgentActionActor(owner = "", item = {}, nextActionType = "", currentState = "", status = "") {
+    const ownerToken = normalizeAgentMemoryToken(owner);
+    const typeToken = normalizeAgentMemoryToken(nextActionType);
+    const stateToken = normalizeAgentMemoryToken(currentState || status || item?.state || "");
+    if (item?.requires_field_review || typeToken === "human_field_review")
+      return "You";
+    if (ownerToken === "agent" || typeToken === "monitor_completion" || typeToken === "reprocess_after_correction")
+      return "Solden";
+    if (ownerToken === "approver" || typeToken === "await_approval" || stateToken === "needs_approval" || stateToken === "pending_approval")
+      return "Approver";
+    if (ownerToken === "vendor" || typeToken === "await_vendor_info" || stateToken === "needs_info")
+      return "Vendor";
+    if (ownerToken === "operator" || typeToken === "operator_recovery" || typeToken === "manual_review")
+      return "You";
+    return ownerToken ? humanizeSnakeText(ownerToken) : "";
+  }
+  function formatAgentResponsibility(owner = "", item = {}, nextActionType = "", currentState = "", status = "") {
+    const ownerToken = normalizeAgentMemoryToken(owner);
+    const typeToken = normalizeAgentMemoryToken(nextActionType);
+    const stateToken = normalizeAgentMemoryToken(currentState || status || item?.state || "");
+    if (item?.requires_field_review || typeToken === "human_field_review")
+      return "Needs your review";
+    if (ownerToken === "agent" || typeToken === "monitor_completion")
+      return "Solden is handling this";
+    if (ownerToken === "approver" || typeToken === "await_approval" || stateToken === "needs_approval")
+      return "Waiting on approver";
+    if (ownerToken === "vendor" || typeToken === "await_vendor_info" || stateToken === "needs_info")
+      return "Waiting on vendor";
+    if (ownerToken === "operator" || typeToken === "operator_recovery" || typeToken === "manual_review")
+      return "Needs your review";
+    return "";
+  }
+  function summarizeAgentHighlights(item = {}, reasonCodes = [], confidenceBlockers = [], sourceConflicts = []) {
+    const highlights = [];
+    reasonCodes.filter(Boolean).forEach((entry) => {
+      if (!highlights.includes(entry))
+        highlights.push(entry);
+    });
+    const fieldReviewBlockers = getFieldReviewBlockers(item);
+    const fieldLabels = Array.from(new Set(fieldReviewBlockers.map((blocker) => String(blocker?.field_label || "").trim().toLowerCase()).filter(Boolean)));
+    const sourceConflictCount = fieldReviewBlockers.filter((blocker) => blocker?.kind === "source_conflict").length || sourceConflicts.length;
+    if (fieldLabels.length === 1) {
+      highlights.push(`${humanizeSnakeText(fieldLabels[0])} still needs confirmation`);
+    } else if (fieldLabels.length === 2) {
+      highlights.push(`${humanizeSnakeText(fieldLabels[0])} and ${humanizeSnakeText(fieldLabels[1])} still need confirmation`);
+    } else if (fieldLabels.length > 2) {
+      highlights.push(`${fieldLabels.length} invoice details still need confirmation`);
+    } else if (confidenceBlockers.length > 0) {
+      highlights.push(`${confidenceBlockers.length} field check${confidenceBlockers.length === 1 ? "" : "s"} still ${confidenceBlockers.length === 1 ? "needs" : "need"} confirmation`);
+    }
+    if (sourceConflictCount > 0) {
+      highlights.push(sourceConflictCount === 1 ? "Email and attachment still do not match" : `${sourceConflictCount} email and attachment conflicts still need review`);
+    }
+    return Array.from(new Set(highlights.filter(Boolean)));
+  }
+  function getAgentMemoryView(item = {}) {
+    const canonicalMemory = canonicalMemoryToAgentMemory(item);
+    const memory = Object.keys(canonicalMemory).length > 0 ? canonicalMemory : normalizeAgentMemorySection(item?.agent_memory);
+    const profile = Object.keys(normalizeAgentMemorySection(item?.agent_profile)).length > 0 ? normalizeAgentMemorySection(item?.agent_profile) : normalizeAgentMemorySection(memory.profile);
+    const belief = Object.keys(normalizeAgentMemorySection(item?.agent_belief_state)).length > 0 ? normalizeAgentMemorySection(item?.agent_belief_state) : normalizeAgentMemorySection(memory.belief);
+    const nextAction = Object.keys(normalizeAgentMemorySection(item?.agent_next_action)).length > 0 ? normalizeAgentMemorySection(item?.agent_next_action) : normalizeAgentMemorySection(memory.next_action);
+    const summary = Object.keys(normalizeAgentMemorySection(item?.agent_summary)).length > 0 ? normalizeAgentMemorySection(item?.agent_summary) : normalizeAgentMemorySection(memory.summary);
+    const episode = Object.keys(normalizeAgentMemorySection(item?.agent_episode)).length > 0 ? normalizeAgentMemorySection(item?.agent_episode) : normalizeAgentMemorySection(memory.episode);
+    const uncertainties = normalizeAgentMemorySection(memory.uncertainties);
+    const evidence = normalizeAgentMemorySection(memory.evidence);
+    const reasonCodes = Array.isArray(uncertainties.reason_codes) ? Array.from(new Set(uncertainties.reason_codes.map((code) => formatAgentReasonCode(code)).filter(Boolean))) : [];
+    const confidenceBlockers = Array.isArray(uncertainties.confidence_blockers) ? uncertainties.confidence_blockers : [];
+    const sourceConflicts = Array.isArray(uncertainties.source_conflicts) ? uncertainties.source_conflicts : [];
+    const currentState = String(memory.current_state || belief.current_state || item?.state || "").trim();
+    const status = String(memory.status || belief.status || episode.status || "").trim();
+    const nextActionType = String(nextAction.type || "").trim();
+    const nextActionLabel = formatAgentNextActionLabel(String(nextAction.label || item?.next_action || "").trim(), item, nextActionType, currentState, status);
+    const beliefReason = formatAgentBeliefReason(String(summary.reason || belief.reason || episode.summary || "").trim(), item);
+    const autonomyLevel = String(profile.autonomy_level || "").trim();
+    const nextActionOwner = String(nextAction.owner || "").trim();
+    const decision = normalizeAgentMemorySection(memory.decision || memory.latest_decision);
+    const memoryDecisionLabel = formatMemoryDecisionLabel(firstMemoryText(decision.label, decision.summary, decision.reason, decision.type, decision.decision_type));
+    const decisionLabel = memoryDecisionLabel || (item?.requires_field_review || nextActionType === "human_field_review" ? "Hold until field checks are confirmed" : "");
+    const evidenceLabel = formatMemoryEvidenceLabel(evidence, item);
+    const mission = String(profile.mission || "").trim();
+    const doctrineVersion = String(profile.doctrine_version || "").trim();
+    const riskPosture = String(profile.risk_posture || "").trim();
+    const highlights = summarizeAgentHighlights(item, reasonCodes, confidenceBlockers, sourceConflicts);
+    const stateSummaryLabel = formatAgentStateSummary(currentState, status);
+    const hasMemory = Boolean(Object.keys(memory).length || Object.keys(profile).length || Object.keys(belief).length || Object.keys(nextAction).length || Object.keys(summary).length || Object.keys(episode).length);
+    return {
+      hasMemory,
+      hasContext: Boolean(nextActionLabel || beliefReason || currentState || status || decisionLabel || evidenceLabel || highlights.length),
+      profile,
+      belief,
+      nextAction,
+      summary,
+      episode,
+      uncertainties,
+      evidence,
+      name: String(profile.name || "").trim() || "Solden Agent",
+      mission,
+      doctrineVersion,
+      riskPosture,
+      autonomyLevel,
+      autonomyLabel: autonomyLevel ? humanizeSnakeText(autonomyLevel) : "",
+      currentState,
+      currentStateLabel: formatAgentStateLabel(currentState),
+      status,
+      statusLabel: formatAgentStateLabel(status),
+      stateSummaryLabel,
+      beliefReason,
+      nextActionLabel,
+      nextActionType,
+      nextActionTypeLabel: nextActionType ? humanizeSnakeText(nextActionType) : "",
+      nextActionOwner,
+      nextActionOwnerLabel: nextActionOwner ? humanizeSnakeText(nextActionOwner) : "",
+      nextActionActorLabel: formatAgentActionActor(nextActionOwner, item, nextActionType, currentState, status),
+      nextActionResponsibility: formatAgentResponsibility(nextActionOwner, item, nextActionType, currentState, status),
+      decision,
+      decisionLabel,
+      evidenceLabel,
+      reasonCodes,
+      highlights,
+      confidenceBlockers,
+      sourceConflicts
+    };
   }
   function getReasonSheetDefaults(actionType = "generic") {
     const n3 = String(actionType || "").trim().toLowerCase();
@@ -58716,6 +59245,41 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 .cl-ts-section-title {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.04em; color: #5C6B7A; margin-bottom: 8px;
+}
+.cl-ts-memory-summary {
+  background: #FBFCFD;
+  border-bottom: 1px solid #E2E8F0;
+}
+.cl-ts-memory-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  max-width: 100%; padding: 3px 9px; border-radius: 999px;
+  background: #DDF7F3; color: #001137;
+  font-size: 11px; font-weight: 700; line-height: 1.3;
+}
+.cl-ts-memory-dot {
+  width: 6px; height: 6px; border-radius: 999px; background: #18BFB0;
+  flex-shrink: 0;
+}
+.cl-ts-memory-story {
+  margin-top: 8px;
+  font-size: 13px; font-weight: 600; color: #001137;
+  line-height: 1.45;
+}
+.cl-ts-memory-grid {
+  display: grid; grid-template-columns: 1fr; gap: 7px;
+  margin-top: 10px;
+}
+.cl-ts-memory-row {
+  display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 10px;
+  align-items: start; padding-top: 7px; border-top: 1px dashed #E2E8F0;
+}
+.cl-ts-memory-label {
+  font-size: 10px; font-weight: 700; color: #5C6B7A;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.cl-ts-memory-value {
+  font-size: 12px; color: #001137; font-weight: 600;
+  line-height: 1.4; text-align: right;
 }
 .cl-ts-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
 .cl-ts-label { font-size: 12px; color: #5C6B7A; }
@@ -59457,6 +60021,45 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     </div>
   `;
   }
+  function MemorySummarySection({ item }) {
+    const view = getAgentMemoryView(item || {});
+    if (!view?.hasContext)
+      return null;
+    const status = view.stateSummaryLabel || view.currentStateLabel || view.statusLabel || humanizeEventType(item?.state, { fallback: "Received" });
+    const story = view.beliefReason || "Solden is holding the current work context on this record.";
+    const owner = view.nextActionOwnerLabel || view.nextActionActorLabel || view.nextActionResponsibility || "Unassigned";
+    const decision = view.decisionLabel || (item?.requires_field_review ? "Hold until review is complete" : "No decision recorded yet");
+    const evidence = view.evidenceLabel || "No proof linked yet";
+    const next = view.nextActionLabel || item?.next_action || "Review this record";
+    return m3`
+    <div class="cl-ts-section cl-ts-memory-summary" aria-label="Memory summary">
+      <div class="cl-ts-section-title">Memory Summary</div>
+      <div class="cl-ts-memory-status">
+        <span class="cl-ts-memory-dot"></span>
+        <span>${status}</span>
+      </div>
+      <div class="cl-ts-memory-story">${story}</div>
+      <div class="cl-ts-memory-grid">
+        <div class="cl-ts-memory-row">
+          <div class="cl-ts-memory-label">Owner</div>
+          <div class="cl-ts-memory-value">${owner}</div>
+        </div>
+        <div class="cl-ts-memory-row">
+          <div class="cl-ts-memory-label">Decision</div>
+          <div class="cl-ts-memory-value">${decision}</div>
+        </div>
+        <div class="cl-ts-memory-row">
+          <div class="cl-ts-memory-label">Evidence</div>
+          <div class="cl-ts-memory-value">${evidence}</div>
+        </div>
+        <div class="cl-ts-memory-row">
+          <div class="cl-ts-memory-label">Next</div>
+          <div class="cl-ts-memory-value">${next}</div>
+        </div>
+      </div>
+    </div>
+  `;
+  }
   function InvoiceSection({ item }) {
     return m3`
     <div class="cl-ts-section">
@@ -59621,7 +60224,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     return m3`
     <div class="cl-ts-section">
       <div class="cl-ts-section-title">
-        <img src="${agentIconUrl()}" alt="" class="cl-ts-section-icon" />Agent Actions
+        <img src="${agentIconUrl()}" alt="" class="cl-ts-section-icon" />Memory Timeline
       </div>
       ${events.length > 0 ? m3`
           <ul class="cl-ts-timeline">
@@ -59647,7 +60250,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
           ${(auditEvents || []).length > 10 ? m3`
             <button class="cl-ts-expand-btn">Show all ${auditEvents.length} actions</button>
           ` : ""}
-        ` : m3`<div style="font-size: 12px; color: #94A3B8;">No agent actions yet</div>`}
+        ` : m3`<div style="font-size: 12px; color: #94A3B8;">No memory timeline yet</div>`}
     </div>
   `;
   }
@@ -59985,6 +60588,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       <${WaitingBanner} waiting=${item.waiting_condition} />
       <${FraudFlagsBanner} flags=${item.fraud_flags} />
 
+      <${MemorySummarySection} item=${item} />
       <${ActionBarSection}
         actions=${actions}
         busy=${actionBusy}
@@ -60303,9 +60907,9 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     if (state === "initializing")
       text = "Setting up Solden…";
     else if (state === "scanning")
-      text = "Checking inbox for new invoices…";
+      text = "Checking inbox for work updates…";
     else if (state === "auth_required") {
-      text = "Gmail access is needed to monitor for new invoices.";
+      text = "Gmail access is needed to monitor work from this inbox.";
       tone = "warning";
     } else if (state === "blocked") {
       text = "Complete Gmail setup to start processing invoices.";
@@ -60327,7 +60931,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       text = lastScan ? `Monitoring active · ${lastScan.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Monitoring active";
     }
     if (state !== "auth_required" && gmail?.requires_reconnect) {
-      text = "Gmail connection lost. Reconnect to resume invoice processing.";
+      text = "Gmail connection lost. Reconnect to resume inbox monitoring.";
       tone = "warning";
     }
     return html4`<div id="cl-scan-status" class="cl-scan-status" data-tone=${tone}>${text}</div>`;
@@ -60912,7 +61516,8 @@ Reason (required — logged to the audit trail):`);
       <div class="cl-header">
         <div class="cl-title">
           ${logoUrl && html4`<img class="cl-logo" src=${logoUrl} alt="Solden" onError=${(e3) => e3.target.remove()} />`}
-          Solden AP
+          <span class="cl-title-product">Solden</span>
+          <span class="cl-title-context">AP Workflow</span>
         </div>
         <div class="cl-header-right">
           ${hasQueueNavigation ? html4`
@@ -61344,7 +61949,7 @@ Reason (required — logged to the audit trail):`);
       return null;
     const logoUrl = getAssetUrl(LOGO_PATH2);
     sidebarPanelViewPromise = sdk.Global.addSidebarContentPanel({
-      title: "Solden AP",
+      title: "Solden",
       iconUrl: logoUrl || null,
       el: sidebarContainer,
       hideTitleBar: false
