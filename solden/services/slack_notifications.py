@@ -269,10 +269,10 @@ async def _post_slack_dm(
             )
             return False
         runtime = resolve_slack_runtime(organization_id)
-        if not runtime or not runtime.get("token"):
+        token = (runtime or {}).get("bot_token") or (runtime or {}).get("token")
+        if not runtime or not token:
             return False
 
-        token = runtime["token"]
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
         # Look up Slack user by email
@@ -1276,8 +1276,9 @@ async def send_invoice_exception_notification(
                     )
                     return sent
                 runtime = resolve_slack_runtime(organization_id)
-                if runtime and runtime.get("token"):
-                    headers = {"Authorization": f"Bearer {runtime['token']}", "Content-Type": "application/json"}
+                token = (runtime or {}).get("bot_token") or (runtime or {}).get("token")
+                if runtime and token:
+                    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
                     client = get_http_client()
                     await client.post(
                         "https://slack.com/api/chat.postMessage",

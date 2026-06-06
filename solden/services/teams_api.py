@@ -120,8 +120,13 @@ class TeamsAPIClient:
         facts = [fact for fact in facts if fact["value"]]
         if not facts:
             return []
+        summary = " | ".join(
+            f"{fact['title']}: {fact['value']}"
+            for fact in facts[:4]
+        )
         return [
             {"type": "TextBlock", "wrap": True, "weight": "Bolder", "text": "Current work memory"},
+            {"type": "TextBlock", "wrap": True, "isSubtle": True, "text": summary},
             {"type": "FactSet", "facts": facts[:4]},
         ]
 

@@ -43,6 +43,7 @@ from typing import Any, Callable, Dict, Mapping, Optional, Protocol, runtime_che
 from solden.core.ap_states import validate_transition
 from solden.core.database import get_db
 from solden.services.invoice_models import InvoiceData
+from solden.services.operational_memory_capture import capture_operational_memory_event
 
 logger = logging.getLogger(__name__)
 
@@ -357,6 +358,16 @@ async def _dispatch_create_like(
         action="created",
         target_state=str(result.get("state") or ""),
     )
+    _capture_intake_memory_event(
+        db=db,
+        organization_id=organization_id,
+        ap_item_id=ap_item_id or "",
+        envelope=envelope,
+        action="created",
+        previous_state="",
+        target_state=str(result.get("state") or ""),
+        field_updates={"pipeline_status": result.get("status")},
+    )
     return {
         "ok": True,
         "action": "created",
@@ -442,6 +453,16 @@ async def _dispatch_state_update(
         action=envelope.event_type,
         target_state=final_state,
     )
+    _capture_intake_memory_event(
+        db=db,
+        organization_id=organization_id,
+        ap_item_id=ap_item_id,
+        envelope=envelope,
+        action=envelope.event_type,
+        previous_state=current_state,
+        target_state=final_state,
+        field_updates=field_updates,
+    )
     return {
         "ok": True,
         "action": envelope.event_type,
@@ -504,4 +525,119 @@ def _record_intake_audit(
         logger.warning(
             "intake_adapter: audit write failed for %s — %s",
             ap_item_id, exc,
+        )
+
+
+def _bounded_payload_preview(value: Any, *, limit: int = 16) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    preview: Dict[str, Any] = {}
+    for key in list(value.keys())[:limit]:
+        raw = value.get(key)
+        if isinstance(raw, (str, int, float, bool)) or raw is None:
+            preview[str(key)] = raw
+        elif isinstance(raw, list):
+            preview[str(key)] = f"list[{len(raw)}]"
+        elif isinstance(raw, dict):
+            preview[str(key)] = f"object[{len(raw)}]"
+        else:
+            preview[str(key)] = type(raw).__name__
+    return preview
+
+
+def _intake_memory_summary(
+    envelope: IntakeEnvelope,
+    *,
+    action: str,
+    target_state: str,
+) -> str:
+    source = str(envelope.source_type or "ERP").replace("_", " ")
+    source_id = str(envelope.source_id or "unknown record")
+    if action == "created":
+        return f"{source} created or posted ERP bill {source_id}; Solden opened the operational record."
+    state = str(target_state or "current state").replace("_", " ")
+    return f"{source} sent {action} for ERP bill {source_id}; Solden reconciled the work item to {state}."
+
+
+def _capture_intake_memory_event(
+    *,
+    db: Any,
+    organization_id: str,
+    ap_item_id: str,
+    envelope: IntakeEnvelope,
+    action: str,
+    previous_state: str,
+    target_state: str,
+    field_updates: Dict[str, Any],
+) -> None:
+    """Best-effort operational-memory capture for ERP-origin events."""
+    if not ap_item_id:
+        return
+    source_type = str(envelope.source_type or "erp").strip()
+    source_id = str(envelope.source_id or "").strip()
+    event_id = str(envelope.event_id or "").strip()
+    refs = {
+        "source_type": source_type,
+        "source_id": source_id,
+        "event_id": event_id,
+        "erp_record_id": source_id,
+        "ap_item_id": ap_item_id,
+    }
+    refs = {key: value for key, value in refs.items() if value}
+    changed_fields = [
+        key for key in (field_updates or {}).keys()
+        if not str(key).startswith("_")
+    ]
+    try:
+        capture_operational_memory_event(
+            db,
+            organization_id=organization_id,
+            actor_type="erp_webhook",
+            actor_id=source_type,
+            actor_label=source_type,
+            observed={
+                "box_type": "ap_item",
+                "box_id": ap_item_id,
+                "ap_item_id": ap_item_id,
+                "source": f"erp_webhook:{source_type}",
+                "event_type": f"erp_intake_{action}",
+                "summary": _intake_memory_summary(
+                    envelope,
+                    action=action,
+                    target_state=target_state,
+                ),
+                "previous_state": previous_state,
+                "resulting_state": target_state,
+                "decision": {
+                    "type": f"erp_native_intake.{action}",
+                    "source_type": source_type,
+                    "changed_fields": changed_fields,
+                },
+                "rationale": "Accepted signed ERP webhook and reconciled the linked work item.",
+                "evidence": {
+                    "type": "signed_erp_webhook",
+                    "source_type": source_type,
+                    "source_id": source_id,
+                    "event_id": event_id,
+                    "received_at": envelope.received_at,
+                    "channel_metadata": envelope.channel_metadata,
+                    "raw_payload_preview": _bounded_payload_preview(envelope.raw_payload),
+                },
+                "confidence": 1.0,
+                "auto_commit": True,
+                "source_refs": refs,
+                "external_refs": refs,
+                "idempotency_key": (
+                    f"memory-event:erp-intake:{organization_id}:"
+                    f"{source_type}:{event_id or source_id}:{action}:{ap_item_id}"
+                ),
+                "correlation_id": event_id or source_id,
+            },
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "intake_adapter: memory capture failed source=%s ap_item=%s — %s",
+            source_type,
+            ap_item_id,
+            exc,
         )

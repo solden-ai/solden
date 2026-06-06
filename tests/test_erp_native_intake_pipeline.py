@@ -552,6 +552,7 @@ async def test_handle_intake_event_routes_through_full_pipeline_for_netsuite():
          patch("solden.integrations.erp_netsuite_intake_adapter.get_db", return_value=fake_db), \
          patch("solden.integrations.erp_netsuite_intake.fetch_intake_context", new_callable=AsyncMock, return_value=fake_intake), \
          patch("solden.services.invoice_workflow.get_invoice_workflow", return_value=fake_workflow), \
+         patch.object(adapter_mod, "capture_operational_memory_event", return_value={"status": "committed"}) as memory_capture, \
          patch("solden.integrations.erp_netsuite_intake_adapter.verify_netsuite_signature", return_value=True):
         result = await adapter_mod.handle_intake_event(
             source_type="netsuite",
@@ -570,6 +571,12 @@ async def test_handle_intake_event_routes_through_full_pipeline_for_netsuite():
     assert invoice_passed.erp_native is True
     assert invoice_passed.source_id == "5135"
     assert invoice_passed.gmail_id == "netsuite-bill:5135"
+    memory_capture.assert_called_once()
+    observed = memory_capture.call_args.kwargs["observed"]
+    assert observed["ap_item_id"] == "AP-NEW"
+    assert observed["source"] == "erp_webhook:netsuite"
+    assert observed["event_type"] == "erp_intake_created"
+    assert observed["auto_commit"] is True
     fake_db.create_ap_item.assert_not_called()
 
 

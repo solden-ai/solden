@@ -1416,18 +1416,21 @@ async def _handle_mention_reply_sync(
         # if we can't resolve the team_id to a real tenant, drop the
         # reply on the floor (logged for ops follow-up).
         runtime = None
+        org_id = ""
         db = get_db()
         orgs = db.list_organizations() if hasattr(db, "list_organizations") else []
         for org in orgs:
-            org_id = str(org.get("id") or "").strip()
-            if not org_id:
+            candidate_org_id = str(org.get("id") or "").strip()
+            if not candidate_org_id:
                 continue
-            rt = resolve_slack_runtime(org_id)
+            rt = resolve_slack_runtime(candidate_org_id)
             if rt and rt.get("team_id") == team_id:
                 runtime = rt
+                org_id = candidate_org_id
                 break
 
-        if not runtime or not runtime.get("token"):
+        runtime_token = (runtime or {}).get("bot_token") or (runtime or {}).get("token")
+        if not runtime or not runtime_token or not org_id:
             logger.warning(
                 "[slack_thread_reply] no Solden tenant bound to "
                 "team_id=%s — dropping reply (no fallback to legacy "
@@ -1437,7 +1440,7 @@ async def _handle_mention_reply_sync(
             return
 
         # Fetch the parent message to find the ap_item_id
-        headers = {"Authorization": f"Bearer {runtime['token']}", "Content-Type": "application/json"}
+        headers = {"Authorization": f"Bearer {runtime_token}", "Content-Type": "application/json"}
         client = get_http_client()
         # Get conversation history for the thread parent
         resp = await client.get(
@@ -1454,6 +1457,15 @@ async def _handle_mention_reply_sync(
         metadata = parent.get("metadata") or {}
         event_payload = metadata.get("event_payload") or {}
         ap_item_id = event_payload.get("ap_item_id")
+        payload_org_id = str(event_payload.get("organization_id") or "").strip()
+        if payload_org_id and payload_org_id != org_id:
+            logger.warning(
+                "[slack_thread_reply] org mismatch team=%s runtime_org=%s payload_org=%s",
+                team_id,
+                org_id,
+                payload_org_id,
+            )
+            return
 
         if not ap_item_id:
             return
@@ -1481,6 +1493,53 @@ async def _handle_mention_reply_sync(
             "actor": user_email,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
+        try:
+            from solden.services.operational_memory_capture import capture_operational_memory_event
+
+            capture_operational_memory_event(
+                db,
+                organization_id=org_id,
+                actor_type="user",
+                actor_id=user_email,
+                actor_label=user_email,
+                observed={
+                    "box_type": "ap_item",
+                    "box_id": ap_item_id,
+                    "ap_item_id": ap_item_id,
+                    "source": "slack",
+                    "event_type": "slack_reply_synced",
+                    "summary": f"{user_email} replied via Slack: {text[:500]}",
+                    "rationale": "Slack reply was attached to the linked work item timeline.",
+                    "evidence": {
+                        "type": "slack_message",
+                        "channel": channel,
+                        "thread_ts": thread_ts,
+                        "team_id": team_id,
+                    },
+                    "confidence": 1.0,
+                    "auto_commit": True,
+                    "source_refs": {
+                        "ap_item_id": ap_item_id,
+                        "slack_channel": channel,
+                        "slack_thread_ts": thread_ts,
+                        "slack_team_id": team_id,
+                        "slack_user_id": user_id,
+                    },
+                    "external_refs": {
+                        "slack_channel": channel,
+                        "slack_thread_ts": thread_ts,
+                        "slack_team_id": team_id,
+                    },
+                    "idempotency_key": f"memory-event:slack-reply:{org_id}:{ap_item_id}:{channel}:{thread_ts}:{user_id}",
+                    "correlation_id": thread_ts,
+                },
+            )
+        except Exception as memory_exc:  # noqa: BLE001
+            logger.warning(
+                "[mention_reply] memory capture failed ap_item=%s: %s",
+                ap_item_id,
+                memory_exc,
+            )
         logger.info("[mention_reply] synced reply from %s to ap_item %s", user_email, ap_item_id)
 
     except Exception as exc:
@@ -1517,13 +1576,14 @@ async def _handle_conversational_query(
                     candidate_org = str(install.get("organization_id") or "").strip()
                     if candidate_org:
                         rt = resolve_slack_runtime(candidate_org)
-                        if rt and rt.get("token"):
+                        if rt and (rt.get("bot_token") or rt.get("token")):
                             runtime = rt
                             org_id = candidate_org
             except Exception as exc:
                 logger.warning("[conversational] team→org lookup failed for team=%s: %s", team_id, exc)
 
-        if not runtime or not runtime.get("token") or not org_id:
+        runtime_token = (runtime or {}).get("bot_token") or (runtime or {}).get("token")
+        if not runtime or not runtime_token or not org_id:
             logger.warning(
                 "[conversational] no Slack runtime / installation for team=%s; refusing query",
                 team_id,
@@ -1558,7 +1618,7 @@ async def _handle_conversational_query(
         )
 
         # Post reply in thread
-        headers = {"Authorization": f"Bearer {runtime['token']}", "Content-Type": "application/json"}
+        headers = {"Authorization": f"Bearer {runtime_token}", "Content-Type": "application/json"}
         payload = {
             "channel": channel,
             "thread_ts": thread_ts,
