@@ -7,6 +7,7 @@ from solden.services.operational_memory import (
 )
 from solden.services.memory_events import commit_memory_event
 from solden.services.memory_events import commit_runtime_memory_event
+from solden.services.operational_memory_capture import capture_operational_memory_event
 
 
 class _MemoryDB:
@@ -31,6 +32,34 @@ class _MemoryDB:
     def get_ap_item(self, ap_item_id):
         box = self.boxes.get(("ap_item", ap_item_id))
         return dict(box) if box else None
+
+    def get_ap_item_by_thread(self, organization_id, thread_id):
+        for (box_type, _box_id), box in self.boxes.items():
+            if (
+                box_type == "ap_item"
+                and box.get("organization_id") == organization_id
+                and box.get("thread_id") == thread_id
+            ):
+                return dict(box)
+        return None
+
+    def get_ap_item_by_message_id(self, organization_id, message_id):
+        for (box_type, _box_id), box in self.boxes.items():
+            if (
+                box_type == "ap_item"
+                and box.get("organization_id") == organization_id
+                and box.get("message_id") == message_id
+            ):
+                return dict(box)
+        return None
+
+    def list_ap_items(self, organization_id, limit=1000):
+        rows = [
+            dict(box)
+            for (box_type, _box_id), box in self.boxes.items()
+            if box_type == "ap_item" and box.get("organization_id") == organization_id
+        ]
+        return rows[:limit]
 
     def list_box_exceptions(self, box_type, box_id):
         return [
@@ -540,3 +569,102 @@ def test_runtime_intent_memory_event_captures_surface_action_context():
     assert record["context_summary"]["next_action"] == "wait for vendor response"
     assert record["context_summary"]["where_it_happened"] == ["teams"]
     assert record["decision_ledger"][0]["decision_type"] == "request_info"
+
+
+def test_capture_loop_commits_confirmed_context_to_memory_event():
+    db = _MemoryDB(
+        [],
+        boxes={
+            ("ap_item", "AP-capture-1"): {
+                "id": "AP-capture-1",
+                "organization_id": "org-test",
+                "thread_id": "thread-capture-1",
+                "vendor_name": "AWS",
+                "invoice_number": "44128",
+                "amount": 48210,
+                "currency": "USD",
+                "state": "needs_approval",
+            }
+        },
+    )
+
+    result = capture_operational_memory_event(
+        db,
+        organization_id="org-test",
+        actor_id="mo@example.com",
+        actor_label="Mo",
+        observed={
+            "source": "slack",
+            "source_refs": {"gmail_thread_id": "thread-capture-1", "slack_thread_ts": "171000.1"},
+            "event_type": "dependency_identified",
+            "summary": "CFO delegate approval is required because Sarah is unavailable.",
+            "dependency": {
+                "type": "approval_delegate",
+                "owner": "CFO delegate",
+                "reason": "Sarah is unavailable until Monday.",
+            },
+            "decision": {
+                "type": "escalate_to_delegate",
+                "rationale": "Invoice exceeds the approval threshold.",
+            },
+            "rationale": "Invoice exceeds the approval threshold and Sarah is unavailable.",
+            "next_action": "Escalate to CFO delegate and notify vendor.",
+            "confidence": 0.84,
+            "human_confirmation_status": "confirmed",
+        },
+    )
+
+    assert result["status"] == "committed"
+    assert result["link"]["work_item"]["box_id"] == "AP-capture-1"
+    assert result["event"]["event_type"] == "memory_event:dependency_identified"
+
+    record = build_box_operational_memory_record(
+        db=db,
+        box_type="ap_item",
+        box_id="AP-capture-1",
+        item=db.get_ap_item("AP-capture-1"),
+    )
+    assert record["waiting_on"] == "CFO delegate"
+    assert record["waiting_reason"] == "Sarah is unavailable until Monday."
+    assert record["next_step"] == "Escalate to CFO delegate and notify vendor."
+    assert record["decision_ledger"][-1]["human_confirmation_status"] == "confirmed"
+    assert any(
+        "CFO delegate approval is required" in line
+        for line in record["memory_narrative"]
+    )
+
+
+def test_capture_loop_asks_before_committing_unconfirmed_context():
+    db = _MemoryDB(
+        [],
+        boxes={
+            ("ap_item", "AP-capture-2"): {
+                "id": "AP-capture-2",
+                "organization_id": "org-test",
+                "invoice_number": "INV-LOW",
+                "vendor_name": "AWS",
+                "amount": 48210,
+                "state": "validated",
+            }
+        },
+    )
+
+    result = capture_operational_memory_event(
+        db,
+        organization_id="org-test",
+        actor_id="agent",
+        observed={
+            "source": "slack",
+            "invoice_number": "INV-LOW",
+            "vendor_name": "AWS",
+            "amount": 48210,
+            "summary": "This may be waiting on Legal confirmation.",
+            "dependency": {"owner": "Legal", "reason": "Possible revised vendor terms."},
+            "confidence": 0.61,
+        },
+    )
+
+    assert result["status"] == "needs_confirmation"
+    assert result["confirmation_request"]["kind"] == "confirm_memory_event"
+    assert "Should Solden record this" in result["confirmation_request"]["question"]
+    assert db.events == []

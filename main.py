@@ -635,6 +635,7 @@ STRICT_PROFILE_ALLOWED_EXTENSION_PATHS = {
     "/extension/cleanup-gmail-labels",
     "/extension/finance-summary-share",
     "/extension/record-field-correction",
+    "/extension/memory-events/capture",
     "/extension/health",
     "/extension/suggestions/gl-code",
     "/extension/suggestions/vendor",
@@ -754,6 +755,7 @@ STRICT_PROFILE_ALLOWED_WORKSPACE_PATHS = {
     "/api/workspace/tax-compliance/summary",
     "/api/workspace/tax-compliance/validate-tax-id",
     "/api/workspace/reports/export-to-sheets",
+    "/api/workspace/memory-events/capture",
     "/api/workspace/records",
 }
 

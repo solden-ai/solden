@@ -20,6 +20,7 @@ from solden.api.box_exceptions_admin import (
     _gather_unresolved,
 )
 from solden.api.gmail_extension_common import resolve_org_id_for_user
+from solden.api.memory_capture_contracts import MemoryCaptureRequest
 from solden.core.auth import (
     TokenData,
     get_current_user,
@@ -33,6 +34,7 @@ from solden.core.auth import (
 )
 from solden.core.database import get_db
 from solden.services.ap_item_service import build_worklist_item, build_worklist_items
+from solden.services.operational_memory_capture import capture_operational_memory_event
 from solden.services.operational_memory import build_box_operational_memory_record
 
 
@@ -70,6 +72,31 @@ def _require_workspace_record_read(user: TokenData) -> None:
 def _require_workspace_exception_write(user: TokenData) -> None:
     if not has_ap_approver(_ap_role(user)):
         raise HTTPException(status_code=403, detail="ap_manager_role_required")
+
+
+def _require_workspace_memory_write(user: TokenData) -> None:
+    if not has_workspace_member(_workspace_role(user)):
+        raise HTTPException(status_code=403, detail="workspace_member_required")
+
+
+@router.post("/memory-events/capture")
+def capture_workspace_memory_event(
+    body: MemoryCaptureRequest,
+    _user=Depends(get_current_user),
+) -> Dict[str, Any]:
+    _require_workspace_memory_write(_user)
+    organization_id = resolve_org_id_for_user(_user, None)
+    db = get_db()
+    payload = body.model_dump() if hasattr(body, "model_dump") else body.dict()
+    payload["source"] = str(payload.get("source") or "").strip() or "workspace"
+    return capture_operational_memory_event(
+        db,
+        organization_id=organization_id,
+        observed=payload,
+        actor_type="user",
+        actor_id=str(getattr(_user, "email", "") or getattr(_user, "user_id", "") or ""),
+        actor_label=str(getattr(_user, "email", "") or getattr(_user, "user_id", "") or ""),
+    )
 
 
 def _sort_exception_rows(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:

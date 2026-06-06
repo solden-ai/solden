@@ -43,6 +43,7 @@ from solden.api.gmail_extension_common import (
     build_finance_runtime as _build_finance_runtime,
     resolve_org_id_for_user as _resolve_org_id_for_user,
 )
+from solden.api.memory_capture_contracts import MemoryCaptureRequest
 from solden.core.org_utils import assert_org_id, require_org
 from solden.api.gmail_extension_support_routes import router as support_routes_router
 from solden.core.auth import get_current_user, require_ops_user, create_access_token, get_user_by_email, has_admin_access
@@ -52,6 +53,7 @@ from solden.core.idempotency import (
     save_idempotent_response,
 )
 from solden.core.utils import safe_int
+from solden.services.operational_memory_capture import capture_operational_memory_event
 
 logger = logging.getLogger(__name__)
 
@@ -717,6 +719,26 @@ async def get_extension_worklist(
         "items": normalized,
         "total": len(normalized),
     }
+
+
+@router.post("/memory-events/capture")
+def capture_extension_memory_event(
+    request: MemoryCaptureRequest,
+    user=Depends(get_current_user),
+):
+    """Capture operational context observed in the Gmail extension/sidebar."""
+    org_id = _resolve_org_id_for_user(user, request.organization_id)
+    db = get_db()
+    payload = request.model_dump() if hasattr(request, "model_dump") else request.dict()
+    payload["source"] = str(payload.get("source") or "").strip() or "gmail_extension"
+    return capture_operational_memory_event(
+        db,
+        organization_id=org_id,
+        observed=payload,
+        actor_type="user",
+        actor_id=str(getattr(user, "email", "") or getattr(user, "user_id", "") or ""),
+        actor_label=_authenticated_actor(user, fallback="gmail_extension"),
+    )
 
 
 @router.post("/repair-historical-invoices", dependencies=[Depends(get_current_user)])

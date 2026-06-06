@@ -283,7 +283,11 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         # ERP ops paths that this strict-surface test was undercounting:
         # /api/workspace/integrations/erp/test plus dynamic test/rotation
         # paths. Cap 461 -> 467.
-        assert len(paths) <= 467
+        # 2026-06-06: operational-memory capture loop adds explicit write
+        # surfaces for workspace and Gmail/sidebar observations, and this pass
+        # reconciles the strict-profile count after embedded memory surfaces
+        # landed. Cap 467 -> 472.
+        assert len(paths) <= 472
         assert not any(path.startswith("/config/") for path in paths)
         assert "/erp/status/{organization_id}" not in paths
         assert "/erp/quickbooks/connect" not in paths
@@ -295,6 +299,8 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         assert "/api/workspace/integrations/erp/test" in paths
         assert "/api/workspace/integrations/erp/{erp_type}/test" in paths
         assert "/api/workspace/integrations/erp/{erp_type}/rotate-credentials" in paths
+        assert "/api/workspace/memory-events/capture" in paths
+        assert "/extension/memory-events/capture" in paths
         assert "/marketplace/apps" not in paths
         # OAuth callbacks remain available for admin ERP install flows.
         assert "/erp/quickbooks/callback" in paths
