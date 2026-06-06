@@ -212,6 +212,31 @@ def test_create_generic_box_rolls_back_when_audit_insert_fails():
     assert db.connections[-1].rollbacks == 1
 
 
+def test_create_generic_box_commits_creation_memory_event():
+    db = _FakeGenericDB()
+
+    created = db.create_generic_box("unit_review", {
+        "id": "UR-create-memory",
+        "organization_id": "org-unit",
+        "title": "Contract",
+        "created_by": "ops@example.com",
+    })
+
+    assert created["state"] == "draft"
+    assert db.audit_events[-1]["event_type"] == "unit_review_created"
+    assert (
+        db.audit_events[-1]["payload_json"]["memory_event"]["event_type"]
+        == "unit_review_created"
+    )
+    assert db.audit_events[-1]["payload_json"]["memory_event"]["state"]["after"] == "draft"
+    assert (
+        db.audit_events[-1]["payload_json"]["memory_event"]["source"]["surface"]
+        == "audit_events"
+    )
+    assert db.audit_events[-1]["payload_json"]["decision_context"]["actor_id"] == "ops@example.com"
+    assert db.webhook_events == [db.audit_events[-1]["id"]]
+
+
 def test_update_generic_box_state_rolls_back_when_audit_insert_fails():
     db = _FakeGenericDB(fail_audit=True)
     db.boxes["UR-update"] = {

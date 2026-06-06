@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
 from solden.core import database as db_module  # noqa: E402
+from solden.services.memory_invariants import memory_event_invariant_violations  # noqa: E402
 from solden.services import procurement_chat  # noqa: E402
 
 ORG = "orgProcChat"
@@ -140,6 +141,37 @@ def test_dispatch_decision_approves_po(db):
     ))
     assert out["status"] == "ok" and out["state"] == "approved"
     assert db.get_purchase_order("PO-chat-approve")["status"] == "approved"
+
+
+def test_purchase_order_state_transition_audit_contains_operational_memory(db):
+    _make_po(db, "PO-memory-transition", status="draft", amount=200.0)
+
+    db.update_purchase_order_state(
+        "PO-memory-transition",
+        "pending_approval",
+        actor_id="buyer@acme.test",
+        reason="Budget owner needs to approve the request.",
+    )
+
+    events = db.list_box_audit_events(
+        "purchase_order",
+        "PO-memory-transition",
+        order="desc",
+    )
+    transition = next(
+        event for event in events
+        if event.get("event_type") == "purchase_order_pending_approval"
+    )
+    payload_json = transition["payload_json"]
+
+    assert memory_event_invariant_violations(payload_json) == []
+    memory_event = payload_json["memory_event"]
+    assert memory_event["work_item"]["box_type"] == "purchase_order"
+    assert memory_event["work_item"]["box_id"] == "PO-memory-transition"
+    assert memory_event["state"]["before"] == "draft"
+    assert memory_event["state"]["after"] == "pending_approval"
+    assert memory_event["decision"]["type"] == "purchase_order_pending_approval"
+    assert "Budget owner" in memory_event["rationale"]
 
 
 def test_dispatch_decision_rejects_po(db):

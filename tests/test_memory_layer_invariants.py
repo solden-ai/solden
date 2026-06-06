@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from solden.services.audit_memory import ensure_memory_payload_for_audit_event
 from solden.services.memory_events import commit_memory_event
 from solden.services.memory_invariants import (
     PRIMARY_MEMORY_COVERAGE_SURFACES,
@@ -123,6 +124,37 @@ def test_memory_payload_invariants_reject_invalid_confidence():
         )
 
         assert "memory_event.confidence must be between 0 and 1" in violations
+
+
+def test_thin_audit_rows_are_promoted_to_operational_memory():
+    payload_json = ensure_memory_payload_for_audit_event(
+        {
+            "event_type": "state_transition",
+            "from_state": "draft",
+            "to_state": "blocked",
+            "actor_type": "user",
+            "actor_id": "finance@example.com",
+            "source": "workspace_spa",
+            "decision_reason": "Procurement paused review after budget changed.",
+            "organization_id": "org-memory",
+            "ts": "2026-06-06T12:00:00+00:00",
+        },
+        box_type="procurement_request",
+        box_id="REQ-memory-2",
+        payload_json={"waiting_condition": {"owner": "Operations Director"}},
+        external_refs={"slack_thread_ts": "171000.2"},
+        now="2026-06-06T12:00:00+00:00",
+    )
+
+    assert_memory_event_payload(payload_json)
+    memory_event = payload_json["memory_event"]
+    assert memory_event["work_item"]["box_type"] == "procurement_request"
+    assert memory_event["work_item"]["box_id"] == "REQ-memory-2"
+    assert memory_event["state"]["before"] == "draft"
+    assert memory_event["state"]["after"] == "blocked"
+    assert memory_event["execution_state"]["dependency"]["owner"] == "Operations Director"
+    assert memory_event["changes"]["event_type"] == "state_transition"
+    assert payload_json["decision_context"]["ui_surface"] == "workspace_spa"
 
 
 def test_primary_memory_sources_remain_wired():

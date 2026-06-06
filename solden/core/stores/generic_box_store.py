@@ -199,6 +199,16 @@ class GenericBoxStore:
             raise ValueError(
                 "_insert_generic_audit_event_txn requires box_id and box_type"
             )
+        from solden.services.audit_memory import ensure_memory_payload_for_audit_event
+
+        payload_json = ensure_memory_payload_for_audit_event(
+            payload,
+            box_type=str(box_type),
+            box_id=str(box_id),
+            payload_json=payload_json,
+            external_refs=external_refs,
+            now=now,
+        )
 
         governance_verdict = payload.get("governance_verdict")
         agent_confidence = payload.get("agent_confidence")
@@ -403,7 +413,11 @@ class GenericBoxStore:
         }
 
         now = datetime.now(timezone.utc).isoformat()
-        inferred_owner = owner if owner not in (None, "", [], {}) else _generic_memory_owner(existing, patch)
+        inferred_owner = (
+            owner
+            if owner not in (None, "", [], {})
+            else _generic_memory_owner(existing, patch)
+        )
         inferred_dependency = _generic_dependency_payload(
             provided=dependency,
             owner=inferred_owner if isinstance(inferred_owner, dict) else None,
@@ -417,42 +431,36 @@ class GenericBoxStore:
             or str(reason or "").strip()
             or f"{box_type.replace('_', ' ')} moved to {target_state.replace('_', ' ')}."
         )
-        memory_payload: Dict[str, Any] = {}
-        try:
-            from solden.services.memory_events import build_memory_event_payload
+        from solden.services.memory_events import build_memory_event_payload
+        from solden.services.memory_invariants import assert_memory_event_payload
 
-            memory_payload = build_memory_event_payload(
-                box_type=box_type,
-                box_id=box_id,
-                organization_id=organization_id,
-                event_type=str(action or target_state or "state_changed"),
-                source=str(source or "").strip() or "workspace_workflow",
-                actor_type="user",
-                actor_id=actor_id,
-                actor_label=actor_id,
-                previous_state=current_state,
-                resulting_state=target_state,
-                owner=inferred_owner,
-                dependency=inferred_dependency,
-                decision={
-                    "type": str(action or target_state or "state_changed"),
-                    "resulting_state": target_state,
-                },
-                rationale=str(reason or "").strip() or memory_summary,
-                evidence=evidence,
-                human_confirmation_status="confirmed",
-                next_action=next_action,
-                summary=memory_summary,
-                source_refs=source_refs,
-                occurred_at=now,
-            )
-            memory_payload["spec_version"] = spec_version
-        except Exception as exc:
-            logger.debug(
-                "[GenericBoxStore] memory payload build failed for %s/%s: %s",
-                box_type, box_id, exc,
-            )
-            memory_payload = {"spec_version": spec_version}
+        memory_payload = build_memory_event_payload(
+            box_type=box_type,
+            box_id=box_id,
+            organization_id=organization_id,
+            event_type=str(action or target_state or "state_changed"),
+            source=str(source or "").strip() or "workspace_workflow",
+            actor_type="user",
+            actor_id=actor_id,
+            actor_label=actor_id,
+            previous_state=current_state,
+            resulting_state=target_state,
+            owner=inferred_owner,
+            dependency=inferred_dependency,
+            decision={
+                "type": str(action or target_state or "state_changed"),
+                "resulting_state": target_state,
+            },
+            rationale=str(reason or "").strip() or memory_summary,
+            evidence=evidence,
+            human_confirmation_status="confirmed",
+            next_action=next_action,
+            summary=memory_summary,
+            source_refs=source_refs,
+            occurred_at=now,
+        )
+        assert_memory_event_payload(memory_payload)
+        memory_payload["spec_version"] = spec_version
         event_id: Optional[str] = None
         with self.connect() as conn:
             try:

@@ -24,6 +24,15 @@ class MemoryCoverageSurface:
 
 PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
     MemoryCoverageSurface(
+        name="audit_memory_promoter",
+        path="solden/services/audit_memory.py",
+        required_tokens=(
+            "ensure_memory_payload_for_audit_event",
+            "build_memory_event_payload",
+            "assert_memory_event_payload",
+        ),
+    ),
+    MemoryCoverageSurface(
         name="runtime_intents",
         path="solden/services/finance_agent_runtime.py",
         required_tokens=("_commit_intent_memory_event", "commit_runtime_memory_event"),
@@ -33,8 +42,39 @@ PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
         path="solden/core/stores/ap_store.py",
         required_tokens=(
             "_ensure_memory_payload_for_audit_event",
+            "ensure_memory_payload_for_audit_event",
             "append_audit_event",
             "set_ap_item_owner_atomic",
+        ),
+    ),
+    MemoryCoverageSurface(
+        name="generic_workflow_atomic_funnel",
+        path="solden/core/stores/generic_box_store.py",
+        required_tokens=(
+            "_insert_generic_audit_event_txn",
+            "ensure_memory_payload_for_audit_event",
+            "assert_memory_event_payload",
+            "update_generic_box_state",
+        ),
+    ),
+    MemoryCoverageSurface(
+        name="purchase_order_box_state_funnel",
+        path="solden/core/stores/purchase_order_store.py",
+        required_tokens=("update_purchase_order_state", "append_audit_event", "purchase_order_"),
+    ),
+    MemoryCoverageSurface(
+        name="bank_match_box_state_funnel",
+        path="solden/core/stores/bank_match_store.py",
+        required_tokens=("update_bank_match_state", "append_audit_event", "bank_match_"),
+    ),
+    MemoryCoverageSurface(
+        name="box_lifecycle_exception_outcome_funnel",
+        path="solden/core/stores/box_lifecycle_store.py",
+        required_tokens=(
+            "raise_box_exception",
+            "resolve_box_exception",
+            "record_box_outcome",
+            "append_audit_event",
         ),
     ),
     MemoryCoverageSurface(
@@ -51,6 +91,36 @@ PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
         name="slack_reply_sync",
         path="solden/api/slack_invoices.py",
         required_tokens=("slack_reply_synced", "capture_operational_memory_event"),
+    ),
+    MemoryCoverageSurface(
+        name="slack_action_surface",
+        path="solden/api/slack_invoices.py",
+        required_tokens=("_dispatch_runtime_intent", "_audit_callback_event", "append_audit_event"),
+    ),
+    MemoryCoverageSurface(
+        name="teams_action_surface",
+        path="solden/api/teams_invoices.py",
+        required_tokens=(
+            "_dispatch_runtime_intent",
+            "_audit_callback_event",
+            "append_audit_event",
+            "source_channel",
+        ),
+    ),
+    MemoryCoverageSurface(
+        name="ap_direct_action_routes",
+        path="solden/api/ap_items_action_routes.py",
+        required_tokens=(
+            "_commit_ap_operational_memory",
+            "commit_memory_event",
+            "runtime.execute_intent",
+            "append_audit_event",
+        ),
+    ),
+    MemoryCoverageSurface(
+        name="workflow_routes_generic_state_api",
+        path="solden/api/workflow_routes.py",
+        required_tokens=("update_generic_box_state", "actor_id", "reason"),
     ),
     MemoryCoverageSurface(
         name="workspace_capture_api",
