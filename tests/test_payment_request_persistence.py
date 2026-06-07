@@ -19,6 +19,7 @@ from solden.core import database as db_module  # noqa: E402
 from solden.services.payment_request import (  # noqa: E402
     PaymentRequestService, RequestStatus,
 )
+from solden.services.memory_invariants import memory_event_invariant_violations  # noqa: E402
 
 
 @pytest.fixture()
@@ -58,16 +59,18 @@ def test_approve_persists_and_audits(db):
     assert reloaded.approved_by == "cfo@a.com"
     assert reloaded.gl_code == "6000"
 
-    # State change wrote an audit row.
-    with db.connect() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT actor_id FROM audit_events WHERE organization_id = %s "
-            "AND event_type = %s",
-            ("pr-org-a", "payment_request_approved"),
-        )
-        rows = cur.fetchall()
-    assert any(str(dict(r).get("actor_id")) == "cfo@a.com" for r in rows)
+    events = db.list_box_audit_events("payment_request", req.request_id)
+    audit = next(
+        event for event in events
+        if event.get("event_type") == "payment_request_approved"
+    )
+    assert audit["actor_id"] == "cfo@a.com"
+    assert audit["from_state"] == RequestStatus.PENDING.value
+    assert audit["to_state"] == RequestStatus.APPROVED.value
+    assert memory_event_invariant_violations(audit["payload_json"]) == []
+    memory_event = audit["payload_json"]["memory_event"]
+    assert memory_event["work_item"]["box_type"] == "payment_request"
+    assert memory_event["work_item"]["box_id"] == req.request_id
 
 
 def test_reject_and_mark_paid_persist(db):

@@ -118,6 +118,37 @@ PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
         ),
     ),
     MemoryCoverageSurface(
+        name="payment_request_lifecycle",
+        path="solden/services/payment_request.py",
+        required_tokens=(
+            "_emit_audit",
+            "box_type",
+            "payment_request",
+            "append_audit_event",
+        ),
+    ),
+    MemoryCoverageSurface(
+        name="payment_status_lifecycle",
+        path="solden/core/stores/payment_store.py",
+        required_tokens=(
+            "update_payment",
+            "payment_status_changed",
+            "box_type",
+            "payment",
+            "append_audit_event",
+        ),
+    ),
+    MemoryCoverageSurface(
+        name="email_task_lifecycle",
+        path="solden/services/email_tasks.py",
+        required_tokens=(
+            "_append_task_memory_event",
+            "email_task_created",
+            "email_task_status_changed",
+            "append_audit_event",
+        ),
+    ),
+    MemoryCoverageSurface(
         name="workflow_routes_generic_state_api",
         path="solden/api/workflow_routes.py",
         required_tokens=("update_generic_box_state", "actor_id", "reason"),

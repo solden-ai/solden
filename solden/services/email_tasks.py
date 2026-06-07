@@ -37,6 +37,44 @@ def _make_id(prefix: str) -> str:
     return f"{prefix}_{ts.replace(':', '').replace('-', '').replace('.', '')}"
 
 
+def _append_task_memory_event(
+    *,
+    task_id: str,
+    event_type: str,
+    actor_id: str,
+    organization_id: Optional[str],
+    previous_status: Optional[str] = None,
+    resulting_status: Optional[str] = None,
+    summary: Optional[str] = None,
+    reason: Optional[str] = None,
+    payload: Optional[Dict[str, Any]] = None,
+) -> None:
+    """Commit an email-task lifecycle event into the canonical memory log."""
+    org_id = str(organization_id or "").strip()
+    if not org_id or not hasattr(db, "append_audit_event"):
+        return
+    event_payload = {
+        "task": {"id": task_id},
+        "summary": summary or event_type.replace("_", " "),
+        "reason": reason or summary or event_type.replace("_", " "),
+    }
+    if payload:
+        event_payload.update(payload)
+    db.append_audit_event({
+        "box_id": task_id,
+        "box_type": "email_task",
+        "event_type": event_type,
+        "from_state": previous_status,
+        "to_state": resulting_status,
+        "actor_type": "user",
+        "actor_id": actor_id or "system",
+        "organization_id": org_id,
+        "source": "email_tasks",
+        "decision_reason": reason or summary,
+        "payload_json": event_payload,
+    })
+
+
 def init_tasks_db():
     """Initialize tasks database."""
     db.execute("""
@@ -182,6 +220,31 @@ def create_task_from_email(
         INSERT INTO task_status_history (history_id, task_id, to_status, changed_by, notes)
         VALUES (%s, %s, 'open', %s, %s)
     """, (_make_id("history"), task_id, created_by, None))
+    _append_task_memory_event(
+        task_id=task_id,
+        event_type="email_task_created",
+        actor_id=created_by,
+        organization_id=organization_id,
+        resulting_status="open",
+        summary=f"Email task created: {title}",
+        reason=description or title,
+        payload={
+            "task": {
+                "id": task_id,
+                "title": title,
+                "task_type": task_type,
+                "source_email_id": email_id,
+                "source_thread_id": thread_id,
+                "assignee_email": assignee_email,
+            },
+            "evidence": {
+                "source_email_id": email_id,
+                "source_thread_id": thread_id,
+                "source_email_subject": email_subject,
+                "source_email_sender": email_sender,
+            },
+        },
+    )
     
     return get_task(task_id) or {
         "task_id": task_id,
@@ -216,7 +279,10 @@ def update_task_status(
         Updated task
     """
     # Get current status
-    row = db.fetchone_dict("SELECT status FROM email_tasks WHERE task_id = %s", (task_id,))
+    row = db.fetchone_dict(
+        "SELECT status, organization_id, title FROM email_tasks WHERE task_id = %s",
+        (task_id,),
+    )
     
     if not row:
         return {"error": "Task not found"}
@@ -245,6 +311,17 @@ def update_task_status(
         INSERT INTO task_status_history (history_id, task_id, from_status, to_status, changed_by, notes)
         VALUES (%s, %s, %s, %s, %s, %s)
     """, (_make_id("history"), task_id, old_status, new_status, changed_by, notes))
+    _append_task_memory_event(
+        task_id=task_id,
+        event_type="email_task_status_changed",
+        actor_id=changed_by,
+        organization_id=row.get("organization_id"),
+        previous_status=old_status,
+        resulting_status=new_status,
+        summary=f"Email task moved from {old_status} to {new_status}.",
+        reason=notes,
+        payload={"task": {"id": task_id, "title": row.get("title")}},
+    )
     
     return get_task(task_id)
 
@@ -256,12 +333,32 @@ def assign_task(
 ) -> Dict[str, Any]:
     """Assign task to user."""
     timestamp = datetime.now(timezone.utc).isoformat()
+    row = db.fetchone_dict(
+        "SELECT organization_id, title, assignee_email FROM email_tasks WHERE task_id = %s",
+        (task_id,),
+    ) or {}
     
     db.execute("""
         UPDATE email_tasks 
         SET assignee_email = %s, updated_at = %s
         WHERE task_id = %s
     """, (assignee_email, timestamp, task_id))
+    _append_task_memory_event(
+        task_id=task_id,
+        event_type="email_task_assigned",
+        actor_id=assigned_by,
+        organization_id=row.get("organization_id"),
+        summary=f"Email task assigned to {assignee_email}.",
+        reason=f"{assigned_by} assigned the task.",
+        payload={
+            "task": {
+                "id": task_id,
+                "title": row.get("title"),
+                "previous_assignee_email": row.get("assignee_email"),
+                "assignee_email": assignee_email,
+            },
+        },
+    )
     
     return get_task(task_id)
 
@@ -274,6 +371,10 @@ def add_comment(
     """Add comment to task."""
     timestamp = datetime.now(timezone.utc).isoformat()
     comment_id = _make_id("comment")
+    row = db.fetchone_dict(
+        "SELECT organization_id, title FROM email_tasks WHERE task_id = %s",
+        (task_id,),
+    ) or {}
     
     db.execute("""
         INSERT INTO task_comments (comment_id, task_id, user_email, comment, created_at)
@@ -284,6 +385,18 @@ def add_comment(
     db.execute("""
         UPDATE email_tasks SET updated_at = %s WHERE task_id = %s
     """, (timestamp, task_id))
+    _append_task_memory_event(
+        task_id=task_id,
+        event_type="email_task_comment_added",
+        actor_id=user_email,
+        organization_id=row.get("organization_id"),
+        summary="Email task comment added.",
+        reason=comment[:500],
+        payload={
+            "task": {"id": task_id, "title": row.get("title")},
+            "comment": {"id": comment_id, "body_preview": comment[:500]},
+        },
+    )
     
     return {
         "comment_id": comment_id,

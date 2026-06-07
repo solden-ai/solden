@@ -222,21 +222,43 @@ class PaymentRequestService:
         self.db.create_payment_request(self._to_payload(request))
         return request
 
-    def _emit_audit(self, request_id: str, event_type: str, actor_id: Optional[str],
-                    payload: Dict[str, Any]) -> None:
-        """Best-effort audit of a payment-request state change. The
-        payment_requests row (status/approved_by/approved_at) is the durable
-        attributable record; this adds the unified-timeline narration."""
+    def _emit_audit(
+        self,
+        request_id: str,
+        event_type: str,
+        actor_id: Optional[str],
+        payload: Dict[str, Any],
+    ) -> None:
+        """Audit a payment-request lifecycle change as operational memory."""
         try:
+            previous_status = payload.pop("_previous_status", None)
+            resulting_status = payload.pop("_resulting_status", None)
+            reason = (
+                payload.get("reason")
+                or payload.get("description")
+                or event_type.replace("_", " ")
+            )
             self.db.append_audit_event({
-                "ap_item_id": "",  # org/request-scoped, not invoice-scoped
+                "box_id": request_id,
+                "box_type": "payment_request",
                 "event_type": event_type,
+                "from_state": previous_status,
+                "to_state": resulting_status,
                 "actor_type": "user",
                 "actor_id": actor_id or "system",
                 "organization_id": self.organization_id,
-                "metadata": {"entity_type": "payment_request",
-                             "entity_id": request_id, **payload},
+                "payload_json": {
+                    "payment_request": {
+                        "id": request_id,
+                        "previous_status": previous_status,
+                        "resulting_status": resulting_status,
+                    },
+                    "field_updates": payload,
+                    "summary": f"Payment request {request_id} moved to {resulting_status or event_type}.",
+                    "reason": reason,
+                },
                 "source": "payment_request_service",
+                "decision_reason": reason,
             })
         except Exception as exc:
             logger.warning("payment_request audit emit failed for %s: %s", request_id, exc)
@@ -441,7 +463,12 @@ class PaymentRequestService:
             updates["gl_code"] = gl_code
         self.db.update_payment_request(request_id, self.organization_id, **updates)
         self._emit_audit(request_id, "payment_request_approved", approved_by,
-                         {"amount": row.get("amount"), "gl_code": gl_code})
+                         {
+                             "_previous_status": row.get("status"),
+                             "_resulting_status": RequestStatus.APPROVED.value,
+                             "amount": row.get("amount"),
+                             "gl_code": gl_code,
+                         })
         logger.info(f"Payment request {request_id} approved by {approved_by}")
 
         return PaymentRequest.from_row(
@@ -468,7 +495,11 @@ class PaymentRequestService:
             metadata_json=metadata,
         )
         self._emit_audit(request_id, "payment_request_rejected", rejected_by,
-                         {"reason": reason})
+                         {
+                             "_previous_status": row.get("status"),
+                             "_resulting_status": RequestStatus.REJECTED.value,
+                             "reason": reason,
+                         })
         logger.info(f"Payment request {request_id} rejected: {reason}")
 
         return PaymentRequest.from_row(
@@ -489,7 +520,11 @@ class PaymentRequestService:
             payment_id=payment_id,
         )
         self._emit_audit(request_id, "payment_request_marked_paid", None,
-                         {"payment_id": payment_id})
+                         {
+                             "_previous_status": row.get("status"),
+                             "_resulting_status": RequestStatus.PAID.value,
+                             "payment_id": payment_id,
+                         })
 
         return PaymentRequest.from_row(
             self.db.get_payment_request(request_id, self.organization_id)

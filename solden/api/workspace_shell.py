@@ -5179,7 +5179,19 @@ def update_payment_status(
     if not updates:
         return existing
 
-    updated = db.update_payment(payment_id, **updates)
+    actor_id = (
+        getattr(user, "email", None)
+        or getattr(user, "user_id", None)
+        or "workspace_user"
+    )
+    updated = db.update_payment(
+        payment_id,
+        **updates,
+        _actor_type="user",
+        _actor_id=actor_id,
+        _source="workspace_payments",
+        _decision_reason=updates.get("notes"),
+    )
     return updated or existing
 
 

@@ -193,12 +193,21 @@ class PaymentStore:
     def update_payment(self, payment_id: str, **kwargs: Any) -> Optional[Dict[str, Any]]:
         """Update a payment record.  Only whitelisted columns are accepted."""
         self.initialize()
+        actor_type = str(kwargs.pop("_actor_type", "system") or "system")
+        actor_id = str(kwargs.pop("_actor_id", "payment_store") or "payment_store")
+        audit_source = str(kwargs.pop("_source", "payment_store") or "payment_store")
+        decision_reason = kwargs.pop("_decision_reason", None)
+        correlation_id = kwargs.pop("_correlation_id", None)
+        previous = self.get_payment(payment_id)
+        if not previous:
+            return None
+
         now = datetime.now(timezone.utc).isoformat()
         kwargs["updated_at"] = now
 
         safe_cols = {k: v for k, v in kwargs.items() if k in self._PAYMENT_ALLOWED_COLUMNS}
         if not safe_cols:
-            return self.get_payment(payment_id)
+            return previous
 
         set_clause = ", ".join(f"{col} = %s" for col in safe_cols)
         values = list(safe_cols.values()) + [payment_id]
@@ -206,7 +215,54 @@ class PaymentStore:
         with self.connect() as conn:
             conn.execute(sql, values)
             conn.commit()
-        return self.get_payment(payment_id)
+        updated = self.get_payment(payment_id)
+        previous_status = str(previous.get("status") or "").strip()
+        updated_status = str((updated or {}).get("status") or "").strip()
+        if (
+            updated
+            and "status" in safe_cols
+            and updated_status
+            and updated_status != previous_status
+            and hasattr(self, "append_audit_event")
+        ):
+            reason = str(
+                decision_reason
+                or safe_cols.get("notes")
+                or f"payment status changed to {updated_status}"
+            )
+            self.append_audit_event({
+                "box_id": payment_id,
+                "box_type": "payment",
+                "event_type": "payment_status_changed",
+                "from_state": previous_status or None,
+                "to_state": updated_status,
+                "actor_type": actor_type,
+                "actor_id": actor_id,
+                "organization_id": updated.get("organization_id"),
+                "source": audit_source,
+                "correlation_id": correlation_id,
+                "decision_reason": reason,
+                "payload_json": {
+                    "payment": {
+                        "id": payment_id,
+                        "ap_item_id": updated.get("ap_item_id"),
+                        "vendor_name": updated.get("vendor_name"),
+                        "amount": updated.get("amount"),
+                        "currency": updated.get("currency"),
+                    },
+                    "field_updates": {
+                        key: value
+                        for key, value in safe_cols.items()
+                        if key != "updated_at"
+                    },
+                    "summary": (
+                        f"Payment {payment_id} moved from "
+                        f"{previous_status or 'unknown'} to {updated_status}."
+                    ),
+                    "reason": reason,
+                },
+            })
+        return updated
 
     def list_payments_by_org(
         self,
