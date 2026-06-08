@@ -488,6 +488,9 @@ def commit_memory_event(
     correlation_id: Optional[str] = None,
     workflow_id: Optional[str] = None,
     run_id: Optional[str] = None,
+    agent_version: Optional[str] = None,
+    tool_scope: Any = None,
+    policy_version: Optional[str] = None,
     occurred_at: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Commit one structured operational-memory event.
@@ -565,6 +568,12 @@ def commit_memory_event(
         "run_id": run_id,
         "decision_reason": decision_reason,
         "agent_confidence": confidence,
+        # Carry full agent attribution onto the memory row so it matches the
+        # sibling runtime audit row (system of intent: who / which agent /
+        # which version / which authority / which policy).
+        "agent_version": agent_version,
+        "tool_scope": tool_scope,
+        "policy_version": policy_version,
         "ts": occurred_at or _utc_now(),
     }
     audit_payload = {
@@ -792,6 +801,8 @@ def commit_runtime_memory_event(
     response: Optional[Dict[str, Any]],
     actor_type: str = "user",
     actor_id: Optional[str] = None,
+    agent_version: Optional[str] = None,
+    tool_scope: Any = None,
 ) -> Optional[Dict[str, Any]]:
     """Capture operational memory for a completed runtime intent.
 
@@ -870,4 +881,6 @@ def commit_runtime_memory_event(
         ),
         correlation_id=_text(payload.get("correlation_id")) or None,
         run_id=_text(payload.get("action_run_id")) or None,
+        agent_version=agent_version,
+        tool_scope=tool_scope,
     )

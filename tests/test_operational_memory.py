@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from solden.services.operational_memory import (
     build_decision_ledger,
     build_box_operational_memory_record,
@@ -7,7 +9,10 @@ from solden.services.operational_memory import (
 )
 from solden.services.memory_events import commit_memory_event
 from solden.services.memory_events import commit_runtime_memory_event
-from solden.services.operational_memory_capture import capture_operational_memory_event
+from solden.services.operational_memory_capture import (
+    capture_operational_memory_event,
+    link_observed_event_to_work_item,
+)
 
 
 class _MemoryDB:
@@ -670,3 +675,152 @@ def test_capture_loop_asks_before_committing_unconfirmed_context():
     assert result["confirmation_request"]["kind"] == "confirm_memory_event"
     assert "Should Solden record this" in result["confirmation_request"]["question"]
     assert db.events == []
+
+
+def test_capture_recency_breaks_ties_toward_recent_work_item():
+    now = datetime.now(timezone.utc)
+    db = _MemoryDB(
+        [],
+        boxes={
+            ("ap_item", "AP-recent"): {
+                "id": "AP-recent",
+                "organization_id": "org-test",
+                "vendor_name": "Globex Software",
+                "amount": 1000,
+                "state": "needs_approval",
+                "created_at": (now - timedelta(days=2)).isoformat(),
+            },
+            ("ap_item", "AP-stale"): {
+                "id": "AP-stale",
+                "organization_id": "org-test",
+                "vendor_name": "Globex Software",
+                "amount": 1000,
+                "state": "needs_approval",
+                "created_at": (now - timedelta(days=90)).isoformat(),
+            },
+        },
+    )
+
+    result = capture_operational_memory_event(
+        db,
+        organization_id="org-test",
+        actor_id="agent",
+        observed={
+            "source": "gmail",
+            "vendor_name": "Globex Software",
+            "amount": 1000,
+            "summary": "The $1,000 Globex bill needs a look.",
+        },
+    )
+
+    # vendor + amount only (0.40) sits below the link bar, so Solden asks rather
+    # than silently links, and it suggests the most RECENT matching item.
+    assert result["status"] == "needs_link"
+    assert result["link"]["status"] == "needs_confirmation"
+    assert result["link"]["work_item"]["box_id"] == "AP-recent"
+    assert db.events == []
+
+
+def test_capture_auto_commit_uses_verified_link_score_not_payload_confidence():
+    db = _MemoryDB(
+        [],
+        boxes={
+            ("ap_item", "AP-gate"): {
+                "id": "AP-gate",
+                "organization_id": "org-test",
+                "invoice_number": "INV-GATE",
+                "vendor_name": "Globex Software",
+                "amount": 500,
+                "state": "validated",
+            }
+        },
+    )
+
+    # Inferred match invoice(0.45)+vendor(0.20)+amount(0.20)=0.85 -> linked, but
+    # below the 0.90 auto-commit bar. A caller-supplied confidence must not
+    # override the verified link score and bypass the human.
+    result = capture_operational_memory_event(
+        db,
+        organization_id="org-test",
+        actor_id="agent",
+        observed={
+            "source": "gmail",
+            "invoice_number": "INV-GATE",
+            "vendor_name": "Globex Software",
+            "amount": 500,
+            "summary": "Auto-log please.",
+            "confidence": 0.99,
+            "auto_commit": True,
+        },
+    )
+
+    assert result["status"] == "needs_confirmation"
+    assert db.events == []
+
+
+def test_capture_auto_commit_commits_on_verified_direct_ref():
+    db = _MemoryDB(
+        [],
+        boxes={
+            ("ap_item", "AP-direct"): {
+                "id": "AP-direct",
+                "organization_id": "org-test",
+                "thread_id": "thread-direct",
+                "vendor_name": "Globex Software",
+                "state": "validated",
+            }
+        },
+    )
+
+    # A verified 1.0 link (direct ref) with auto_commit still commits, so the
+    # gate fix does not regress the real auto-commit callers (slack/outlook/erp).
+    result = capture_operational_memory_event(
+        db,
+        organization_id="org-test",
+        actor_id="agent",
+        observed={
+            "source": "outlook",
+            "source_refs": {"gmail_thread_id": "thread-direct"},
+            "event_type": "outlook_triaged",
+            "summary": "Autopilot attached the message to the linked item.",
+            "confidence": 1.0,
+            "auto_commit": True,
+        },
+    )
+
+    assert result["status"] == "committed"
+    assert result["link"]["confidence"] == 1.0
+    assert db.events
+
+
+def test_link_fuzzy_vendor_matches_reordered_tokens():
+    db = _MemoryDB(
+        [],
+        boxes={
+            ("ap_item", "AP-fuzzy"): {
+                "id": "AP-fuzzy",
+                "organization_id": "org-test",
+                "invoice_number": "INV-FZ",
+                "vendor_name": "Globex Software",
+                "amount": 1000,
+                "state": "validated",
+            }
+        },
+    )
+
+    # Reordered tokens: strict equality would miss "software globex" and leave
+    # this below the link bar (invoice+amount = 0.65). Fuzzy lifts it to linked.
+    link = link_observed_event_to_work_item(
+        db,
+        organization_id="org-test",
+        observed={
+            "invoice_number": "INV-FZ",
+            "vendor_name": "software globex",
+            "amount": 1000,
+        },
+    )
+
+    assert link["status"] == "linked"
+    assert link["work_item"]["box_id"] == "AP-fuzzy"
+    assert "vendor" in link["match_evidence"]
+    assert link["confidence"] >= 0.72

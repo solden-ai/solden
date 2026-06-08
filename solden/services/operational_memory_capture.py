@@ -8,15 +8,25 @@ happening.
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from solden.core.ap_item_resolution import resolve_ap_item_reference
 from solden.core.box_registry import get_box
 from solden.services.memory_events import commit_memory_event
+from solden.services.vendor_attribute_matcher import vendor_name_similarity
 
 
 DEFAULT_LINK_CONFIDENCE_THRESHOLD = 0.72
 DEFAULT_AUTO_COMMIT_CONFIDENCE_THRESHOLD = 0.90
+# Vendor inference is fuzzy (token-set similarity), not exact-string equality.
+DEFAULT_VENDOR_STRONG_SIMILARITY = 0.92
+DEFAULT_VENDOR_PARTIAL_SIMILARITY = 0.75
+# Recency only modulates weak/fuzzy matches: 1.0 within _FULL days, decaying to
+# _FLOOR by _FLOOR days. A fresh work item outranks a stale one of equal evidence.
+_RECENCY_FULL_DAYS = 7.0
+_RECENCY_FLOOR_DAYS = 60.0
+_RECENCY_FLOOR = 0.9
 
 
 def _text(value: Any) -> str:
@@ -42,6 +52,35 @@ def _same_amount(a: Any, b: Any) -> bool:
     if left is None or right is None:
         return False
     return abs(left - right) < 0.01
+
+
+def _parse_dt(value: Any) -> Optional[datetime]:
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        return value
+    try:
+        return datetime.fromisoformat(str(value).strip().replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+
+
+def _recency_factor(created_at: Any, *, now: Optional[datetime] = None) -> float:
+    """Gentle decay (1.0 -> _RECENCY_FLOOR) by work-item age. Returns 1.0 when
+    the timestamp is missing or unparseable, so it is a no-op on bad data."""
+    dt = _parse_dt(created_at)
+    if dt is None:
+        return 1.0
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    ref = now or datetime.now(timezone.utc)
+    age_days = (ref - dt).total_seconds() / 86400.0
+    if age_days <= _RECENCY_FULL_DAYS:
+        return 1.0
+    if age_days >= _RECENCY_FLOOR_DAYS:
+        return _RECENCY_FLOOR
+    span = _RECENCY_FLOOR_DAYS - _RECENCY_FULL_DAYS
+    return round(1.0 - (1.0 - _RECENCY_FLOOR) * (age_days - _RECENCY_FULL_DAYS) / span, 4)
 
 
 def _row_org(row: Dict[str, Any]) -> str:
@@ -151,9 +190,16 @@ def _resolve_ap_by_refs(
         if po_number and po_number == _text(row.get("po_number")):
             score += 0.25
             evidence.append("po_number")
-        if vendor and vendor == _text(row.get("vendor_name") or row.get("vendor")).lower():
-            score += 0.20
-            evidence.append("vendor")
+        if vendor:
+            sim = vendor_name_similarity(
+                vendor, _text(row.get("vendor_name") or row.get("vendor")).lower()
+            )
+            if sim >= DEFAULT_VENDOR_STRONG_SIMILARITY:
+                score += 0.20
+                evidence.append("vendor")
+            elif sim >= DEFAULT_VENDOR_PARTIAL_SIMILARITY:
+                score += 0.12
+                evidence.append("vendor~")
         if _same_amount(amount, row.get("amount")):
             score += 0.20
             evidence.append("amount")
@@ -164,9 +210,15 @@ def _resolve_ap_by_refs(
         }:
             score += 0.45
             evidence.append("erp_record_id")
-        if score > best_score:
+        # Recency modulates weak/fuzzy matches only. A strong structured id
+        # (invoice / po / erp) stays at full confidence regardless of age, since
+        # an old invoice with an exact id match is still the right one.
+        strong = any(e in evidence for e in ("invoice_number", "po_number", "erp_record_id"))
+        capped = min(score, 1.0)
+        ranked = capped if strong else capped * _recency_factor(row.get("created_at"))
+        if ranked > best_score:
             best = row
-            best_score = min(score, 1.0)
+            best_score = ranked
             best_evidence = evidence
     return best, best_score, best_evidence
 
@@ -331,7 +383,12 @@ def capture_operational_memory_event(
     )
     confirmation_status = _text(candidate.get("human_confirmation_status")).lower()
     auto_commit = bool(payload.get("auto_commit"))
-    confidence = float(candidate.get("confidence") or 0.0)
+    # Auto-commit must be gated on the VERIFIED link score, never the caller's
+    # self-reported confidence (the public capture endpoints accept it in the
+    # request body). Legitimate auto-commit callers link via explicit/direct
+    # refs at 1.0, so this does not regress them; it closes the bypass where a
+    # weak fuzzy link (0.72-0.89) would auto-commit on a payload-supplied 0.99.
+    link_confidence = float(link.get("confidence") or 0.0)
     if link.get("status") != "linked":
         return {
             "status": "needs_link",
@@ -343,7 +400,7 @@ def capture_operational_memory_event(
             },
         }
     if confirmation_status not in {"confirmed", "human_confirmed"}:
-        if not auto_commit or confidence < DEFAULT_AUTO_COMMIT_CONFIDENCE_THRESHOLD:
+        if not auto_commit or link_confidence < DEFAULT_AUTO_COMMIT_CONFIDENCE_THRESHOLD:
             return {
                 "status": "needs_confirmation",
                 "link": link,

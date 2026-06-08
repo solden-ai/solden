@@ -241,6 +241,56 @@ async def peppol_import(
             _source="peppol_import",
         )
 
+    # Operational-memory boundary: an inbound e-invoice is a work item entering
+    # from a channel. Link it to the new box and write the memory event, the way
+    # the other intakes do; PEPPOL was creating the item outside the layer.
+    try:
+        from solden.services.operational_memory_capture import (
+            capture_operational_memory_event,
+        )
+
+        capture_operational_memory_event(
+            db,
+            organization_id=user.organization_id,
+            actor_type="user",
+            actor_id=user.user_id,
+            observed={
+                "box_type": "ap_item",
+                "box_id": ap_item_id,
+                "ap_item_id": ap_item_id,
+                "source": "peppol_ubl",
+                "event_type": "peppol_intake_created",
+                "summary": (
+                    f"Imported PEPPOL/UBL e-invoice {parsed.invoice_id or ''} "
+                    f"from {parsed.supplier_name}."
+                ),
+                "rationale": (
+                    "Inbound PEPPOL/UBL e-invoice parsed and created as a work item."
+                ),
+                "evidence": {
+                    "type": "peppol_ubl",
+                    "invoice_id": parsed.invoice_id,
+                    "supplier_name": parsed.supplier_name,
+                    "warnings": list(parsed.warnings),
+                },
+                "confidence": 1.0,
+                "auto_commit": True,
+                "source_refs": {
+                    "ap_item_id": ap_item_id,
+                    "peppol_invoice_id": parsed.invoice_id,
+                },
+                "external_refs": {"peppol_invoice_id": parsed.invoice_id},
+                "idempotency_key": (
+                    f"memory-event:peppol:{user.organization_id}:"
+                    f"{parsed.invoice_id or ap_item_id}"
+                ),
+            },
+        )
+    except Exception as exc:  # noqa: BLE001
+        logging.getLogger(__name__).warning(
+            "[peppol] operational-memory capture failed for %s: %s", ap_item_id, exc
+        )
+
     return PeppolImportResponse(
         ap_item_id=ap_item_id,
         invoice_id=parsed.invoice_id,

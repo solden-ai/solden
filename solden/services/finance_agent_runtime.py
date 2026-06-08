@@ -1912,6 +1912,8 @@ class FinanceAgentRuntime:
                 response=response,
                 actor_type=self.actor_type,
                 actor_id=self.actor_email or self.actor_id,
+                agent_version=self.agent_version,
+                tool_scope=self.tool_scope,
             )
             if isinstance(row, dict) and row.get("id"):
                 response["memory_event_id"] = row.get("id")

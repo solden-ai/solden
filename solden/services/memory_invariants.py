@@ -108,6 +108,11 @@ PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
         ),
     ),
     MemoryCoverageSurface(
+        name="peppol_import",
+        path="solden/api/peppol.py",
+        required_tokens=("peppol_intake_created", "capture_operational_memory_event"),
+    ),
+    MemoryCoverageSurface(
         name="ap_direct_action_routes",
         path="solden/api/ap_items_action_routes.py",
         required_tokens=(

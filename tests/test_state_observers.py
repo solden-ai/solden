@@ -130,8 +130,15 @@ def test_audit_observer_records_event():
     db.append_audit_event.assert_called_once()
     call_arg = db.append_audit_event.call_args[0][0]
     assert call_arg["event_type"] == "state_transition"
-    assert call_arg["details"]["old_state"] == "validated"
-    assert call_arg["details"]["new_state"] == "needs_approval"
+    # Funnel contract: it reads actor_id + from_state/to_state. The bug passed
+    # "actor"/"details", which the funnel ignored, so the row recorded a NULL
+    # actor and NULL states on every transition.
+    assert "actor" not in call_arg
+    assert call_arg["actor_id"]
+    assert call_arg["from_state"] == "validated"
+    assert call_arg["to_state"] == "needs_approval"
+    assert call_arg["metadata"]["old_state"] == "validated"
+    assert call_arg["metadata"]["new_state"] == "needs_approval"
 
 
 def test_audit_observer_skips_without_method():

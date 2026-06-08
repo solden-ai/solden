@@ -287,10 +287,15 @@ class AuditTrailObserver(StateObserver):
             "organization_id": event.organization_id,
             "event_type": "state_transition",
             "source": event.source,
-            "actor": event.actor_id or "system",
+            # The funnel reads ``actor_id`` (not ``actor``) and lifts
+            # ``from_state``/``to_state`` onto the row; passing the wrong keys
+            # wrote the actor and states as NULL on every transition.
+            "actor_id": event.actor_id or "system",
+            "from_state": event.old_state,
+            "to_state": event.new_state,
             "correlation_id": event.correlation_id,
             "next_action": next_action,
-            "details": {
+            "metadata": {
                 "old_state": event.old_state,
                 "new_state": event.new_state,
                 "next_action": next_action,

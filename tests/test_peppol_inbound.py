@@ -477,6 +477,13 @@ def test_api_import_creates_ap_item_with_vat_split(db, client_orgA):
     assert fresh["vat_code"] == "T1"
     assert fresh["bill_country"] == "DE"
 
+    # H4: the import is an operational-memory boundary — a memory event linking
+    # the inbound e-invoice to the new work item must be written, not just the row.
+    events = db.list_audit_events(organization_id="orgA", box_id=ap_item_id, limit=20)
+    assert any(
+        "peppol" in str(e.get("event_type", "")) for e in events
+    ), f"no peppol memory event for {ap_item_id}: {[e.get('event_type') for e in events]}"
+
 
 def test_api_import_reverse_charge_flagged_correctly(db, client_orgA):
     resp = client_orgA.post(

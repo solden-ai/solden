@@ -110,6 +110,16 @@ def _name_similarity(a: str, b: str) -> float:
     return round(0.7 * jaccard + 0.3 * len_ratio, 3)
 
 
+def vendor_name_similarity(a: str, b: str) -> float:
+    """Public 0..1 token-set similarity for two vendor names.
+
+    Shared with the operational-memory capture linker so vendor inference
+    uses the same fuzzy logic the AP validation gate relies on, instead of
+    brittle exact-string equality.
+    """
+    return _name_similarity(a, b)
+
+
 # ── Per-attribute matchers ─────────────────────────────────────────
 
 

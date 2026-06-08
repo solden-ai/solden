@@ -437,8 +437,17 @@ class APStore:
                     (id, box_id, box_type, event_type, prev_state, new_state,
                      actor_type, actor_id, payload_json, source, correlation_id,
                      workflow_id, run_id, decision_reason, organization_id,
-                     agent_version, ts)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+                     agent_version, policy_version, ts)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+                )
+                # This is an ap_item state-transition (a decision row), so it
+                # carries the policy version that authorized it, mirroring the
+                # main append funnel. build_decision_ledger reads this column.
+                from solden.core.ap_states import (
+                    CURRENT_AP_POLICY_VERSION as _CURRENT_AP_POLICY_VERSION,
+                )
+                _transition_policy_version = (
+                    kwargs.get("policy_version") or _CURRENT_AP_POLICY_VERSION
                 )
                 audit_payload: Dict[str, Any] = {
                     "column_updates": {
@@ -524,6 +533,7 @@ class APStore:
                         # canonical runtime intent row written separately
                         # carries the version for /v1 calls.
                         kwargs.get("agent_version"),
+                        _transition_policy_version,
                         now,
                     ),
                 )
