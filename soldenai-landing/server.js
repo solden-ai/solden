@@ -138,7 +138,7 @@ app.use(express.json({ limit: '32kb' }));
 //
 // CSP rationale:
 //   default-src 'self'          , start strict; explicit allow per directive
-//   script-src 'self'            , no inline scripts (site.js is external)
+//   script-src 'self'            , no inline scripts (page JS is external in /assets/js)
 //   style-src 'self' 'unsafe-inline'
 //                                , a few inline style attrs on hero swatches
 //   font-src 'self' data:        , Geist self-hosted from /assets/fonts/
