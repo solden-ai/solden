@@ -210,7 +210,7 @@ app.get('/healthz', async (_req, res) => {
 
 // ── Contact form ─────────────────────────────────────────────
 //
-// Fields match the markup in contact.html. Honeypot field is named
+// Fields match the markup in request-demo.html. Honeypot field is named
 // `company_website`; bots fill it because the label says so, real
 // users never see it (CSS off-screen). Honeypot trips to silent 200,
 // no DB write, no Slack notify.
