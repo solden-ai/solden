@@ -42,6 +42,10 @@ def _clean_dict(value: Any) -> Dict[str, Any]:
     return cleaned if cleaned is not None else {}
 
 
+def _is_present(value: Any) -> bool:
+    return value not in (None, "", [], {})
+
+
 def _normalize_event_type(event_type: str) -> str:
     token = _text(event_type).lower().replace("-", "_").replace(" ", "_")
     while "__" in token:
@@ -105,6 +109,81 @@ def _normalize_source_refs(
             if evidence.get(key) not in (None, "", [], {}):
                 refs[key] = evidence[key]
     return refs
+
+
+def _normalize_evidence(
+    *,
+    evidence: Any,
+    refs: Dict[str, Any],
+    source: str,
+    event_type: str,
+    actor_type: str,
+    actor_id: Optional[str],
+    occurred_at: Optional[str],
+    captured_at: str,
+) -> Dict[str, Any]:
+    if isinstance(evidence, dict):
+        payload = {
+            str(key): value
+            for key, value in evidence.items()
+            if _is_present(value)
+        }
+    elif isinstance(evidence, list):
+        payload = {"items": [item for item in evidence if _is_present(item)]}
+    elif _text(evidence):
+        payload = {"summary": _text(evidence)}
+    else:
+        payload = {}
+
+    if refs and not isinstance(payload.get("source_refs"), dict):
+        payload["source_refs"] = refs
+    payload.setdefault("captured_from", source)
+    payload.setdefault("event_type", event_type)
+    payload.setdefault("captured_at", captured_at)
+    if _text(occurred_at):
+        payload.setdefault("occurred_at", _text(occurred_at))
+    captured_by = {
+        key: value
+        for key, value in {
+            "type": _text(actor_type) or None,
+            "id": _text(actor_id) or None,
+        }.items()
+        if _is_present(value)
+    }
+    if captured_by:
+        payload.setdefault("captured_by", captured_by)
+    return {
+        str(key): value
+        for key, value in payload.items()
+        if _is_present(value)
+    }
+
+
+def _memory_quality(
+    *,
+    confidence: Optional[float],
+    human_confirmation_status: Optional[str],
+    refs: Dict[str, Any],
+    evidence_was_explicit: bool,
+) -> Dict[str, Any]:
+    evidence_status = "linked" if refs or evidence_was_explicit else "provenance_only"
+    verification_status = (
+        _text(human_confirmation_status)
+        or ("source_linked" if evidence_status == "linked" else "system_observed")
+    )
+    quality = {
+        "contract": "operational_memory_quality.v1",
+        "evidence_status": evidence_status,
+        "verification_status": verification_status,
+        "source_ref_count": len(refs),
+        "confidence": confidence,
+        "decay_policy": "event_sourced",
+    }
+    return {
+        key: value
+        for key, value in quality.items()
+        if _is_present(value)
+    }
 
 
 def _idempotency_key(
@@ -176,6 +255,23 @@ def build_memory_event_payload(
         external_refs=external_refs,
         evidence=evidence,
     )
+    evidence_was_explicit = _is_present(evidence)
+    evidence_payload = _normalize_evidence(
+        evidence=evidence,
+        refs=refs,
+        source=source,
+        event_type=normalized_event_type,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        occurred_at=occurred_at,
+        captured_at=captured_at,
+    )
+    quality_payload = _memory_quality(
+        confidence=confidence,
+        human_confirmation_status=human_confirmation_status,
+        refs=refs,
+        evidence_was_explicit=evidence_was_explicit,
+    )
     decision_payload = _normalize_decision(
         decision=decision,
         event_type=normalized_event_type,
@@ -212,7 +308,7 @@ def build_memory_event_payload(
         "execution_state": execution_state,
         "decision": decision_payload,
         "rationale": _text(rationale) or decision_payload.get("rationale"),
-        "evidence": evidence if evidence not in (None, "", [], {}) else None,
+        "evidence": evidence_payload,
         "source": {
             "surface": source,
             "refs": refs,
@@ -221,6 +317,7 @@ def build_memory_event_payload(
         },
         "confidence": confidence,
         "human_confirmation_status": _text(human_confirmation_status) or None,
+        "quality": quality_payload,
     }
     memory_event = {
         key: value for key, value in memory_event.items()
@@ -238,6 +335,9 @@ def build_memory_event_payload(
         "decision_reason": _text(rationale) or memory_summary,
         "confidence_at_decision": confidence,
         "human_confirmation_status": _text(human_confirmation_status) or None,
+        "evidence_status": quality_payload.get("evidence_status"),
+        "verification_status": quality_payload.get("verification_status"),
+        "source_ref_count": quality_payload.get("source_ref_count"),
         "memory_line": memory_summary,
         "memory_event_schema_version": MEMORY_EVENT_SCHEMA_VERSION,
         "work_item": {
@@ -255,6 +355,106 @@ def build_memory_event_payload(
         "summary": memory_summary,
         "reason": _text(rationale) or memory_summary,
     }
+
+
+def upgrade_memory_event_payload_contract(
+    payload_json: Dict[str, Any],
+    *,
+    source: Optional[str] = None,
+    event_type: Optional[str] = None,
+    actor_type: str = "system",
+    actor_id: Optional[str] = None,
+    evidence: Any = None,
+    source_refs: Optional[Dict[str, Any]] = None,
+    external_refs: Optional[Dict[str, Any]] = None,
+    occurred_at: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Backfill evidence and quality fields on older explicit memory events."""
+    payload = dict(payload_json) if isinstance(payload_json, dict) else {}
+    memory_event = _clean_dict(payload.get("memory_event"))
+    if not memory_event:
+        return payload
+
+    source_payload = _clean_dict(memory_event.get("source"))
+    existing_refs = _clean_dict(source_payload.get("refs"))
+    refs = {
+        **existing_refs,
+        **_normalize_source_refs(
+            source_refs=source_refs,
+            external_refs=external_refs,
+            evidence=evidence if _is_present(evidence) else memory_event.get("evidence"),
+        ),
+    }
+    resolved_source = (
+        _text(source_payload.get("surface"))
+        or _text(source)
+        or "audit_events"
+    )
+    normalized_event_type = _normalize_event_type(
+        _text(memory_event.get("event_type")) or _text(event_type) or "context_recorded"
+    )
+    captured_at = _text(source_payload.get("captured_at")) or _utc_now()
+    source_payload = {
+        **source_payload,
+        "surface": resolved_source,
+        "refs": refs,
+        "captured_at": captured_at,
+    }
+    if _text(occurred_at) and not _text(source_payload.get("occurred_at")):
+        source_payload["occurred_at"] = _text(occurred_at)
+
+    existing_evidence = memory_event.get("evidence")
+    explicit_evidence = existing_evidence if _is_present(existing_evidence) else evidence
+    evidence_payload = _normalize_evidence(
+        evidence=explicit_evidence,
+        refs=refs,
+        source=resolved_source,
+        event_type=normalized_event_type,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        occurred_at=_text(source_payload.get("occurred_at")) or occurred_at,
+        captured_at=captured_at,
+    )
+    existing_quality = _clean_dict(memory_event.get("quality"))
+    quality_payload = {
+        **_memory_quality(
+            confidence=memory_event.get("confidence"),
+            human_confirmation_status=(
+                _text(memory_event.get("human_confirmation_status"))
+                or _text(existing_quality.get("verification_status"))
+                or None
+            ),
+            refs=refs,
+            evidence_was_explicit=_is_present(explicit_evidence),
+        ),
+        **existing_quality,
+    }
+
+    memory_event["event_type"] = normalized_event_type
+    memory_event["source"] = {
+        key: value
+        for key, value in source_payload.items()
+        if _is_present(value)
+    }
+    memory_event["evidence"] = evidence_payload
+    memory_event["quality"] = quality_payload
+    payload["memory_event"] = {
+        key: value
+        for key, value in memory_event.items()
+        if _is_present(value)
+    }
+    decision_context = _clean_dict(payload.get("decision_context"))
+    decision_context.setdefault("ui_surface", resolved_source)
+    decision_context.setdefault("evidence_status", quality_payload.get("evidence_status"))
+    decision_context.setdefault("verification_status", quality_payload.get("verification_status"))
+    decision_context.setdefault("source_ref_count", quality_payload.get("source_ref_count"))
+    if decision_context:
+        payload["decision_context"] = {
+            key: value
+            for key, value in decision_context.items()
+            if _is_present(value)
+        }
+    return payload
 
 
 def commit_memory_event(

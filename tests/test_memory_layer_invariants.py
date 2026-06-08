@@ -68,6 +68,11 @@ def test_committed_memory_event_satisfies_required_payload_invariants():
 
     assert row["event_type"] == "memory_event:review_paused"
     assert memory_event_invariant_violations(row["payload_json"]) == []
+    memory_event = row["payload_json"]["memory_event"]
+    assert memory_event["evidence"]["captured_from"] == "slack"
+    assert memory_event["evidence"]["source_refs"]["slack_thread_ts"] == "171000.1"
+    assert memory_event["quality"]["evidence_status"] == "linked"
+    assert memory_event["quality"]["verification_status"] == "confirmed"
 
 
 def test_memory_payload_invariants_reject_plain_audit_payloads():
@@ -99,6 +104,8 @@ def test_memory_payload_invariants_reject_missing_core_fields():
     assert "memory_event.work_item.box_id" in violations
     assert "memory_event.source.surface" in violations
     assert "memory_event.decision.type" in violations
+    assert "memory_event.evidence" in violations
+    assert "memory_event.quality" in violations
 
 
 def test_memory_payload_invariants_reject_invalid_confidence():
@@ -115,6 +122,14 @@ def test_memory_payload_invariants_reject_invalid_confidence():
                         "captured_at": "2026-06-06T12:00:00+00:00",
                     },
                     "decision": {"type": "approve_exception"},
+                    "evidence": {
+                        "captured_from": "workspace",
+                        "event_type": "decision_recorded",
+                    },
+                    "quality": {
+                        "evidence_status": "provenance_only",
+                        "verification_status": "system_observed",
+                    },
                     "confidence": confidence,
                 },
                 "decision_context": {"intent": "approve_exception"},
@@ -124,6 +139,31 @@ def test_memory_payload_invariants_reject_invalid_confidence():
         )
 
         assert "memory_event.confidence must be between 0 and 1" in violations
+
+
+def test_memory_event_builder_records_provenance_when_evidence_is_not_explicit():
+    db = _MemoryDB()
+
+    row = commit_memory_event(
+        db,
+        box_type="close_task",
+        box_id="CLOSE-1",
+        organization_id="org-memory",
+        event_type="owner_changed",
+        source="workspace",
+        actor_type="user",
+        actor_id="controller@example.com",
+        decision={"type": "assign_owner"},
+        rationale="Controller assigned the accrual review to finance ops.",
+        summary="Controller assigned the accrual review.",
+    )
+
+    assert memory_event_invariant_violations(row["payload_json"]) == []
+    memory_event = row["payload_json"]["memory_event"]
+    assert memory_event["evidence"]["captured_from"] == "workspace"
+    assert memory_event["evidence"]["event_type"] == "owner_changed"
+    assert memory_event["quality"]["evidence_status"] == "provenance_only"
+    assert memory_event["quality"]["verification_status"] == "system_observed"
 
 
 def test_thin_audit_rows_are_promoted_to_operational_memory():
@@ -154,7 +194,51 @@ def test_thin_audit_rows_are_promoted_to_operational_memory():
     assert memory_event["state"]["after"] == "blocked"
     assert memory_event["execution_state"]["dependency"]["owner"] == "Operations Director"
     assert memory_event["changes"]["event_type"] == "state_transition"
+    assert memory_event["evidence"]["captured_from"] == "workspace_spa"
+    assert memory_event["quality"]["evidence_status"] == "linked"
     assert payload_json["decision_context"]["ui_surface"] == "workspace_spa"
+
+
+def test_existing_memory_event_payloads_are_upgraded_before_validation():
+    payload_json = ensure_memory_payload_for_audit_event(
+        {
+            "event_type": "decision_recorded",
+            "actor_type": "user",
+            "actor_id": "finance@example.com",
+            "source": "workspace",
+            "organization_id": "org-memory",
+            "ts": "2026-06-06T12:00:00+00:00",
+        },
+        box_type="procurement_request",
+        box_id="REQ-memory-3",
+        payload_json={
+            "memory_event": {
+                "schema_version": "1.0",
+                "work_item": {
+                    "box_type": "procurement_request",
+                    "box_id": "REQ-memory-3",
+                    "organization_id": "org-memory",
+                },
+                "event_type": "decision_recorded",
+                "summary": "Legal approved the sourcing exception.",
+                "source": {
+                    "surface": "workspace",
+                    "captured_at": "2026-06-06T12:00:00+00:00",
+                },
+                "decision": {"type": "legal_approved_exception"},
+            },
+            "decision_context": {"intent": "legal_approved_exception"},
+            "summary": "Legal approved the sourcing exception.",
+            "reason": "Exception was approved by legal.",
+        },
+        external_refs={"audit_event_id": "evt-legacy-1"},
+        now="2026-06-06T12:00:00+00:00",
+    )
+
+    assert_memory_event_payload(payload_json)
+    memory_event = payload_json["memory_event"]
+    assert memory_event["evidence"]["source_refs"]["audit_event_id"] == "evt-legacy-1"
+    assert memory_event["quality"]["evidence_status"] == "linked"
 
 
 def test_primary_memory_sources_remain_wired():

@@ -84,14 +84,11 @@ def _evidence_label(memory: Dict[str, Any]) -> str:
     context = _dict(memory.get("context_summary"))
     context_evidence = _dict(context.get("evidence"))
     proof = _dict(memory.get("proof"))
-
-    direct = _first_text(
-        context_evidence.get("memory_evidence"),
-        proof.get("memory_evidence"),
-        memory.get("evidence"),
+    quality = _dict(
+        context_evidence.get("memory_quality")
+        or proof.get("memory_quality")
+        or memory.get("memory_quality")
     )
-    if direct:
-        return direct
 
     decision_refs = _list(context_evidence.get("decision_refs"))
     if decision_refs:
@@ -102,6 +99,9 @@ def _evidence_label(memory: Dict[str, Any]) -> str:
                 surfaces.append(surface)
         if surfaces:
             return "Decision evidence from " + ", ".join(dict.fromkeys(surfaces))
+        rendered_refs = _text(decision_refs)
+        if rendered_refs:
+            return rendered_refs
         return f"{len(decision_refs)} decision evidence ref{'s' if len(decision_refs) != 1 else ''}"
 
     attachment_url = _first_text(context_evidence.get("attachment_url"), proof.get("attachment_url"))
@@ -117,6 +117,21 @@ def _evidence_label(memory: Dict[str, Any]) -> str:
         return "Field evidence linked"
     if _list(context_evidence.get("source_conflicts")) or _list(proof.get("source_conflicts")):
         return "Source conflict evidence linked"
+    evidence_status = _first_text(quality.get("evidence_status"))
+    verification_status = _first_text(quality.get("verification_status"))
+    if evidence_status == "linked":
+        if verification_status in {"confirmed", "human_confirmed"}:
+            return "Evidence linked and confirmed"
+        return "Evidence linked"
+    if evidence_status == "provenance_only":
+        return "Provenance captured"
+    direct = _first_text(
+        context_evidence.get("memory_evidence"),
+        proof.get("memory_evidence"),
+        memory.get("evidence"),
+    )
+    if direct:
+        return direct
     return ""
 
 

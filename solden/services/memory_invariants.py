@@ -191,6 +191,8 @@ def memory_event_missing_fields(payload_json: Dict[str, Any]) -> list[str]:
     work_item = _dict(memory_event.get("work_item"))
     source = _dict(memory_event.get("source"))
     decision = _dict(memory_event.get("decision"))
+    evidence = _dict(memory_event.get("evidence"))
+    quality = _dict(memory_event.get("quality"))
     missing: list[str] = []
 
     required_values = {
@@ -203,6 +205,12 @@ def memory_event_missing_fields(payload_json: Dict[str, Any]) -> list[str]:
         "memory_event.source.surface": source.get("surface"),
         "memory_event.source.captured_at": source.get("captured_at"),
         "memory_event.decision.type": decision.get("type"),
+        "memory_event.evidence": evidence,
+        "memory_event.evidence.captured_from": evidence.get("captured_from"),
+        "memory_event.evidence.event_type": evidence.get("event_type"),
+        "memory_event.quality": quality,
+        "memory_event.quality.evidence_status": quality.get("evidence_status"),
+        "memory_event.quality.verification_status": quality.get("verification_status"),
         "decision_context": payload.get("decision_context"),
         "summary": payload.get("summary"),
         "reason": payload.get("reason"),
@@ -220,6 +228,7 @@ def memory_event_invariant_violations(payload_json: Dict[str, Any]) -> list[str]
     violations = memory_event_missing_fields(payload_json)
     payload = _dict(payload_json)
     memory_event = _dict(payload.get("memory_event"))
+    quality = _dict(memory_event.get("quality"))
 
     confidence = memory_event.get("confidence")
     if confidence not in (None, ""):
@@ -230,6 +239,20 @@ def memory_event_invariant_violations(payload_json: Dict[str, Any]) -> list[str]
         else:
             if not math.isfinite(numeric) or numeric < 0 or numeric > 1:
                 violations.append("memory_event.confidence must be between 0 and 1")
+
+    quality_confidence = quality.get("confidence")
+    if quality_confidence not in (None, ""):
+        try:
+            numeric = float(quality_confidence)
+        except (TypeError, ValueError):
+            violations.append("memory_event.quality.confidence must be numeric")
+        else:
+            if not math.isfinite(numeric) or numeric < 0 or numeric > 1:
+                violations.append("memory_event.quality.confidence must be between 0 and 1")
+
+    evidence_status = _text(quality.get("evidence_status"))
+    if evidence_status and evidence_status not in {"linked", "provenance_only", "review_required"}:
+        violations.append("memory_event.quality.evidence_status is invalid")
 
     return violations
 

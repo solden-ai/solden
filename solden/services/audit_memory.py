@@ -142,10 +142,22 @@ def ensure_memory_payload_for_audit_event(
     resolved_payload = _audit_payload_dict(payload_json)
     existing_memory_event = _audit_dict(resolved_payload.get("memory_event"))
     if existing_memory_event:
+        from solden.services.memory_events import upgrade_memory_event_payload_contract
         from solden.services.memory_invariants import assert_memory_event_payload
 
-        assert_memory_event_payload(resolved_payload)
-        return resolved_payload
+        upgraded_payload = upgrade_memory_event_payload_contract(
+            resolved_payload,
+            source=payload.get("source"),
+            event_type=payload.get("event_type"),
+            actor_type=_audit_text(payload.get("actor_type")) or "system",
+            actor_id=_audit_text(payload.get("actor_id")) or None,
+            evidence=resolved_payload.get("evidence"),
+            source_refs=external_refs,
+            external_refs=external_refs,
+            occurred_at=payload.get("ts") or now,
+        )
+        assert_memory_event_payload(upgraded_payload)
+        return upgraded_payload
 
     from solden.services.memory_events import build_memory_event_payload
     from solden.services.memory_invariants import assert_memory_event_payload

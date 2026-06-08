@@ -212,6 +212,11 @@ def _memory_event_execution_state(memory_event: Dict[str, Any]) -> Dict[str, Any
     return execution_state if isinstance(execution_state, dict) else {}
 
 
+def _memory_event_quality(memory_event: Dict[str, Any]) -> Dict[str, Any]:
+    quality = memory_event.get("quality") if isinstance(memory_event, dict) else None
+    return quality if isinstance(quality, dict) else {}
+
+
 def _coerce_confidence(*values: Any) -> Optional[float]:
     for value in values:
         if value in (None, ""):
@@ -386,6 +391,13 @@ def build_decision_ledger(
         if not (context or rationale or has_state_change or memory_event):
             continue
         decision_type = _decision_type(event, context, payload)
+        memory_source = _safe_json_dict(memory_event.get("source"))
+        memory_refs = _safe_json_dict(memory_source.get("refs"))
+        evidence_refs = {
+            **memory_refs,
+            **_event_external_refs(event),
+        }
+        memory_quality = _memory_event_quality(memory_event)
         ledger.append({
             "event_id": event.get("id"),
             "decision_type": decision_type,
@@ -397,7 +409,7 @@ def build_decision_ledger(
             "decided_at": event.get("ts"),
             "source_surface": (
                 context.get("ui_surface")
-                or _safe_json_dict(memory_event.get("source")).get("surface")
+                or memory_source.get("surface")
                 or event.get("source")
             ),
             "previous_state": event.get("prev_state"),
@@ -411,17 +423,21 @@ def build_decision_ledger(
                 rationale=rationale,
             ),
             "context_snapshot": context,
-            "evidence_refs": _event_external_refs(event),
+            "evidence_refs": evidence_refs,
+            "evidence": memory_event.get("evidence"),
+            "quality": memory_quality,
             "memory_event": memory_event,
             "policy_version": event.get("policy_version") or context.get("policy_version"),
             "confidence": _coerce_confidence(
                 event.get("agent_confidence"),
                 context.get("confidence_at_decision"),
                 memory_event.get("confidence"),
+                memory_quality.get("confidence"),
             ),
             "human_confirmation_status": (
                 context.get("human_confirmation_status")
                 or memory_event.get("human_confirmation_status")
+                or memory_quality.get("verification_status")
             ),
             "governance_verdict": event.get("governance_verdict"),
             "correlation_id": event.get("correlation_id"),
@@ -554,6 +570,8 @@ def _memory_event_waiting_reason(memory_event: Dict[str, Any]) -> str:
 
 def _memory_event_evidence(memory_event: Dict[str, Any]) -> Any:
     evidence = memory_event.get("evidence") if isinstance(memory_event, dict) else None
+    if isinstance(evidence, dict) and isinstance(evidence.get("items"), list):
+        return evidence.get("items")
     return evidence if evidence not in (None, "", [], {}) else None
 
 
@@ -744,6 +762,7 @@ def _context_summary(
             "field_confidences": proof.get("field_confidences") or {},
             "source_conflicts": proof.get("source_conflicts") or [],
             "memory_evidence": proof.get("memory_evidence"),
+            "memory_quality": proof.get("memory_quality") or {},
         },
     }
 
@@ -775,6 +794,7 @@ def build_operational_memory_record(
     memory_waiting_reason = _memory_event_waiting_reason(latest_memory_event)
     memory_next_action = _memory_event_next_action(latest_memory_event)
     memory_evidence = _memory_event_evidence(latest_memory_event)
+    memory_quality = _memory_event_quality(latest_memory_event)
     if not owner_email:
         owner_email = str(memory_owner.get("email") or "").strip()
     owner = {
@@ -823,6 +843,8 @@ def build_operational_memory_record(
     proof = _proof(item, metadata)
     if memory_evidence is not None:
         proof["memory_evidence"] = memory_evidence
+    if memory_quality:
+        proof["memory_quality"] = memory_quality
     work_item_ref = {
         "id": resolved_box_id,
         "type": item.get("document_type") or box_type,
