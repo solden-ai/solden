@@ -202,3 +202,24 @@ def test_export_tenant_isolated(db, client_orgA, client_orgB):
     # orgB sees 404 — never 403, so existence doesn't leak.
     cross = client_orgB.get(f"/api/workspace/ap-items/{item['id']}/export")
     assert cross.status_code == 404
+
+
+def test_box_memory_route_surfaces_purchase_order(db, client_orgA, client_orgB):
+    """M4: the generic per-Box memory route surfaces a purchase_order's
+    operational-memory record (PO memory was captured but unreachable before)."""
+    db.create_purchase_order_box({
+        "po_id": "PO-mem-1",
+        "organization_id": "orgA",
+        "vendor_name": "Acme",
+        "total_amount": 500.0,
+        "requested_by": "u",
+    })
+    resp = client_orgA.get("/api/workspace/box/purchase_order/PO-mem-1/memory")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["box_type"] == "purchase_order"
+    assert body["box_id"] == "PO-mem-1"
+    assert isinstance(body["memory"], dict)
+    assert isinstance(body["surface_memory"], dict)
+    # Tenant isolation: orgB sees 404, never 403 (no existence leak).
+    assert client_orgB.get("/api/workspace/box/purchase_order/PO-mem-1/memory").status_code == 404

@@ -407,3 +407,46 @@ def _record_export_event(
             "[box_export] export audit write failed for %s/%s: %s",
             box_type, box_id, exc,
         )
+
+
+@router.get("/box/{box_type}/{box_id}/memory")
+def get_box_memory(
+    box_type: str,
+    box_id: str,
+    _user=Depends(get_current_user),
+) -> Dict[str, Any]:
+    """The generic per-Box operational-memory read surface.
+
+    ``ap_item`` has dedicated read routes; this exposes the same canonical
+    record (state / owner / dependencies / decisions / rationale / evidence /
+    history / next) for ``purchase_order``, ``bank_match``, and future declared
+    Box types, dispatching via ``box_registry.get_box``. So a PO's memory is
+    captured AND surfaced, not written into a void. Tenant-scoped: a Box in
+    another org returns 404, never 403 (no membership leak).
+    """
+    from solden.core.box_registry import get_box
+    from solden.services.operational_memory import build_box_operational_memory_record
+    from solden.services.memory_surface import build_surface_memory_snapshot
+
+    organization_id = _session_org(_user)
+    db = get_db()
+    try:
+        item = get_box(box_type, box_id, db)
+    except Exception:
+        item = None
+    if not isinstance(item, dict) or str(item.get("organization_id") or "") != organization_id:
+        raise HTTPException(status_code=404, detail="box_not_found")
+
+    memory = build_box_operational_memory_record(
+        db=db, box_type=box_type, box_id=box_id, item=item
+    )
+    surface_memory = build_surface_memory_snapshot(
+        memory, item=item, surface="workspace"
+    )
+    return {
+        "box_type": box_type,
+        "box_id": box_id,
+        "memory": memory,
+        "surface_memory": surface_memory,
+        "decision_ledger": memory.get("decision_ledger") or [],
+    }

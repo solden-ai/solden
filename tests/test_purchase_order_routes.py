@@ -130,3 +130,15 @@ def test_cross_tenant_get_404(client):
     })
     r = client.get("/api/workspace/purchase-orders/PO-other-routes")
     assert r.status_code == 404
+
+
+def test_cancel_records_terminal_box_outcome(client):
+    """M3: reaching a terminal PO state records exactly one box_outcome row,
+    so the Outcome primitive is populated for purchase_order like ap_item."""
+    po_id = _create(client)["po_id"]
+    r = client.post(f"/api/workspace/purchase-orders/{po_id}/cancel", json={})
+    assert r.status_code == 200, r.text
+    db = db_module.get_db()
+    outcome = db.get_box_outcome(box_type="purchase_order", box_id=po_id)
+    assert outcome is not None, "no terminal box_outcome recorded for the cancelled PO"
+    assert outcome.get("outcome_type") == "cancelled"

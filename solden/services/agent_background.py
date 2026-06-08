@@ -1320,6 +1320,59 @@ def _is_within_days(date_str: Any, days: int) -> bool:
     return (datetime.now(timezone.utc) - parsed).days <= days
 
 
+def _record_payment_memory_event(
+    db: Any,
+    *,
+    ap_item_id: str,
+    org_id: str,
+    payment_status: str,
+    status: Dict[str, Any],
+    vendor_name: str = "vendor",
+) -> None:
+    """Record a payment outcome as an operational-memory event.
+
+    The autonomous poll merges payment fields into ``ap_items.metadata``, but
+    that merge is silent. A confirmed/closed payment is an operational-memory
+    event (the record moved to Paid; here is who, why, and the evidence), so it
+    goes through the audit funnel, which promotes it into the memory record.
+    Best-effort: a memory hiccup must not break the poll.
+    """
+    if not (ap_item_id and hasattr(db, "append_audit_event")):
+        return
+    label = payment_status.replace("_", " ")
+    ref = status.get("payment_reference")
+    try:
+        db.append_audit_event({
+            "ap_item_id": ap_item_id,
+            "box_type": "ap_item",
+            "event_type": f"payment_{payment_status}",
+            "actor_type": "agent",
+            "actor_id": "payment_poll",
+            "organization_id": org_id,
+            "reason": f"Payment {label} detected in the ERP.",
+            "summary": (
+                f"Payment {label} for {vendor_name}"
+                + (f" (ref {ref})" if ref else "")
+                + "."
+            ),
+            "evidence": {
+                "type": "erp_payment_status",
+                "payment_reference": ref,
+                "payment_method": status.get("payment_method"),
+                "payment_amount": status.get("payment_amount"),
+            },
+            "metadata": {
+                "payment_status": payment_status,
+                "payment_reference": ref,
+                "payment_method": status.get("payment_method"),
+                "payment_amount": status.get("payment_amount"),
+            },
+            "source": "payment_poll",
+        })
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[payment_poll] memory event failed for %s: %s", ap_item_id, exc)
+
+
 async def _poll_payment_statuses(org_id: str) -> Dict[str, int]:
     """Poll ERP for payment status updates on ready/scheduled payments.
 
@@ -1415,6 +1468,11 @@ async def _poll_payment_statuses(org_id: str) -> Dict[str, int]:
                             "payment_closure_method": closure_method,
                             "payment_completed_at": now_iso,
                         })
+                        _record_payment_memory_event(
+                            db, ap_item_id=ap_item_id, org_id=org_id,
+                            payment_status="closed_by_credit", status=status,
+                            vendor_name=payment.get("vendor_name", "vendor"),
+                        )
                     # Auto-close AP item after credit closure (#34)
                     if ap_item_id:
                         try:
@@ -1483,6 +1541,11 @@ async def _poll_payment_statuses(org_id: str) -> Dict[str, int]:
                             "payment_method": status.get("payment_method", ""),
                             "payment_reference": status.get("payment_reference", ""),
                         })
+                        _record_payment_memory_event(
+                            db, ap_item_id=ap_item_id, org_id=org_id,
+                            payment_status="completed", status=status,
+                            vendor_name=payment.get("vendor_name", "vendor"),
+                        )
                     # Auto-close AP item after full payment (#34)
                     if ap_item_id:
                         try:

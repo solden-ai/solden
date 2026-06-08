@@ -385,6 +385,34 @@ class PurchaseOrderStore:
                 "decision_reason": reason or None,
                 "idempotency_key": f"po-{target_state}:{po_id}:{now}",
             })
+
+        # Terminal Outcome: exactly one box_outcomes row per PO at CLOSED /
+        # CANCELLED, mirroring ap_item. Idempotent via the UNIQUE
+        # (box_type, box_id) constraint, so a re-close is a no-op.
+        if target_state in (POStatus.CLOSED.value, POStatus.CANCELLED.value) and hasattr(
+            self, "record_box_outcome"
+        ):
+            try:
+                final = self.get_purchase_order(po_id) or existing
+                self.record_box_outcome(
+                    box_id=po_id,
+                    box_type="purchase_order",
+                    organization_id=str(existing.get("organization_id") or ""),
+                    outcome_type=str(target_state),
+                    recorded_by=str(actor_id or "system"),
+                    recorded_actor_type="user",
+                    data={
+                        "po_number": final.get("po_number"),
+                        "vendor_name": final.get("vendor_name"),
+                        "amount": final.get("amount"),
+                        "reason": reason or None,
+                    },
+                )
+            except Exception as outcome_exc:  # noqa: BLE001
+                logger.warning(
+                    "[PurchaseOrderStore] outcome record failed for %s: %s",
+                    po_id, outcome_exc,
+                )
         return self.get_purchase_order(po_id)  # type: ignore[return-value]
 
     def set_po_erp_id(

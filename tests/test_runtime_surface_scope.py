@@ -290,7 +290,10 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         # 2026-06-06: provider-neutral ERP memory/action surface brings
         # QuickBooks, Xero, and Sage Accounting onto the same memory contract
         # as NetSuite/SAP/Sage Intacct. Cap 472 -> 476.
-        assert len(paths) <= 476
+        # 2026-06-08: generic per-Box operational-memory read surface
+        # (/api/workspace/box/{box_type}/{box_id}/memory) so purchase_order /
+        # bank_match / declared types are reachable, not just ap_item. Cap 476 -> 477.
+        assert len(paths) <= 477
         assert not any(path.startswith("/config/") for path in paths)
         assert "/erp/status/{organization_id}" not in paths
         assert "/erp/quickbooks/connect" not in paths
@@ -304,6 +307,7 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         assert "/api/workspace/integrations/erp/{erp_type}/rotate-credentials" in paths
         assert "/api/workspace/memory-events/capture" in paths
         assert "/extension/memory-events/capture" in paths
+        assert "/api/workspace/box/{box_type}/{box_id}/memory" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/approve" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/reject" in paths

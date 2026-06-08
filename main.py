@@ -859,6 +859,10 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         r"^/api/workspace/purchase-orders$",
         r"^/api/workspace/purchase-orders/[^/]+$",
         r"^/api/workspace/purchase-orders/[^/]+/(submit|approve|reject|cancel|close|receive|issue|amend)$",
+        # Module 9 — generic per-Box operational-memory read surface, so
+        # purchase_order / bank_match / declared types are reachable (ap_item
+        # already has dedicated read routes).
+        r"^/api/workspace/box/[^/]+/[^/]+/memory$",
         # Manifesto audit 2026-05-23: a cluster of AP feature routers were
         # mounted (include_router) + tested but never added to this allowlist,
         # so the strict-profile boot stripped all ~60 of their endpoints and

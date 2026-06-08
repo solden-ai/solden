@@ -56,3 +56,28 @@ def test_check_overdue_tasks_continues_when_one_org_fails(monkeypatch):
 
     # org-a fails but is isolated; org-b's summary is still delivered.
     assert delivered == [("org-b", 1, 0)]
+
+
+def test_record_payment_memory_event_writes_memory_promoting_audit():
+    """M2: a confirmed payment is recorded as an operational-memory event, not
+    only silently merged into ap_items.metadata."""
+    from unittest.mock import MagicMock
+    from solden.services.agent_background import _record_payment_memory_event
+
+    db = MagicMock()
+    _record_payment_memory_event(
+        db,
+        ap_item_id="AP-pay-1",
+        org_id="org-pay",
+        payment_status="completed",
+        status={"payment_reference": "REF-9", "payment_method": "ach", "payment_amount": 100},
+        vendor_name="Acme",
+    )
+    db.append_audit_event.assert_called_once()
+    payload = db.append_audit_event.call_args[0][0]
+    assert payload["event_type"] == "payment_completed"
+    assert payload["box_type"] == "ap_item"
+    assert payload["ap_item_id"] == "AP-pay-1"
+    assert payload["actor_type"] == "agent"
+    assert payload["organization_id"] == "org-pay"
+    assert payload["evidence"]["payment_reference"] == "REF-9"
