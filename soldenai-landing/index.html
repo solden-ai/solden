@@ -1,405 +1,572 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="referrer" content="strict-origin-when-cross-origin" />
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Solden · Operational memory for the back office</title>
+<meta name="description" content="Solden shows what is stuck, why it is stuck, who owns it, what was decided, and what should happen next across ERP, email, Slack, Teams, and AI agents." />
+<meta name="theme-color" content="#F6F5F0" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Solden · Operational memory for the back office" />
+<meta property="og:description" content="The operational memory layer for the back office. A live, shared record across the tools you already use." />
+<meta property="og:url" content="https://soldenai.com/" />
+<meta property="og:image" content="https://soldenai.com/assets/solden-lockup-dark.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" />
+<link rel="icon" type="image/png" sizes="128x128" href="/assets/favicon.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+<link rel="stylesheet" href="/assets/fonts/solden-fonts.css" />
+<style>
+  :root{
+    --paper:#F6F5F0;
+    --paper-2:#EFEEE7;
+    --ink:#14151B;
+    --ink-2:#4C4E57;
+    --ink-3:#8B8D95;
+    --rule:rgba(20,21,27,0.14);
+    --rule-2:rgba(20,21,27,0.075);
+    --accent:#00B3A8;
+    --accent-ink:#0B7E75;
+    --dark:#121317;
+    --dark-line:rgba(246,245,240,0.13);
+    --mono:'Martian Mono',ui-monospace,monospace;
+    --sans:'Hanken Grotesk',-apple-system,system-ui,sans-serif;
+    --maxw:1180px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-weight:400;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+  ::selection{background:var(--ink);color:var(--paper)}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 28px}
+  .reveal{opacity:1}
 
-    <title>Solden | Stop chasing back-office work</title>
-    <meta
-      name="description"
-      content="Solden captures approvals, vendor requests, purchase requests, invoices, and ERP follow-up where they start, gives each one a live record, and follows it through across email, chat, approvals, ERP, and AI agents until it is done."
-    />
-    <meta name="theme-color" content="#F4F8F7" />
+  /* mono label system */
+  .lbl{font-family:var(--mono);font-weight:500;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-3)}
+  .lbl-ink{color:var(--ink-2)}
+  .acc{color:var(--accent-ink)}
 
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Solden | Stop chasing back-office work" />
-    <meta
-      property="og:description"
-      content="Solden captures approvals, vendor requests, purchase requests, invoices, and ERP follow-up where they start, gives each one a live record, and follows it through across email, chat, approvals, ERP, and AI agents until it is done."
-    />
-    <meta property="og:url" content="https://soldenai.com/" />
-    <meta property="og:image" content="https://soldenai.com/assets/solden-lockup-dark.png" />
-    <meta name="twitter:card" content="summary_large_image" />
+  /* NAV */
+  header.nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--rule)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:60px;max-width:var(--maxw);margin:0 auto;padding:0 28px}
+  .brand{display:flex;align-items:center;gap:9px}
+  .brand .mk{width:23px;height:23px;object-fit:contain;display:block}
+  .brand .lockup{height:20px;width:auto;object-fit:contain;display:block;filter:brightness(0)}
+  .nav-links{display:flex;align-items:center;gap:30px}
+  .nav-links a{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:0.02em;text-transform:none;color:var(--ink-2);transition:color .16s;white-space:nowrap}
+  .nav-links a:hover{color:var(--ink)}
+  .nav-cta{display:flex;align-items:center;gap:12px}
+  .btn{display:inline-flex;align-items:center;gap:9px;white-space:nowrap;font-family:var(--mono);font-weight:500;font-size:11.5px;letter-spacing:0.08em;text-transform:uppercase;border:1px solid var(--ink);border-radius:0;padding:10px 15px;cursor:pointer;transition:background .16s,color .16s}
+  .btn-solid{background:var(--ink);color:var(--paper)}
+  .btn-solid:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
+  .btn-out{background:transparent;color:var(--ink)}
+  .btn-out:hover{background:var(--ink);color:var(--paper)}
+  .btn .x{transition:transform .18s}
+  .btn:hover .x{transform:translate(2px,-2px)}
 
-    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="128x128" href="/assets/favicon.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+  /* HERO */
+  .hero{border-bottom:1px solid var(--rule);position:relative}
+  .hero-in{max-width:var(--maxw);margin:0 auto;padding:0 28px;display:grid;grid-template-columns:1.06fr 0.94fr;gap:30px;align-items:center;min-height:640px}
+  .hero-l{padding:72px 48px 72px 0;border-right:1px solid var(--rule-2)}
+  .hero-tag{display:flex;align-items:center;gap:14px;margin-bottom:28px}
+  .hero-tag .dot{width:7px;height:7px;background:var(--accent);border-radius:50%;flex:none}
+  h1.hero-h{font-family:var(--mono);font-weight:500;font-size:clamp(29px,4.1vw,54px);line-height:1.06;letter-spacing:-0.035em;text-transform:uppercase}
+  .hero-sub{margin-top:28px;max-width:54ch}
+  .hero-sub .hs-lead{font-family:var(--mono);font-weight:400;font-size:14.5px;color:var(--ink-2);line-height:1.72;letter-spacing:0.01em}
+  .hero-sub .hs-list{list-style:none;margin:14px 0 0;display:flex;flex-direction:column;gap:6px}
+  .hero-sub .hs-list li{font-size:16px;color:var(--ink-2);line-height:1.55}
+  .hero-sub .hs-list li.key{color:var(--ink);font-weight:500}
+  .hero-sub .hs-end{margin-top:18px;font-size:17px;color:var(--ink);font-weight:600;line-height:1.5}
+  .hero-actions{margin-top:32px;display:flex;gap:12px;flex-wrap:wrap}
+  .hero-foot{margin-top:42px;padding-top:18px;border-top:1px solid var(--rule-2);display:flex;gap:34px;flex-wrap:wrap}
+  .hero-foot div .k{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3)}
+  .hero-foot div .v{margin-top:6px;font-size:13.5px;font-weight:500;color:var(--ink)}
+  .hero-r{padding:36px 0 36px 8px;align-self:stretch;display:flex;align-items:center;justify-content:center}
 
-    <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/Geist-Variable.woff2" crossorigin />
-    <link rel="preload" as="font" type="font/woff2" href="/assets/fonts/GeistMono-Variable.woff2" crossorigin />
-    <link rel="stylesheet" href="/styles.css?v=87" />
-  </head>
-  <body class="ix-home ix-home--inngest">
-    <div data-site-header></div>
+  /* SCHEMATIC (signature, static) */
+  .schem{position:relative;width:100%;max-width:470px;aspect-ratio:1/0.86;font-family:var(--mono)}
+  .schem .grid{position:absolute;inset:0;background-image:linear-gradient(var(--rule-2) 1px,transparent 1px),linear-gradient(90deg,var(--rule-2) 1px,transparent 1px);background-size:30px 30px;mask-image:radial-gradient(82% 82% at 52% 50%,black,transparent 94%)}
+  .schem .wires{position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:1}
+  .src{position:absolute;left:0;z-index:2;display:flex;align-items:center;gap:9px;background:var(--paper);border:1px solid var(--rule);padding:9px 12px;font-size:10px;letter-spacing:0.04em;color:var(--ink-2);white-space:nowrap;box-shadow:0 2px 8px -6px rgba(20,21,27,0.4)}
+  .src i{width:7px;height:7px;flex:none;background:var(--ink-3)}
+  .s1{top:4%}.s2{top:29%}.s3{top:55%}.s4{top:81%}
+  .merge{position:absolute;left:43%;top:46%;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;background:var(--paper);border:1.5px solid var(--accent);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 5px rgba(0,179,168,0.12),0 0 18px rgba(0,179,168,0.55);z-index:3}
+  .merge img{width:18px;height:18px;object-fit:contain;display:block}
+  .rec{position:absolute;right:0;top:46%;transform:translateY(-50%);width:53%;border:1px solid var(--ink);background:var(--paper);box-shadow:0 22px 48px -30px rgba(20,21,27,0.55);z-index:2}
+  .rec-h{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-bottom:1px solid var(--rule);font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink);font-weight:600}
+  .rec-h .live{display:inline-flex;align-items:center;gap:5px;color:var(--accent-ink);font-weight:600}
+  .rec-h .live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 7px var(--accent)}
+  .rec-row{display:flex;justify-content:space-between;gap:10px;padding:9px 13px;border-bottom:1px solid var(--rule-2);font-size:10.5px}
+  .rec-row .rk{color:var(--ink-3);letter-spacing:0.04em}
+  .rec-row .rv{color:var(--ink);font-weight:600}
+  .rec-row .rv.t{color:var(--accent-ink)}
+  .rec-row .rv.warn{color:#9A6A1A}
+  .rec-f{display:flex;justify-content:space-between;gap:10px;padding:10px 13px;background:var(--paper-2);font-size:9.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-3)}
+  .rec-f b{color:var(--ink);font-weight:600}
+  .schem-cap{position:absolute;left:0;bottom:-30px;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3)}
 
-    <main>
-      <section class="ix-hero" aria-labelledby="hero-title">
-        <div class="shell ix-hero__inner">
-          <div class="ix-hero__lead">
-            <div class="ix-hero__copy">
-              <h1 id="hero-title" data-reveal>
-                Stop chasing <strong>back-office work</strong>.
-              </h1>
-              <p data-reveal data-reveal-delay="1">
-                Solden turns approvals, vendor setup, purchase requests, invoices,
-                and ERP follow-up into live work records. Each record carries the
-                owner, blocker, next step, proof, and audit from the inbox or chat
-                all the way to the ERP and the AI agents that help move it.
-              </p>
-              <div class="ix-hero__ctas" data-reveal data-reveal-delay="2">
-                <a class="ix-btn ix-btn--primary" href="/contact.html">Talk to us</a>
-                <a class="ix-btn ix-btn--secondary" href="#workflow">See the record <span>→</span></a>
-              </div>
-            </div>
+  /* SECTION SCAFFOLD */
+  section.band{border-bottom:1px solid var(--rule);position:relative}
+  .band-in{max-width:var(--maxw);margin:0 auto;padding:84px 28px}
+  .sec-tag{display:flex;align-items:center;justify-content:flex-start;gap:16px;margin-bottom:24px}
+  .sec-tag .r{font-family:var(--mono);font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3)}
+  .sec-h{font-size:clamp(27px,3.5vw,44px);font-weight:600;letter-spacing:-0.03em;line-height:1.08;max-width:20ch}
+  .sec-h .it{color:var(--accent-ink)}
+  .sec-lead{margin-top:18px;max-width:64ch;font-family:var(--mono);font-weight:400;font-size:13.5px;color:var(--ink-2);line-height:1.75;letter-spacing:0.01em}
 
-            <div class="ix-hero-console" aria-label="Solden live work console" data-reveal data-reveal-delay="1">
-              <div class="ix-console-top">
-                <span>Solden workspace</span>
-                <strong>Live work records</strong>
-                <em>4 waiting</em>
-              </div>
-              <div class="ix-console-body">
-                <aside class="ix-console-sidebar" aria-label="Work in progress">
-                  <div class="ix-console-sidebar__head">
-                    <span>Work in progress</span>
-                    <strong>38 open</strong>
-                  </div>
-                  <ol>
-                    <li class="is-selected">
-                      <span>PR-4821</span>
-                      <strong>Facilities repair</strong>
-                      <small>Waiting on approval</small>
-                    </li>
-                    <li>
-                      <span>VEN-1094</span>
-                      <strong>New vendor setup</strong>
-                      <small>Proof requested</small>
-                    </li>
-                    <li>
-                      <span>INV-8820</span>
-                      <strong>Invoice exception</strong>
-                      <small>PO match needed</small>
-                    </li>
-                  </ol>
-                </aside>
+  /* THESIS (numbered argument) */
+  .argue{display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid var(--rule);border-left:1px solid var(--rule);margin-top:40px}
+  .arg{padding:28px 30px 32px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+  .arg .an{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--ink-3)}
+  .arg.turn .an{color:var(--accent-ink)}
+  .arg h3{margin-top:16px;font-size:21px;font-weight:600;letter-spacing:-0.015em;line-height:1.22}
+  .arg.turn h3{color:var(--accent-ink)}
+  .arg p{margin-top:11px;font-family:var(--mono);font-weight:400;font-size:12.5px;color:var(--ink-2);line-height:1.7;letter-spacing:0.01em;max-width:44ch}
 
-                <section class="ix-console-record" aria-label="Selected work record">
-                  <div class="ix-console-record__head">
-                    <div>
-                      <span>Purchase request</span>
-                      <h2>PR-4821 · Facilities repair</h2>
-                      <p>Captured from chat with vendor quote, budget context, and ERP supplier match attached.</p>
-                    </div>
-                    <strong>Waiting on approval</strong>
-                  </div>
-                  <dl class="ix-console-fields">
-                    <div><dt>Owner</dt><dd>Department manager</dd></div>
-                    <div><dt>Blocker</dt><dd>Approval needed before ERP writeback</dd></div>
-                    <div><dt>Next</dt><dd>Approve, hold, or request correction</dd></div>
-                  </dl>
-                  <div class="ix-console-route" aria-label="Work route">
-                    <span>Inbox</span>
-                    <span>Chat</span>
-                    <span>Approvals</span>
-                    <span>ERP</span>
-                    <span>Audit</span>
-                  </div>
-                  <div class="ix-console-evidence">
-                    <div><span>Source</span><strong>Slack · #ops</strong><small>Quote, requester, attachment, and budget context captured.</small></div>
-                    <div><span>Writeback</span><strong>ERP record queued</strong><small>NetSuite / SAP / Sage update waits for approval clearance.</small></div>
-                  </div>
-                </section>
+  /* PRODUCT ANATOMY */
+  .anat{margin-top:50px;border:1px solid var(--ink)}
+  .anat-h{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:16px 22px;border-bottom:1px solid var(--rule)}
+  .anat-h .nm{font-family:var(--mono);font-size:15px;font-weight:600;letter-spacing:0.02em;text-transform:uppercase}
+  .anat-tags{display:flex;gap:7px;flex-wrap:wrap}
+  .tg{font-family:var(--mono);font-size:9.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-2);border:1px solid var(--rule);padding:5px 9px}
+  .anat-grid{display:grid;grid-template-columns:repeat(3,1fr)}
+  .ana{padding:24px 22px 26px;border-right:1px solid var(--rule-2);border-bottom:1px solid var(--rule-2)}
+  .ana:nth-child(3n){border-right:none}
+  .ana .ac{font-family:var(--mono);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent-ink)}
+  .ana h4{margin-top:13px;font-size:16px;font-weight:600;letter-spacing:-0.01em}
+  .ana p{margin-top:8px;font-family:var(--mono);font-weight:400;font-size:12px;color:var(--ink-2);line-height:1.68;letter-spacing:0.01em}
 
-                <aside class="ix-console-activity" aria-label="Record activity">
-                  <span>Activity</span>
-                  <ol>
-                    <li><strong>Captured</strong><small>Quote and request pulled from chat</small></li>
-                    <li><strong>Checked</strong><small>Vendor and policy context attached</small></li>
-                    <li><strong>Waiting</strong><small>Owner has the next decision</small></li>
-                    <li><strong>Ready</strong><small>ERP writeback resumes after approval</small></li>
-                  </ol>
-                </aside>
-              </div>
-            </div>
-          </div>
+  /* SIGNAL GRID (memory layer) */
+  .siggrid{margin-top:40px;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--rule);border-left:1px solid var(--rule)}
+  .sig{padding:26px 24px 30px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);transition:background .16s}
+  .sig:hover{background:var(--paper-2)}
+  .sig .sn{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--accent-ink)}
+  .sig h4{margin-top:14px;font-size:16.5px;font-weight:600;letter-spacing:-0.012em;line-height:1.25}
+  .sig p{margin-top:8px;font-family:var(--mono);font-weight:400;font-size:12px;color:var(--ink-2);line-height:1.68;letter-spacing:0.01em}
 
-          <div class="ix-logos" aria-label="Trusted surfaces" data-reveal>
-            <h2>Works where back office work already happens</h2>
-            <div>
-              <span>Inbox</span>
-              <span>Slack / Teams</span>
-              <span>Approvals</span>
-              <span>NetSuite / SAP</span>
-              <span>Sage / Xero</span>
-              <span>Audit</span>
-            </div>
-          </div>
+  /* FLOW (why now, horizontal progression) */
+  .flow{margin-top:40px;display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--rule)}
+  .flow-c{padding:26px 22px 28px;border-right:1px solid var(--rule);position:relative;transition:background .16s}
+  .flow-c:last-child{border-right:none}
+  .flow-c .fn{font-family:var(--mono);font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3)}
+  .flow-c h4{margin-top:16px;font-size:16.5px;font-weight:600;letter-spacing:-0.012em;line-height:1.28}
+  .flow-c p{margin-top:9px;font-family:var(--mono);font-weight:400;font-size:12px;color:var(--ink-2);line-height:1.66;letter-spacing:0.01em}
+  .flow-c .arrow{position:absolute;top:30px;right:-7px;z-index:2;width:13px;height:13px;background:var(--paper);border-right:1px solid var(--ink-3);border-bottom:1px solid var(--ink-3);transform:rotate(-45deg)}
+  .flow-c.sol{background:var(--paper-2)}
+  .flow-c.sol .fn{color:var(--accent-ink)}
+  .flow-c.sol h4{color:var(--accent-ink)}
+  .flow-c.sol::before{content:"";position:absolute;left:0;top:0;width:100%;height:2px;background:var(--accent)}
+
+  /* TRUST STRIP */
+  .trust{margin-top:40px;display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--rule);border-left:1px solid var(--rule)}
+  .trust-c{padding:24px 22px 26px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+  .trust-c .tk{font-family:var(--mono);font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent-ink)}
+  .trust-c h4{margin-top:12px;font-size:15.5px;font-weight:600;letter-spacing:-0.01em;line-height:1.3}
+  .trust-c p{margin-top:7px;font-family:var(--mono);font-weight:400;font-size:11.5px;color:var(--ink-2);line-height:1.64;letter-spacing:0.01em}
+
+  /* HOW IT WORKS */
+  .how2{margin-top:40px;display:grid;grid-template-columns:0.92fr 1.08fr;gap:48px;align-items:center}
+  .how-steps{display:flex;flex-direction:column}
+  .how-step{padding:22px 0;border-top:1px solid var(--rule);display:grid;grid-template-columns:34px 1fr;gap:18px;align-items:start}
+  .how-step:last-child{border-bottom:1px solid var(--rule)}
+  .how-step .hn{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--accent-ink);padding-top:3px}
+  .how-step h4{font-size:18px;font-weight:600;letter-spacing:-0.015em;line-height:1.25}
+  .how-step p{margin-top:7px;font-family:var(--mono);font-weight:400;font-size:12.5px;color:var(--ink-2);line-height:1.7;letter-spacing:0.01em}
+  /* surfaces diagram */
+  .surf{position:relative;border:1px solid var(--ink);background:var(--paper);font-family:var(--mono)}
+  .surf-h{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--rule);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink);font-weight:600}
+  .surf-h .live{display:inline-flex;align-items:center;gap:5px;color:var(--accent-ink)}
+  .surf-h .live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 7px var(--accent)}
+  .surf-tools{display:flex;gap:0;border-bottom:1px solid var(--rule);background:var(--paper-2)}
+  .surf-tools span{flex:1;text-align:center;padding:9px 4px;font-size:9.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-3);border-right:1px solid var(--rule-2)}
+  .surf-tools span:last-child{border-right:none}
+  .surf-tools span.on{color:var(--ink);background:var(--paper);box-shadow:inset 0 -2px 0 var(--accent)}
+  .surf-stage{position:relative;min-height:206px;display:flex}
+  .surf-view{display:none;padding:18px 16px;width:100%}
+  .surf-view.on{display:block}
+  @media (prefers-reduced-motion: no-preference){.surf-view.on{animation:fadeView .4s ease}}
+  @keyframes fadeView{from{opacity:0}to{opacity:1}}
+  /* ERP view */
+  .surf-line{display:flex;align-items:flex-start;gap:11px;padding:9px 0}
+  .surf-line .sl-k{width:74px;flex:none;font-size:10px;letter-spacing:0.04em;text-transform:uppercase;color:var(--ink-3);padding-top:2px}
+  .surf-line .sl-v{font-family:var(--sans);font-size:13.5px;color:var(--ink);line-height:1.5}
+  .surf-line .sl-v b{font-weight:600}
+  .surf-line .sl-v .tl{color:var(--accent-ink);font-weight:600}
+  .surf-line .sl-v .warn{color:#9A6A1A;font-weight:600}
+  /* Slack view */
+  .msg{display:flex;gap:11px;font-family:var(--sans)}
+  .msg .ava{width:30px;height:30px;flex:none;border-radius:6px;background:var(--paper);border:1px solid var(--rule);display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .msg .ava img{width:20px;height:20px;object-fit:contain;display:block}
+  .msg .mbody{min-width:0}
+  .msg .mhead{font-size:12.5px;color:var(--ink-3)}
+  .msg .mhead b{color:var(--ink);font-weight:600}
+  .msg .mtext{margin-top:5px;font-size:13.5px;color:var(--ink);line-height:1.5}
+  .msg .mtext b{font-weight:600}
+  .msg .mbtns{margin-top:11px;display:flex;gap:8px}
+  .msg .mbtns span{font-family:var(--mono);font-size:10px;letter-spacing:0.04em;text-transform:uppercase;padding:6px 11px;border:1px solid var(--rule);color:var(--ink-2)}
+  .msg .mbtns span.pri{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  /* Email view */
+  .eml .esub{font-family:var(--sans);font-size:14px;font-weight:600;color:var(--ink)}
+  .eml .emeta{margin-top:4px;font-size:11.5px;color:var(--ink-3)}
+  .eml .esum{margin-top:12px;padding:12px 13px;background:var(--paper-2);border-left:2px solid var(--accent);font-family:var(--sans);font-size:13px;color:var(--ink);line-height:1.55}
+  .eml .esum b{font-weight:600}
+  .eml .esum .tl{color:var(--accent-ink);font-weight:600}
+  /* Agent view */
+  .agent .arow{display:flex;align-items:center;gap:10px;padding:8px 0;font-family:var(--sans);font-size:13.5px;color:var(--ink);border-bottom:1px solid var(--rule-2)}
+  .agent .arow:last-of-type{border-bottom:none}
+  .agent .arow .tick{width:16px;height:16px;flex:none;border:1px solid var(--accent-ink);color:var(--accent-ink);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px}
+  .agent .arow .tick.pend{border-style:dashed;color:var(--ink-3);border-color:var(--ink-3)}
+  .agent .arow b{font-weight:600}
+  .agent .acaps{margin-top:12px;display:flex;gap:7px;flex-wrap:wrap}
+  .agent .acaps span{font-family:var(--mono);font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent-ink);border:1px solid var(--rule);padding:4px 8px}
+  .surf-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--rule);background:var(--paper-2);font-size:9.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-3)}
+  .surf-foot .act{color:var(--accent-ink);font-weight:600}
+
+  /* USE CASES cards */
+  .ucards{margin-top:40px;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--rule);border-left:1px solid var(--rule)}
+  .ucard{padding:28px 28px 32px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);transition:background .16s}
+  .ucard:hover{background:var(--paper-2)}
+  .ucard .un2{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0.06em;color:var(--accent-ink)}
+  .ucard h4{margin-top:13px;font-size:19px;font-weight:600;letter-spacing:-0.015em;color:var(--ink)}
+  .ucard p{margin-top:10px;font-family:var(--mono);font-weight:400;font-size:12.5px;line-height:1.7;letter-spacing:0.01em;color:var(--ink-2)}
+
+  /* USE CASES - spec table */
+  .uctab{margin-top:50px;border-top:1px solid var(--ink)}
+  .ucr{display:grid;grid-template-columns:64px 1.1fr 2fr;gap:24px;padding:22px 6px;border-bottom:1px solid var(--rule);align-items:baseline;transition:background .16s}
+  .ucr:hover{background:var(--paper-2)}
+  .ucr .ui{font-family:var(--mono);font-size:11px;color:var(--ink-3);letter-spacing:0.06em}
+  .ucr .un{font-size:18px;font-weight:600;letter-spacing:-0.015em}
+  .ucr .ud{font-size:14.5px;color:var(--ink-2);line-height:1.55}
+
+  /* DIFFERENTIATION versus list */
+  .vs{margin-top:48px;border-top:1px solid var(--rule)}
+  .vsr{display:grid;grid-template-columns:220px 1fr;gap:24px;padding:18px 6px;border-bottom:1px solid var(--rule-2);align-items:baseline}
+  .vsr .vk{font-family:var(--mono);font-size:12px;letter-spacing:0.04em;text-transform:uppercase;color:var(--ink-3)}
+  .vsr .vv{font-family:var(--mono);font-weight:400;font-size:14px;color:var(--ink-2);line-height:1.55;letter-spacing:0.01em}
+  .vsr.sol{border-bottom:none;border-top:1px solid var(--rule);margin-top:2px;padding-top:22px}
+  .vsr.sol .vk{color:var(--accent-ink);font-weight:600}
+  .vsr.sol .vv{font-family:var(--mono);color:var(--ink);font-weight:600;font-size:15px;letter-spacing:0.01em}
+
+  /* CTA */
+  .cta{background:var(--dark);color:var(--paper);border-bottom:1px solid var(--dark)}
+  .cta-in{max-width:var(--maxw);margin:0 auto;padding:104px 28px}
+  .cta .lbl{color:rgba(246,245,240,0.5)}
+  .cta h2{margin-top:24px;font-size:clamp(32px,4.6vw,60px);font-weight:500;letter-spacing:-0.03em;line-height:1.06;max-width:17ch}
+  .cta h2 .it{color:var(--accent)}
+  .cta-sub{margin-top:18px;max-width:60ch;font-family:var(--mono);font-weight:400;font-size:13.5px;line-height:1.72;letter-spacing:0.01em;color:rgba(246,245,240,0.72)}
+  .cta-actions{margin-top:38px;display:flex;gap:12px;flex-wrap:wrap}
+  .cta .btn-solid{background:var(--accent);color:var(--dark);border-color:var(--accent)}
+  .cta .btn-solid:hover{background:var(--paper);border-color:var(--paper)}
+  .cta .btn-out{color:var(--paper);border-color:rgba(246,245,240,0.28)}
+  .cta .btn-out:hover{background:var(--paper);color:var(--dark);border-color:var(--paper)}
+  .cta-note{margin-top:26px;font-family:var(--mono);font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:rgba(246,245,240,0.42)}
+
+  /* FOOTER (light) */
+  footer{background:var(--paper);color:var(--ink);border-top:1px solid var(--rule)}
+  .foot-in{max-width:var(--maxw);margin:0 auto;padding:0 28px}
+  .foot-top{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:30px;padding:56px 0}
+  .foot-brand p{margin-top:16px;max-width:30ch;font-size:13.5px;color:var(--ink-2);line-height:1.6}
+  .foot-social{margin-top:20px;display:flex;gap:12px}
+  .foot-social a{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--rule);color:var(--ink-2);transition:color .16s,border-color .16s}
+  .foot-social a:hover{color:var(--accent-ink);border-color:var(--accent-ink)}
+  .foot-col .h{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:16px}
+  .foot-col a{display:block;font-size:13.5px;color:var(--ink-2);margin-bottom:11px;transition:color .16s}
+  .foot-col a:hover{color:var(--accent-ink)}
+  .foot-base{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:20px 0;border-top:1px solid var(--rule-2);font-family:var(--mono);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3)}
+  .foot-legal{display:flex;gap:22px}
+  .foot-legal a{color:var(--ink-3);transition:color .16s}
+  .foot-legal a:hover{color:var(--accent-ink)}
+
+  @media (prefers-reduced-motion: no-preference){
+    .js .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
+    .js .reveal.in{opacity:1;transform:none}
+  }
+
+  @media(max-width:900px){
+    .nav-links{display:none}
+    .nav-cta .btn-out{display:none}
+    .hero-in{grid-template-columns:1fr;min-height:0}
+    .hero-l{border-right:none;padding:48px 0 40px;min-height:0}
+    .hero-in{min-height:0}
+    .hero-r{padding:0 0 56px}
+    .how2{grid-template-columns:1fr;gap:32px}
+    .flow{grid-template-columns:1fr}
+    .flow-c{border-right:none;border-bottom:1px solid var(--rule)}
+    .flow-c:last-child{border-bottom:none}
+    .flow-c .arrow{display:none}
+    .trust{grid-template-columns:1fr 1fr}
+    .trust-c:nth-child(2n){border-right:none}
+    .argue,.anat-grid{grid-template-columns:1fr}
+    .siggrid{grid-template-columns:1fr 1fr}
+    .siggrid .sig:nth-child(2n){border-right:none}
+    .arg{border-right:none}
+    .ana{border-right:none}
+    .ucr{grid-template-columns:48px 1fr;gap:6px 16px}
+    .ucr .ud{grid-column:2}
+    .vsr{grid-template-columns:1fr;gap:3px}
+    .ucards{grid-template-columns:1fr}
+    .ucards .ucard{border-right:none}
+    .band-in{padding:60px 28px}
+  }
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-in">
+    <a href="#top" class="brand" aria-label="Solden"><img class="mk" src="/assets/solden-mark.png" alt="" /><img class="lockup" src="/assets/solden-wordmark.png" alt="Solden" /></a>
+    <nav class="nav-links">
+      <a href="#memory">Memory</a>
+      <a href="/surfaces.html">Surfaces</a>
+      <a href="/connectors.html">Connectors</a>
+      <a href="/security.html">Security</a>
+    </nav>
+    <div class="nav-cta">
+      <a href="/thesis.html" class="btn btn-out">Read the thesis</a>
+      <a href="/request-demo.html" class="btn btn-solid">Request a demo <span class="x">↗</span></a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-in">
+      <div class="hero-l">
+        <div class="hero-tag"><span class="dot"></span><span class="lbl lbl-ink">§ 01 · What Solden is</span></div>
+        <h1 class="hero-h">Operational<br />memory for the<br />back office.</h1>
+        <div class="hero-sub">
+          <p class="hs-lead">Solden shows what is stuck, why it is stuck, who owns it, what was decided, and what should happen next across ERP, email, Slack, Teams, and AI agents.</p>
         </div>
-      </section>
-
-      <section class="ix-thesis" id="platform">
-        <div class="shell ix-thesis__inner">
-          <div data-reveal>
-            <span class="ix-section-label">The operating problem</span>
-            <h2>Your team has the tools. What goes missing is the current state of the work.</h2>
-            <p>
-              A purchase request starts in chat. A vendor setup waits on tax
-              and bank details. A contract review needs business approval. An
-              invoice has to make it through policy checks before ERP posting.
-              Solden keeps the live owner, next step, blocker, and proof together
-              before the team has to chase the same story again.
-            </p>
-          </div>
-          <div class="ix-operating-table" data-reveal>
-            <div>
-              <span>Where it starts</span>
-              <strong>Inbox, chat, vendor portal, ERP note</strong>
-              <p>The first message becomes a record instead of another thread someone has to remember.</p>
-            </div>
-            <div>
-              <span>What stays attached</span>
-              <strong>Owner, blocker, evidence, next step</strong>
-              <p>Every handoff carries the current state and the proof behind the decision.</p>
-            </div>
-            <div>
-              <span>Where it moves</span>
-              <strong>Approvals, ERP, audit trail, agent work</strong>
-              <p>People and agents can act in their tools while Solden keeps the record current.</p>
-            </div>
-          </div>
+        <div class="hero-actions">
+          <a href="/request-demo.html" class="btn btn-solid">Request a demo <span class="x">↗</span></a>
+          <a href="/thesis.html" class="btn btn-out">Read the thesis</a>
         </div>
-      </section>
-
-      <section class="ix-record-system" aria-labelledby="record-title">
-        <div class="shell ix-record-system__inner">
-          <div class="ix-record-system__copy" data-reveal>
-            <span class="ix-section-label">The Solden record</span>
-            <h2 id="record-title">One record shows who owns the next step.</h2>
-            <p>
-              Every request gets a live record with the current owner, status,
-              evidence, next action, and audit trail. Operators can see whether
-              the work is waiting on a manager, vendor, policy check, or ERP
-              writeback without rebuilding the story from five places.
-            </p>
+      </div>
+      <div class="hero-r">
+        <div class="schem" role="img" aria-label="Schematic: scattered context from many tools converging into one live operational record">
+          <div class="grid"></div>
+          <svg class="wires" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <g fill="none" stroke="rgba(20,21,27,0.22)" stroke-width="1" vector-effect="non-scaling-stroke">
+              <path d="M26,9 L43,46" /><path d="M28,34 L43,46" /><path d="M26,60 L43,46" /><path d="M30,86 L43,46" />
+            </g>
+            <path d="M43,46 L48,46" fill="none" stroke="#00B3A8" stroke-width="1.4" vector-effect="non-scaling-stroke" />
+          </svg>
+          <div class="src s1"><i></i>ERP · RECORD</div>
+          <div class="src s2"><i></i>SLACK · DECISION</div>
+          <div class="src s3"><i></i>EMAIL · THREAD</div>
+          <div class="src s4"><i></i>SHEET · EVIDENCE</div>
+          <span class="merge"><img src="/assets/solden-mark.png" alt="" /></span>
+          <div class="rec">
+            <div class="rec-h"><span>VENDOR BILL</span><span class="live">LIVE</span></div>
+            <div class="rec-row"><span class="rk">STATE</span><span class="rv warn">BLOCKED</span></div>
+            <div class="rec-row"><span class="rk">OWNER</span><span class="rv">MAYA R.</span></div>
+            <div class="rec-row"><span class="rk">DECISION</span><span class="rv">ROUTE TO DELEGATE</span></div>
+            <div class="rec-row"><span class="rk">EVIDENCE</span><span class="rv t">PO-44128</span></div>
+            <div class="rec-row"><span class="rk">NEXT</span><span class="rv">CFO SIGN-OFF</span></div>
+            <div class="rec-f"><span>CHANGED</span><span><b>+$12,400</b> vs PO</span></div>
           </div>
-
-          <div class="ix-work-record" aria-label="Example Solden work record" data-reveal data-reveal-delay="1">
-            <div class="ix-work-record__top">
-              <span>Vendor onboarding</span>
-              <strong>Waiting on proof</strong>
-            </div>
-            <div class="ix-work-record__main">
-              <div class="ix-work-record__identity">
-                <span>next action visible</span>
-                <h3>Facilities vendor setup</h3>
-                <p>UK entity · services vendor · ERP vendor record pending</p>
-              </div>
-              <div class="ix-work-record__fields">
-                <div><span>Status</span><strong>Waiting on bank and tax verification</strong></div>
-                <div><span>Owner</span><strong>Procurement operations</strong></div>
-                <div><span>Evidence</span><strong>Tax form, bank details, approval note</strong></div>
-                <div><span>Next</span><strong>Verify details or request correction</strong></div>
-              </div>
-            </div>
-            <div class="ix-work-record__chain">
-              <div><span>01</span><strong>Requested</strong><small>Intake thread</small></div>
-              <div><span>02</span><strong>Checked</strong><small>Policy + registry</small></div>
-              <div><span>03</span><strong>Waiting</strong><small>Vendor proof</small></div>
-              <div><span>04</span><strong>Ready</strong><small>Create vendor</small></div>
-            </div>
-          </div>
+          <span class="schem-cap">FIG. 01 · SCATTERED CONTEXT, FUSED INTO OPERATIONAL MEMORY</span>
         </div>
-      </section>
+      </div>
+    </div>
+  </section>
 
-      <section class="ix-workflow-section ix-sdk" id="workflow" data-sdk-demo data-sdk-state="capture">
-        <div class="shell ix-sdk__inner">
-          <div class="ix-sdk__copy" data-reveal>
-            <span class="ix-section-label">How the work moves</span>
-            <h2>Capture the request where it starts.</h2>
-            <div class="ix-tabs" role="tablist" aria-label="How Solden moves work">
-              <button type="button" aria-label="Solden work record">S</button>
-              <button type="button" class="is-active" role="tab" aria-selected="true" aria-controls="sdk-capture" id="sdk-tab-capture" data-sdk-tab="capture">Capture</button>
-              <button type="button" role="tab" aria-selected="false" aria-controls="sdk-check" id="sdk-tab-check" data-sdk-tab="check">Check</button>
-              <button type="button" role="tab" aria-selected="false" aria-controls="sdk-resolve" id="sdk-tab-resolve" data-sdk-tab="resolve">Resolve</button>
+  <!-- THESIS -->
+  <section class="band" id="thesis">
+    <div class="band-in">
+      <div class="sec-tag"><span class="r reveal">§ 02</span><span class="lbl reveal">[ The thesis ]</span></div>
+      <h2 class="sec-h reveal">The back office runs on memory it doesn't have.</h2>
+      <p class="sec-lead reveal">Finance work moves across a dozen tools. The context that ties it together lives nowhere durable, so it's rebuilt, from memory, every close.</p>
+      <div class="argue">
+        <div class="arg reveal"><div class="an">01</div><h3>The work is spread across a dozen tools.</h3><p>An ERP, spreadsheets, a close checklist, email, and chat. Finance never happens in one place.</p></div>
+        <div class="arg reveal"><div class="an">02</div><h3>The context that ties it together lives nowhere.</h3><p>The why, the owner, the decision, the evidence, held in people's heads and buried in threads.</p></div>
+        <div class="arg reveal"><div class="an">03</div><h3>So every close, it gets rebuilt from memory.</h3><p>And when audit asks "why" three weeks later, the reasoning has already left the building.</p></div>
+        <div class="arg turn reveal"><div class="an">04 · SOLDEN</div><h3>Solden holds the context between systems.</h3><p>A live, shared record across the tools you already use, so the work stops living in people's heads and never becomes another system to check.</p></div>
+      </div>
+      <a href="/thesis.html" class="btn btn-out reveal" style="margin-top:30px">Read the full thesis <span class="x">↗</span></a>
+    </div>
+  </section>
+
+  <!-- WHY NOW -->
+  <section class="band" id="why">
+    <div class="band-in">
+      <div class="sec-tag"><span class="r reveal">§ 03</span><span class="lbl reveal">[ Why now ]</span></div>
+      <h2 class="sec-h reveal">AI can execute work. <span class="it">Execution needs memory.</span></h2>
+      <p class="sec-lead reveal">Back-office work is becoming agentic. But an agent can't operate across an ERP, email, chat, and approvals without persistent context. More agents without shared memory only add more fragmentation.</p>
+      <div class="flow">
+        <div class="flow-c reveal"><span class="arrow"></span><div class="fn">Then</div><h4>Software recorded work.</h4><p>It stored outcomes, routed steps, and reported on what already happened.</p></div>
+        <div class="flow-c reveal"><span class="arrow"></span><div class="fn">Now</div><h4>Software can do the work.</h4><p>Agents read context, investigate exceptions, and advance workflows where policy allows.</p></div>
+        <div class="flow-c reveal"><span class="arrow"></span><div class="fn">The gap</div><h4>An agent without memory is not an operator.</h4><p>With no state, owner, dependencies, or history, it is a task generator, not a colleague.</p></div>
+        <div class="flow-c sol reveal"><div class="fn">Solden</div><h4>Operational memory is the substrate.</h4><p>One shared, structured record humans, systems, and agents can all read and write back to.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE MEMORY LAYER -->
+  <section class="band" id="memory">
+    <div class="band-in">
+      <div class="sec-tag"><span class="r reveal">§ 04</span><span class="lbl reveal">[ The memory layer ]</span></div>
+      <h2 class="sec-h reveal">For every work item, Solden captures <span class="it">the memory around it.</span></h2>
+      <p class="sec-lead reveal">Not just the transaction. Not just the workflow route. The live context that lets the work move, held in one structured record.</p>
+      <div class="siggrid">
+        <div class="sig reveal"><div class="sn">01</div><h4>State</h4><p>Where the work is now.</p></div>
+        <div class="sig reveal"><div class="sn">02</div><h4>Ownership</h4><p>Who acts next.</p></div>
+        <div class="sig reveal"><div class="sn">03</div><h4>Dependencies</h4><p>What the work is waiting on.</p></div>
+        <div class="sig reveal"><div class="sn">04</div><h4>Exceptions</h4><p>What is stuck, and why.</p></div>
+        <div class="sig reveal"><div class="sn">05</div><h4>Decisions</h4><p>What was decided.</p></div>
+        <div class="sig reveal"><div class="sn">06</div><h4>Rationale</h4><p>Why it was decided.</p></div>
+        <div class="sig reveal"><div class="sn">07</div><h4>Evidence</h4><p>Where the supporting proof lives.</p></div>
+        <div class="sig reveal"><div class="sn">08</div><h4>History</h4><p>What happened before.</p></div>
+        <div class="sig reveal"><div class="sn">09</div><h4>Next action</h4><p>What should happen next.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="band" id="how-it-works">
+    <div class="band-in">
+      <div class="sec-tag"><span class="r reveal">§ 05</span><span class="lbl reveal">[ How it works ]</span></div>
+      <h2 class="sec-h reveal">The memory lives where <span class="it">the work already happens.</span></h2>
+      <p class="sec-lead reveal">Solden reads from the systems work moves through and keeps one record per item, surfaced inside the tools your team already uses. No new place to check.</p>
+      <div class="how2">
+        <div class="how-steps reveal">
+          <div class="how-step"><span class="hn">01</span><div><h4>Connect the systems</h4><p>ERP, email, chat, spreadsheets, and approvals. Solden reads the signals where work actually moves.</p></div></div>
+          <div class="how-step"><span class="hn">02</span><div><h4>Maintain one record</h4><p>Every work item gets a live record: state, owner, dependencies, decisions, evidence, and history.</p></div></div>
+          <div class="how-step"><span class="hn">03</span><div><h4>Surface it in context</h4><p>The record appears inside the tools people already use, and humans and agents read and write back to it.</p></div></div>
+        </div>
+        <div class="surf reveal" role="img" aria-label="The same operational record surfaced natively across ERP, Slack, email, and an agent">
+          <div class="surf-h"><span>Vendor Bill · Record PO-44128</span><span class="live">Live</span></div>
+          <div class="surf-tools"><span class="on" data-i="0">ERP</span><span data-i="1">Slack</span><span data-i="2">Email</span><span data-i="3">Agent</span></div>
+          <div class="surf-stage">
+            <!-- ERP -->
+            <div class="surf-view on" data-i="0">
+              <div class="surf-line"><span class="sl-k">State</span><span class="sl-v"><span class="warn">Blocked</span>, exceeds approval threshold</span></div>
+              <div class="surf-line"><span class="sl-k">Owner</span><span class="sl-v"><b>Maya R.</b>, delegated from D. Okafor</span></div>
+              <div class="surf-line"><span class="sl-k">Decision</span><span class="sl-v">Routed to delegate, matched to <span class="tl">PO-44128</span></span></div>
+              <div class="surf-line"><span class="sl-k">Changed</span><span class="sl-v">+$12,400 vs PO, freight added after quote</span></div>
+              <div class="surf-line"><span class="sl-k">Next</span><span class="sl-v">CFO sign-off</span></div>
             </div>
-          </div>
-          <div class="ix-code-card" data-reveal data-reveal-delay="1">
-            <div class="ix-code-card__bar">
-              <span aria-hidden="true"><i></i><i></i><i></i></span>
-              <strong data-sdk-file>Purchase request PR-4821</strong>
-              <em>record open</em>
-            </div>
-            <div class="ix-code-card__body">
-              <div class="ix-code-card__panels">
-                <div id="sdk-capture" role="tabpanel" aria-labelledby="sdk-tab-capture" data-sdk-panel="capture">
-                  <div class="ix-workflow-panel">
-                    <div class="ix-workflow-panel__header">
-                      <span>Captured from inbox</span>
-                      <strong>Needs owner</strong>
-                    </div>
-                    <div class="ix-workflow-panel__subject">
-                      <h3>Purchase request captured from chat</h3>
-                      <p>Operations asked to approve a facilities repair with a vendor quote attached. Solden keeps the request, quote, policy, vendor, and approval status together.</p>
-                    </div>
-                    <dl>
-                      <div><dt>Vendor</dt><dd>Facilities contractor</dd></div>
-                      <div><dt>Amount</dt><dd>EUR 18,420.00</dd></div>
-                      <div><dt>Missing</dt><dd>department owner approval</dd></div>
-                    </dl>
-                  </div>
+            <!-- SLACK -->
+            <div class="surf-view" data-i="1">
+              <div class="msg">
+                <span class="ava"><img src="/assets/solden-mark.png" alt="" /></span>
+                <div class="mbody">
+                  <div class="mhead"><b>Solden</b> · #ap-close · now</div>
+                  <div class="mtext">Vendor Bill <b>PO-44128</b> is blocked on CFO sign-off, the amount exceeds the approval threshold. Owner <b>Maya R.</b>, delegated from D. Okafor.</div>
+                  <div class="mbtns"><span class="pri">Approve</span><span>Open record</span></div>
                 </div>
-                <div id="sdk-check" role="tabpanel" aria-labelledby="sdk-tab-check" data-sdk-panel="check" hidden>
-                  <div class="ix-workflow-panel">
-                    <div class="ix-workflow-panel__header">
-                      <span>Policy check</span>
-                      <strong>Needs approval</strong>
-                    </div>
-                    <div class="ix-workflow-panel__subject">
-                      <h3>Request checked against policy</h3>
-                      <p>Solden keeps the quote, vendor status, budget context, approval band, and decision trail together before anyone commits the spend.</p>
-                    </div>
-                    <dl>
-                      <div><dt>Budget</dt><dd>facilities budget found</dd></div>
-                      <div><dt>Vendor</dt><dd>active supplier record found</dd></div>
-                      <div><dt>Next action</dt><dd>approval routed to department owner</dd></div>
-                    </dl>
-                  </div>
-                </div>
-                <div id="sdk-resolve" role="tabpanel" aria-labelledby="sdk-tab-resolve" data-sdk-panel="resolve" hidden>
-                  <div class="ix-workflow-panel">
-                    <div class="ix-workflow-panel__header">
-                      <span>Ready to write back</span>
-                      <strong>Operator approved</strong>
-                    </div>
-                    <div class="ix-workflow-panel__subject">
-                      <h3>Purchase record ready to create</h3>
-                      <p>The work resumes from approval, writes the purchase record to the ERP, and keeps the audit event attached to the full path.</p>
-                    </div>
-                    <dl>
-                      <div><dt>Owner</dt><dd>operations</dd></div>
-                      <div><dt>System</dt><dd>NetSuite purchase record</dd></div>
-                      <div><dt>Audit</dt><dd>sealed with manager approval</dd></div>
-                    </dl>
-                  </div>
-                </div>
               </div>
-              <aside class="ix-code-history" aria-label="Work history preview">
-                <span>HISTORY</span>
-                <ol>
-                  <li><strong>Captured</strong><small>Inbox request captured</small></li>
-                  <li><strong>Read</strong><small>Request details read</small></li>
-                  <li><strong>Blocked</strong><small>Department approval waiting</small></li>
-                  <li><strong>Recovered</strong><small>ERP update resumed</small></li>
-                </ol>
-              </aside>
             </div>
-            <div class="ix-code-card__foot">
-              <span><strong>Owner</strong> kept current</span>
-              <span><strong>Blocker</strong> visible</span>
-              <span><strong>Proof</strong> attached</span>
+            <!-- EMAIL -->
+            <div class="surf-view" data-i="2">
+              <div class="eml">
+                <div class="esub">Re: AWS invoice, approval needed</div>
+                <div class="emeta">From AP · to CFO delegate · thread of 4</div>
+                <div class="esum">Solden summary: <b>+$12,400 vs PO</b> (freight added after quote). Matched to <span class="tl">PO-44128</span>. Owner Maya R. Awaiting your sign-off to release payment.</div>
+              </div>
+            </div>
+            <!-- AGENT -->
+            <div class="surf-view" data-i="3">
+              <div class="agent">
+                <div class="arow"><span class="tick">✓</span>Matched invoice to <b>PO-44128</b></div>
+                <div class="arow"><span class="tick">✓</span>Flagged <b>+$12,400</b> variance, traced to freight</div>
+                <div class="arow"><span class="tick pend">·</span>Route to CFO delegate for sign-off</div>
+                <div class="arow"><span class="tick pend">·</span>Notify AP when cleared</div>
+                <div class="acaps"><span>Bounded</span><span>Audited</span><span>Reversible</span></div>
+              </div>
             </div>
           </div>
-          <div class="ix-sdk__after" data-reveal>
-            <h3>The record follows the work instead of another tracker.</h3>
-            <p>
-              Solden keeps the context, owner, decision, next action, and audit
-              trail together as work moves across inboxes, approvals, and
-              systems of record.
-            </p>
-            <a href="/contact.html">Get started <span>→</span></a>
-          </div>
+          <div class="surf-foot"><span>One record</span><span class="act">Surfaced where the work happens ↗</span></div>
         </div>
+      </div>
+    </div>
+  </section>
 
-        <div class="ix-anywhere">
-          <div class="shell ix-anywhere__inner">
-            <div class="ix-anywhere__copy" data-reveal>
-              <span class="ix-section-label">Where Solden sits</span>
-              <h2>Work where operations already happen</h2>
-              <p>Solden does not ask the team to move into another dashboard. It keeps the record attached while the work moves through the places people already use.</p>
-            </div>
-            <div class="ix-surface-ledger" aria-label="Surface handoff ledger" data-reveal data-reveal-delay="1">
-              <div><span>Inbox</span><strong>Request captured</strong><small>Original email, attachment, sender, and thread context.</small></div>
-              <div><span>Chat</span><strong>Owner assigned</strong><small>Approval request lands where the manager already responds.</small></div>
-              <div><span>Approval</span><strong>Decision recorded</strong><small>Approve, hold, or request correction with reason attached.</small></div>
-              <div><span>ERP</span><strong>Writeback queued</strong><small>NetSuite, SAP, Sage, or Xero update waits for policy clearance.</small></div>
-              <div><span>Audit</span><strong>Proof sealed</strong><small>Actor, timestamp, policy version, source, and evidence stay together.</small></div>
-            </div>
-          </div>
+  <!-- DIFFERENTIATION -->
+  <section class="band" id="approach">
+    <div class="band-in">
+      <div class="sec-tag"><span class="r reveal">§ 06</span><span class="lbl reveal">[ Not another tool ]</span></div>
+      <h2 class="sec-h reveal">Not another workflow tool.</h2>
+      <p class="sec-lead reveal">The stack already has a tool for every slice of the work. None of them holds the work itself.</p>
+      <div class="vs reveal">
+        <div class="vsr"><span class="vk">Workflow tools</span><span class="vv">route the steps.</span></div>
+        <div class="vsr"><span class="vk">Integration tools</span><span class="vv">move the data.</span></div>
+        <div class="vsr"><span class="vk">ERPs</span><span class="vv">record the outcome.</span></div>
+        <div class="vsr"><span class="vk">Chat tools</span><span class="vv">hold the fragments.</span></div>
+        <div class="vsr sol"><span class="vk">Solden</span><span class="vv">maintains the memory of the work itself.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- USE CASES -->
+  <section class="band" id="cases">
+    <div class="band-in">
+      <div class="sec-tag"><span class="r reveal">§ 07</span><span class="lbl reveal">[ Where it earns its keep ]</span></div>
+      <h2 class="sec-h reveal">Built for the work finance <span class="it">can't afford to forget.</span></h2>
+      <p class="sec-lead reveal">We start where the cost of forgetting is highest. The same operational memory extends across the back office.</p>
+      <div class="ucards">
+        <div class="ucard reveal"><div class="un2">UC · 01</div><h4>Month-end close</h4><p>Every line item carries its own thread: owner, decision, evidence, and what's blocking the lock.</p></div>
+        <div class="ucard reveal"><div class="un2">UC · 02</div><h4>Reconciliations</h4><p>When a balance breaks, the reasoning behind every adjustment is one click away.</p></div>
+        <div class="ucard reveal"><div class="un2">UC · 03</div><h4>Audit &amp; evidence</h4><p>Answer "why did this change" in seconds. Decision, owner, and proof are already linked.</p></div>
+        <div class="ucard reveal"><div class="un2">UC · 04</div><h4>Approvals &amp; sign-off</h4><p>See what's waiting on whom, with full context attached, so nothing stalls in silence.</p></div>
+        <div class="ucard reveal"><div class="un2">UC · 05</div><h4>Accruals &amp; journal entries</h4><p>Track what changed since last period and why, with evidence carried forward.</p></div>
+        <div class="ucard reveal"><div class="un2">UC · 06</div><h4>Flux &amp; variance</h4><p>The narrative behind the numbers is captured as it happens, not at quarter end.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST -->
+  <section class="band" id="trust">
+    <div class="band-in">
+      <div class="sec-tag"><span class="r reveal">§ 08</span><span class="lbl reveal">[ Built to be trusted ]</span></div>
+      <h2 class="sec-h reveal">Operational memory finance <span class="it">can stand behind.</span></h2>
+      <p class="sec-lead reveal">A record auditors accept and operators control. The substrate is yours, and it is removable without losing what it holds.</p>
+      <div class="trust">
+        <div class="trust-c reveal"><div class="tk">Audit</div><h4>Every transition logged</h4><p>State, owner, decision, and evidence, captured as it happens.</p></div>
+        <div class="trust-c reveal"><div class="tk">Reversible</div><h4>Nothing is destructive</h4><p>Every override and retry is reconstructable and reversible.</p></div>
+        <div class="trust-c reveal"><div class="tk">Sovereign</div><h4>Your data, your substrate</h4><p>The workflow record belongs to the operator, not the vendor.</p></div>
+        <div class="trust-c reveal"><div class="tk">Removable</div><h4>No lock-in by design</h4><p>Your tools stay whole if Solden is ever taken out.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta" id="cta">
+    <div class="cta-in">
+      <span class="lbl">[ Request a demo ]</span>
+      <h2>Move operational memory <span class="it">from humans into software.</span></h2>
+      <p class="cta-sub">Back-office work shouldn't depend on someone remembering what happened in a thread six weeks ago. Solden keeps the work alive until it closes.</p>
+      <div class="cta-actions">
+        <a href="/request-demo.html" class="btn btn-solid">Request a demo <span class="x">↗</span></a>
+        <a href="/thesis.html" class="btn btn-out">Read the thesis</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="foot-in">
+    <div class="foot-top">
+      <div class="foot-brand">
+        <a href="#top" class="brand" aria-label="Solden"><img class="mk" src="/assets/solden-mark.png" alt="" /><img class="lockup" src="/assets/solden-wordmark.png" alt="Solden" /></a>
+        <p>The operational memory layer for the back office.</p>
+        <div class="foot-social">
+          <a href="https://linkedin.com/company/soldenai" target="_blank" rel="noopener" aria-label="Solden on LinkedIn"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM10 9h3.8v1.7h.05c.53-.95 1.83-1.95 3.77-1.95 4.03 0 4.78 2.5 4.78 5.76V21h-4v-5.3c0-1.26-.02-2.9-1.78-2.9-1.78 0-2.05 1.38-2.05 2.8V21h-4z"/></svg></a>
+          <a href="https://x.com/solden_ai" target="_blank" rel="noopener" aria-label="Solden on X"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M18.9 2H22l-7.5 8.6L23 22h-6.8l-5.3-7-6.1 7H1.6l8-9.2L1 2h7l4.8 6.4L18.9 2zm-2.4 18h1.9L7.6 3.9H5.6z"/></svg></a>
         </div>
-      </section>
+      </div>
+      <div class="foot-col"><div class="h">Product</div><a href="#memory">Memory</a><a href="/surfaces.html">Surfaces</a><a href="/connectors.html">Connectors</a><a href="/security.html">Security</a></div>
+      <div class="foot-col"><div class="h">Learn</div><a href="#approach">Approach</a><a href="#cases">Use cases</a><a href="/thesis.html">Thesis</a></div>
+      <div class="foot-col"><div class="h">Company</div><a href="/thesis.html">About</a><a href="mailto:hello@soldenai.com">Contact</a></div>
+    </div>
+    <div class="foot-base">
+      <span>© 2026 Solden Systems Ltd.</span>
+      <span class="foot-legal"><a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a></span>
+    </div>
+  </div>
+</footer>
 
-      <section class="ix-scale" id="scale">
-        <div class="shell">
-          <div class="ix-scale__head" data-reveal>
-            <h2>What changes when the work has a record.</h2>
-            <p>The difference is not another queue. It is that every active item carries its own state, owner, evidence, and audit path.</p>
-          </div>
-
-          <div class="ix-compare-table" aria-label="Before and after Solden" data-reveal>
-            <div class="ix-compare-table__head">
-              <span>Question</span>
-              <span>Without Solden</span>
-              <span>With Solden</span>
-            </div>
-            <div>
-              <span>Who owns this now?</span>
-              <p>Someone checks Slack, email, and the ERP to reconstruct the handoff.</p>
-              <p>The current owner is on the record, with the handoff source attached.</p>
-            </div>
-            <div>
-              <span>Why is it waiting?</span>
-              <p>The blocker lives in a comment, a call, or a manager's memory.</p>
-              <p>The blocker, policy reason, and next action stay visible.</p>
-            </div>
-            <div>
-              <span>Can the agent continue?</span>
-              <p>The agent needs fresh context or a human to restate the situation.</p>
-              <p>The agent reads the record, sees the wait, and resumes when the condition clears.</p>
-            </div>
-            <div>
-              <span>Can audit follow it?</span>
-              <p>The trail is rebuilt from screenshots, exports, and message history.</p>
-              <p>Each action carries actor, timestamp, policy version, and proof.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="ix-trust">
-        <div class="shell ix-trust__inner">
-          <div class="ix-trust__head" data-reveal>
-            <h2>Controls before automation.</h2>
-            <p>
-              Solden can read, route, and write records. Policy still decides
-              what moves, who can approve, and when an agent has to stop.
-            </p>
-            <a href="/contact.html">Talk through trust <span>→</span></a>
-          </div>
-          <div class="ix-trust-list" data-reveal>
-            <div><span>Access</span><strong>SSO, roles, approval bands, and override windows.</strong></div>
-            <div><span>Policy</span><strong>AI can draft and route. Policy gates decide what moves.</strong></div>
-            <div><span>Authority</span><strong>No fund movement. Operators keep execution control.</strong></div>
-            <div><span>Audit</span><strong>Actor, source, timestamp, policy version, and proof on every step.</strong></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="ix-final">
-        <div class="shell ix-final__inner" data-reveal>
-          <h2>Bring us the work you are tired of chasing.</h2>
-          <p>We will map the owner, next step, context, and proof across the tools you already use.</p>
-          <div class="ix-final__ctas">
-            <a class="ix-btn ix-btn--primary" href="/contact.html">Let's talk</a>
-            <a class="ix-btn ix-btn--secondary" href="/manifesto.html">Read the manifesto</a>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <div data-site-footer></div>
-
-    <script src="/site.js?v=shared-chrome-7" defer></script>
-  </body>
+<script src="/assets/js/home.js"></script>
+</body>
 </html>

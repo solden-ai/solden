@@ -387,10 +387,15 @@ async function notifyProspectEmail(lead) {
   const esc = (v) =>
     String(v || '').replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
   const firstName = String(lead.name || '').trim().split(/\s+/)[0] || 'there';
+  const isDemo = String(lead.topic || '').toLowerCase() === 'demo';
+  const body = isDemo
+    ? `<p style="margin:0 0 14px">Thanks for requesting a Solden demo. We have your details and someone from our team will be in touch to set up your walkthrough.</p>
+  <p style="margin:0 0 14px">It is a 30-minute working session, not a pitch. We map one real workflow you care about and show how Solden holds it. We usually reach out within one business day. If there is anything else we should know first, just reply to this email.</p>`
+    : `<p style="margin:0 0 14px">Thanks for reaching out to Solden. We received your note and someone from our team will reply.</p>
+  <p style="margin:0 0 14px">We usually respond within one business day. If there is anything else we should know, you can reply directly to this email.</p>`;
   const html = `<div style="font-family:-apple-system,system-ui,sans-serif;color:#0a1628;line-height:1.55">
   <p style="margin:0 0 14px">Hi ${esc(firstName)},</p>
-  <p style="margin:0 0 14px">Thanks for reaching out to Solden. We received your note and someone from our team will reply.</p>
-  <p style="margin:0 0 14px">We usually respond within one business day. If there is anything else we should know, you can reply directly to this email.</p>
+  ${body}
   <p style="margin:20px 0 0">Solden</p>
 </div>`;
   const resp = await fetch('https://api.resend.com/emails', {
@@ -403,7 +408,7 @@ async function notifyProspectEmail(lead) {
       from: `Solden <${LEAD_NOTIFY_FROM}>`,
       to: [lead.email],
       reply_to: LEAD_NOTIFY_TO || LEAD_NOTIFY_FROM,
-      subject: 'We got your note to Solden',
+      subject: isDemo ? 'Your Solden demo request' : 'We got your note to Solden',
       html,
     }),
   });
