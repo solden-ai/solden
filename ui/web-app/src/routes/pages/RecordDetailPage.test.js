@@ -97,4 +97,54 @@ describe('RecordDetailPage', () => {
     expect(container.textContent).not.toContain('critical_field_low_confidence');
     expect(container.textContent).not.toContain('Field review blockers');
   });
+
+  it('renders the Record state panel from the canonical surface_memory', async () => {
+    const api = vi.fn(async (path) => {
+      if (String(path).startsWith('/api/workspace/ap-items/AP-3/detail')) {
+        return {
+          item: {
+            id: 'AP-3',
+            vendor_name: 'Acme Supplies',
+            amount: 100,
+            currency: 'USD',
+            invoice_number: 'INV-3',
+            state: 'needs_approval',
+          },
+          reasoning: {},
+          match: {},
+          actions: [],
+          timeline: [],
+          memory: { execution_state: {} },
+          // The one record. Owner is NOT on item.owner_email, so if the panel
+          // rendered "Maya R." it read the record, not raw columns.
+          surface_memory: {
+            contract: 'solden_memory_surface.v1',
+            full_memory_url: '/records/AP-3',
+            fields: [
+              { label: 'Owner', value: 'Maya R.' },
+              { label: 'Waiting on', value: 'CFO delegate' },
+              { label: 'Next', value: 'Route to CFO delegate' },
+            ],
+          },
+        };
+      }
+      return {};
+    });
+
+    render(h(RecordDetailPage, {
+      api,
+      orgId: 'org-test',
+      recordId: 'AP-3',
+      bootstrap: {},
+      navigate: () => {},
+      toast: () => {},
+    }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Record state')).toBeTruthy();
+      expect(screen.getByText('Maya R.')).toBeTruthy();
+      expect(screen.getByText('CFO delegate')).toBeTruthy();
+      expect(screen.getByText('Route to CFO delegate')).toBeTruthy();
+    });
+  });
 });

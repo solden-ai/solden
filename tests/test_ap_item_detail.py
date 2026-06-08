@@ -106,12 +106,20 @@ class TestResponseShape:
         assert resp.status_code == 200
         body = resp.json()
 
-        # Top-level keys are stable contract.
-        assert set(body.keys()) >= {"item", "reasoning", "match", "timeline", "actions"}
+        # Top-level keys are stable contract — including the one operational-
+        # memory record the page must render rather than recompute (H3).
+        assert set(body.keys()) >= {
+            "item", "reasoning", "match", "timeline", "actions",
+            "memory", "surface_memory", "decision_ledger",
+        }
         assert body["item"]["id"] == "ap-shape-1"
         assert body["item"].get("vendor_name") == "Acme Supplies" or body["item"].get("vendor") == "Acme Supplies"
         assert isinstance(body["timeline"], list)
         assert isinstance(body["actions"]["available"], list)
+        # The detail payload carries the canonical record (state lives once).
+        assert isinstance(body["memory"], dict)
+        assert isinstance(body["surface_memory"], dict)
+        assert body["surface_memory"].get("contract") == "solden_memory_surface.v1"
 
 
 class TestTenantIsolation:

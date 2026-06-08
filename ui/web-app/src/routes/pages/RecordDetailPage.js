@@ -255,7 +255,7 @@ export default function RecordDetailPage({
     return html`<${ErrorState} message="Record not found" onRetry=${loadDetail} onBack=${onBack} />`;
   }
 
-  const { item, reasoning, match, timeline, actions } = detail;
+  const { item, reasoning, match, timeline, actions, surface_memory } = detail;
   const handoffLinks = getHandoffLinks(item);
 
   return html`
@@ -279,7 +279,7 @@ export default function RecordDetailPage({
         handoffLinks=${handoffLinks}
       />
 
-      <${RecordStatePanel} item=${item} timeline=${timeline} />
+      <${RecordStatePanel} surfaceMemory=${surface_memory} item=${item} timeline=${timeline} />
 
       <${AgentReasoningPanel}
         reasoning=${reasoning}
@@ -712,41 +712,51 @@ function ActionDialog({ kind, onCancel, onSubmit, busy }) {
 // and on audit_events (policy_version v83), but no other panel surfaces
 // them as a unified spec view. Matches the marketing card's bottom half.
 
-function RecordStatePanel({ item, timeline }) {
-  const events = Array.isArray(timeline) ? timeline : [];
-  const ownerEmail = item?.owner_email || '';
-  const exceptionCode = String(item?.exception_code || '').trim().toLowerCase();
-  const stateLower = String(item?.state || '').toLowerCase();
-  const isSealed = ['closed', 'sealed', 'rejected', 'paid'].includes(stateLower);
+function RecordStatePanel({ surfaceMemory, item, timeline }) {
+  // Render the one operational-memory record (state lives once). The backend
+  // attaches surface_memory — the same canonical projection Home and every
+  // embedded surface render. Fall back to a raw-column recompute only if the
+  // projection is unavailable (e.g. it failed server-side).
+  const sm = surfaceMemory && typeof surfaceMemory === 'object' ? surfaceMemory : null;
+  let rows;
+  if (sm && Array.isArray(sm.fields) && sm.fields.length) {
+    rows = sm.fields
+      .filter((f) => f && f.label && f.value)
+      .map((f) => ({ label: f.label, value: f.value }));
+  } else {
+    const events = Array.isArray(timeline) ? timeline : [];
+    const ownerEmail = item?.owner_email || '';
+    const exceptionCode = String(item?.exception_code || '').trim().toLowerCase();
+    const stateLower = String(item?.state || '').toLowerCase();
+    const isSealed = ['closed', 'sealed', 'rejected', 'paid'].includes(stateLower);
 
-  // waiting_condition is JSON: {type, expected_by, context}. Sometimes
-  // already-parsed, sometimes a JSON string — handle both.
-  let waiting = item?.waiting_condition;
-  if (typeof waiting === 'string') {
-    try { waiting = JSON.parse(waiting); } catch (_) { waiting = null; }
+    // waiting_condition is JSON: {type, expected_by, context}. Sometimes
+    // already-parsed, sometimes a JSON string — handle both.
+    let waiting = item?.waiting_condition;
+    if (typeof waiting === 'string') {
+      try { waiting = JSON.parse(waiting); } catch (_) { waiting = null; }
+    }
+    const waitingDescription = formatWaitingCondition(waiting);
+
+    // Policy version: take the most recent event with one. v83 stamps
+    // policy_version on every state-changing audit_event.
+    const policyEvent = events.find((e) => e && (e.policy_version != null));
+    const policyVersion = policyEvent?.policy_version != null
+      ? `v${policyEvent.policy_version}`
+      : null;
+
+    rows = [
+      ownerEmail ? { label: 'Owner', value: ownerEmail } : null,
+      waitingDescription ? { label: 'Waiting on', value: waitingDescription } : null,
+      exceptionCode ? { label: 'Exception', value: html`<span class="cl-record-spec-exception">${exceptionCode}</span>` } : null,
+      events.length > 0
+        ? { label: 'History', value: `${events.length} event${events.length === 1 ? '' : 's'}${isSealed ? ' · sealed' : ''}` }
+        : null,
+      policyVersion
+        ? { label: 'Policy', value: html`<code class="cl-record-spec-code">${policyVersion}</code> · stamped on transition` }
+        : null,
+    ].filter(Boolean);
   }
-  const waitingDescription = formatWaitingCondition(waiting);
-
-  // Policy version: take the most recent event with one. v83 stamps
-  // policy_version on every state-changing audit_event.
-  const policyEvent = events.find((e) => e && (e.policy_version != null));
-  const policyVersion = policyEvent?.policy_version != null
-    ? `v${policyEvent.policy_version}`
-    : null;
-
-  // Nothing to surface? Skip the panel entirely. Empty rows make the
-  // detail page look broken; missing-by-design is better than empty.
-  const rows = [
-    ownerEmail ? { label: 'Owner', value: ownerEmail } : null,
-    waitingDescription ? { label: 'Waiting on', value: waitingDescription } : null,
-    exceptionCode ? { label: 'Exception', value: html`<span class="cl-record-spec-exception">${exceptionCode}</span>` } : null,
-    events.length > 0
-      ? { label: 'History', value: `${events.length} event${events.length === 1 ? '' : 's'}${isSealed ? ' · sealed' : ''}` }
-      : null,
-    policyVersion
-      ? { label: 'Policy', value: html`<code class="cl-record-spec-code">${policyVersion}</code> · stamped on transition` }
-      : null,
-  ].filter(Boolean);
 
   if (rows.length === 0) return null;
 
@@ -763,6 +773,9 @@ function RecordStatePanel({ item, timeline }) {
           </div>
         `)}
       </dl>
+      ${sm && sm.full_memory_url ? html`
+        <a class="cl-record-spec-fullmemory" href=${sm.full_memory_url}>Full memory ↗</a>
+      ` : ''}
     </section>
   `;
 }

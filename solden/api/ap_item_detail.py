@@ -47,6 +47,8 @@ from solden.services.ap_item_service import (
     build_worklist_item,
 )
 from solden.services.ap_operator_audit import normalize_operator_audit_events
+from solden.services.operational_memory import build_box_operational_memory_record
+from solden.services.memory_surface import build_surface_memory_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -617,10 +619,38 @@ def get_ap_item_detail(
         ),
     }
 
+    # Read the one operational-memory record (state / owner / dependencies /
+    # decisions / rationale / evidence / history / next), same projection Home
+    # and every embedded surface render. The detail page must render this, not
+    # recompute its own state from raw columns ("state lives once").
+    memory = None
+    surface_memory = None
+    decision_ledger: list = []
+    try:
+        memory = build_box_operational_memory_record(
+            db=db,
+            box_type="ap_item",
+            box_id=resolved_id,
+            item=enriched,
+        )
+        surface_memory = build_surface_memory_snapshot(
+            memory,
+            item=enriched,
+            surface="workspace",
+        )
+        decision_ledger = memory.get("decision_ledger") or []
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "[ap_item_detail] memory projection failed for %s: %s", resolved_id, exc
+        )
+
     return {
         "item": enriched,
         "reasoning": reasoning,
         "match": match,
         "timeline": timeline,
         "actions": actions,
+        "memory": memory,
+        "surface_memory": surface_memory,
+        "decision_ledger": decision_ledger,
     }
