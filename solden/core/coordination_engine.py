@@ -68,6 +68,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, Optional, Tuple
@@ -76,6 +77,12 @@ from solden.core import box_registry
 from solden.core.plan import Action, CoordinationResult, Plan
 
 logger = logging.getLogger(__name__)
+
+# H2b: the agent build version stamped on every autonomous coordination action,
+# so post-hoc analysis can attribute behaviour to a specific agent build. A
+# build/deploy constant (set per release), distinct from the per-org policy
+# version. Sourced from the env so it can be a git sha / release tag in prod.
+AGENT_RUNTIME_VERSION = os.getenv("SOLDEN_AGENT_VERSION", "v1")
 
 # §5.2: Retry delays for transient failures
 _RETRY_DELAYS = [5, 30, 120]  # seconds
@@ -166,9 +173,16 @@ class CoordinationEngine:
     5. On completion: clear pending_plan, return result
     """
 
-    def __init__(self, db: Any, organization_id: str):
+    # Class-level default so self.agent_version resolves even for instances
+    # built via __new__ (test harnesses, deserialization). __init__ overrides
+    # it per-instance. H2b.
+    agent_version: str = AGENT_RUNTIME_VERSION
+
+    def __init__(self, db: Any, organization_id: str, agent_version: Optional[str] = None):
         self.db = db
         self.organization_id = organization_id
+        # H2b: stamped on every autonomous action's audit row.
+        self.agent_version = agent_version or AGENT_RUNTIME_VERSION
         self._handlers: Dict[str, Callable] = {}
         self._workflow = None
         self._ctx: Dict[str, Any] = {}  # Per-instance, NOT class-level
@@ -688,6 +702,7 @@ class CoordinationEngine:
             "event_type": f"agent_action:{action.name}:executing",
             "actor_type": "agent",
             "actor_id": "coordination_engine",
+            "agent_version": self.agent_version,
             "organization_id": self.organization_id,
             "idempotency_key": idempotency_key,
             "payload_json": {
@@ -761,6 +776,7 @@ class CoordinationEngine:
             "event_type": f"agent_action:{action.name}:{status}",
             "actor_type": "agent",
             "actor_id": "coordination_engine",
+            "agent_version": self.agent_version,
             "organization_id": self.organization_id,
             "idempotency_key": idempotency_key,
             "payload_json": {
@@ -1197,6 +1213,7 @@ class CoordinationEngine:
                     "event_type": "illegal_transition_blocked",
                     "actor_type": "agent",
                     "actor_id": "coordination_engine",
+                    "agent_version": self.agent_version,
                     "organization_id": org_id,
                     "payload_json": {
                         "from_state": exc_current,
@@ -2208,6 +2225,7 @@ class CoordinationEngine:
                 "event_type": "agent_action:post_timeline_entry",
                 "actor_type": "agent",
                 "actor_id": "coordination_engine",
+                "agent_version": self.agent_version,
                 "organization_id": self.organization_id,
                 "payload_json": {
                     "summary": action.params.get("summary", action.description),
@@ -3037,6 +3055,7 @@ class CoordinationEngine:
                     "event_type": f"notification:{event_type}",
                     "actor_type": "agent",
                     "actor_id": "coordination_engine",
+                    "agent_version": self.agent_version,
                     "organization_id": self.organization_id,
                     "payload_json": {
                         "summary": action.description,

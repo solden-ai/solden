@@ -413,6 +413,28 @@ class APStore:
             # Normalize to canonical state name
             kwargs["state"] = normalize_state(new_state)
 
+            # M5: resolve the REAL per-org policy version once, before the
+            # transaction. Stamp it on the record (approval_policy_version) AND
+            # carry it to the transition audit row, so both the record and its
+            # decision attribute to the policy in effect — not a hardcoded "v1".
+            # Best-effort: resolve falls back to CURRENT_AP_POLICY_VERSION.
+            from solden.services.ap_policy_version import (
+                resolve_ap_policy_version as _resolve_ap_policy_version,
+            )
+            _resolved_policy_version = _resolve_ap_policy_version(
+                self,
+                str((current or {}).get("organization_id")
+                    or kwargs.get("organization_id") or ""),
+            )
+            # Set the record's policy version on first transition, but PRESERVE
+            # any existing value — the column records the decision-era version
+            # that governed the item, not the latest transition's. The
+            # per-transition audit row (below) carries the live version.
+            if "approval_policy_version" not in kwargs and not str(
+                (current or {}).get("approval_policy_version") or ""
+            ).strip():
+                kwargs["approval_policy_version"] = _resolved_policy_version
+
         set_clause = ", ".join(f"{k} = %s" for k in kwargs.keys())
         if expected_updated_at:
             # §11.2.5: Optimistic locking — only update if updated_at hasn't changed
@@ -443,12 +465,7 @@ class APStore:
                 # This is an ap_item state-transition (a decision row), so it
                 # carries the policy version that authorized it, mirroring the
                 # main append funnel. build_decision_ledger reads this column.
-                from solden.core.ap_states import (
-                    CURRENT_AP_POLICY_VERSION as _CURRENT_AP_POLICY_VERSION,
-                )
-                _transition_policy_version = (
-                    kwargs.get("policy_version") or _CURRENT_AP_POLICY_VERSION
-                )
+                _transition_policy_version = _resolved_policy_version
                 audit_payload: Dict[str, Any] = {
                     "column_updates": {
                         k: v
@@ -2577,8 +2594,17 @@ class APStore:
             if nested:
                 policy_version = str(nested)
         if policy_version is None and box_type == "ap_item":
-            from solden.core.ap_states import CURRENT_AP_POLICY_VERSION
-            policy_version = CURRENT_AP_POLICY_VERSION
+            # M5: stamp the real per-org policy version (best-effort →
+            # CURRENT_AP_POLICY_VERSION) so ap_item audit rows carry the policy
+            # in effect, not a flat constant.
+            try:
+                from solden.services.ap_policy_version import resolve_ap_policy_version
+                policy_version = resolve_ap_policy_version(
+                    self, str(payload.get("organization_id") or "")
+                )
+            except Exception:
+                from solden.core.ap_states import CURRENT_AP_POLICY_VERSION
+                policy_version = CURRENT_AP_POLICY_VERSION
 
         # Module 9 §300: entity_id on audit_events for per-entity
         # auditor scoping. Resolution order:

@@ -110,7 +110,11 @@ def test_merge_round_trips_for_every_kind():
             "default_payment_terms_days": 30,
         },
     }
-    for kind in POLICY_KINDS:
+    # ap_decision_policy (M5) is a DERIVED composite — an auto-snapshot of the
+    # effective decision config for versioning. No operator authors it directly,
+    # so it is intentionally NOT mirrored to settings_json (its merge is a no-op)
+    # and has no round-trip. Excluded here by design.
+    for kind in POLICY_KINDS - {"ap_decision_policy"}:
         settings: Dict[str, Any] = {}
         _merge_kind_into_settings(kind, fixtures[kind], settings)
         sliced = _slice_settings_for_kind(kind, settings)

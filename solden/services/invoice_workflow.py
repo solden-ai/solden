@@ -805,6 +805,16 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
                 box_summary=_box_summary_text,
                 single_pass_hints=single_pass_hints,
             )
+            # M5/M6: stamp the policy version that governed this routing
+            # decision, so the decision object (and its surfaced reasoning)
+            # attribute to the policy in effect. Best-effort.
+            try:
+                from solden.services.ap_policy_version import resolve_ap_policy_version
+                decision.policy_version = resolve_ap_policy_version(
+                    self.db, self.organization_id
+                )
+            except Exception:
+                pass
             logger.info(
                 "[APDecision] %s → %s (confidence=%.2f model=%s risk=%s): %s",
                 invoice.vendor_name, decision.recommendation,

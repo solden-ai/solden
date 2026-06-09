@@ -98,6 +98,12 @@ POLICY_KINDS: Set[str] = {
     # payment terms). Branchable for org-wide changes that need
     # ops-side preview before ship.
     "org_settings",
+    # M5 — the composite AP decision policy (routing thresholds + fraud controls
+    # + match mode/tolerances + confidence gate). Auto-snapshotted at decision
+    # time by ap_policy_version.resolve_ap_policy_version, so a stamped v{N} is
+    # resolvable to exactly what governed a decision. Derived composite — no
+    # settings_json mirror (_merge_kind_into_settings is a no-op for it).
+    "ap_decision_policy",
 }
 
 VALID_MATCH_MODES: Set[str] = {

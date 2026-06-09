@@ -42,6 +42,7 @@ class APDecision:
     model: str                     # routing source; always "rules" post-Phase 4
     gate_override: bool = False    # True if enforce_gate_constraint overrode
     original_recommendation: Optional[str] = None  # original rec, if overridden
+    policy_version: Optional[str] = None  # M5: the AP decision-policy version in effect
 
     def __post_init__(self) -> None:
         # Boundary check: any rule path that produces a recommendation

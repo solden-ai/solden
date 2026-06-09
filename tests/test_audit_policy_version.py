@@ -154,3 +154,24 @@ def test_export_surface_includes_policy_version(db):
     assert all(e.get("policy_version") for e in normalized), (
         "every exported event must carry policy_version"
     )
+
+
+def test_transition_stamps_resolved_version_and_bumps_on_config_change(db):
+    """M5: a transition stamps the REAL per-org policy version (resolved from the
+    registry), not the frozen constant — and it bumps when decision config changes."""
+    from solden.services.ap_policy_version import resolve_ap_policy_version
+    from solden.services.threshold_policy import set_org_thresholds
+    assert resolve_ap_policy_version(db, "orgPV") == "v1"  # baseline
+    set_org_thresholds(
+        db, "orgPV", auto_approve_min=0.93, escalate_below=0.66, modified_by="u-1",
+    )
+    assert resolve_ap_policy_version(db, "orgPV") == "v2"  # config change bumped it
+    db.create_ap_item({
+        "id": "AP-pv-txn", "organization_id": "orgPV", "vendor_name": "Acme",
+        "amount": 100.0, "currency": "EUR", "invoice_number": "INV-pv", "state": "received",
+    })
+    db.update_ap_item("AP-pv-txn", state="validated")
+    rows = db.list_ap_audit_events("AP-pv-txn", order="desc") or []
+    tr = [r for r in rows if r.get("new_state") == "validated"]
+    assert tr and tr[0].get("policy_version") == "v2"
+    assert (db.get_ap_item("AP-pv-txn") or {}).get("approval_policy_version") == "v2"
