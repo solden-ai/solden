@@ -279,3 +279,24 @@ def test_ap_export_links_child_bank_matches(db, client_a):
     doc = resp.json()
     child_ids = [c["id"] for c in doc["links"]["child_boxes"]]
     assert match["id"] in child_ids
+
+
+def test_terminal_transition_records_box_outcome(db):
+    """L2: a bank_match resolving to a terminal state records its box_outcome."""
+    parent = _make_parent_ap(db, item_id="AP-bm-outcome")
+    match = _make_match(db, box_id="BM-outcome", parent_id=parent["id"])
+    db.update_bank_match_state(match["id"], "accepted", actor_id="ops@example.com")
+    outcome = db.get_box_outcome(box_type="bank_match", box_id=match["id"])
+    assert outcome is not None, "no terminal box_outcome recorded for the accepted bank_match"
+    assert outcome.get("outcome_type") == "accepted"
+
+
+def test_box_summary_extracts_bank_match_key_fields(db):
+    """L3: bank_match has a per-type summary extractor (key_fields), not just
+    the generic stage."""
+    from solden.core.box_summary import build_box_summary
+    parent = _make_parent_ap(db, item_id="AP-bm-summary")
+    match = _make_match(db, box_id="BM-summary", parent_id=parent["id"])
+    summary = build_box_summary(match["id"], db=db, box_type="bank_match")
+    assert summary.key_fields, "bank_match summary should carry key_fields"
+    assert summary.key_fields.get("parent_ap_item_id") == parent["id"]

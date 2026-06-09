@@ -1233,7 +1233,15 @@ class FinanceAgentRuntime:
             skill_id=resolved_skill_id,
             entity_id=ap_item_id,
             action=event_type,
-            actor="human" if self.actor_email else "system",
+            # Derive the canonical actor from actor_type (which is set
+            # correctly), not from actor_email presence — that heuristic
+            # mislabelled agent/service actions as "human" because actor_email
+            # defaults to actor_id.
+            actor=(
+                "agent" if self.actor_type == "agent"
+                else "human" if self.actor_type == "user"
+                else "system"
+            ),
             outcome=reason,
             correlation_id=str(correlation_id or "").strip(),
             evidence_refs=resolved_evidence_refs,

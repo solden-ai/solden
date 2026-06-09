@@ -2507,6 +2507,22 @@ class APStore:
         # which case it's the box_id for type ``ap_item``.
         box_id = payload.get("box_id") or payload.get("ap_item_id")
         box_type = payload.get("box_type")
+        # Org/vendor-scoped governance audits (threshold / fraud-control /
+        # vendor-KYC / role / IBAN-freeze) explicitly pass an empty ap_item_id
+        # (the key is present, value blank) to signal "no work item". Key those
+        # to the organization instead of a phantom empty ap_item. A payload with
+        # NO box identifier at all (no ap_item_id key) is still a hard error
+        # below — the ledger must know which Box an event belongs to. Memory
+        # synthesis is skipped for the "organization" box type (see audit_memory).
+        if (
+            (not box_type)
+            and (not str(box_id or "").strip())
+            and ("ap_item_id" in payload)
+        ):
+            _org_for_box = str(payload.get("organization_id") or "").strip()
+            if _org_for_box:
+                box_type = "organization"
+                box_id = _org_for_box
         if box_type is None and box_id is not None:
             box_type = "ap_item"
         if box_id is None or box_type is None:

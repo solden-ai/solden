@@ -247,12 +247,17 @@ def test_api_put_org_thresholds_writes_audit(db, client_orgA):
     assert put.status_code == 200
     with db.connect() as conn:
         rows = conn.execute(
-            "SELECT actor_id, event_type FROM audit_events "
+            "SELECT actor_id, event_type, box_type, box_id FROM audit_events "
             "WHERE organization_id = %s AND event_type = %s",
             ("orgA", "routing_threshold_modified"),
         ).fetchall()
     assert rows, "threshold change must write a routing_threshold_modified audit row"
     assert any(str(dict(r).get("actor_id")) == "user-1" for r in rows)
+    # L1: an org-scoped governance audit is keyed to the organization, not a
+    # phantom empty ap_item.
+    row = dict(rows[0])
+    assert row.get("box_type") == "organization"
+    assert row.get("box_id") == "orgA"
 
 
 def test_api_invalid_pair_400(client_orgA):

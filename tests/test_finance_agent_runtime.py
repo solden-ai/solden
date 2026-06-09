@@ -2197,3 +2197,33 @@ def test_finance_lead_summary_humanizes_field_review_blockers():
     assert "Review vendor and amount before posting." in text
     assert "Field review blockers" not in text
     assert "critical_field_low_confidence" not in text
+
+
+def test_canonical_audit_actor_is_agent_for_agent_runtime():
+    """L5: the canonical actor is derived from actor_type, so an agent action is
+    labelled 'agent', not 'human' (the old actor_email heuristic mislabelled it)."""
+    db = _FakeDB()
+    runtime = FinanceAgentRuntime(
+        organization_id="org-test",
+        actor_id="agent:cs-bot",
+        actor_email="agent:cs-bot",
+        actor_type="agent",
+        db=db,
+    )
+    workflow = MagicMock()
+    workflow.evaluate_batch_route_low_risk_for_approval.return_value = {
+        "eligible": True, "reason_codes": [],
+    }
+    workflow.build_invoice_data_from_ap_item.return_value = SimpleNamespace(
+        gmail_id="gmail-thread-route-1"
+    )
+    workflow._send_for_approval = AsyncMock(return_value={"status": "pending_approval"})
+    with patch("solden.services.finance_skills.ap_skill.get_invoice_workflow", return_value=workflow):
+        asyncio.run(runtime.execute_intent(
+            "route_low_risk_for_approval",
+            {"email_id": "gmail-thread-route-1"},
+            idempotency_key="idem-l5-agent-1",
+        ))
+    assert db.audit_rows
+    canonical = (db.audit_rows[0].get("metadata") or {}).get("canonical_audit_event") or {}
+    assert canonical.get("actor") == "agent"

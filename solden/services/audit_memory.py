@@ -159,12 +159,13 @@ def ensure_memory_payload_for_audit_event(
         assert_memory_event_payload(upgraded_payload)
         return upgraded_payload
 
-    # Org/vendor-scoped governance audits (routing-threshold, fraud-control,
-    # vendor-KYC, role, IBAN-freeze changes) have no work item, so there is no
-    # operational-memory event to promote. The memory-event invariant is a
-    # box-scoped contract; leave these box-less audit rows as written rather
-    # than synthesizing a memory event with an empty work_item.box_id.
-    if not _audit_text(box_id):
+    # The memory-event invariant is a work-item contract. Box-less governance
+    # audits (routing-threshold, fraud-control, vendor-KYC, role, IBAN-freeze)
+    # and organization/vendor "reference" boxes have no work item to promote, so
+    # leave the audit row as written rather than synthesizing a phantom memory
+    # event. ap_item / purchase_order / bank_match and tenant-declared Box types
+    # still flow through below.
+    if not _audit_text(box_id) or _audit_text(box_type) in {"organization", "vendor"}:
         return resolved_payload
 
     from solden.services.memory_events import build_memory_event_payload

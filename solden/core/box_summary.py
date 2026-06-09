@@ -122,6 +122,16 @@ def build_box_summary(
                 summary.match_result_summary = f"Issued to ERP ({item['erp_po_id']})"
             return summary
 
+        if box_type == "bank_match":
+            summary.key_fields = {
+                "parent_ap_item_id": item.get("parent_ap_item_id") or "",
+                "payment_confirmation_id": item.get("payment_confirmation_id") or "",
+                "bank_statement_line_id": item.get("bank_statement_line_id") or "",
+                "decided_by": item.get("decided_by") or "",
+                "rejection_reason": item.get("rejection_reason") or "",
+            }
+            return summary
+
         if isinstance(item.get("data"), dict):
             # Declarative (WorkflowSpec) box: surface its declared data fields
             # as the summary's key fields. If the spec declares summary_fields,

@@ -228,6 +228,32 @@ class BankMatchStore:
                 "idempotency_key": f"bm-{target_state}:{box_id}:{now}",
             })
 
+        # Terminal Outcome: a bank_match resolves to ACCEPTED / REJECTED (both
+        # terminal), so record exactly one box_outcome row, mirroring ap_item /
+        # purchase_order. Idempotent via the UNIQUE (box_type, box_id) constraint.
+        if hasattr(self, "record_box_outcome") and target_state in (
+            BankMatchState.ACCEPTED.value, BankMatchState.REJECTED.value
+        ):
+            try:
+                self.record_box_outcome(
+                    box_id=box_id,
+                    box_type="bank_match",
+                    organization_id=str(existing.get("organization_id") or ""),
+                    outcome_type=str(target_state),
+                    recorded_by=str(actor_id or "system"),
+                    recorded_actor_type="user",
+                    data={
+                        "parent_ap_item_id": existing.get("parent_ap_item_id"),
+                        "rejection_reason": kwargs.get("rejection_reason"),
+                        "reason": reason or None,
+                    },
+                )
+            except Exception as outcome_exc:  # noqa: BLE001
+                logger.warning(
+                    "[BankMatchStore] outcome record failed for %s: %s",
+                    box_id, outcome_exc,
+                )
+
         return self.get_bank_match(box_id)  # type: ignore[return-value]
 
     # ------------------------------------------------------------------
