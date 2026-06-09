@@ -5928,3 +5928,64 @@ def _v99_box_links_org(cur, db):
         "CREATE INDEX IF NOT EXISTS idx_box_links_org "
         "ON box_links(organization_id, source_box_id)"
     )
+
+
+@migration(100, "Dimension graph: context_dimensions + dimension_aliases + dimension_links (H5)")
+def _v100_dimension_graph(cur, db):
+    """Cross-system dimension graph — the GL account / cost center a record
+    references, so operational memory spans systems (H5).
+
+    A dimension is NOT a legal entity (the `entities` table) and NOT a Box.
+    Mirrors DimensionStore.*_TABLE_SQL; initialize() also creates these for
+    fresh DBs, so this migration brings existing tenants up to schema.
+    """
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS context_dimensions (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            dimension_type TEXT NOT NULL,
+            code TEXT NOT NULL,
+            label TEXT,
+            source TEXT,
+            metadata_json TEXT DEFAULT '{}',
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT,
+            updated_at TEXT,
+            UNIQUE(organization_id, dimension_type, code)
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS dimension_aliases (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            dimension_id TEXT NOT NULL,
+            alias TEXT NOT NULL,
+            created_at TEXT,
+            UNIQUE(organization_id, dimension_id, alias)
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS dimension_links (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            box_type TEXT NOT NULL,
+            box_id TEXT NOT NULL,
+            dimension_id TEXT NOT NULL,
+            confidence REAL,
+            status TEXT DEFAULT 'proposed',
+            linked_by TEXT,
+            source TEXT,
+            created_at TEXT,
+            UNIQUE(organization_id, box_type, box_id, dimension_id)
+        )
+    """)
+    for ddl in (
+        "CREATE INDEX IF NOT EXISTS idx_context_dimensions_org_type ON context_dimensions(organization_id, dimension_type)",
+        "CREATE INDEX IF NOT EXISTS idx_dimension_aliases_lookup ON dimension_aliases(organization_id, alias)",
+        "CREATE INDEX IF NOT EXISTS idx_dimension_links_box ON dimension_links(organization_id, box_type, box_id)",
+        "CREATE INDEX IF NOT EXISTS idx_dimension_links_dim ON dimension_links(organization_id, dimension_id)",
+    ):
+        try:
+            cur.execute(ddl)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[migration v100] index failed: %s", exc)

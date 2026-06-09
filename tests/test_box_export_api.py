@@ -223,3 +223,27 @@ def test_box_memory_route_surfaces_purchase_order(db, client_orgA, client_orgB):
     assert isinstance(body["surface_memory"], dict)
     # Tenant isolation: orgB sees 404, never 403 (no existence leak).
     assert client_orgB.get("/api/workspace/box/purchase_order/PO-mem-1/memory").status_code == 404
+
+
+def test_box_memory_route_surfaces_dimensions(db, client_orgA):
+    """H5: the generic box-memory route carries the cross-system dimensions
+    (GL account / cost center) the record references."""
+    from solden.services.dimension_resolver import resolve_dimensions_for_box
+    item = db.create_ap_item({
+        "id": "AP-dimroute",
+        "organization_id": "orgA",
+        "vendor_name": "Acme",
+        "amount": 50.0,
+        "currency": "EUR",
+        "invoice_number": "INV-dr",
+        "state": "received",
+        "metadata": {"gl_code": "5210", "gl_account_name": "Software"},
+    })
+    resolve_dimensions_for_box(
+        db, box_type="ap_item", box_id=item["id"],
+        item=db.get_ap_item(item["id"]), organization_id="orgA",
+    )
+    resp = client_orgA.get(f"/api/workspace/box/ap_item/{item['id']}/memory")
+    assert resp.status_code == 200, resp.text
+    dims = resp.json()["memory"].get("dimensions") or []
+    assert any(d["dimension_type"] == "gl_account" and d["code"] == "5210" for d in dims)

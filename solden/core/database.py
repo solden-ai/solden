@@ -127,6 +127,7 @@ def _load_store_symbols() -> None:
     global VendorStore
     global ReconStore
     global EntityStore
+    global DimensionStore
     global PaymentStore
     global WebhookStore
     global DisputeStore
@@ -166,6 +167,7 @@ def _load_store_symbols() -> None:
     from solden.core.stores.vendor_store import VendorStore as _VendorStore
     from solden.core.stores.recon_store import ReconStore as _ReconStore
     from solden.core.stores.entity_store import EntityStore as _EntityStore
+    from solden.core.stores.dimension_store import DimensionStore as _DimensionStore
     from solden.core.stores.payment_store import PaymentStore as _PaymentStore
     from solden.core.stores.webhook_store import WebhookStore as _WebhookStore
     from solden.core.stores.dispute_store import DisputeStore as _DisputeStore
@@ -236,6 +238,7 @@ def _load_store_symbols() -> None:
     VendorStore = _VendorStore
     ReconStore = _ReconStore
     EntityStore = _EntityStore
+    DimensionStore = _DimensionStore
     PaymentStore = _PaymentStore
     WebhookStore = _WebhookStore
     DisputeStore = _DisputeStore
@@ -1661,6 +1664,16 @@ class _SoldenDBBase:
             cur.execute(EntityStore.ENTITIES_TABLE_SQL)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_entities_org ON entities(organization_id)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_entities_org_code ON entities(organization_id, code)")
+
+            # Cross-system dimension graph (the GL account / cost center a
+            # record references) — H5. Distinct from the legal `entities` above.
+            cur.execute(DimensionStore.CONTEXT_DIMENSIONS_TABLE_SQL)
+            cur.execute(DimensionStore.DIMENSION_ALIASES_TABLE_SQL)
+            cur.execute(DimensionStore.DIMENSION_LINKS_TABLE_SQL)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_context_dimensions_org_type ON context_dimensions(organization_id, dimension_type)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_dimension_aliases_lookup ON dimension_aliases(organization_id, alias)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_dimension_links_box ON dimension_links(organization_id, box_type, box_id)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_dimension_links_dim ON dimension_links(organization_id, dimension_id)")
             # Add entity_id to ap_items for entity-level routing
             self._ensure_column(cur, "ap_items", "entity_id", "TEXT")
             self._ensure_column(cur, "ap_items", "document_type", "TEXT DEFAULT 'invoice'")
@@ -1715,6 +1728,7 @@ def _get_db_impl_class():
             ApprovalChainStore,
             AuthStore,
             EntityStore,
+            DimensionStore,
             IntegrationStore,
             PolicyStore,
             MetricsStore,

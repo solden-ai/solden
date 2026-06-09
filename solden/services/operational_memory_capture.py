@@ -8,13 +8,17 @@ happening.
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from solden.core.ap_item_resolution import resolve_ap_item_reference
 from solden.core.box_registry import get_box
+from solden.services.dimension_resolver import resolve_dimensions_for_box
 from solden.services.memory_events import commit_memory_event
 from solden.services.vendor_attribute_matcher import vendor_name_similarity
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_LINK_CONFIDENCE_THRESHOLD = 0.72
@@ -443,6 +447,26 @@ def capture_operational_memory_event(
         correlation_id=candidate.get("correlation_id"),
         occurred_at=candidate.get("occurred_at"),
     )
+
+    # Link the cross-system dimensions (GL account / cost center) this record
+    # references into the dimension graph, so memory spans systems (H5).
+    # Best-effort: a resolution hiccup must never fail the memory write.
+    try:
+        box_item = get_box(candidate["box_type"], candidate["box_id"], db)
+        if isinstance(box_item, dict):
+            resolve_dimensions_for_box(
+                db,
+                box_type=candidate["box_type"],
+                box_id=candidate["box_id"],
+                item=box_item,
+                organization_id=org_id,
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "[operational_memory_capture] dimension resolution failed for %s/%s: %s",
+            candidate.get("box_type"), candidate.get("box_id"), exc,
+        )
+
     return {
         "status": "committed",
         "link": link,

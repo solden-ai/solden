@@ -767,6 +767,23 @@ def _context_summary(
     }
 
 
+def _fetch_dimension_links(
+    db: Any, box_type: str, box_id: str, organization_id: str
+) -> List[Dict[str, Any]]:
+    """Cross-system dimensions (GL account / cost center) this record references
+    (H5). Best-effort: empty when the store/method or org is unavailable."""
+    if db is None or not (box_id and organization_id):
+        return []
+    if not hasattr(db, "list_dimension_links"):
+        return []
+    try:
+        return db.list_dimension_links(
+            organization_id=organization_id, box_type=box_type, box_id=box_id
+        )
+    except Exception:
+        return []
+
+
 def build_operational_memory_record(
     *,
     item: Dict[str, Any],
@@ -882,6 +899,10 @@ def build_operational_memory_record(
         proof=proof,
     )
 
+    dimensions = _fetch_dimension_links(
+        db, box_type, resolved_box_id, str(item.get("organization_id") or "").strip()
+    )
+
     return {
         "memory_record_version": "1.0",
         "record_id": f"{box_type}:{resolved_box_id}",
@@ -908,6 +929,7 @@ def build_operational_memory_record(
         "open_exceptions": open_exceptions,
         "outcome": outcome,
         "proof": proof,
+        "dimensions": dimensions,
         "projected_at": datetime.now(timezone.utc).isoformat(),
         # Compatibility fields consumed by the current NetSuite panel.
         "owner": owner,
