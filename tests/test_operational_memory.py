@@ -824,3 +824,23 @@ def test_link_fuzzy_vendor_matches_reordered_tokens():
     assert link["work_item"]["box_id"] == "AP-fuzzy"
     assert "vendor" in link["match_evidence"]
     assert link["confidence"] >= 0.72
+
+
+def test_narrative_vocab_is_box_type_scoped():
+    """L4: AP-state narratives apply only to ap_item; other box types get
+    box-type-neutral prose, not mis-applied AP semantics."""
+    from solden.services.operational_memory import _next_step, _waiting_on, _waiting_reason
+    # ap_item "approved" keeps its AP-specific narrative.
+    assert "ERP" in _next_step("approved", "", "ap_item")
+    assert _waiting_on("approved", "", "ap_item") == "Solden"
+    assert "ERP posting" in _waiting_reason(
+        state="approved", item={}, exceptions=[], metadata={}, outcome=None, box_type="ap_item",
+    )
+    # purchase_order "approved" must NOT inherit the AP "post to ERP" prescription.
+    po_next = _next_step("approved", "", "purchase_order")
+    assert "ERP" not in po_next
+    assert po_next == "Review the timeline and decide the next action."
+    assert _waiting_on("approved", "", "purchase_order") == "the assigned owner"
+    assert "ERP posting" not in _waiting_reason(
+        state="approved", item={}, exceptions=[], metadata={}, outcome=None, box_type="purchase_order",
+    )

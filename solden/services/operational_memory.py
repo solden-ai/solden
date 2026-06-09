@@ -108,9 +108,14 @@ def _last_timeline_event(timeline: list) -> Optional[Dict[str, Any]]:
     return None
 
 
-def _waiting_on(state: str, owner_email: str) -> str:
+def _waiting_on(state: str, owner_email: str, box_type: str = "ap_item") -> str:
     if owner_email:
         return owner_email
+    # AP routing semantics apply only to ap_item. Other box types share some
+    # state names (a purchase_order is also "approved") but with different
+    # meaning, so stay box-type-neutral rather than mis-attributing (L4).
+    if box_type != "ap_item":
+        return "the assigned owner"
     if state in {"awaiting_payment", "payment_in_flight"}:
         return "ERP / payment rail"
     if state in _HUMAN_WAIT_STATES:
@@ -131,6 +136,7 @@ def _waiting_reason(
     exceptions: list,
     metadata: Dict[str, Any],
     outcome: Optional[Dict[str, Any]],
+    box_type: str = "ap_item",
 ) -> str:
     exception_reason = _first_exception_reason(item, exceptions, metadata)
     if exception_reason:
@@ -139,6 +145,10 @@ def _waiting_reason(
         text = str(outcome.get("summary") or outcome.get("reason") or "").strip()
         if text:
             return text
+    # AP-state narratives apply only to ap_item; other box types get a
+    # box-type-neutral humanized state rather than AP-flavoured prose (L4).
+    if box_type != "ap_item":
+        return _humanize_token(state, "The record is waiting for the next step.")
     state_reasons = {
         "received": "The work item has been received and is waiting for validation.",
         "validated": "The work item passed validation and is waiting for routing.",
@@ -160,8 +170,12 @@ def _waiting_reason(
     return state_reasons.get(state, _humanize_token(state, "The record is waiting for the next step."))
 
 
-def _next_step(state: str, owner_email: str) -> str:
+def _next_step(state: str, owner_email: str, box_type: str = "ap_item") -> str:
     owner = owner_email or "the assigned owner"
+    # AP next-step prescriptions apply only to ap_item; other box types get a
+    # neutral pointer rather than AP-specific instructions (L4).
+    if box_type != "ap_item":
+        return "Review the timeline and decide the next action."
     next_steps = {
         "received": "Validate extracted fields.",
         "validated": "Route the work item for approval or request missing context.",
@@ -839,7 +853,7 @@ def build_operational_memory_record(
         or _first_display_value(metadata.get("approval_sent_to"))
         or _first_display_value(metadata.get("approval_delivery_targets"))
         or (owner_label if owner_label != "Unassigned" else "")
-        or _waiting_on(state, owner_email)
+        or _waiting_on(state, owner_email, box_type)
     ).strip()
     waiting_reason = _waiting_reason(
         state=state,
@@ -847,10 +861,11 @@ def build_operational_memory_record(
         exceptions=list(exceptions or []),
         metadata=metadata,
         outcome=outcome,
+        box_type=box_type,
     )
     if memory_waiting_reason:
         waiting_reason = memory_waiting_reason
-    next_step = memory_next_action or _next_step(state, owner_email)
+    next_step = memory_next_action or _next_step(state, owner_email, box_type)
     last_event = _last_timeline_event(resolved_timeline)
     latest_system_state = _latest_system_state(item, metadata)
     dependencies = _dependencies(item, metadata, list(exceptions or []))
