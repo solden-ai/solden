@@ -772,6 +772,11 @@ class FinanceAgentRuntime:
             "primary_source",
             "exception_code",
             "exception_severity",
+            # Dimension hints (H5) — linked as `proposed` dimensions by
+            # dimension_resolver; do not feed ERP posting.
+            "suggested_cost_center",
+            "suggested_project",
+            "suggested_department",
         ):
             value = invoice.get(key)
             if value:

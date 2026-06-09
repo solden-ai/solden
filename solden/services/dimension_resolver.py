@@ -1,23 +1,27 @@
-"""Resolve the cross-system dimensions (GL account / cost center) a record
-references, and link them into the dimension graph.
+"""Resolve the cross-system dimensions a record references (GL account, cost
+center, project, department), and link them into the dimension graph.
 
 Called best-effort from the operational-memory capture loop, so a record's
 memory carries the accounting objects it touches ("everything charged to GL
-5210"). See docs/ENTITY_GRAPH_SCOPING.md (H5).
+5210 / CC 402"). See docs/ENTITY_GRAPH_SCOPING.md (H5).
 
-Data reality (Phase 1): the per-record GL value is a *code*
-(`ap_items.metadata.gl_code` etc.), which is authoritative — a known code links
-``confirmed``, an unknown code seeds a new dimension + links ``confirmed`` (the
-record IS coded to it). Fuzzy matching runs ONLY on free-text labels (values
-with a space), never on numeric codes, or "5211" would fuzzy-match "5210".
-Cost center is usually absent on ap_items today, so its links stay sparse until
-extraction populates it.
+Status by source authority:
+* An AUTHORITATIVE value — a code the record is actually coded to (``gl_code``,
+  ``cost_center``, ``posting_metadata.*``) — links ``confirmed``.
+* An LLM SUGGESTION (``suggested_*``, pulled by invoice extraction) links
+  ``proposed`` — it is a read of unstructured input, so it needs human confirm
+  before it counts as the record's coding.
+
+The resolver itself is deterministic: exact -> alias -> normalized, then (for
+free-text labels only, never numeric codes — or "5211" would match "5210")
+fuzzy against labels, then seed the value as a new canonical dimension. The LLM
+only reads the input upstream (extraction); it never decides the link here.
 """
 from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from solden.services.vendor_attribute_matcher import vendor_name_similarity
 
@@ -26,6 +30,20 @@ logger = logging.getLogger(__name__)
 # Same bands the operational-memory capture linker uses.
 _FUZZY_CONFIRM = 0.90
 _FUZZY_PROPOSE = 0.72
+
+# Per dimension type: where the value lives. Authoritative fields (the record's
+# actual coding) win and link confirmed; suggested_* fields are LLM reads and
+# link proposed. posting_metadata.<posting key> is authoritative too.
+_DIMENSION_SOURCES: Tuple[Dict[str, Any], ...] = (
+    {"type": "gl_account", "authoritative": ("gl_code",), "posting": ("gl_account",),
+     "suggested": ("suggested_gl_code",), "label": ("gl_account_name", "account_name")},
+    {"type": "cost_center", "authoritative": ("cost_center",), "posting": ("cost_center",),
+     "suggested": ("suggested_cost_center",), "label": ("cost_center_name",)},
+    {"type": "project", "authoritative": ("project",), "posting": ("project",),
+     "suggested": ("suggested_project",), "label": ("project_name",)},
+    {"type": "department", "authoritative": ("department",), "posting": ("department",),
+     "suggested": ("suggested_department",), "label": ("department_name",)},
+)
 
 
 def _first_str(*vals: Any) -> str:
@@ -46,23 +64,35 @@ def _meta(item: Dict[str, Any]) -> Dict[str, Any]:
     return m if isinstance(m, dict) else {}
 
 
-def _gl_value(item: Dict[str, Any], meta: Dict[str, Any]) -> str:
-    posting = meta.get("posting_metadata") if isinstance(meta.get("posting_metadata"), dict) else {}
-    return _first_str(
-        item.get("gl_code"), meta.get("gl_code"),
-        meta.get("suggested_gl_code"), posting.get("gl_account"),
+def _posting(meta: Dict[str, Any]) -> Dict[str, Any]:
+    p = meta.get("posting_metadata")
+    return p if isinstance(p, dict) else {}
+
+
+def _resolve_value(
+    item: Dict[str, Any], meta: Dict[str, Any], spec: Dict[str, Any]
+) -> Tuple[str, Optional[str]]:
+    """The value to link for one dimension type + its intended status.
+
+    Authoritative (the record's coding) -> 'confirmed'; an LLM suggestion ->
+    'proposed'. Returns ('', None) when neither is present.
+    """
+    posting = _posting(meta)
+    auth = _first_str(
+        *[item.get(k) for k in spec["authoritative"]],
+        *[meta.get(k) for k in spec["authoritative"]],
+        *[posting.get(k) for k in spec.get("posting", ())],
     )
+    if auth:
+        return auth, "confirmed"
+    sugg = _first_str(*[meta.get(k) for k in spec["suggested"]])
+    if sugg:
+        return sugg, "proposed"
+    return "", None
 
 
-def _gl_label(item: Dict[str, Any], meta: Dict[str, Any]) -> Optional[str]:
-    posting = meta.get("posting_metadata") if isinstance(meta.get("posting_metadata"), dict) else {}
-    return _first_str(
-        meta.get("gl_account_name"), meta.get("account_name"), posting.get("gl_account_name"),
-    ) or None
-
-
-def _cost_center_value(item: Dict[str, Any], meta: Dict[str, Any]) -> str:
-    return _first_str(item.get("cost_center"), meta.get("cost_center"))
+def _label_for(item: Dict[str, Any], meta: Dict[str, Any], spec: Dict[str, Any]) -> Optional[str]:
+    return _first_str(*[meta.get(k) for k in spec["label"]]) or None
 
 
 def _link_for(
@@ -73,17 +103,20 @@ def _link_for(
     box_id: str,
     dimension_type: str,
     raw_value: str,
+    intended_status: str,
     label: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """Resolve one (type, value) to a dimension and link it.
 
-    Ladder: deterministic (exact/alias/normalized) -> for free-text values only,
-    fuzzy against labels with the propose/confirm bands -> else seed a new
-    canonical dimension (the record's own coding is authoritative) + confirm.
+    ``intended_status`` ('confirmed' for an authoritative code, 'proposed' for a
+    suggestion) is the ceiling: a suggested value links 'proposed' even on a
+    strong match. Ladder: deterministic -> fuzzy (free-text only) -> seed new.
     """
     raw = str(raw_value or "").strip()
     if not raw:
         return None
+    confirmed = intended_status == "confirmed"
+    conf_score = 1.0 if confirmed else 0.7
 
     hit = db.resolve_dimension(
         organization_id=organization_id, dimension_type=dimension_type, raw_code=raw
@@ -91,9 +124,10 @@ def _link_for(
     if hit:
         db.link_dimension(
             organization_id=organization_id, box_type=box_type, box_id=box_id,
-            dimension_id=hit["id"], confidence=1.0, status="confirmed", source="resolver",
+            dimension_id=hit["id"], confidence=conf_score, status=intended_status,
+            source="resolver",
         )
-        return {"dimension_id": hit["id"], "status": "confirmed", "match": hit.get("_match_kind")}
+        return {"dimension_id": hit["id"], "status": intended_status, "match": hit.get("_match_kind")}
 
     # Fuzzy only for free-text labels (a value with a space). Numeric/short codes
     # are matched deterministically above; fuzzing them mis-links near-codes.
@@ -108,12 +142,15 @@ def _link_for(
                 if sim > best_sim:
                     best, best_sim = cand, sim
         if best and best_sim >= _FUZZY_CONFIRM:
+            # A strong match confirms only if the value itself is authoritative;
+            # a suggestion stays proposed.
+            status = intended_status
             db.link_dimension(
                 organization_id=organization_id, box_type=box_type, box_id=box_id,
                 dimension_id=best["id"], confidence=round(best_sim, 3),
-                status="confirmed", source="resolver_fuzzy",
+                status=status, source="resolver_fuzzy",
             )
-            return {"dimension_id": best["id"], "status": "confirmed", "match": "fuzzy"}
+            return {"dimension_id": best["id"], "status": status, "match": "fuzzy"}
         if best and best_sim >= _FUZZY_PROPOSE:
             db.link_dimension(
                 organization_id=organization_id, box_type=box_type, box_id=box_id,
@@ -122,18 +159,20 @@ def _link_for(
             )
             return {"dimension_id": best["id"], "status": "proposed", "match": "fuzzy"}
 
-    # Brand-new value: the record's own coding is authoritative, so seed + confirm.
+    # Brand-new value: seed it as a canonical dimension. An authoritative code is
+    # the record's real coding (confirmed); a suggestion is provenance-tagged.
     seeded = db.upsert_dimension(
         organization_id=organization_id, dimension_type=dimension_type,
-        code=raw, label=label, source="inferred",
+        code=raw, label=label, source="inferred" if confirmed else "suggested",
     )
     if not seeded:
         return None
     db.link_dimension(
         organization_id=organization_id, box_type=box_type, box_id=box_id,
-        dimension_id=seeded["id"], confidence=1.0, status="confirmed", source="resolver",
+        dimension_id=seeded["id"], confidence=conf_score, status=intended_status,
+        source="resolver",
     )
-    return {"dimension_id": seeded["id"], "status": "confirmed", "match": "seeded"}
+    return {"dimension_id": seeded["id"], "status": intended_status, "match": "seeded"}
 
 
 def resolve_dimensions_for_box(
@@ -144,7 +183,8 @@ def resolve_dimensions_for_box(
     item: Optional[Dict[str, Any]],
     organization_id: str,
 ) -> List[Dict[str, Any]]:
-    """Resolve + link the GL account and cost center a record references.
+    """Resolve + link every dimension (GL / cost center / project / department) a
+    record references.
 
     Returns the links created (for logging/tests). Callers invoke this
     best-effort (wrapped in try/except) so a resolution hiccup never breaks the
@@ -156,27 +196,20 @@ def resolve_dimensions_for_box(
     meta = _meta(item)
     links: List[Dict[str, Any]] = []
 
-    gl = _gl_value(item, meta)
-    if gl:
+    for spec in _DIMENSION_SOURCES:
+        value, status = _resolve_value(item, meta, spec)
+        if not value or not status:
+            continue
         r = _link_for(
             db, organization_id=organization_id, box_type=box_type, box_id=box_id,
-            dimension_type="gl_account", raw_value=gl, label=_gl_label(item, meta),
+            dimension_type=spec["type"], raw_value=value, intended_status=status,
+            label=_label_for(item, meta, spec),
         )
         if r:
-            links.append({**r, "dimension_type": "gl_account"})
+            links.append({**r, "dimension_type": spec["type"]})
 
-    cc = _cost_center_value(item, meta)
-    if cc:
-        r = _link_for(
-            db, organization_id=organization_id, box_type=box_type, box_id=box_id,
-            dimension_type="cost_center", raw_value=cc, label=None,
-        )
-        if r:
-            links.append({**r, "dimension_type": "cost_center"})
-    else:
+    if not links:
         logger.debug(
-            "[dimension_resolver] no cost_center on %s/%s "
-            "(sparse until extraction populates it)", box_type, box_id,
+            "[dimension_resolver] no dimensions resolved for %s/%s", box_type, box_id
         )
-
     return links

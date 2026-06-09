@@ -274,6 +274,9 @@ Analyse everything and return ONE JSON object. Two of the sections — classific
     "suggested_gl_code": "<GL code for the main expense category>",
     "reasoning": "<why this GL code>"
   }},
+  "suggested_cost_center": "<cost center this should be charged to, if stated, or null>",
+  "suggested_project": "<project this relates to, if stated, or null>",
+  "suggested_department": "<department this relates to, if stated, or null>",
   "duplicate_analysis": {{
     "is_duplicate": <true/false>,
     "is_amendment": <true/false>,

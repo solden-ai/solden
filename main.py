@@ -130,6 +130,7 @@ from solden.api.workflow_routes import (
 # tuple and the route surface are built below.
 import solden.box_specs  # noqa: F401
 from solden.api.box_export import router as box_export_router
+from solden.api.dimensions import router as dimensions_router
 from solden.api.box_owner_routes import router as box_owner_router
 from solden.api.box_revert_routes import router as box_revert_router
 from solden.api.payment_confirmations import router as payment_confirmations_router
@@ -694,6 +695,9 @@ STRICT_PROFILE_ALLOWED_WORKSPACE_PATHS = {
     "/api/workspace/exceptions",
     "/api/workspace/exceptions/stats",
     "/api/workspace/entities",
+    # Dimension rollup read API (GL account / cost center / project / department
+    # a record references) — H5 cross-system query surface.
+    "/api/workspace/dimensions",
     "/api/workspace/erp/field-mappings",
     "/api/workspace/permissions/catalog",
     "/api/workspace/roles/custom",
@@ -863,6 +867,9 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         # purchase_order / bank_match / declared types are reachable (ap_item
         # already has dedicated read routes).
         r"^/api/workspace/box/[^/]+/[^/]+/memory$",
+        # H5 dimension rollup: every record linked to one dimension
+        # ("everything charged to CC 402").
+        r"^/api/workspace/dimensions/[^/]+/records$",
         # Manifesto audit 2026-05-23: a cluster of AP feature routers were
         # mounted (include_router) + tested but never added to this allowlist,
         # so the strict-profile boot stripped all ~60 of their endpoints and
@@ -1846,6 +1853,8 @@ app.include_router(erp_webhooks_router)
 # Sovereignty primitive: per-Box portable export (the manifesto's
 # "removable" promise — components remain whole if you take Solden out).
 app.include_router(box_export_router)
+# Dimension rollup read API — the cross-system "everything on CC 402" surface (H5).
+app.include_router(dimensions_router)
 
 # Ownership primitive: manual Box reassignment (the manifesto's
 # "ownership is explicit, enforceable, auditable" promise).

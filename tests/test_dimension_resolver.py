@@ -78,3 +78,36 @@ def test_record_surfaces_dimensions(db):
     rec = build_box_operational_memory_record(db=db, box_type="ap_item", box_id="AP-rec")
     dims = rec.get("dimensions") or []
     assert any(d["dimension_type"] == "gl_account" and d["code"] == "5210" for d in dims)
+
+
+def test_suggested_value_links_proposed(db):
+    """An LLM suggestion (no authoritative coding) links proposed, not confirmed."""
+    item = _ap(db, "AP-sugg", {"suggested_cost_center": "402"})
+    links = resolve_dimensions_for_box(
+        db, box_type="ap_item", box_id="AP-sugg", item=item, organization_id="orgRes",
+    )
+    cc = [l for l in links if l["dimension_type"] == "cost_center"]
+    assert cc and cc[0]["status"] == "proposed"
+
+
+def test_authoritative_beats_suggested_and_confirms(db):
+    """An authoritative value wins over a suggestion and links confirmed."""
+    item = _ap(db, "AP-auth", {"cost_center": "402", "suggested_cost_center": "999"})
+    links = resolve_dimensions_for_box(
+        db, box_type="ap_item", box_id="AP-auth", item=item, organization_id="orgRes",
+    )
+    cc = [l for l in links if l["dimension_type"] == "cost_center"][0]
+    assert cc["status"] == "confirmed"
+    rec = db.list_dimension_links(organization_id="orgRes", box_type="ap_item", box_id="AP-auth")
+    assert any(l["code"] == "402" for l in rec)
+    assert not any(l["code"] == "999" for l in rec)
+
+
+def test_project_and_department_resolve(db):
+    item = _ap(db, "AP-pd", {"project": "Alpha", "department": "Engineering"})
+    links = resolve_dimensions_for_box(
+        db, box_type="ap_item", box_id="AP-pd", item=item, organization_id="orgRes",
+    )
+    types = {l["dimension_type"] for l in links}
+    assert "project" in types
+    assert "department" in types

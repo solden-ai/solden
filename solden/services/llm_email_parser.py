@@ -334,6 +334,9 @@ Return exactly this JSON shape (use null for any field you cannot determine with
     "due_date": <0.0–1.0>
   }},
   "suggested_gl_code": "<GL code predicted from vendor history and invoice content, or null>",
+  "suggested_cost_center": "<cost center code/name this should be charged to, if stated or clearly implied, or null>",
+  "suggested_project": "<project this relates to, if stated, or null>",
+  "suggested_department": "<department this relates to, if stated, or null>",
   "is_amendment": <true if this replaces/revises a previous invoice, false otherwise>,
   "supersedes_reference": "<invoice number this replaces, or null>",
   "confidence": <overall 0.0–1.0>,
@@ -539,6 +542,13 @@ def _llm_result_to_parse_email_dict(
         "reasoning_summary": llm.get("reasoning") or "",
         "payment_processor": llm.get("payment_processor"),
         "po_number": llm.get("po_number"),
+        # Dimension hints (H5) — cost center / project / department the LLM read
+        # from the email. Carried to ap_items.metadata and linked as `proposed`
+        # dimensions by dimension_resolver. suggested_gl_code is intentionally NOT
+        # carried (it would feed ERP GL posting; H5 is memory-only).
+        "suggested_cost_center": llm.get("suggested_cost_center") or None,
+        "suggested_project": llm.get("suggested_project") or None,
+        "suggested_department": llm.get("suggested_department") or None,
         "payment_terms": llm.get("payment_terms"),
         "tax_amount": safe_float_or_none(llm.get("tax_amount")),
         "tax_rate": safe_float_or_none(llm.get("tax_rate")),

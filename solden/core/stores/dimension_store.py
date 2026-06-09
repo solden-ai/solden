@@ -205,19 +205,45 @@ class DimensionStore:
         return None
 
     def list_dimensions(
-        self, *, organization_id: str, dimension_type: str
+        self, *, organization_id: str, dimension_type: Optional[str] = None
     ) -> List[Dict[str, Any]]:
-        """All active dimensions of a type (the resolver's fuzzy candidate set)."""
+        """Active dimensions for an org. Filtered by type (the resolver's fuzzy
+        candidate set) or all types (the rollup API) when ``dimension_type`` is None."""
         self.initialize()
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(
-                "SELECT * FROM context_dimensions "
-                "WHERE organization_id=%s AND dimension_type=%s AND is_active=1",
-                (organization_id, dimension_type),
-            )
+            if dimension_type:
+                cur.execute(
+                    "SELECT * FROM context_dimensions "
+                    "WHERE organization_id=%s AND dimension_type=%s AND is_active=1 "
+                    "ORDER BY dimension_type, code",
+                    (organization_id, dimension_type),
+                )
+            else:
+                cur.execute(
+                    "SELECT * FROM context_dimensions "
+                    "WHERE organization_id=%s AND is_active=1 "
+                    "ORDER BY dimension_type, code",
+                    (organization_id,),
+                )
             rows = cur.fetchall() or []
         return [self._dim_row(r) for r in rows]
+
+    def get_dimension(
+        self, *, organization_id: str, dimension_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """One canonical dimension by id, tenant-scoped (None if not in this org)."""
+        self.initialize()
+        if not (organization_id and dimension_id):
+            return None
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT * FROM context_dimensions WHERE organization_id=%s AND id=%s",
+                (organization_id, dimension_id),
+            )
+            row = cur.fetchone()
+        return self._dim_row(row)
 
     # ---- record <-> dimension links -------------------------------------
 
