@@ -5989,3 +5989,40 @@ def _v100_dimension_graph(cur, db):
             cur.execute(ddl)
         except Exception as exc:  # noqa: BLE001
             logger.warning("[migration v100] index failed: %s", exc)
+
+
+@migration(101, "policy_proposals — behavior → standing-rule proposals (tribal-knowledge Build 3)")
+def _v101_policy_proposals(cur, db):
+    """Agent-proposed standing rules distilled from enacted behavior
+    ("you approved Acme's escalated invoices 6 times — make it a rule?").
+    Advisory rows: only a human accept lands the bounded rule (rules table).
+    Mirrors PolicyProposalStore.POLICY_PROPOSALS_TABLE_SQL; initialize()
+    creates it for fresh DBs, this brings existing tenants up to schema.
+    """
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS policy_proposals (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            proposal_kind TEXT NOT NULL,
+            vendor_name TEXT,
+            behavior_summary TEXT NOT NULL,
+            evidence_json TEXT DEFAULT '{}',
+            proposed_rule_json TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            accepted_by TEXT,
+            accepted_at TEXT,
+            declined_by TEXT,
+            declined_at TEXT,
+            decline_reason TEXT,
+            applied_rule_id TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """)
+    try:
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_policy_proposals_org_status "
+            "ON policy_proposals(organization_id, status, created_at DESC)"
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[migration v101] index failed: %s", exc)

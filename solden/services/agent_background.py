@@ -536,6 +536,19 @@ async def _run_loop():
                 for org_id in org_ids:
                     await _run_task_scheduler_checks(org_id)
 
+            # Every 12th tick (~3 hours): detect behavior -> standing-rule
+            # proposals (tribal-knowledge Build 3). Advisory rows only; a
+            # human accept is the only thing that changes behavior.
+            if tick % 12 == 0:
+                for org_id in org_ids:
+                    try:
+                        from solden.services.policy_proposals import detect_policy_proposals
+                        import asyncio as _asyncio
+                        from solden.core.database import get_db as _get_db
+                        await _asyncio.to_thread(detect_policy_proposals, _get_db(), org_id)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("Policy-proposal sweep failed for %s: %s", org_id, exc)
+
             # Every 12th tick (~3 hours): verify recent ERP postings
             if tick % 12 == 0:
                 for org_id in org_ids:

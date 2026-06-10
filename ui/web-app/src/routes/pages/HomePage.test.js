@@ -176,4 +176,50 @@ describe('HomePage', () => {
       .some((node) => node.textContent.trim() === '—')).toBe(false);
     expect(document.body.textContent).not.toContain('critical_field_low_confidence');
   });
+
+  it('surfaces a policy proposal with accept + required-reason decline', async () => {
+    const posts = [];
+    api.mockImplementation(async (path, opts) => {
+      const url = String(path || '');
+      if (url === '/api/workspace/bootstrap') {
+        return {
+          organization: { id: 'org-test', name: 'Acme Finance' },
+          current_user: { email: 'maya@acme.com', name: 'Maya', organization_id: 'org-test' },
+          dashboard: {},
+          integrations: [],
+        };
+      }
+      if (url.startsWith('/api/workspace/policy-proposals?')) {
+        return {
+          proposals: posts.length === 0 ? [{
+            id: 'PROP-1',
+            behavior_summary: "You've approved Acme's invoices 6 times after the agent escalated them. Make it a standing rule?",
+            status: 'pending',
+          }] : [],
+          count: posts.length === 0 ? 1 : 0,
+        };
+      }
+      if (url.includes('/policy-proposals/PROP-1/')) {
+        posts.push({ url, body: opts?.body });
+        return { status: 'accepted' };
+      }
+      return {};
+    });
+
+    renderHome();
+
+    await screen.findByText('Solden noticed a pattern');
+    expect(screen.getByText(/approved Acme's invoices 6 times/)).toBeTruthy();
+    // Decline path requires a reason before the button enables.
+    (await screen.findByText('Decline')).click();
+    const recordBtn = await screen.findByText('Record non-rule');
+    expect(recordBtn.disabled).toBe(true);
+    // Accept path posts to the accept endpoint.
+    (await screen.findByText('Cancel')).click();
+    (await screen.findByText('Make it a rule')).click();
+    await waitFor(() => {
+      expect(posts.length).toBe(1);
+      expect(posts[0].url).toContain('/policy-proposals/PROP-1/accept');
+    });
+  });
 });

@@ -1590,3 +1590,54 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ─── Policy proposals (tribal-knowledge Build 3) ─────────────────────
+   The agent plays a noticed behavior pattern back as a proposed standing
+   rule. Teal accent per DESIGN.md; the decline path opens a required
+   reason field (a deliberate non-rule is knowledge too). */
+.cl-home-proposals {
+  border: 1px solid var(--cl-border, #E2E8F0);
+  border-left: 3px solid var(--cl-teal-500);
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: var(--cl-surface, #fff);
+}
+.cl-home-proposals-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.cl-home-proposals-head h2 {
+  font-size: 14px;
+  margin: 0;
+}
+.cl-home-proposals-count {
+  background: var(--cl-teal-soft);
+  color: var(--cl-teal-600);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 8px;
+}
+.cl-home-proposals-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cl-home-proposal-summary {
+  margin: 0 0 8px;
+  line-height: 1.45;
+}
+.cl-home-proposal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.cl-home-proposal-decline textarea {
+  width: 100%;
+  margin-bottom: 8px;
+}

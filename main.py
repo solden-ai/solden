@@ -131,6 +131,7 @@ from solden.api.workflow_routes import (
 import solden.box_specs  # noqa: F401
 from solden.api.box_export import router as box_export_router
 from solden.api.dimensions import router as dimensions_router
+from solden.api.policy_proposals import router as policy_proposals_router
 from solden.api.box_owner_routes import router as box_owner_router
 from solden.api.box_revert_routes import router as box_revert_router
 from solden.api.payment_confirmations import router as payment_confirmations_router
@@ -698,6 +699,8 @@ STRICT_PROFILE_ALLOWED_WORKSPACE_PATHS = {
     # Dimension rollup read API (GL account / cost center / project / department
     # a record references) — H5 cross-system query surface.
     "/api/workspace/dimensions",
+    # Behavior -> standing-rule proposals (tribal-knowledge Build 3).
+    "/api/workspace/policy-proposals",
     "/api/workspace/erp/field-mappings",
     "/api/workspace/permissions/catalog",
     "/api/workspace/roles/custom",
@@ -873,6 +876,8 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         # H5 dimension rollup: every record linked to one dimension
         # ("everything charged to CC 402").
         r"^/api/workspace/dimensions/[^/]+/records$",
+        # Accept/decline a behavior-derived standing-rule proposal.
+        r"^/api/workspace/policy-proposals/[^/]+/(accept|decline)$",
         # Manifesto audit 2026-05-23: a cluster of AP feature routers were
         # mounted (include_router) + tested but never added to this allowlist,
         # so the strict-profile boot stripped all ~60 of their endpoints and
@@ -1858,6 +1863,8 @@ app.include_router(erp_webhooks_router)
 app.include_router(box_export_router)
 # Dimension rollup read API — the cross-system "everything on CC 402" surface (H5).
 app.include_router(dimensions_router)
+# Behavior -> standing-rule proposals review surface (tribal-knowledge Build 3).
+app.include_router(policy_proposals_router)
 
 # Ownership primitive: manual Box reassignment (the manifesto's
 # "ownership is explicit, enforceable, auditable" promise).

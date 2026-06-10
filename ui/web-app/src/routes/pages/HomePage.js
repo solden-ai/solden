@@ -250,6 +250,8 @@ export function HomePage() {
         />
       </section>
 
+      <${PolicyProposalsPanel} />
+
       <${ApproverWorkloadStrip} state=${workloadState} navigate=${navigate} />
 
       <${SystemStatusFooter}
@@ -1085,4 +1087,86 @@ function safeMetric(value) {
   if (value === null || value === undefined || value === '') return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+
+// ─── Policy proposals (tribal-knowledge Build 3) ─────────────────────
+// The agent plays enacted behavior back as a proposed standing rule.
+// Accept lands the bounded rule (versioned, attributed); decline records
+// the deliberate non-rule — its reason is required because "we handle
+// these case-by-case because..." is itself knowledge worth keeping.
+
+function PolicyProposalsPanel() {
+  const [proposals, setProposals] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+  const [declining, setDeclining] = useState(null); // {id, reason}
+
+  const load = () => {
+    api('/api/workspace/policy-proposals?status=pending', { silent: true })
+      .then((resp) => setProposals(Array.isArray(resp?.proposals) ? resp.proposals : []))
+      .catch(() => setProposals([]));
+  };
+  useEffect(() => { load(); }, []);
+
+  const resolve = async (id, action, reason) => {
+    setBusyId(id);
+    try {
+      await api(`/api/workspace/policy-proposals/${encodeURIComponent(id)}/${action}`, {
+        method: 'POST',
+        body: JSON.stringify(action === 'decline' ? { reason } : {}),
+      });
+      setDeclining(null);
+      load();
+    } catch (_) {
+      // Leave the proposal visible; the operator can retry.
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  if (!proposals || proposals.length === 0) return null;
+
+  return html`
+    <section class="cl-home-proposals" aria-label="Proposed standing rules">
+      <header class="cl-home-proposals-head">
+        <h2>Solden noticed a pattern</h2>
+        <span class="cl-home-proposals-count">${proposals.length}</span>
+      </header>
+      <ul class="cl-home-proposals-list">
+        ${proposals.map((p) => html`
+          <li key=${p.id} class="cl-home-proposal">
+            <p class="cl-home-proposal-summary">${p.behavior_summary}</p>
+            ${declining?.id === p.id ? html`
+              <div class="cl-home-proposal-decline">
+                <textarea
+                  rows="2"
+                  placeholder="Why keep handling these case-by-case? (recorded as a deliberate non-rule)"
+                  value=${declining.reason}
+                  onInput=${(e) => setDeclining({ id: p.id, reason: e.target.value })}></textarea>
+                <div class="cl-home-proposal-actions">
+                  <button type="button" class="btn btn-tertiary"
+                          onClick=${() => setDeclining(null)} disabled=${busyId === p.id}>Cancel</button>
+                  <button type="button" class="btn btn-primary"
+                          disabled=${busyId === p.id || !declining.reason.trim()}
+                          onClick=${() => resolve(p.id, 'decline', declining.reason.trim())}>
+                    Record non-rule
+                  </button>
+                </div>
+              </div>
+            ` : html`
+              <div class="cl-home-proposal-actions">
+                <button type="button" class="btn btn-tertiary"
+                        onClick=${() => setDeclining({ id: p.id, reason: '' })}
+                        disabled=${busyId === p.id}>Decline</button>
+                <button type="button" class="btn btn-primary"
+                        onClick=${() => resolve(p.id, 'accept')}
+                        disabled=${busyId === p.id}>
+                  ${busyId === p.id ? 'Working…' : 'Make it a rule'}
+                </button>
+              </div>
+            `}
+          </li>`)}
+      </ul>
+    </section>
+  `;
 }

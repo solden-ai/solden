@@ -298,7 +298,9 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         # Cap 477 -> 479.
         # 2026-06-09: tribal-knowledge Build 1 — POST /api/workspace/ap-items/{id}/
         # rationale/confirm (promote a machine-distilled rationale). Cap 479 -> 480.
-        assert len(paths) <= 480
+        # 2026-06-10: tribal-knowledge Build 3 — policy-proposals review surface
+        # (list + accept + decline). Cap 480 -> 483.
+        assert len(paths) <= 483
         assert not any(path.startswith("/config/") for path in paths)
         assert "/erp/status/{organization_id}" not in paths
         assert "/erp/quickbooks/connect" not in paths
@@ -316,6 +318,9 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         assert "/api/workspace/dimensions" in paths
         assert "/api/workspace/dimensions/{dimension_id}/records" in paths
         assert "/api/workspace/ap-items/{ap_item_id}/rationale/confirm" in paths
+        assert "/api/workspace/policy-proposals" in paths
+        assert "/api/workspace/policy-proposals/{proposal_id}/accept" in paths
+        assert "/api/workspace/policy-proposals/{proposal_id}/decline" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/approve" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/reject" in paths

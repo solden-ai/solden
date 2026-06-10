@@ -77,6 +77,17 @@ def is_high_signal_elicitation_enabled() -> bool:
     return _env_flag("FEATURE_HIGH_SIGNAL_ELICITATION", default=True)
 
 
+def is_policy_proposals_enabled() -> bool:
+    """Tribal-knowledge Build 3 — propose standing rules from stable enacted
+    behavior (e.g. repeated approve-after-escalate for one vendor).
+
+    Default ``True``: proposals are ADVISORY rows — creating one changes no
+    behavior; only a human accept lands the bounded rule.
+    ``FEATURE_POLICY_PROPOSALS=false`` is the kill switch.
+    """
+    return _env_flag("FEATURE_POLICY_PROPOSALS", default=True)
+
+
 def is_rationale_distillation_enabled() -> bool:
     """Tribal-knowledge Build 1 — distill a proposed decision rationale from
     persisted conversation context when the operator's rationale is thin.

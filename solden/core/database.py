@@ -128,6 +128,7 @@ def _load_store_symbols() -> None:
     global ReconStore
     global EntityStore
     global DimensionStore
+    global PolicyProposalStore
     global PaymentStore
     global WebhookStore
     global DisputeStore
@@ -168,6 +169,7 @@ def _load_store_symbols() -> None:
     from solden.core.stores.recon_store import ReconStore as _ReconStore
     from solden.core.stores.entity_store import EntityStore as _EntityStore
     from solden.core.stores.dimension_store import DimensionStore as _DimensionStore
+    from solden.core.stores.policy_proposal_store import PolicyProposalStore as _PolicyProposalStore
     from solden.core.stores.payment_store import PaymentStore as _PaymentStore
     from solden.core.stores.webhook_store import WebhookStore as _WebhookStore
     from solden.core.stores.dispute_store import DisputeStore as _DisputeStore
@@ -239,6 +241,7 @@ def _load_store_symbols() -> None:
     ReconStore = _ReconStore
     EntityStore = _EntityStore
     DimensionStore = _DimensionStore
+    PolicyProposalStore = _PolicyProposalStore
     PaymentStore = _PaymentStore
     WebhookStore = _WebhookStore
     DisputeStore = _DisputeStore
@@ -1674,6 +1677,11 @@ class _SoldenDBBase:
             cur.execute("CREATE INDEX IF NOT EXISTS idx_dimension_aliases_lookup ON dimension_aliases(organization_id, alias)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_dimension_links_box ON dimension_links(organization_id, box_type, box_id)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_dimension_links_dim ON dimension_links(organization_id, dimension_id)")
+
+            # Policy proposals (tribal-knowledge Build 3) — agent-proposed
+            # standing rules from enacted behavior; advisory until accepted.
+            cur.execute(PolicyProposalStore.POLICY_PROPOSALS_TABLE_SQL)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_policy_proposals_org_status ON policy_proposals(organization_id, status, created_at DESC)")
             # Add entity_id to ap_items for entity-level routing
             self._ensure_column(cur, "ap_items", "entity_id", "TEXT")
             self._ensure_column(cur, "ap_items", "document_type", "TEXT DEFAULT 'invoice'")
@@ -1729,6 +1737,7 @@ def _get_db_impl_class():
             AuthStore,
             EntityStore,
             DimensionStore,
+            PolicyProposalStore,
             IntegrationStore,
             PolicyStore,
             MetricsStore,
