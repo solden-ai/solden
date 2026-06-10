@@ -237,6 +237,23 @@ def _extract_event_context(event: Dict[str, Any]) -> Dict[str, Any]:
         metadata.get("human_rationale"),
         payload.get("resolution_note"),
     )
+    # Solden's read of the thread (tribal-knowledge Build 1): a rationale the
+    # agent distilled from persisted conversation context. Surfaced under
+    # DISTINCT keys so machine prose can never pass as the operator's words.
+    # Status: machine_distilled until a human confirms (rationale_confirmed).
+    distilled_rationale = ""
+    distilled_status = ""
+    memory_event_block = (
+        payload.get("memory_event") if isinstance(payload.get("memory_event"), dict) else {}
+    )
+    me_type = str(memory_event_block.get("event_type") or "").strip()
+    if me_type in {"rationale_distilled", "rationale_confirmed"}:
+        distilled_rationale = _first_text(memory_event_block.get("rationale"))
+        distilled_status = (
+            "confirmed" if me_type == "rationale_confirmed" else "machine_distilled"
+        )
+        if me_type == "rationale_distilled":
+            human_rationale = ""
     return {
         "payload": payload,
         "response": response,
@@ -252,6 +269,8 @@ def _extract_event_context(event: Dict[str, Any]) -> Dict[str, Any]:
         "reason_codes": reason_codes,
         "channel": channel,
         "human_rationale": human_rationale,
+        "distilled_rationale": distilled_rationale,
+        "distilled_status": distilled_status,
     }
 
 
@@ -411,6 +430,10 @@ def _finalize_operator_view(event: Dict[str, Any], operator: Dict[str, Any]) -> 
     human_rationale = context.get("human_rationale")
     if human_rationale:
         enriched["human_rationale"] = human_rationale
+    # Solden's distilled read of the thread rides under its own keys.
+    if context.get("distilled_rationale"):
+        enriched["distilled_rationale"] = context.get("distilled_rationale")
+        enriched["distilled_status"] = context.get("distilled_status")
     return enriched
 
 
@@ -1153,6 +1176,8 @@ def normalize_operator_audit_event(event: Dict[str, Any]) -> Dict[str, Any]:
     row["operator_importance"] = operator.get("importance")
     row["operator_category"] = operator.get("category")
     row["operator_human_rationale"] = operator.get("human_rationale")
+    row["operator_distilled_rationale"] = operator.get("distilled_rationale")
+    row["operator_distilled_status"] = operator.get("distilled_status")
     row["operator_evidence_label"] = _first_text(
         _dict_value(operator.get("evidence")).get("label"),
         operator.get("evidence_label"),

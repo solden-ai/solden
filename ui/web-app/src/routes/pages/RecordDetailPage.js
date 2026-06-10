@@ -301,7 +301,7 @@ export default function RecordDetailPage({
         ? html`<${BankMatchPanel} api=${api} recordId=${recordId} item=${item} />`
         : null}
 
-      <${WorkflowTimeline} events=${timeline} />
+      <${WorkflowTimeline} events=${timeline} api=${api} recordId=${recordId} toast=${toast} onRefresh=${loadDetail} />
     </div>
   `;
 }
@@ -1329,8 +1329,23 @@ function BankMatchPanel({ api, recordId, item }) {
 
 // ─── Workflow timeline ──────────────────────────────────────────────
 
-function WorkflowTimeline({ events }) {
+function WorkflowTimeline({ events, api, recordId, toast, onRefresh }) {
   const safeEvents = Array.isArray(events) ? events : [];
+
+  // Confirm Solden's distilled read of the thread — promotes it to the
+  // operator's confirmed rationale via a follow-up memory event.
+  const confirmDistilled = async (auditEventId) => {
+    try {
+      await api(`/api/workspace/ap-items/${encodeURIComponent(recordId)}/rationale/confirm`, {
+        method: 'POST',
+        body: { audit_event_id: auditEventId },
+      });
+      if (toast) toast('Rationale confirmed');
+      if (onRefresh) await onRefresh();
+    } catch (err) {
+      if (toast) toast(`Could not confirm: ${err?.message || 'request failed'}`, 'error');
+    }
+  };
 
   if (safeEvents.length === 0) {
     return html`
@@ -1377,6 +1392,19 @@ function WorkflowTimeline({ events }) {
                 <div class="cl-record-timeline-rationale" title="The operator's recorded reason for this decision">
                   <span class="cl-record-timeline-rationale-key">why</span>
                   <span class="cl-record-timeline-rationale-val">${event.operator_human_rationale}</span>
+                </div>` : null}
+              ${event.operator_distilled_rationale ? html`
+                <div class="cl-record-timeline-rationale cl-record-timeline-distilled"
+                     title="Distilled by Solden from the linked conversation. Not the operator's words until confirmed.">
+                  <span class="cl-record-timeline-rationale-key">
+                    ${event.operator_distilled_status === 'confirmed' ? 'why (confirmed)' : "Solden's read"}
+                  </span>
+                  <span class="cl-record-timeline-rationale-val">${event.operator_distilled_rationale}</span>
+                  ${event.operator_distilled_status === 'machine_distilled' && api ? html`
+                    <button type="button" class="cl-record-timeline-confirm-btn"
+                            onClick=${() => confirmDistilled(event.id)}>
+                      Confirm
+                    </button>` : null}
                 </div>` : null}
               ${event.hash ? html`
                 <div class="cl-record-timeline-chain" title="Append-only hash chain. The audit trail proves its own integrity.">

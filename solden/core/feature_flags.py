@@ -65,6 +65,18 @@ def is_teams_enabled() -> bool:
     return _env_flag("FEATURE_TEAMS_ENABLED", default=False)
 
 
+def is_rationale_distillation_enabled() -> bool:
+    """Tribal-knowledge Build 1 — distill a proposed decision rationale from
+    persisted conversation context when the operator's rationale is thin.
+
+    Default ``True``: operator-facing prose from existing data (same role
+    class as exception generation), strictly post-decision and best-effort.
+    ``FEATURE_RATIONALE_DISTILLATION=false`` is the kill switch (cost
+    control or rollout caution).
+    """
+    return _env_flag("FEATURE_RATIONALE_DISTILLATION", default=True)
+
+
 def is_slack_approve_rationale_enabled() -> bool:
     """Optional free-text rationale modal on the Slack Approve button.
 

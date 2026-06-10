@@ -14,6 +14,56 @@ from solden.core.utils import safe_int
 logger = logging.getLogger(__name__)
 
 
+def _spawn_rationale_distillation(
+    runtime,
+    *,
+    ap_item_id: str,
+    audit_row: Optional[Dict[str, Any]],
+    decision_intent: str,
+    existing_rationale: Any,
+    correlation_id: Optional[str] = None,
+) -> None:
+    """Fire-and-forget: distill a proposed why when the rationale is thin.
+
+    Strictly post-decision and best-effort — any failure here (no running
+    loop, distiller error) is logged and never affects the decision response.
+    """
+    import asyncio
+
+    from solden.services.rationale_distillation import (
+        distill_rationale_for_decision,
+        is_thin_rationale,
+    )
+
+    try:
+        if not is_thin_rationale(existing_rationale):
+            return
+        task = asyncio.create_task(distill_rationale_for_decision(
+            runtime.db,
+            organization_id=str(runtime.organization_id or ""),
+            ap_item_id=ap_item_id,
+            decision_audit_event_id=(audit_row or {}).get("id"),
+            decision_intent=decision_intent,
+            actor_id=str(runtime.actor_id or "") or None,
+            existing_rationale=existing_rationale,
+            correlation_id=correlation_id,
+        ))
+
+        def _log_result(t: "asyncio.Task") -> None:
+            exc = t.exception()
+            if exc is not None:
+                logger.warning(
+                    "[rationale_distillation] background task failed for %s: %s",
+                    ap_item_id, exc,
+                )
+
+        task.add_done_callback(_log_result)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug(
+            "[rationale_distillation] spawn skipped for %s: %s", ap_item_id, exc
+        )
+
+
 def _base_context(intent: str, runtime, payload: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     normalized_payload = payload if isinstance(payload, dict) else {}
     action_context = runtime.create_ap_action_context(normalized_payload)
@@ -377,6 +427,15 @@ class ApproveInvoiceHandler(APIntentHandler):
             idempotency_key=idempotency_key,
         )
         response["audit_event_id"] = (audit_row or {}).get("id")
+        if approved:
+            _spawn_rationale_distillation(
+                runtime,
+                ap_item_id=ap_item_id,
+                audit_row=audit_row,
+                decision_intent=self.intent,
+                existing_rationale=justification,
+                correlation_id=correlation_id,
+            )
         return response
 
 
@@ -482,6 +541,15 @@ class RequestInfoHandler(APIntentHandler):
             idempotency_key=idempotency_key,
         )
         response["audit_event_id"] = (audit_row or {}).get("id")
+        if moved_to_needs_info:
+            _spawn_rationale_distillation(
+                runtime,
+                ap_item_id=ap_item_id,
+                audit_row=audit_row,
+                decision_intent=self.intent,
+                existing_rationale=payload.get("reason"),
+                correlation_id=correlation_id,
+            )
         return response
 
 
@@ -1042,6 +1110,15 @@ class RejectInvoiceHandler(APIntentHandler):
             idempotency_key=idempotency_key,
         )
         response["audit_event_id"] = (audit_row or {}).get("id")
+        if rejected:
+            _spawn_rationale_distillation(
+                runtime,
+                ap_item_id=ap_item_id,
+                audit_row=audit_row,
+                decision_intent=self.intent,
+                existing_rationale=payload.get("reason"),
+                correlation_id=correlation_id,
+            )
         return response
 
 

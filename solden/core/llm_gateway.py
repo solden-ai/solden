@@ -81,6 +81,12 @@ class LLMAction(str, Enum):
     # Module 2 spec line 100 — "Ask the agent" free-form Q&A on the
     # exception detail page. Returns within 10s for typical questions.
     ASK_THE_AGENT = "ask_the_agent"
+    # Tribal-knowledge Build 1 — distill a PROPOSED decision rationale from
+    # persisted conversation context (email excerpt + timeline crumbs) when the
+    # operator's rationale is thin. Strictly extractive: returns INSUFFICIENT
+    # rather than inventing a why. Result is stored machine_distilled and
+    # requires human confirm before it counts as the operator's rationale.
+    DISTILL_DECISION_RATIONALE = "distill_decision_rationale"
 
 
 @dataclass(frozen=True)
@@ -145,6 +151,9 @@ ACTION_REGISTRY: Dict[LLMAction, ActionConfig] = {
     # spec acceptance line ("returns within 10 seconds for typical
     # questions").
     LLMAction.ASK_THE_AGENT:          ActionConfig(max_output_tokens=1500, model_tier="sonnet", timeout_seconds=15),
+    # Distills the why behind a decision from persisted excerpts. Cheap tier —
+    # extractive prose only; the decision is already made and rules made it.
+    LLMAction.DISTILL_DECISION_RATIONALE: ActionConfig(max_output_tokens=400, model_tier="haiku", timeout_seconds=10),
 }
 
 

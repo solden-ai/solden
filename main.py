@@ -845,6 +845,9 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         r"^/api/workspace/ap-items/[^/]+/detail$",
         # Module 2 — Ask the agent Q&A surface.
         r"^/api/workspace/ap-items/[^/]+/ask$",
+        # Tribal-knowledge Build 1 — confirm a machine-distilled rationale
+        # (promotes Solden's read of the thread to human-confirmed).
+        r"^/api/workspace/ap-items/[^/]+/rationale/confirm$",
         # Bank-match status for one AP item (post-AP expansion, route-gated off by default).
         r"^/api/workspace/ap-items/[^/]+/bank-match$",
         # Sovereignty primitive: portable per-Box export (manifesto §"The substrate is yours").

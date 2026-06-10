@@ -3200,6 +3200,27 @@
   line-height: 1.4;
 }
 
+/* Solden's distilled read of the thread — provisional until confirmed, so the
+   left edge is dashed (vs the solid edge of the operator's own rationale). */
+.cl-record-timeline-distilled {
+  border-left-style: dashed;
+}
+.cl-record-timeline-confirm-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border: none;
+  border-radius: 4px;
+  background: var(--cl-teal-500);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cl-record-timeline-confirm-btn:hover {
+  background: var(--cl-teal-600);
+}
+
 /* Policy-version chip on each timeline event. v83 stamps a policy
    version on every state-changing audit_event; surfacing it makes the
    "policy that authorized this transition" visible to the operator. */

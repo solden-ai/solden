@@ -147,4 +147,46 @@ describe('RecordDetailPage', () => {
       expect(screen.getByText('Route to CFO delegate')).toBeTruthy();
     });
   });
+  it("renders Solden's distilled rationale with a confirm affordance", async () => {
+    const api = vi.fn(async (path) => {
+      if (String(path).startsWith('/api/workspace/ap-items/AP-4/detail')) {
+        return {
+          item: {
+            id: 'AP-4',
+            vendor_name: 'Acme Supplies',
+            amount: 100,
+            currency: 'USD',
+            invoice_number: 'INV-4',
+            state: 'approved',
+          },
+          reasoning: {},
+          match: {},
+          actions: [],
+          timeline: [{
+            id: 'evt-distilled-1',
+            operator_title: 'Rationale distilled',
+            occurred_at: '2026-06-09T10:00:00Z',
+            operator_distilled_rationale: 'Approved because it covers the Q3 true-up Dana signed off on.',
+            operator_distilled_status: 'machine_distilled',
+          }],
+        };
+      }
+      return {};
+    });
+
+    render(h(RecordDetailPage, {
+      api,
+      orgId: 'org-test',
+      recordId: 'AP-4',
+      bootstrap: {},
+      navigate: () => {},
+      toast: () => {},
+    }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Solden's read")).toBeTruthy();
+      expect(screen.getByText('Approved because it covers the Q3 true-up Dana signed off on.')).toBeTruthy();
+      expect(screen.getByText('Confirm')).toBeTruthy();
+    });
+  });
 });

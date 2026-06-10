@@ -35,7 +35,7 @@ import json
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from solden.core.ap_states import APState, normalize_state, VALID_TRANSITIONS
@@ -653,4 +653,84 @@ def get_ap_item_detail(
         "memory": memory,
         "surface_memory": surface_memory,
         "decision_ledger": decision_ledger,
+    }
+
+
+@router.post("/ap-items/{ap_item_id}/rationale/confirm")
+def confirm_distilled_rationale(
+    ap_item_id: str,
+    body: Dict[str, Any],
+    user: TokenData = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Promote a machine-distilled rationale to human-confirmed.
+
+    The distilled why (``rationale_distilled``, machine_distilled) never counts
+    as the operator's words until a human clicks confirm. The audit chain is
+    append-only, so confirmation is a follow-up memory event
+    (``rationale_confirmed``) by the confirming user; surfaces merge the pair.
+    """
+    organization_id = require_org(user)
+    db = get_db()
+    item = _resolve_item_for_detail(
+        db, organization_id=organization_id, ap_item_ref=ap_item_id
+    )
+    resolved_id = str(item.get("id") or ap_item_id)
+
+    audit_event_id = str((body or {}).get("audit_event_id") or "").strip()
+    if not audit_event_id:
+        raise HTTPException(status_code=400, detail="audit_event_id_required")
+
+    # Locate the distilled event on THIS box in THIS org — cross-tenant or
+    # cross-box ids 404, never leak.
+    distilled = None
+    try:
+        for row in db.list_audit_events(
+            organization_id,
+            event_types=["memory_event:rationale_distilled"],
+            box_id=resolved_id,
+        ) or []:
+            if str(row.get("id") or "") == audit_event_id:
+                distilled = row
+                break
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[ap_item_detail] rationale lookup failed: %s", exc)
+    if not distilled:
+        raise HTTPException(status_code=404, detail="distilled_rationale_not_found")
+
+    payload = distilled.get("payload_json")
+    if isinstance(payload, str):
+        payload = _safe_json(payload) or {}
+    memory_event = (payload or {}).get("memory_event") if isinstance(payload, dict) else {}
+    distilled_text = str(
+        ((memory_event or {}).get("rationale"))
+        or distilled.get("decision_reason")
+        or ""
+    ).strip()
+    if not distilled_text:
+        raise HTTPException(status_code=404, detail="distilled_rationale_not_found")
+
+    from solden.services.memory_events import commit_memory_event
+
+    actor = str(getattr(user, "email", "") or getattr(user, "user_id", "") or "user")
+    row = commit_memory_event(
+        db,
+        box_type="ap_item",
+        box_id=resolved_id,
+        organization_id=organization_id,
+        event_type="rationale_confirmed",
+        source="workspace",
+        actor_type="user",
+        actor_id=actor,
+        actor_label=actor,
+        rationale=distilled_text,
+        summary=f"Confirmed Solden's read of the thread: {distilled_text}"[:500],
+        human_confirmation_status="confirmed",
+        source_refs={"distilled_audit_event_id": audit_event_id},
+        idempotency_key=f"rationale-confirm:{resolved_id}:{audit_event_id}",
+    )
+    return {
+        "status": "confirmed",
+        "ap_item_id": resolved_id,
+        "rationale": distilled_text,
+        "event": {"id": (row or {}).get("id")},
     }

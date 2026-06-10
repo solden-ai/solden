@@ -296,7 +296,9 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         # 2026-06-09: H5 dimension rollup read API — GET /api/workspace/dimensions
         # and /api/workspace/dimensions/{id}/records ("everything charged to CC 402").
         # Cap 477 -> 479.
-        assert len(paths) <= 479
+        # 2026-06-09: tribal-knowledge Build 1 — POST /api/workspace/ap-items/{id}/
+        # rationale/confirm (promote a machine-distilled rationale). Cap 479 -> 480.
+        assert len(paths) <= 480
         assert not any(path.startswith("/config/") for path in paths)
         assert "/erp/status/{organization_id}" not in paths
         assert "/erp/quickbooks/connect" not in paths
@@ -313,6 +315,7 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         assert "/api/workspace/box/{box_type}/{box_id}/memory" in paths
         assert "/api/workspace/dimensions" in paths
         assert "/api/workspace/dimensions/{dimension_id}/records" in paths
+        assert "/api/workspace/ap-items/{ap_item_id}/rationale/confirm" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/approve" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/reject" in paths
