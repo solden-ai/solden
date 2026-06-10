@@ -329,7 +329,7 @@ sap.ui.define([
             request_info: "request-info"
         },
 
-        _dispatchAction: async function (sAction, sBusyText) {
+        _dispatchAction: async function (sAction, sBusyText, sRationale) {
             const oBoxModel = this.getOwnerComponent().getModel("box");
             const oSessionModel = this.getOwnerComponent().getModel("session");
             const sApItemId = oBoxModel.getProperty("/ap_item_id");
@@ -356,12 +356,26 @@ sap.ui.define([
                         "Content-Type": "application/json",
                         "Accept": "application/json"
                     },
-                    body: JSON.stringify({}),
+                    body: JSON.stringify(sRationale ? { reason: sRationale } : {}),
                     credentials: "include"
                 });
                 if (!oResponse.ok) {
                     const sBody = await oResponse.text().catch(() => "");
                     throw new Error(sAction + "_failed_" + oResponse.status + ": " + sBody.slice(0, 200));
+                }
+                // High-signal elicitation (tribal-knowledge Build 2): the
+                // backend blocks an unusual action with ONE contextual
+                // question — a 200 whose result.status === "blocked". Ask
+                // it and retry with the operator's why attached. The
+                // server-side gate is the un-bypassable backstop; this
+                // dialog is the surface answering it.
+                const oData = await oResponse.json().catch(() => ({}));
+                const oResult = (oData && oData.result) || {};
+                if (oResult.status === "blocked"
+                        && (oResult.reason === "high_signal_rationale_required"
+                            || oResult.reason === "approval_rationale_required")) {
+                    this._openElicitDialog(sAction, sBusyText, oResult.question);
+                    return;
                 }
                 MessageToast.show(sAction === "approve" ? "Approved." : "Rejected.");
                 // Re-fetch the Box to reflect the new state.
@@ -371,6 +385,49 @@ sap.ui.define([
                 console.error("[clearledgr] " + sAction + " failed", err);
                 this._showError(sAction + " failed: " + (err.message || err));
             }
+        },
+
+        // One question, one answer: collect the why Solden asked for, then
+        // retry the same action with the rationale attached.
+        _openElicitDialog: function (sAction, sBusyText, sQuestion) {
+            const that = this;
+            sap.ui.require(
+                ["sap/m/Dialog", "sap/m/TextArea", "sap/m/Button", "sap/m/Text"],
+                function (Dialog, TextArea, Button, Text) {
+                    const oTextArea = new TextArea({
+                        width: "100%",
+                        rows: 3,
+                        placeholder: "Why is this OK?"
+                    });
+                    const oDialog = new Dialog({
+                        title: "Solden needs the why",
+                        contentWidth: "26rem",
+                        content: [
+                            new Text({
+                                text: sQuestion
+                                    || "Solden flagged this action as unusual — why is it OK?"
+                            }).addStyleClass("sapUiSmallMargin"),
+                            oTextArea
+                        ],
+                        beginButton: new Button({
+                            text: "Submit",
+                            type: "Emphasized",
+                            press: function () {
+                                const sWhy = String(oTextArea.getValue() || "").trim();
+                                if (!sWhy) return;
+                                oDialog.close();
+                                that._dispatchAction(sAction, sBusyText, sWhy);
+                            }
+                        }),
+                        endButton: new Button({
+                            text: "Cancel",
+                            press: function () { oDialog.close(); }
+                        }),
+                        afterClose: function () { oDialog.destroy(); }
+                    });
+                    oDialog.open();
+                }
+            );
         },
 
         onOpenInSoldenPress: function () {

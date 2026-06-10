@@ -164,7 +164,7 @@ test('approved or ready-to-post invoices without an ERP connection do not expose
   assert.equal(getAgentExecutionMode('approved', disconnectedApproved), 'operator_attention');
   assert.match(
     getWorkStateNotice('approved', 'invoice', disconnectedApproved),
-    /connect quickbooks, xero, netsuite, or sap/i,
+    /connect a supported erp/i,
   );
 });
 

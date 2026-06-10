@@ -95,6 +95,23 @@
             eventEl.textContent = summary ? verb + ' — ' + summary : verb;
             li.appendChild(timeEl);
             li.appendChild(eventEl);
+            // The why behind the decision: the operator's own rationale, or
+            // Solden's distilled read of the thread (tribal-knowledge Build 1;
+            // confirmable in the workspace, rendered read-only here).
+            const why = String(event.human_rationale || '').trim();
+            const distilled = String(event.distilled_rationale || '').trim();
+            if (why) {
+                const whyEl = document.createElement('span');
+                whyEl.className = 'cl-why';
+                whyEl.textContent = 'why: ' + why;
+                li.appendChild(whyEl);
+            } else if (distilled) {
+                const distEl = document.createElement('span');
+                distEl.className = 'cl-why cl-why-distilled';
+                distEl.textContent = (event.distilled_status === 'confirmed'
+                    ? 'why (confirmed): ' : "Solden's read: ") + distilled;
+                li.appendChild(distEl);
+            }
             list.appendChild(li);
         });
         show('cl-timeline-section');
@@ -301,22 +318,59 @@
         needs_info: 'request-info',
     };
 
-    async function dispatchAction(action) {
+    // High-signal elicitation (tribal-knowledge Build 2): the backend blocks
+    // an unusual action with ONE contextual question. Show it, collect the
+    // why, retry the same action with the rationale attached. The block is
+    // a 200 response whose result.status === 'blocked' — the server-side
+    // gate is the backstop; this is the surface that answers it.
+    let pendingElicitAction = null;
+
+    function showElicit(action, question) {
+        pendingElicitAction = action;
+        setText('cl-elicit-question',
+            question || 'Solden flagged this action as unusual — why is it OK?');
+        const reasonEl = $('cl-elicit-reason');
+        if (reasonEl) reasonEl.value = '';
+        show('cl-elicit');
+        if (reasonEl) reasonEl.focus();
+    }
+
+    function hideElicit() {
+        pendingElicitAction = null;
+        hide('cl-elicit');
+    }
+
+    function blockedElicitation(data) {
+        const result = (data && data.result) || {};
+        if (result.status !== 'blocked') return null;
+        const reason = String(result.reason || '');
+        if (reason !== 'high_signal_rationale_required'
+            && reason !== 'approval_rationale_required') return null;
+        return result.question || '';
+    }
+
+    async function dispatchAction(action, rationale) {
         if (!config.billId || !config.accountId) return;
         const segment = ACTION_PATH_SEGMENT[action];
         if (!segment) return;
-        const buttons = document.querySelectorAll('#cl-actions .cl-btn');
+        const buttons = document.querySelectorAll('#cl-actions .cl-btn, #cl-elicit .cl-btn');
         buttons.forEach((b) => { b.setAttribute('disabled', ''); });
         try {
             const path = '/extension/ap-items/by-netsuite-bill/'
                 + encodeURIComponent(config.billId)
                 + '/' + segment
                 + '?account_id=' + encodeURIComponent(config.accountId);
-            await api(path, {
+            const data = await api(path, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({}),
+                body: JSON.stringify(rationale ? { reason: rationale } : {}),
             });
+            const question = blockedElicitation(data);
+            if (question !== null) {
+                showElicit(action, question);
+                return;
+            }
+            hideElicit();
             await load();  // refresh the panel state
         } catch (err) {
             // eslint-disable-next-line no-console
@@ -328,6 +382,17 @@
     }
 
     document.addEventListener('click', (e) => {
+        if (e.target && e.target.id === 'cl-elicit-submit') {
+            const reasonEl = $('cl-elicit-reason');
+            const rationale = reasonEl ? String(reasonEl.value || '').trim() : '';
+            if (!rationale || !pendingElicitAction) return;
+            dispatchAction(pendingElicitAction, rationale);
+            return;
+        }
+        if (e.target && e.target.id === 'cl-elicit-cancel') {
+            hideElicit();
+            return;
+        }
         const target = e.target.closest('[data-action]');
         if (!target) return;
         const action = target.getAttribute('data-action');

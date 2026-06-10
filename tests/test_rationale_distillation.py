@@ -299,3 +299,39 @@ def test_timeline_surfaces_distilled_under_distinct_keys(db):
     assert row["operator_distilled_status"] == "machine_distilled"
     # Machine prose must NEVER pass as the operator's own words.
     assert not row.get("operator_human_rationale")
+
+
+def test_surface_injected_default_reasons_are_thin():
+    """Surface default reasons are machine labels, never an operator's why.
+
+    Regression for the Build 2 bypass: ``approved_in_netsuite_panel`` (26
+    chars, not in the stock list) passed the thin check, so the high-signal
+    elicitation backstop never fired for ERP-panel approvals — and the
+    distiller never proposed a read for them either. The shape match
+    (verb + in/from/via + surface) covers panels that don't exist yet.
+    """
+    from solden.services.rationale_distillation import is_thin_rationale
+
+    surface_defaults = [
+        "approved_in_netsuite_panel",
+        "rejected_in_netsuite_panel",
+        "info_requested_from_netsuite_panel",
+        "approved_in_sap_fiori_panel",
+        "rejected_in_sap_fiori_panel",
+        "info_requested_from_sap_fiori_panel",
+        "approved_in_sage_intacct_panel",
+        "rejected_in_sage_intacct_panel",
+        "info_requested_from_sage_intacct_panel",
+        # a hypothetical future surface must be caught by shape, not list
+        "approved_via_acme_erp_panel",
+    ]
+    for token in surface_defaults:
+        assert is_thin_rationale(token), f"surface default escaped: {token}"
+
+    # Real whys — including ones that mention surfaces — must NOT be flagged.
+    real = [
+        "Approved in NetSuite after Dana verified the PO on the call.",
+        "Quarterly true-up; CFO signed off by email.",
+    ]
+    for text in real:
+        assert not is_thin_rationale(text), f"real why misflagged: {text}"

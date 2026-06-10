@@ -170,6 +170,23 @@
             body.textContent = String(event.summary || event.message || event.event_type || 'event').replace(/_/g, ' ');
             li.appendChild(time);
             li.appendChild(body);
+            // The why behind the decision: the operator's own rationale, or
+            // Solden's distilled read of the thread (tribal-knowledge Build 1;
+            // confirmable in the workspace, rendered read-only here).
+            const why = String(event.human_rationale || '').trim();
+            const distilled = String(event.distilled_rationale || '').trim();
+            if (why) {
+                const whyEl = document.createElement('span');
+                whyEl.className = 'cl-why';
+                whyEl.textContent = 'why: ' + why;
+                li.appendChild(whyEl);
+            } else if (distilled) {
+                const distEl = document.createElement('span');
+                distEl.className = 'cl-why cl-why-distilled';
+                distEl.textContent = (event.distilled_status === 'confirmed'
+                    ? 'why (confirmed): ' : "Solden's read: ") + distilled;
+                li.appendChild(distEl);
+            }
             list.appendChild(li);
         });
         show('cl-timeline-section');
@@ -270,6 +287,24 @@
             });
             if (!res.ok) {
                 setActionStatus('Solden returned ' + res.status + '.', true);
+                return;
+            }
+            const data = await res.json().catch(() => ({}));
+            // High-signal elicitation (tribal-knowledge Build 2): the backend
+            // blocks an unusual action with ONE contextual question — a 200
+            // whose result.status === 'blocked'. Surface the question in the
+            // status line and focus the reason box; the operator answers
+            // there and clicks the action again.
+            const result = (data && data.result) || {};
+            if (result.status === 'blocked'
+                    && (result.reason === 'high_signal_rationale_required'
+                        || result.reason === 'approval_rationale_required')) {
+                setActionStatus(
+                    result.question
+                        || 'Solden flagged this action as unusual — add the why below and retry.',
+                    true
+                );
+                if (reasonEl) reasonEl.focus();
                 return;
             }
             setActionStatus('Action recorded.', false);

@@ -20,7 +20,7 @@ test('gmail entrypoint stays branded and never auto-triggers OAuth', () => {
   // panel title + the no-auto-auth invariant are the surviving contract.
   const source = read(INBOXSDK_SOURCE);
 
-  assert.match(source, /title:\s*'Solden AP'/);
+  assert.match(source, /title:\s*'Solden'/);
   assert.doesNotMatch(source, /Solden Ops/);
   assert.doesNotMatch(source, /triggerAutoAuth\(/);
 });

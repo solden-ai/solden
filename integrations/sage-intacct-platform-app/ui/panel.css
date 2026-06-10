@@ -222,3 +222,14 @@ a {
     text-decoration: none;
 }
 a:hover { color: var(--cl-teal-600); }
+
+/* The why line under a timeline event: the operator's rationale, or
+   Solden's distilled read (teal accent, read-only on this surface). */
+.cl-why {
+    display: block;
+    color: var(--cl-ink-secondary);
+    font-size: 11px;
+    font-style: italic;
+    padding-left: 2px;
+}
+.cl-why-distilled { color: var(--cl-teal-600); }

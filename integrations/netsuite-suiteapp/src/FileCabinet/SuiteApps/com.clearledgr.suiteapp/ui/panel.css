@@ -197,3 +197,41 @@ body {
 .cl-empty { text-align: center; padding: 24px 0; }
 .cl-error .cl-error-text { color: var(--cl-error); font-size: 12px; margin: 0 0 10px; }
 .cl-muted { color: var(--cl-ink-secondary); font-size: 11px; }
+
+/* The why line under a timeline event: the operator's rationale, or
+   Solden's distilled read (teal accent, read-only on this surface). */
+.cl-timeline li { flex-wrap: wrap; }
+.cl-why {
+    flex: 0 0 100%;
+    color: var(--cl-ink-secondary);
+    font-size: 11px;
+    font-style: italic;
+    padding-left: 2px;
+}
+.cl-why-distilled { color: var(--cl-teal-600); }
+
+/* High-signal elicitation block (Build 2): one question, one answer. */
+.cl-elicit {
+    border: 1px solid var(--cl-border-hover);
+    border-left: 3px solid var(--cl-teal-500);
+    border-radius: 6px;
+    padding: 12px;
+    background: #F8FAFC;
+}
+.cl-elicit-question {
+    margin: 0 0 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cl-ink);
+}
+.cl-elicit-reason {
+    font: inherit;
+    font-size: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--cl-border-hover);
+    border-radius: 6px;
+    padding: 8px;
+    margin-bottom: 8px;
+    resize: vertical;
+}

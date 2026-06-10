@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,17 @@ _STOCK_TOKENS = {
     "approved_in_gmail", "rejected_in_gmail",
 }
 
+# Surface-injected default reasons are machine labels, never an operator's
+# why — e.g. ``approved_in_netsuite_panel``, ``info_requested_from_sap_fiori_
+# panel``. Matching the SHAPE (verb + in/from/via + surface, snake_case, no
+# spaces) instead of enumerating surfaces: the enumeration above missed every
+# ERP panel because it only listed the surfaces in mind on the day it was
+# written.
+_SURFACE_DEFAULT_RE = re.compile(
+    r"^(approved|rejected|declined|info_requested|requested_info|escalated)"
+    r"_(in|from|via)_[a-z0-9_]+$"
+)
+
 _INSUFFICIENT_TOKEN = "INSUFFICIENT"
 _MAX_CONTEXT_CHARS = 12_000
 _MAX_TIMELINE_EVENTS = 40
@@ -48,7 +60,10 @@ def is_thin_rationale(text: Any) -> bool:
     s = " ".join(str(text or "").strip().split())
     if not s:
         return True
-    if s.lower().strip(".!") in _STOCK_TOKENS:
+    token = s.lower().strip(".!")
+    if token in _STOCK_TOKENS:
+        return True
+    if _SURFACE_DEFAULT_RE.match(token):
         return True
     return len(s) < THIN_RATIONALE_MIN_CHARS
 

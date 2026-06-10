@@ -405,6 +405,6 @@ test('full-page Gmail routes collapse the thread sidebar rail while active', () 
 
   assert.equal(source.includes('async function setSidebarPanelOpen(shouldOpen)'), true);
   assert.equal(source.includes('void setSidebarPanelOpen(false);'), true);
-  assert.equal(source.includes("if (!hash.includes('clearledgr/')) {"), true);
+  assert.equal(source.includes("if (!hash.includes('solden/') && !hash.includes('clearledgr/')) {"), true);
   assert.equal(source.includes('void setSidebarPanelOpen(true);'), true);
 });

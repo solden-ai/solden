@@ -131,3 +131,13 @@
     margin: 1rem;
     font-size: 0.75rem;
 }
+
+/* The why line under a timeline event: the operator's rationale, or
+   Solden's distilled read (teal accent, read-only on this surface). */
+.cl-timeline-why {
+    font-size: 0.75rem;
+    font-style: italic;
+    color: #6B7280;
+    padding-left: 0.125rem;
+}
+.cl-timeline-why-distilled { color: #0D9488; }

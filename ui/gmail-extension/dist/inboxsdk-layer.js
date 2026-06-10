@@ -1,4 +1,4 @@
-/* clearledgr-source-fingerprint:cee330b14b601bbb143a43b31fc383c57555bd48b0052d5157bbe700a3e8b959 */
+/* clearledgr-source-fingerprint:7124f79f92f20403b37732e2c1b4132f53fd659a54453bc40021e7a7d1f87d00 */
 (() => {
   var __create = Object.create;
   var __getProtoOf = Object.getPrototypeOf;
@@ -59334,6 +59334,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   font-weight: 600; cursor: pointer; padding: 4px 0; font-family: inherit;
 }
 .cl-ts-timeline-why { font-weight: 400; color: #5C6B7A; }
+.cl-ts-timeline-distilled { display: block; font-size: 11px; font-style: italic; color: #0D9488; margin-top: 2px; }
 .cl-ts-timeline-next { display: block; font-size: 11px; color: #00A85F; font-weight: 500; margin-top: 2px; }
 .cl-ts-linked-box {
   display: flex; align-items: center; gap: 8px; padding: 8px 10px;
@@ -60230,9 +60231,12 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
           <ul class="cl-ts-timeline">
             ${events.map((e3) => {
       const what = humanizeEventType(e3.summary || e3.decision_reason || e3.event_type, { fallback: "Action" });
+      const operatorWhy = String(e3.human_rationale || "").trim();
       const rawWhy = e3.reasoning_summary || e3.reasoning || e3.reason || "";
       const humanizedWhy = humanizeEventType(rawWhy);
-      const why = humanizedWhy && humanizedWhy !== what ? humanizedWhy : "";
+      const why = operatorWhy || (humanizedWhy && humanizedWhy !== what ? humanizedWhy : "");
+      const distilled = !operatorWhy ? String(e3.distilled_rationale || "").trim() : "";
+      const distilledLabel = e3.distilled_status === "confirmed" ? "why (confirmed)" : "Solden's read";
       const next = e3.next_action || e3.next_step || "";
       const isAgent = (e3.actor || e3.actor_type || "") !== "user";
       const auditTs = String(e3.ts || e3.created_at || "").slice(0, 16).replace("T", " ");
@@ -60241,6 +60245,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
                   ${isAgent ? m3`<img src="${agentIconUrl()}" alt="agent" class="cl-ts-agent-icon" />` : ""}
                   <strong>${what}</strong>
                   ${why ? m3`<span class="cl-ts-timeline-why"> — ${why}</span>` : ""}
+                  ${distilled ? m3`<span class="cl-ts-timeline-distilled">${distilledLabel}: ${distilled}</span>` : ""}
                   ${next ? m3`<span class="cl-ts-timeline-next">Next: ${next}</span>` : ""}
                   <span class="cl-ts-timeline-time">${formatTimeAgo(e3.ts || e3.created_at)}</span>
                 </li>

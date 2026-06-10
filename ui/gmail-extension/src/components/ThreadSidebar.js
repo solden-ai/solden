@@ -132,6 +132,7 @@ const THREAD_SIDEBAR_CSS = `
   font-weight: 600; cursor: pointer; padding: 4px 0; font-family: inherit;
 }
 .cl-ts-timeline-why { font-weight: 400; color: #5C6B7A; }
+.cl-ts-timeline-distilled { display: block; font-size: 11px; font-style: italic; color: #0D9488; margin-top: 2px; }
 .cl-ts-timeline-next { display: block; font-size: 11px; color: #00A85F; font-weight: 500; margin-top: 2px; }
 .cl-ts-linked-box {
   display: flex; align-items: center; gap: 8px; padding: 8px 10px;
@@ -1069,9 +1070,19 @@ function AgentActionsSection({ item, auditEvents }) {
               );
               // Skip "why" if it is identical to "what" (the backend sometimes
               // fills reason with the same snake_case token as event_type).
+              // The operator's own rationale wins over the generic reason.
+              const operatorWhy = String(e.human_rationale || '').trim();
               const rawWhy = e.reasoning_summary || e.reasoning || e.reason || '';
               const humanizedWhy = humanizeEventType(rawWhy);
-              const why = humanizedWhy && humanizedWhy !== what ? humanizedWhy : '';
+              const why = operatorWhy
+                || (humanizedWhy && humanizedWhy !== what ? humanizedWhy : '');
+              // Solden's distilled read of the thread (tribal-knowledge
+              // Build 1) — shown when the operator left no real why.
+              // Confirmable in the workspace; rendered read-only here.
+              const distilled = !operatorWhy
+                ? String(e.distilled_rationale || '').trim() : '';
+              const distilledLabel = e.distilled_status === 'confirmed'
+                ? 'why (confirmed)' : "Solden's read";
               const next = e.next_action || e.next_step || '';
               const isAgent = (e.actor || e.actor_type || '') !== 'user';
               // data-audit-ts carries the full timestamp (up to minutes) so the
@@ -1082,6 +1093,7 @@ function AgentActionsSection({ item, auditEvents }) {
                   ${isAgent ? html`<img src="${agentIconUrl()}" alt="agent" class="cl-ts-agent-icon" />` : ''}
                   <strong>${what}</strong>
                   ${why ? html`<span class="cl-ts-timeline-why"> — ${why}</span>` : ''}
+                  ${distilled ? html`<span class="cl-ts-timeline-distilled">${distilledLabel}: ${distilled}</span>` : ''}
                   ${next ? html`<span class="cl-ts-timeline-next">Next: ${next}</span>` : ''}
                   <span class="cl-ts-timeline-time">${formatTimeAgo(e.ts || e.created_at)}</span>
                 </li>

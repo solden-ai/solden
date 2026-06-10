@@ -57,6 +57,19 @@
                 <button class="cl-btn cl-btn-ghost" data-action="needs_info">Request info</button>
             </section>
 
+            <!-- High-signal elicitation (tribal-knowledge Build 2): the backend
+                 blocks an unusual action with ONE contextual question; answer
+                 it here and the action retries with the rationale. -->
+            <section id="cl-elicit" class="cl-section cl-elicit cl-hidden">
+                <p class="cl-elicit-question" id="cl-elicit-question"></p>
+                <textarea id="cl-elicit-reason" class="cl-elicit-reason" rows="3"
+                          placeholder="Why is this OK?"></textarea>
+                <div class="cl-actions">
+                    <button class="cl-btn cl-btn-primary" id="cl-elicit-submit">Submit</button>
+                    <button class="cl-btn cl-btn-ghost" id="cl-elicit-cancel">Cancel</button>
+                </div>
+            </section>
+
             <section id="cl-empty" class="cl-section cl-empty cl-hidden">
                 <p class="cl-muted">This bill was not processed through Solden.</p>
             </section>

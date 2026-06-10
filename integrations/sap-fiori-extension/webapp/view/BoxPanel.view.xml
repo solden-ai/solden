@@ -155,11 +155,27 @@
             class="cl-section">
             <List items="{box>/timeline}" showSeparators="Inner" class="cl-timeline">
                 <CustomListItem>
-                    <HBox class="cl-timeline-row" alignItems="Center">
-                        <Text text="{= ${created_at} ? new Date(${created_at}).toLocaleString() : '' }" class="cl-timeline-time"/>
-                        <Text text="{= (${event_type} || ${type} || 'event').replace(/_/g, ' ') }" class="cl-timeline-event"/>
-                        <Text text="{= ${summary} || ${message} ? ' — ' + (${summary} || ${message}) : '' }" class="cl-timeline-summary"/>
-                    </HBox>
+                    <VBox class="cl-timeline-row">
+                        <HBox alignItems="Center">
+                            <Text text="{= ${created_at} ? new Date(${created_at}).toLocaleString() : '' }" class="cl-timeline-time"/>
+                            <Text text="{= (${event_type} || ${type} || 'event').replace(/_/g, ' ') }" class="cl-timeline-event"/>
+                            <Text text="{= ${summary} || ${message} ? ' — ' + (${summary} || ${message}) : '' }" class="cl-timeline-summary"/>
+                        </HBox>
+                        <!-- The why behind the decision: the operator's own
+                             rationale, or Solden's distilled read of the
+                             thread (tribal-knowledge Build 1; confirmable in
+                             the workspace, read-only here). -->
+                        <Text
+                            visible="{= !!(${human_rationale}) }"
+                            text="{= 'why: ' + (${human_rationale} || '') }"
+                            wrapping="true"
+                            class="cl-timeline-why"/>
+                        <Text
+                            visible="{= !(${human_rationale}) &amp;&amp; !!(${distilled_rationale}) }"
+                            text="{= (${distilled_status} === 'confirmed' ? 'why (confirmed): ' : 'Solden’s read: ') + (${distilled_rationale} || '') }"
+                            wrapping="true"
+                            class="cl-timeline-why cl-timeline-why-distilled"/>
+                    </VBox>
                 </CustomListItem>
             </List>
         </Panel>
@@ -184,7 +200,7 @@
 
         <!-- Footer — deep link to Solden app -->
         <HBox justifyContent="Center" class="cl-footer">
-            <Link text="Open in Solden →" press=".onOpenInClearledgrPress"/>
+            <Link text="Open in Solden →" press=".onOpenInSoldenPress"/>
         </HBox>
 
     </Page>
