@@ -79,6 +79,22 @@ class DimensionStore:
         )
     """
 
+    # Dimension <-> dimension relationships: 'hierarchy' (parent contains child,
+    # e.g. Division EMEA -> CC 402) and 'equivalent' (the same real-world thing
+    # known by two codes/systems). Mirrors the box_links org-required pattern.
+    DIMENSION_EDGES_TABLE_SQL = """
+        CREATE TABLE IF NOT EXISTS dimension_edges (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            parent_dimension_id TEXT NOT NULL,
+            child_dimension_id TEXT NOT NULL,
+            edge_type TEXT NOT NULL DEFAULT 'hierarchy',
+            source TEXT,
+            created_at TEXT,
+            UNIQUE(organization_id, parent_dimension_id, child_dimension_id, edge_type)
+        )
+    """
+
     # ---- normalization ---------------------------------------------------
 
     @staticmethod
@@ -321,17 +337,141 @@ class DimensionStore:
         return out
 
     def list_boxes_for_dimension(
+        self,
+        *,
+        organization_id: str,
+        dimension_id: str,
+        include_descendants: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """Every record linked to a dimension. With ``include_descendants``,
+        also every record linked anywhere under it in the hierarchy ("all
+        records under EMEA" without any record knowing about EMEA)."""
+        self.initialize()
+        ids = [dimension_id]
+        if include_descendants:
+            ids += self.list_descendant_dimension_ids(
+                organization_id=organization_id, dimension_id=dimension_id
+            )
+        placeholders = ",".join("%s" for _ in ids)
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT DISTINCT box_type, box_id, status, confidence "
+                f"FROM dimension_links WHERE organization_id=%s AND dimension_id IN ({placeholders})",
+                (organization_id, *ids),
+            )
+            rows = cur.fetchall() or []
+        return [dict(r) for r in rows]
+
+    # ---- dimension <-> dimension edges -----------------------------------
+
+    _EDGE_MAX_DEPTH = 10
+
+    def add_dimension_edge(
+        self,
+        *,
+        organization_id: str,
+        parent_dimension_id: str,
+        child_dimension_id: str,
+        edge_type: str = "hierarchy",
+        source: str = "manual",
+    ) -> Optional[Dict[str, Any]]:
+        """Relate two dimensions. Org required; self-edges rejected; a
+        hierarchy edge that would close a cycle is refused (the child must not
+        already reach the parent)."""
+        if not organization_id:
+            raise ValueError("add_dimension_edge requires organization_id")
+        if edge_type not in ("hierarchy", "equivalent"):
+            raise ValueError(f"invalid edge_type: {edge_type!r}")
+        if parent_dimension_id == child_dimension_id:
+            raise ValueError("self-edge rejected")
+        self.initialize()
+        if edge_type == "hierarchy":
+            reachable = self.list_descendant_dimension_ids(
+                organization_id=organization_id, dimension_id=child_dimension_id
+            )
+            if parent_dimension_id in reachable:
+                raise ValueError("hierarchy cycle rejected")
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """INSERT INTO dimension_edges
+                       (id, organization_id, parent_dimension_id,
+                        child_dimension_id, edge_type, source, created_at)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)
+                   ON CONFLICT (organization_id, parent_dimension_id,
+                                child_dimension_id, edge_type) DO NOTHING
+                   RETURNING *""",
+                (
+                    f"DEDG-{uuid.uuid4().hex[:12]}", organization_id,
+                    parent_dimension_id, child_dimension_id, edge_type,
+                    source, _now_iso(),
+                ),
+            )
+            row = cur.fetchone()
+            conn.commit()
+        return dict(row) if row is not None else None
+
+    def list_dimension_children(
         self, *, organization_id: str, dimension_id: str
     ) -> List[Dict[str, Any]]:
-        """Every record linked to a dimension (the reverse edge -- the basis
-        for a future 'everything on CC 402' rollup)."""
         self.initialize()
         with self.connect() as conn:
             cur = conn.cursor()
             cur.execute(
-                "SELECT box_type, box_id, status, confidence FROM dimension_links "
-                "WHERE organization_id=%s AND dimension_id=%s",
+                """SELECT cd.*, de.edge_type FROM dimension_edges de
+                   JOIN context_dimensions cd ON cd.id = de.child_dimension_id
+                   WHERE de.organization_id=%s AND de.parent_dimension_id=%s""",
                 (organization_id, dimension_id),
             )
             rows = cur.fetchall() or []
-        return [dict(r) for r in rows]
+        return [self._dim_row(r) for r in rows]
+
+    def list_dimension_parents(
+        self, *, organization_id: str, dimension_id: str
+    ) -> List[Dict[str, Any]]:
+        self.initialize()
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """SELECT cd.*, de.edge_type FROM dimension_edges de
+                   JOIN context_dimensions cd ON cd.id = de.parent_dimension_id
+                   WHERE de.organization_id=%s AND de.child_dimension_id=%s""",
+                (organization_id, dimension_id),
+            )
+            rows = cur.fetchall() or []
+        return [self._dim_row(r) for r in rows]
+
+    def list_descendant_dimension_ids(
+        self, *, organization_id: str, dimension_id: str
+    ) -> List[str]:
+        """All hierarchy descendants of a dimension (depth-capped, cycle-safe
+        via the path-tracking guard). Equivalence edges are NOT traversed."""
+        self.initialize()
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                WITH RECURSIVE descendants(dimension_id, depth, path) AS (
+                    SELECT de.child_dimension_id, 1,
+                           ARRAY[de.parent_dimension_id, de.child_dimension_id]
+                    FROM dimension_edges de
+                    WHERE de.organization_id = %s
+                      AND de.parent_dimension_id = %s
+                      AND de.edge_type = 'hierarchy'
+                    UNION ALL
+                    SELECT de.child_dimension_id, d.depth + 1,
+                           d.path || de.child_dimension_id
+                    FROM dimension_edges de
+                    JOIN descendants d ON de.parent_dimension_id = d.dimension_id
+                    WHERE de.organization_id = %s
+                      AND de.edge_type = 'hierarchy'
+                      AND d.depth < %s
+                      AND NOT de.child_dimension_id = ANY(d.path)
+                )
+                SELECT DISTINCT dimension_id FROM descendants
+                """,
+                (organization_id, dimension_id, organization_id, self._EDGE_MAX_DEPTH),
+            )
+            rows = cur.fetchall() or []
+        return [str(dict(r)["dimension_id"]) for r in rows]

@@ -2786,3 +2786,47 @@ async def list_all_vendors(
         _save_vendor_list_cache(org_id, vendors, erp_type)
 
     return vendors
+
+
+# ==================== Dimension Masters Dispatcher (H5 deepening) ====================
+
+def _dimension_master_fetchers():
+    """erp_type -> fetcher for dimension masters (departments/classes/locations/
+    tracking categories WITH parent refs where the ERP has them). Resolved
+    lazily so the per-ERP modules' import order doesn't matter."""
+    from solden.integrations.erp_netsuite import get_dimension_masters_netsuite
+    from solden.integrations.erp_quickbooks import get_dimension_masters_quickbooks
+    from solden.integrations.erp_sage_intacct import get_dimension_masters_sage_intacct
+    from solden.integrations.erp_sap import get_dimension_masters_sap
+    from solden.integrations.erp_xero import get_dimension_masters_xero
+
+    return {
+        "netsuite": get_dimension_masters_netsuite,
+        "quickbooks": get_dimension_masters_quickbooks,
+        "xero": get_dimension_masters_xero,
+        "sap": get_dimension_masters_sap,
+        "sage_intacct": get_dimension_masters_sage_intacct,
+        # sage_accounting: deliberately absent — a flat small-business ledger
+        # with no dimension masters to import; sync is a clean no-op for it.
+    }
+
+
+async def get_dimension_masters(organization_id: str) -> Dict[str, Any]:
+    """Fetch the org's ERP dimension masters. Returns
+    ``{erp_type, masters: [...]}``; empty masters when no connection or the
+    ERP has no fetcher yet."""
+    connection = get_erp_connection(organization_id)
+    if not connection:
+        return {"erp_type": None, "masters": []}
+    fetcher = _dimension_master_fetchers().get(str(connection.type or "").lower())
+    if not fetcher:
+        return {"erp_type": connection.type, "masters": []}
+    try:
+        masters = await fetcher(connection)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "Dimension-master fetch failed for %s (%s): %s",
+            organization_id, connection.type, type(exc).__name__,
+        )
+        masters = []
+    return {"erp_type": connection.type, "masters": masters or []}

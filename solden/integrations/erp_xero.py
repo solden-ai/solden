@@ -1471,3 +1471,44 @@ async def list_all_purchase_orders_xero(connection) -> List[Dict[str, Any]]:
     except Exception as e:
         logger.error("Failed to fetch Xero PO list: %s", type(e).__name__)
         return all_pos or []
+
+
+async def get_dimension_masters_xero(connection) -> List[Dict[str, Any]]:
+    """Fetch Xero tracking categories + options for the dimension graph (H5
+    deepening). Xero tracking is flat (no parent refs): each option becomes a
+    dimension of kind ``tracking:<category name>``.
+
+    Returns normalized rows; ``[]`` on any error. NEEDS live-sandbox validation.
+    """
+    if not connection.access_token or not connection.tenant_id:
+        return []
+    try:
+        client = get_http_client()
+        response = await client.get(
+            "https://api.xero.com/api.xro/2.0/TrackingCategories",
+            headers=_xero_headers(connection),
+            timeout=60,
+        )
+        response.raise_for_status()
+        out: List[Dict[str, Any]] = []
+        for category in response.json().get("TrackingCategories", []):
+            cat_name = str(category.get("Name") or "").strip()
+            if not cat_name:
+                continue
+            kind = f"tracking:{cat_name.lower()}"
+            for option in category.get("Options", []) or []:
+                name = str(option.get("Name") or "").strip()
+                if not name:
+                    continue
+                out.append({
+                    "kind": kind,
+                    "external_id": str(option.get("TrackingOptionID") or ""),
+                    "code": name,
+                    "name": name,
+                    "parent_external_id": None,
+                    "active": str(option.get("Status") or "ACTIVE").upper() == "ACTIVE",
+                })
+        return out
+    except Exception as e:  # noqa: BLE001
+        logger.error("Failed to fetch Xero dimension masters: %s", type(e).__name__)
+        return []

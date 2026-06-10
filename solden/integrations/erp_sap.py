@@ -2325,3 +2325,61 @@ async def list_all_vendors_sap(connection) -> List[Dict[str, Any]]:
     except Exception as e:
         logger.error("Failed to fetch SAP vendor list: %s", type(e).__name__)
         return all_vendors or []
+
+
+async def get_dimension_masters_sap(connection) -> List[Dict[str, Any]]:
+    """Fetch SAP Business One cost-accounting masters for the dimension graph
+    (H5 deepening): ProfitCenters (B1's cost-accounting centers — kept under
+    the ERP-native name) and Projects. B1's classic API carries no parent
+    refs on these, so rows are flat.
+
+    Returns normalized rows ``{kind, external_id, code, name,
+    parent_external_id, active}``; ``[]`` on any error. Mirrors
+    get_chart_of_accounts_sap; NEEDS live-sandbox validation.
+    """
+    if not connection.access_token or not connection.base_url:
+        return []
+    try:
+        client = get_http_client()
+        session = await _open_sap_service_layer_session(connection, client)
+        if session.get("status") != "success":
+            logger.warning("SAP session setup failed for dimension-master fetch")
+            return []
+        headers = session.get("headers", {})
+        specs = (
+            ("profit_center", "/b1s/v1/ProfitCenters?$select=CenterCode,CenterName,Active&$top=1000",
+             "CenterCode", "CenterName"),
+            ("project", "/b1s/v1/Projects?$select=Code,Name,Active&$top=1000",
+             "Code", "Name"),
+        )
+        out: List[Dict[str, Any]] = []
+        for kind, path, code_field, name_field in specs:
+            response = await client.get(
+                f"{connection.base_url}{path}", headers=headers, timeout=60,
+            )
+            if response.status_code == 401:
+                logger.warning("SAP token expired during dimension-master fetch")
+                return out
+            response.raise_for_status()
+            for item in response.json().get("value", []):
+                code = str(item.get(code_field) or "").strip()
+                if not code:
+                    continue
+                active_flag = item.get("Active")
+                active = True
+                if isinstance(active_flag, str):
+                    active = active_flag.strip().lower() in {"y", "yes", "true", "tyes"}
+                elif isinstance(active_flag, bool):
+                    active = active_flag
+                out.append({
+                    "kind": kind,
+                    "external_id": code,
+                    "code": code,
+                    "name": str(item.get(name_field) or "") or code,
+                    "parent_external_id": None,
+                    "active": active,
+                })
+        return out
+    except Exception as e:  # noqa: BLE001
+        logger.error("Failed to fetch SAP dimension masters: %s", type(e).__name__)
+        return []

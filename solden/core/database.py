@@ -1677,6 +1677,9 @@ class _SoldenDBBase:
             cur.execute("CREATE INDEX IF NOT EXISTS idx_dimension_aliases_lookup ON dimension_aliases(organization_id, alias)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_dimension_links_box ON dimension_links(organization_id, box_type, box_id)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_dimension_links_dim ON dimension_links(organization_id, dimension_id)")
+            cur.execute(DimensionStore.DIMENSION_EDGES_TABLE_SQL)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_dimension_edges_parent ON dimension_edges(organization_id, parent_dimension_id)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_dimension_edges_child ON dimension_edges(organization_id, child_dimension_id)")
 
             # Policy proposals (tribal-knowledge Build 3) — agent-proposed
             # standing rules from enacted behavior; advisory until accepted.

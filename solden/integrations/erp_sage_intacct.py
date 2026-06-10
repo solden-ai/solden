@@ -648,3 +648,47 @@ async def get_payment_status_sage_intacct(connection: Any, erp_reference: str) -
         "status": state or None,
         "payment_reference": _record_text(record, "RECORDNO"),
     }
+
+
+async def get_dimension_masters_sage_intacct(connection: Any) -> List[Dict[str, Any]]:
+    """Fetch Sage Intacct dimension masters WITH parent refs, for the
+    dimension graph (H5 deepening). Intacct is dimensions-first: DEPARTMENT /
+    LOCATION / CLASS / PROJECT all carry PARENTID, so this is the richest
+    hierarchy source of the supported ERPs.
+
+    Returns normalized rows ``{kind, external_id, code, name,
+    parent_external_id, active}``; ``[]`` on any error. Mirrors
+    get_chart_of_accounts_sage_intacct; NEEDS live-sandbox validation.
+    """
+    specs = (
+        ("department", "DEPARTMENT", "DEPARTMENTID", "TITLE", "PARENTID"),
+        ("location", "LOCATION", "LOCATIONID", "NAME", "PARENTID"),
+        ("class", "CLASS", "CLASSID", "NAME", "PARENTID"),
+        ("project", "PROJECT", "PROJECTID", "NAME", "PARENTID"),
+    )
+    out: List[Dict[str, Any]] = []
+    for kind, object_name, id_field, name_field, parent_field in specs:
+        outcome = await _post_function(
+            connection,
+            _read_by_query(
+                object_name,
+                f"{id_field},{name_field},{parent_field},STATUS",
+                "STATUS != 'inactive'",
+                pagesize=1000,
+            ),
+        )
+        if not outcome.get("ok"):
+            continue
+        for record in _record_nodes(outcome.get("result")):
+            code = _record_text(record, id_field)
+            if not code:
+                continue
+            out.append({
+                "kind": kind,
+                "external_id": code,
+                "code": code,
+                "name": _record_text(record, name_field) or code,
+                "parent_external_id": _record_text(record, parent_field) or None,
+                "active": str(_record_text(record, "STATUS") or "").lower() != "inactive",
+            })
+    return out

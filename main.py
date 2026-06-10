@@ -701,6 +701,8 @@ STRICT_PROFILE_ALLOWED_WORKSPACE_PATHS = {
     "/api/workspace/dimensions",
     # Behavior -> standing-rule proposals (tribal-knowledge Build 3).
     "/api/workspace/policy-proposals",
+    # H5 deepening: import ERP dimension masters (admin-gated).
+    "/api/workspace/dimensions/sync-erp",
     "/api/workspace/erp/field-mappings",
     "/api/workspace/permissions/catalog",
     "/api/workspace/roles/custom",
@@ -876,6 +878,8 @@ STRICT_PROFILE_ALLOWED_DYNAMIC_PATTERNS = tuple(
         # H5 dimension rollup: every record linked to one dimension
         # ("everything charged to CC 402").
         r"^/api/workspace/dimensions/[^/]+/records$",
+        # H5 deepening: the dimension as a memory object ("tell me about CC 402").
+        r"^/api/workspace/dimensions/[^/]+/memory$",
         # Accept/decline a behavior-derived standing-rule proposal.
         r"^/api/workspace/policy-proposals/[^/]+/(accept|decline)$",
         # Manifesto audit 2026-05-23: a cluster of AP feature routers were

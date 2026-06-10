@@ -1836,3 +1836,60 @@ async def list_all_vendors_netsuite(connection) -> List[Dict[str, Any]]:
     except Exception as e:
         logger.error("Failed to fetch NetSuite vendor list: %s", type(e).__name__)
         return all_vendors or []
+
+
+async def get_dimension_masters_netsuite(connection) -> List[Dict[str, Any]]:
+    """Fetch dimension masters (departments / classes / locations) WITH parent
+    refs via SuiteQL, for the dimension graph (H5 deepening).
+
+    Returns normalized rows ``{kind, external_id, code, name,
+    parent_external_id, active}``; ``[]`` on any error so the caller is never
+    blocked. Request shape mirrors get_chart_of_accounts_netsuite; NEEDS
+    live-sandbox validation (same posture as the PO write adapters).
+    """
+    if not connection.account_id:
+        return []
+    suiteql_url = (
+        f"https://{connection.account_id}.suitetalk.api.netsuite.com"
+        "/services/rest/query/v1/suiteql"
+    )
+    kinds = (
+        ("department", "SELECT id, name, parent, isinactive FROM department"),
+        ("classification", "SELECT id, name, parent, isinactive FROM classification"),
+        ("location", "SELECT id, name, parent, isinactive FROM location"),
+    )
+    out: List[Dict[str, Any]] = []
+    try:
+        client = get_http_client()
+        for kind, query in kinds:
+            auth_header = _oauth_header(connection, "POST", suiteql_url)
+            response = await client.post(
+                suiteql_url,
+                json={"q": query},
+                headers={
+                    "Authorization": auth_header,
+                    "Content-Type": "application/json",
+                    "Prefer": "transient",
+                },
+                params={"limit": 1000},
+                timeout=60,
+            )
+            response.raise_for_status()
+            for item in response.json().get("items", []):
+                inactive = item.get("isinactive")
+                active = str(inactive).strip().upper() not in {"T", "TRUE", "YES", "1"}
+                name = str(item.get("name") or "").strip()
+                if not name:
+                    continue
+                out.append({
+                    "kind": kind,
+                    "external_id": str(item.get("id") or ""),
+                    "code": name,
+                    "name": name,
+                    "parent_external_id": str(item.get("parent") or "") or None,
+                    "active": active,
+                })
+        return out
+    except Exception as e:  # noqa: BLE001
+        logger.error("Failed to fetch NetSuite dimension masters: %s", type(e).__name__)
+        return []

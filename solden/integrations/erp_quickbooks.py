@@ -1860,3 +1860,48 @@ async def list_all_purchase_orders_quickbooks(connection) -> List[Dict[str, Any]
     except Exception as e:
         logger.error("Failed to fetch QuickBooks PO list: %s", type(e).__name__)
         return all_pos or []
+
+
+async def get_dimension_masters_quickbooks(connection) -> List[Dict[str, Any]]:
+    """Fetch QuickBooks Classes + Departments WITH ParentRef, for the
+    dimension graph (H5 deepening).
+
+    Returns normalized rows ``{kind, external_id, code, name,
+    parent_external_id, active}``; ``[]`` on any error. Mirrors
+    get_chart_of_accounts_quickbooks; NEEDS live-sandbox validation.
+    """
+    if not connection.access_token or not connection.realm_id:
+        return []
+    url = f"https://quickbooks.api.intuit.com/v3/company/{connection.realm_id}/query"
+    kinds = (("class", "Class"), ("department", "Department"))
+    out: List[Dict[str, Any]] = []
+    try:
+        client = get_http_client()
+        for kind, entity in kinds:
+            response = await client.get(
+                url,
+                params={"query": f"SELECT * FROM {entity} MAXRESULTS 1000"},
+                headers=_quickbooks_headers(connection),
+                timeout=60,
+            )
+            if response.status_code == 401:
+                logger.warning("QuickBooks token expired during dimension-master fetch")
+                return []
+            response.raise_for_status()
+            for item in response.json().get("QueryResponse", {}).get(entity, []):
+                name = str(item.get("Name") or "").strip()
+                if not name:
+                    continue
+                parent_ref = item.get("ParentRef") or {}
+                out.append({
+                    "kind": kind,
+                    "external_id": str(item.get("Id") or ""),
+                    "code": name,
+                    "name": str(item.get("FullyQualifiedName") or name),
+                    "parent_external_id": str(parent_ref.get("value") or "") or None,
+                    "active": bool(item.get("Active", True)),
+                })
+        return out
+    except Exception as e:  # noqa: BLE001
+        logger.error("Failed to fetch QuickBooks dimension masters: %s", type(e).__name__)
+        return []

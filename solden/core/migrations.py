@@ -6026,3 +6026,32 @@ def _v101_policy_proposals(cur, db):
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("[migration v101] index failed: %s", exc)
+
+
+@migration(102, "dimension_edges — dimension hierarchy/equivalence graph (H5 deepening)")
+def _v102_dimension_edges(cur, db):
+    """Dimension <-> dimension relationships: 'hierarchy' (Division EMEA
+    contains CC 402) and 'equivalent' (the same thing under two codes).
+    Powers recursive rollups ("all records under EMEA"). Mirrors
+    DimensionStore.DIMENSION_EDGES_TABLE_SQL.
+    """
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS dimension_edges (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            parent_dimension_id TEXT NOT NULL,
+            child_dimension_id TEXT NOT NULL,
+            edge_type TEXT NOT NULL DEFAULT 'hierarchy',
+            source TEXT,
+            created_at TEXT,
+            UNIQUE(organization_id, parent_dimension_id, child_dimension_id, edge_type)
+        )
+    """)
+    for ddl in (
+        "CREATE INDEX IF NOT EXISTS idx_dimension_edges_parent ON dimension_edges(organization_id, parent_dimension_id)",
+        "CREATE INDEX IF NOT EXISTS idx_dimension_edges_child ON dimension_edges(organization_id, child_dimension_id)",
+    ):
+        try:
+            cur.execute(ddl)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[migration v102] index failed: %s", exc)
