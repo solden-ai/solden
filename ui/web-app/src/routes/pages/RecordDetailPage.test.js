@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { h } from 'preact';
-import { cleanup, render, screen, waitFor } from '@testing-library/preact';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/preact';
 import RecordDetailPage from './RecordDetailPage.js';
 
 describe('RecordDetailPage', () => {
@@ -187,6 +187,63 @@ describe('RecordDetailPage', () => {
       expect(screen.getByText("Solden's read")).toBeTruthy();
       expect(screen.getByText('Approved because it covers the Q3 true-up Dana signed off on.')).toBeTruthy();
       expect(screen.getByText('Confirm')).toBeTruthy();
+    });
+  });
+
+  it('asks the contextual question when an intent is blocked high-signal, then retries with the answer', async () => {
+    const calls = [];
+    const api = vi.fn(async (path, opts) => {
+      if (String(path).startsWith('/api/workspace/ap-items/AP-5/detail')) {
+        return {
+          item: {
+            id: 'AP-5',
+            vendor_name: 'Acme Supplies',
+            amount: 3200,
+            currency: 'EUR',
+            invoice_number: 'INV-5',
+            state: 'needs_approval',
+          },
+          reasoning: {},
+          match: {},
+          actions: { available: ['escalate_approval'], primary: 'escalate_approval' },
+          timeline: [],
+        };
+      }
+      if (String(path).startsWith('/api/agent/intents/execute')) {
+        calls.push(JSON.parse(opts.body));
+        if (calls.length === 1) {
+          return {
+            status: 'blocked',
+            reason: 'high_signal_rationale_required',
+            question: "This is 3.2x Acme's typical amount - what makes it OK?",
+          };
+        }
+        return { status: 'ok' };
+      }
+      return {};
+    });
+
+    render(h(RecordDetailPage, {
+      api,
+      orgId: 'org-test',
+      recordId: 'AP-5',
+      bootstrap: {},
+      navigate: () => {},
+      toast: () => {},
+    }));
+
+    const btn = await screen.findByText('Escalate to controller');
+    btn.click();
+
+    // The blocked response opens the elicitation dialog with the question.
+    await screen.findByText("This is 3.2x Acme's typical amount - what makes it OK?");
+    const textarea = document.querySelector('.cl-record-dialog textarea');
+    fireEvent.input(textarea, { target: { value: 'Contract true-up Dana signed off.' } });
+    fireEvent.click(screen.getByText('Confirm'));
+
+    await waitFor(() => {
+      expect(calls.length).toBe(2);
+      expect(calls[1].input.reason).toBe('Contract true-up Dana signed off.');
     });
   });
 });

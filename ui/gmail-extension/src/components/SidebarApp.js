@@ -2246,9 +2246,34 @@ export default function SidebarApp({ queueManager }) {
           }),
         },
       );
-      const ok = resp && resp.ok !== false && !resp.detail;
+      // High-signal elicitation (tribal-knowledge Build 2): the backend blocks
+      // an unusual approve with ONE contextual question; ask it and retry with
+      // the answer as the recorded why.
+      if (resp && resp.status === 'blocked' && resp.reason === 'high_signal_rationale_required') {
+        setSidebarActionBusy(false);
+        const answer = await openSidebarActionDialog({
+          actionType: 'generic',
+          dialogMode: 'input',
+          title: 'A quick why is needed',
+          label: resp.question || 'Solden flagged this approval as unusual — why is it OK?',
+          placeholder: 'Your answer is recorded as the decision why.',
+          confirmLabel: 'Approve',
+          required: true,
+        });
+        if (answer === null || answer === undefined) return; // backed out
+        const text = (typeof answer === 'string' ? answer : (answer?.value || '')).trim();
+        if (!text) return;
+        return handleSidebarIntent(intent, { ...(extraInput || {}), reason: text });
+      }
+      const blocked = resp && resp.status === 'blocked';
+      const ok = !blocked && resp && resp.ok !== false && !resp.detail;
       const label = SIDEBAR_INTENT_LABELS[intent] || intent;
-      showToast(ok ? `${label} recorded.` : (resp?.detail || `${label} failed.`), ok ? 'success' : 'error');
+      showToast(
+        ok
+          ? `${label} recorded.`
+          : (blocked ? `Blocked: ${String(resp.reason || 'policy').replace(/_/g, ' ')}` : (resp?.detail || `${label} failed.`)),
+        ok ? 'success' : 'error',
+      );
       if (ok) {
         await queueManager.refreshQueue();
         // Refresh context so the action bar reflects the new state's

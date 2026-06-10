@@ -192,6 +192,9 @@ export default function RecordDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
+  // High-signal elicitation (tribal-knowledge Build 2): when the backend
+  // blocks an approve with a contextual question, ask it here and retry.
+  const [elicitation, setElicitation] = useState(null);
 
   const loadDetail = useCallback(async () => {
     if (!recordId) {
@@ -220,7 +223,7 @@ export default function RecordDetailPage({
     if (!detail || actionBusy) return;
     setActionBusy(true);
     try {
-      await api('/api/agent/intents/execute', {
+      const resp = await api('/api/agent/intents/execute', {
         method: 'POST',
         body: JSON.stringify({
           intent,
@@ -232,6 +235,20 @@ export default function RecordDetailPage({
           },
         }),
       });
+      const blockedReason = resp && resp.status === 'blocked' ? String(resp.reason || '') : '';
+      if (blockedReason === 'high_signal_rationale_required') {
+        // Solden flagged this approval; ask the contextual question and retry.
+        setElicitation({
+          intent,
+          extraInput,
+          question: resp.question || 'Solden flagged this approval as unusual — why is it OK?',
+        });
+        return;
+      }
+      if (blockedReason) {
+        toast(`Blocked: ${blockedReason.replace(/_/g, ' ')}`, 'error');
+        return;
+      }
       toast(`${INTENT_LABELS[intent] || intent} recorded.`, 'success');
       await loadDetail();
     } catch (exc) {
@@ -302,6 +319,19 @@ export default function RecordDetailPage({
         : null}
 
       <${WorkflowTimeline} events=${timeline} api=${api} recordId=${recordId} toast=${toast} onRefresh=${loadDetail} />
+
+      ${elicitation ? html`
+        <${ActionDialog}
+          kind="high_signal_why"
+          question=${elicitation.question}
+          busy=${actionBusy}
+          onCancel=${() => setElicitation(null)}
+          onSubmit=${({ reason }) => {
+            const pending = elicitation;
+            setElicitation(null);
+            onIntent(pending.intent, { ...pending.extraInput, reason });
+          }}
+        />` : null}
     </div>
   `;
 }
@@ -591,14 +621,21 @@ function describeEscalation(item) {
 }
 
 
-function ActionDialog({ kind, onCancel, onSubmit, busy }) {
+function ActionDialog({ kind, onCancel, onSubmit, busy, question }) {
   const [email, setEmail] = useState('');
   const [note, setNote] = useState('');
   const [duplicateOf, setDuplicateOf] = useState('');
   const [overrideReason, setOverrideReason] = useState('');
+  const [whyReason, setWhyReason] = useState('');
 
   const onConfirm = (e) => {
     e?.preventDefault?.();
+    if (kind === 'high_signal_why') {
+      const reason = whyReason.trim();
+      if (!reason) return;
+      onSubmit({ reason });
+      return;
+    }
     if (kind === 'reassign_approval') {
       const trimmed = email.trim();
       if (!trimmed) return;
@@ -624,11 +661,13 @@ function ActionDialog({ kind, onCancel, onSubmit, busy }) {
     reassign_approval: 'Reassign the current approval step',
     mark_duplicate: 'Mark as duplicate',
     override_post: 'Override validation and post anyway',
+    high_signal_why: 'A quick why is needed',
   };
   const subs = {
     reassign_approval: 'Hands off the current approval step to the named approver. Recorded in the audit trail.',
     mark_duplicate: 'Closes this invoice with a duplicate marker. Optionally link the original.',
     override_post: 'Skips the eligibility gate and posts to the ERP. The override + reason are recorded; CFO and audit trail will see this.',
+    high_signal_why: question || 'Solden flagged this approval as unusual — why is it OK?',
   };
 
   return html`
@@ -676,6 +715,18 @@ function ActionDialog({ kind, onCancel, onSubmit, busy }) {
                 rows="3"
                 value=${note}
                 onInput=${(e) => setNote(e.target.value)}></textarea>
+            </label>
+          ` : null}
+          ${kind === 'high_signal_why' ? html`
+            <label class="cl-record-dialog-field">
+              <span>Your answer (recorded as the decision's why)</span>
+              <textarea
+                placeholder="e.g. Contract true-up Dana signed off; amount matches the renewal terms."
+                rows="3"
+                value=${whyReason}
+                onInput=${(e) => setWhyReason(e.target.value)}
+                required
+                autoFocus></textarea>
             </label>
           ` : null}
           ${kind === 'override_post' ? html`

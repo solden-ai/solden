@@ -65,6 +65,18 @@ def is_teams_enabled() -> bool:
     return _env_flag("FEATURE_TEAMS_ENABLED", default=False)
 
 
+def is_high_signal_elicitation_enabled() -> bool:
+    """Tribal-knowledge Build 2 — require a contextual why when approving a
+    HIGH-SIGNAL invoice (bank change, big amount deviation, first-time vendor,
+    missing PO, override) with no rationale.
+
+    Default ``True``: this is the justified-friction case — clean approvals
+    never prompt, and the budget-override block already ships unflagged.
+    ``FEATURE_HIGH_SIGNAL_ELICITATION=false`` is the kill switch.
+    """
+    return _env_flag("FEATURE_HIGH_SIGNAL_ELICITATION", default=True)
+
+
 def is_rationale_distillation_enabled() -> bool:
     """Tribal-knowledge Build 1 — distill a proposed decision rationale from
     persisted conversation context when the operator's rationale is thin.

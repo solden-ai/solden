@@ -372,6 +372,45 @@ class ApproveInvoiceHandler(APIntentHandler):
             )
             response["audit_event_id"] = (audit_row or {}).get("id")
             return response
+
+        # Tribal-knowledge Build 2: a HIGH-SIGNAL approval (bank change, big
+        # amount deviation, first-time vendor, missing PO) by a HUMAN with no
+        # real rationale is blocked with ONE contextual question. The surfaces
+        # catch this and ask; the gate here is the un-bypassable backstop.
+        # Clean approvals never hit it; agent/auto approvals are exempt.
+        if str(getattr(runtime, "actor_type", "user") or "user") == "user":
+            from solden.services.elicitation_signals import evaluate_elicitation
+            from solden.services.rationale_distillation import is_thin_rationale
+
+            elicitation = evaluate_elicitation(context["ap_item"], payload)
+            if elicitation.get("required") and is_thin_rationale(justification):
+                response = {
+                    "skill_id": skill.skill_id,
+                    "intent": self.intent,
+                    "status": "blocked",
+                    "reason": "high_signal_rationale_required",
+                    "question": elicitation.get("question"),
+                    "signals": elicitation.get("signals"),
+                    "email_id": email_id,
+                    "ap_item_id": ap_item_id,
+                    "policy_precheck": precheck,
+                    "audit_contract": skill.audit_contract(self.intent),
+                }
+                audit_row = runtime.append_runtime_audit(
+                    ap_item_id=ap_item_id,
+                    event_type="invoice_approval_blocked",
+                    reason="high_signal_rationale_required",
+                    metadata={
+                        "intent": self.intent,
+                        "response": response,
+                        "elicitation_signals": elicitation.get("signals"),
+                        "elicitation_question": elicitation.get("question"),
+                    },
+                    correlation_id=correlation_id,
+                    idempotency_key=idempotency_key,
+                )
+                response["audit_event_id"] = (audit_row or {}).get("id")
+                return response
         result = await workflow.approve_invoice(
             gmail_id=email_id,
             approved_by=actor["canonical_actor"],

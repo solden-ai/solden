@@ -152,6 +152,7 @@ async def _dispatch_runtime_intent(*args, **kwargs):
 # to-space as a safe fallback (still better than raw `vendor_iban_
 # unverified`).
 _REASON_LABELS: Dict[str, str] = {
+    "high_signal_rationale_required": "This approval needs a short why — Solden flagged it as unusual. Tap Approve again and answer the question.",
     "vendor_iban_unverified": "The vendor's bank details haven't been verified yet. Payment can't be scheduled until they complete IBAN verification in the portal.",
     "match_tolerance_exceeded": "The 3-way match delta exceeds your policy tolerance.",
     "erp_connector_offline": "The ERP connector is temporarily offline. Retry in a few minutes — the invoice is safe in the queue.",
@@ -717,10 +718,22 @@ async def _complete_slack_action_via_response_url(normalized: Any, processed_key
 _APPROVE_RATIONALE_CALLBACK_ID = "cl_approve_rationale"
 
 
-async def _open_approve_rationale_modal(normalized, payload: Dict[str, Any], request_ts: Optional[str]) -> bool:
-    """Open the optional approve-rationale modal. Returns True if Slack
-    accepted the views.open call, False on any failure (caller then falls
-    through to a normal one-click approve so the action is never dropped).
+async def _open_approve_rationale_modal(
+    normalized,
+    payload: Dict[str, Any],
+    request_ts: Optional[str],
+    *,
+    question_text: Optional[str] = None,
+    required: bool = False,
+) -> bool:
+    """Open the approve-rationale modal. Returns True if Slack accepted the
+    views.open call, False on any failure (caller then falls through to a
+    normal one-click approve so the action is never dropped — for the
+    high-signal case the handler backstop still blocks server-side).
+
+    ``question_text``/``required`` are the high-signal elicitation variant
+    (tribal-knowledge Build 2): the contextual question becomes the label and
+    the answer is mandatory.
     """
     trigger_id = str(payload.get("trigger_id") or "").strip()
     if not trigger_id:
@@ -749,8 +762,12 @@ async def _open_approve_rationale_modal(normalized, payload: Dict[str, Any], req
             {
                 "type": "input",
                 "block_id": "rationale_block",
-                "optional": True,
-                "label": {"type": "plain_text", "text": "Why are you approving? (optional)"},
+                "optional": not required,
+                "label": {
+                    "type": "plain_text",
+                    # Slack plain_text labels cap at 2000 chars; questions are short.
+                    "text": (question_text or "Why are you approving? (optional)")[:150],
+                },
                 "element": {
                     "type": "plain_text_input",
                     "action_id": "rationale_input",
@@ -1121,6 +1138,36 @@ async def _process_interactive_payload(
     # Intercept an approve that has no reason yet: open a modal to collect
     # the optional "why", then the view_submission re-enters this function
     # with the reason set (skipping this block) and dispatches normally.
+    # Tribal-knowledge Build 2: a HIGH-SIGNAL approve with no reason gets the
+    # required modal with ONE contextual question, regardless of the optional-
+    # modal flag. If the modal can't open, dispatch proceeds and the handler
+    # backstop blocks with the same question (never silently dropped, never
+    # silently approved).
+    if (
+        str(getattr(normalized, "action", "") or "").strip().lower() == "approve"
+        and not str(getattr(normalized, "reason", "") or "").strip()
+        and str(payload.get("trigger_id") or "").strip()
+    ):
+        try:
+            from solden.services.elicitation_signals import evaluate_elicitation
+
+            item = db.get_ap_item(normalized.ap_item_id) if normalized.ap_item_id else None
+            if (
+                isinstance(item, dict)
+                and str(item.get("organization_id") or "") == str(normalized.organization_id or "")
+            ):
+                elicitation = evaluate_elicitation(item, {})
+                if elicitation.get("required"):
+                    opened = await _open_approve_rationale_modal(
+                        normalized, payload, request_ts,
+                        question_text=elicitation.get("question"),
+                        required=True,
+                    )
+                    if opened:
+                        return {"response_type": "ephemeral", "text": ""}
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[Slack] high-signal elicitation check failed: %s", exc)
+
     # Reject/request_info/budget-override (which already carry a reason) and
     # flag-off orgs fall straight through to dispatch as before.
     if (

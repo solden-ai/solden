@@ -1,4 +1,4 @@
-/* clearledgr-source-fingerprint:826573e9aa0a4436edcaacb0b0bdca0ac6eda89488be2eee050d85b10533d46d */
+/* clearledgr-source-fingerprint:cee330b14b601bbb143a43b31fc383c57555bd48b0052d5157bbe700a3e8b959 */
 (() => {
   var __create = Object.create;
   var __getProtoOf = Object.getPrototypeOf;
@@ -61456,9 +61456,28 @@ Reason (required — logged to the audit trail):`);
             }
           })
         });
-        const ok = resp && resp.ok !== false && !resp.detail;
+        if (resp && resp.status === "blocked" && resp.reason === "high_signal_rationale_required") {
+          setSidebarActionBusy(false);
+          const answer = await openSidebarActionDialog({
+            actionType: "generic",
+            dialogMode: "input",
+            title: "A quick why is needed",
+            label: resp.question || "Solden flagged this approval as unusual — why is it OK?",
+            placeholder: "Your answer is recorded as the decision why.",
+            confirmLabel: "Approve",
+            required: true
+          });
+          if (answer === null || answer === undefined)
+            return;
+          const text = (typeof answer === "string" ? answer : answer?.value || "").trim();
+          if (!text)
+            return;
+          return handleSidebarIntent(intent, { ...extraInput || {}, reason: text });
+        }
+        const blocked = resp && resp.status === "blocked";
+        const ok = !blocked && resp && resp.ok !== false && !resp.detail;
         const label = SIDEBAR_INTENT_LABELS[intent] || intent;
-        showToast(ok ? `${label} recorded.` : resp?.detail || `${label} failed.`, ok ? "success" : "error");
+        showToast(ok ? `${label} recorded.` : blocked ? `Blocked: ${String(resp.reason || "policy").replace(/_/g, " ")}` : resp?.detail || `${label} failed.`, ok ? "success" : "error");
         if (ok) {
           await queueManager.refreshQueue();
           try {
