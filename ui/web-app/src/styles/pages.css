@@ -7305,3 +7305,77 @@
   border-top: 1px solid var(--cl-border);
   margin-top: 10px;
 }
+
+/* ── Field-grammar conversion for ALL settings internals (2026-06-11) ──
+   Inside settings content, the legacy stacked-label forms become the
+   ratified label-left/control-right rows with hairlines. Scoped here so
+   the global .field-row (used by other pages) is untouched. */
+.cl-settings-content .secondary-form-grid,
+.cl-settings-content .settings-section-grid {
+  display: block;
+}
+.cl-settings-content .field-row {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  column-gap: 32px;
+  row-gap: 6px;
+  align-items: start;
+  padding: 18px 0;
+  border-top: 1px solid color-mix(in srgb, var(--cl-border) 55%, transparent);
+}
+.cl-settings-content .field-row:first-of-type { border-top: 0; }
+.cl-settings-content .field-row > label {
+  grid-column: 1;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+  padding-top: 8px;
+}
+.cl-settings-content .field-row > *:not(label) { grid-column: 2; }
+.cl-settings-content .field-row input,
+.cl-settings-content .field-row select {
+  max-width: 360px;
+}
+.cl-settings-content .field-row .form-help {
+  margin-top: 0;
+  font-size: 12.5px;
+  color: var(--cl-ink-muted);
+}
+@media (max-width: 860px) {
+  .cl-settings-content .field-row { grid-template-columns: 1fr; }
+  .cl-settings-content .field-row > label { padding-top: 0; }
+  .cl-settings-content .field-row > *:not(label) { grid-column: 1; }
+}
+
+
+/* Billing/usage summary inside settings: definition rows, not card-soup. */
+.cl-settings-content .settings-summary-grid {
+  display: flex;
+  flex-direction: column;
+}
+.cl-settings-content .settings-summary-card {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 32px;
+  align-items: baseline;
+  padding: 12px 0;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--cl-border) 55%, transparent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.cl-settings-content .settings-summary-card:first-of-type { border-top: 0; }
+.cl-settings-content .settings-summary-card strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--cl-ink-primary);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.cl-settings-content .settings-summary-card span {
+  font-family: var(--cl-font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--cl-ink-primary);
+}
