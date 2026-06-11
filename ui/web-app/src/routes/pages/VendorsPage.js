@@ -111,6 +111,7 @@ export default function VendorsPage({ api, orgId, navigate, toast }) {
   }
 
   return html`
+    <div class="cl-vendors-page">
     <div class="secondary-banner">
       <div class="secondary-banner-copy">
         <h3>Vendor directory</h3>
@@ -174,7 +175,7 @@ export default function VendorsPage({ api, orgId, navigate, toast }) {
           : filtered.map((vendor) => html`
               <div key=${vendor.vendor_name} class="secondary-card">
                 <div class="secondary-card-head">
-                  <div class="secondary-card-copy cl-row-who">
+                  <div class="secondary-card-copy">
                     ${(() => {
                       const name = String(vendor.vendor_name || '').trim();
                       const initials = name.split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || '?';
@@ -237,29 +238,32 @@ export default function VendorsPage({ api, orgId, navigate, toast }) {
                     </div>
                     </div>
                   </div>
-                  <div class="secondary-card-stat">
-                    <strong>${formatAmount(vendor.total_amount || 0, vendor.currency, { decimals: 0 })}${vendor.currency_mixed ? html` <span class="muted" style="font-weight:400" title="This vendor's invoices span multiple currencies; total uses the dominant one">·mixed</span>` : ''}</strong>
-                    <span>${Number(vendor.invoice_count || 0).toLocaleString()} invoices</span>
-                    <span>${Number(vendor.open_count || 0).toLocaleString()} open · ${Number(vendor.issue_count || 0).toLocaleString()} issues · ${Number(vendor.approval_count || 0).toLocaleString()} awaiting approval</span>
+                  <div class="secondary-card-side">
+                    <div class="secondary-card-stat">
+                      <strong>${formatAmount(vendor.total_amount || 0, vendor.currency, { decimals: 0 })}${vendor.currency_mixed ? html` <span class="muted" style="font-weight:400" title="This vendor's invoices span multiple currencies; total uses the dominant one">·mixed</span>` : ''}</strong>
+                      <span>${Number(vendor.invoice_count || 0).toLocaleString()} invoices</span>
+                      <span>${Number(vendor.open_count || 0).toLocaleString()} open · ${Number(vendor.issue_count || 0).toLocaleString()} issues · ${Number(vendor.approval_count || 0).toLocaleString()} awaiting approval</span>
+                    </div>
+                    <div class="secondary-card-actions">
+                      <button class="btn-secondary btn-sm" onClick=${() => openVendorRecord(vendor)}>Open vendor record</button>
+                      <${VendorStatusButton}
+                        api=${api}
+                        orgId=${orgId}
+                        vendor=${vendor}
+                        toast=${toast}
+                        onChanged=${() => loadVendors({ silent: true })} />
+                      <${VendorPushButton}
+                        api=${api}
+                        orgId=${orgId}
+                        vendor=${vendor}
+                        toast=${toast} />
+                    </div>
                   </div>
-                </div>
-                <div class="secondary-card-actions">
-                  <button class="btn-secondary btn-sm" onClick=${() => openVendorRecord(vendor)}>Open vendor record</button>
-                  <${VendorStatusButton}
-                    api=${api}
-                    orgId=${orgId}
-                    vendor=${vendor}
-                    toast=${toast}
-                    onChanged=${() => loadVendors({ silent: true })} />
-                  <${VendorPushButton}
-                    api=${api}
-                    orgId=${orgId}
-                    vendor=${vendor}
-                    toast=${toast} />
                 </div>
               </div>
             `)}
       </div>
+    </div>
     </div>
   `;
 }

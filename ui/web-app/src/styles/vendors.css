@@ -2,7 +2,7 @@
  *
  * Each card: vendor identity on the left (name + sender +
  * specs row + status chips), spend snapshot on the right,
- * action buttons across the bottom. The JSX uses
+ * action buttons in the right rail. The JSX uses
  * `.secondary-card*` + `.secondary-chip*` + `.cl-vendor-*`
  * — these are the class names; this file is the rules. */
 
@@ -183,4 +183,148 @@
   gap: 8px;
   padding-top: 12px;
   border-top: 1px solid var(--cl-border);
+}
+
+/* Vendors page-specific directory row. Keep this scoped: other workspace
+   pages still use the generic `.secondary-card` contract above. */
+.cl-vendors-page {
+  width: 100%;
+}
+
+.cl-vendors-page .panel {
+  padding: 18px;
+}
+
+.cl-vendors-page .secondary-search-row {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.cl-vendors-page .secondary-search-row input,
+.cl-vendors-page .secondary-search-row [type="search"] {
+  height: 40px;
+  padding-left: 36px;
+}
+
+.cl-vendors-page .secondary-card-list {
+  gap: 10px;
+}
+
+.cl-vendors-page .secondary-card {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.cl-vendors-page .secondary-card:hover {
+  border-color: var(--cl-border-hover);
+  box-shadow: 0 10px 24px rgba(64, 50, 32, 0.05);
+}
+
+.cl-vendors-page .secondary-card-head {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: 0;
+  align-items: stretch;
+}
+
+.cl-vendors-page .secondary-card-copy {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 0 14px;
+  align-items: start;
+  padding: 16px 18px;
+}
+
+.cl-vendors-page .secondary-card-copy .cl-avatar {
+  margin-top: 2px;
+}
+
+.cl-vendors-page .secondary-card-title {
+  display: block;
+  margin-top: 1px;
+  line-height: 1.25;
+}
+
+.cl-vendors-page .secondary-card-meta {
+  margin-top: 4px;
+}
+
+.cl-vendors-page .cl-vendor-spec-row {
+  margin-top: 8px;
+}
+
+.cl-vendors-page .secondary-card-tags {
+  margin-top: 8px;
+}
+
+.cl-vendors-page .secondary-card-side {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px 14px;
+  border-left: 1px solid var(--cl-border);
+  background: linear-gradient(90deg, var(--cl-bg) 0%, var(--cl-surface) 48%);
+}
+
+.cl-vendors-page .secondary-card-stat {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cl-vendors-page .secondary-card-actions {
+  justify-content: flex-end;
+  gap: 6px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.cl-vendors-page .secondary-card-actions .btn-secondary,
+.cl-vendors-page .secondary-card-actions .btn-ghost {
+  min-height: 30px;
+  padding-inline: 11px;
+}
+
+@media (max-width: 980px) {
+  .cl-vendors-page .secondary-card-head {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-vendors-page .secondary-card-side {
+    flex-direction: row;
+    align-items: center;
+    border-top: 1px solid var(--cl-border);
+    border-left: 0;
+    background: var(--cl-bg);
+  }
+
+  .cl-vendors-page .secondary-card-stat {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+@media (max-width: 640px) {
+  .cl-vendors-page .panel {
+    padding: 14px;
+  }
+
+  .cl-vendors-page .secondary-card-copy {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-vendors-page .secondary-card-copy .cl-avatar {
+    display: none;
+  }
+
+  .cl-vendors-page .secondary-card-side {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cl-vendors-page .secondary-card-actions {
+    justify-content: flex-start;
+  }
 }

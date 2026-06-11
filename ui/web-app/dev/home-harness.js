@@ -207,6 +207,69 @@ const records = [
   },
 ];
 
+const vendorDirectory = [
+  {
+    vendor_name: 'Google Cloud EMEA Limited',
+    primary_email: 'payments-noreply@google.com',
+    currency: 'EUR',
+    currency_mixed: true,
+    total_amount: 439,
+    invoice_count: 21,
+    open_count: 21,
+    issue_count: 21,
+    approval_count: 0,
+    last_activity_at: isoAgo(42),
+    top_states: [{ state: 'received', count: 21 }],
+    top_exception_codes: [
+      { exception_code: 'critical_field_low_confidence', count: 19 },
+      { exception_code: 'field_conflict', count: 1 },
+    ],
+    profile: { status: 'active' },
+  },
+  {
+    vendor_name: 'Account Name: | MICROSOFT',
+    primary_email: 'microsoft-noreply@microsoft.com',
+    currency: 'ZAR',
+    total_amount: 0,
+    invoice_count: 11,
+    open_count: 11,
+    issue_count: 11,
+    approval_count: 0,
+    last_activity_at: isoAgo(33000),
+    top_states: [{ state: 'received', count: 11 }],
+    top_exception_codes: [{ exception_code: 'critical_field_low_confidence', count: 11 }],
+    profile: { status: 'active' },
+  },
+  {
+    vendor_name: 'Google Payments',
+    primary_email: 'payments-noreply@google.com',
+    currency: 'USD',
+    total_amount: 0,
+    invoice_count: 4,
+    open_count: 4,
+    issue_count: 4,
+    approval_count: 0,
+    last_activity_at: isoAgo(1380),
+    top_states: [{ state: 'received', count: 4 }],
+    top_exception_codes: [{ exception_code: 'critical_field_low_confidence', count: 4 }],
+    profile: { status: 'active' },
+  },
+  {
+    vendor_name: 'Cisco Systems',
+    primary_email: 'billing@cisco.example',
+    currency: 'USD',
+    total_amount: 12400,
+    invoice_count: 6,
+    open_count: 2,
+    issue_count: 2,
+    approval_count: 1,
+    last_activity_at: isoAgo(12),
+    top_states: [{ state: 'needs_info', count: 2 }, { state: 'validated', count: 4 }],
+    top_exception_codes: [{ exception_code: 'po_context_missing', count: 2 }],
+    profile: { terms: 'Net 30', status: 'active', requires_po: true },
+  },
+];
+
 const activityItems = [
   { id: 'act-1', box_type: 'ap_item', box_id: 'AP-1001', action: 'Asked vendor for missing PO context', subject: 'Cisco Systems - CIS-INV-4482', actor_label: 'Solden agent', surface: 'Gmail', tone: 'warning', ts: isoAgo(12) },
   { id: 'act-2', box_type: 'ap_item', box_id: 'AP-1002', action: 'Validated account coding', subject: 'AWS Cloud Services - AWS-77421', actor_label: 'Dana O.', surface: 'NetSuite', tone: 'success', ts: isoAgo(18) },
@@ -230,6 +293,12 @@ const responses = {
       { id: 'ent-us', name: 'Solden US', code: 'US' },
       { id: 'ent-uk', name: 'Solden UK', code: 'UK' },
     ],
+  },
+  '/api/ap/items/vendors': {
+    vendors: vendorDirectory,
+  },
+  '/api/workspace/vendor-intelligence/duplicates': {
+    clusters: [],
   },
   '/api/ap/items/metrics/aggregation': { metrics: { exceptions_count: 7 } },
   '/api/workspace/records': {
