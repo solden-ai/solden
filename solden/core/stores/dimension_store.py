@@ -127,10 +127,14 @@ class DimensionStore:
         label: Optional[str] = None,
         source: str = "inferred",
         metadata: Optional[Dict[str, Any]] = None,
+        is_active: bool = True,
     ) -> Optional[Dict[str, Any]]:
         """Create or refresh a canonical dimension. Idempotent on
         (organization_id, dimension_type, code). First-writer wins on
-        ``source`` (don't let an inferred re-link downgrade an erp_coa seed)."""
+        ``source`` (don't let an inferred re-link downgrade an erp_coa seed).
+        ``is_active`` IS writer-wins on conflict — the ERP master is
+        authoritative for active/retired, so a re-sync can retire a
+        dimension in place."""
         self.initialize()
         code = str(code or "").strip()
         if not (organization_id and dimension_type and code):
@@ -141,10 +145,11 @@ class DimensionStore:
             INSERT INTO context_dimensions
                 (id, organization_id, dimension_type, code, label, source,
                  metadata_json, is_active, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 1, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (organization_id, dimension_type, code) DO UPDATE SET
                 label = COALESCE(EXCLUDED.label, context_dimensions.label),
                 source = COALESCE(context_dimensions.source, EXCLUDED.source),
+                is_active = EXCLUDED.is_active,
                 updated_at = EXCLUDED.updated_at
             RETURNING *
         """
@@ -154,7 +159,8 @@ class DimensionStore:
                 sql,
                 (
                     dim_id, organization_id, dimension_type, code, label,
-                    source, json.dumps(metadata or {}), now, now,
+                    source, json.dumps(metadata or {}), 1 if is_active else 0,
+                    now, now,
                 ),
             )
             row = cur.fetchone()

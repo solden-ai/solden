@@ -131,6 +131,7 @@ from solden.api.workflow_routes import (
 import solden.box_specs  # noqa: F401
 from solden.api.box_export import router as box_export_router
 from solden.api.dimensions import router as dimensions_router
+from solden.api.ask_solden import router as ask_solden_router
 from solden.api.policy_proposals import router as policy_proposals_router
 from solden.api.box_owner_routes import router as box_owner_router
 from solden.api.box_revert_routes import router as box_revert_router
@@ -703,6 +704,9 @@ STRICT_PROFILE_ALLOWED_WORKSPACE_PATHS = {
     "/api/workspace/policy-proposals",
     # H5 deepening: import ERP dimension masters (admin-gated).
     "/api/workspace/dimensions/sync-erp",
+    # Ask Solden: org-wide Q&A over the earned memory (role-aware, quota-gated).
+    "/api/workspace/ask",
+    "/api/workspace/ask/suggestions",
     "/api/workspace/erp/field-mappings",
     "/api/workspace/permissions/catalog",
     "/api/workspace/roles/custom",
@@ -1867,6 +1871,7 @@ app.include_router(erp_webhooks_router)
 app.include_router(box_export_router)
 # Dimension rollup read API — the cross-system "everything on CC 402" surface (H5).
 app.include_router(dimensions_router)
+app.include_router(ask_solden_router)
 # Behavior -> standing-rule proposals review surface (tribal-knowledge Build 3).
 app.include_router(policy_proposals_router)
 

@@ -376,6 +376,15 @@ def _assert_org_not_deleted(token_data: TokenData) -> TokenData:
     return token_data
 
 
+def session_org(user: Any) -> str:
+    """The caller's organization_id, or 403 — the canonical helper for
+    workspace routers (one copy; routers must not re-implement this)."""
+    org = str(getattr(user, "organization_id", "") or "").strip()
+    if not org:
+        raise HTTPException(status_code=403, detail="user_missing_organization_id")
+    return org
+
+
 def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),

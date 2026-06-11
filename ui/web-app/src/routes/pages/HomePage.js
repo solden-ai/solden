@@ -8,6 +8,7 @@ import { api } from '../../api/client.js';
 import { useBootstrap, useOrgId } from '../../shell/BootstrapContext.js';
 import { formatAmount, formatRelative, displayOrgName } from '../../utils/formatters.js';
 import { accountsPayablePath, accountPayableRecordPath } from '../../utils/record-route.js';
+import AskSoldenPanel from './AskSoldenPanel.js';
 
 /**
  * Workspace Home — work-in-progress control center.
@@ -249,6 +250,8 @@ export function HomePage() {
           onClick=${exceptionCount > 0 ? () => navigate('/exceptions') : undefined}
         />
       </section>
+
+      <${AskSoldenPanel} />
 
       <${PolicyProposalsPanel} />
 

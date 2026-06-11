@@ -87,6 +87,9 @@ class LLMAction(str, Enum):
     # rather than inventing a why. Result is stored machine_distilled and
     # requires human confirm before it counts as the operator's rationale.
     DISTILL_DECISION_RATIONALE = "distill_decision_rationale"
+    # Org-wide Q&A over the earned memory ("Ask Solden") — composes from
+    # deterministically-retrieved, role-aware sources only.
+    ASK_SOLDEN = "ask_solden"
 
 
 @dataclass(frozen=True)
@@ -151,6 +154,7 @@ ACTION_REGISTRY: Dict[LLMAction, ActionConfig] = {
     # spec acceptance line ("returns within 10 seconds for typical
     # questions").
     LLMAction.ASK_THE_AGENT:          ActionConfig(max_output_tokens=1500, model_tier="sonnet", timeout_seconds=15),
+    LLMAction.ASK_SOLDEN:             ActionConfig(max_output_tokens=1500, model_tier="sonnet", timeout_seconds=15),
     # Distills the why behind a decision from persisted excerpts. Cheap tier —
     # extractive prose only; the decision is already made and rules made it.
     LLMAction.DISTILL_DECISION_RATIONALE: ActionConfig(max_output_tokens=400, model_tier="haiku", timeout_seconds=10),

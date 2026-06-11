@@ -71,6 +71,9 @@ async def sync_dimensions_from_erp(db: Any, organization_id: str) -> Dict[str, A
             label=str(row.get("name") or "") or None,
             source="erp_master",
             metadata={"external_id": str(row.get("external_id") or ""), "erp_type": erp_type},
+            # The ERP master is authoritative for active/retired — a retired
+            # cost center must not show up in rollups as live.
+            is_active=bool(row.get("active", True)),
         )
         if not dim:
             continue

@@ -266,3 +266,56 @@ def test_dimension_master_dispatch_covers_all_erps_except_sage_accounting():
     assert set(fetchers) == {"netsuite", "quickbooks", "xero", "sap", "sage_intacct"}
     # sage_accounting deliberately absent: flat small-business ledger, no
     # dimension masters — the sync degrades to a clean no-op for it.
+
+
+def test_sync_inactive_master_is_retired(db):
+    """The ERP master is authoritative for active/retired: an inactive master
+    upserts as inactive (and a re-sync can retire a previously-active one)."""
+    masters = [
+        {"kind": "department", "external_id": "RET", "code": "RET", "name": "Retired Dept", "parent_external_id": None, "active": True},
+    ]
+    with patch(
+        "solden.integrations.erp_router.get_dimension_masters",
+        new=AsyncMock(return_value={"erp_type": "netsuite", "masters": masters}),
+    ):
+        _run(sync_dimensions_from_erp(db, "orgDM"))
+    assert any(d["code"] == "RET" for d in db.list_dimensions(organization_id="orgDM"))
+    # ERP retires the department; re-sync must retire the dimension in place.
+    masters[0]["active"] = False
+    with patch(
+        "solden.integrations.erp_router.get_dimension_masters",
+        new=AsyncMock(return_value={"erp_type": "netsuite", "masters": masters}),
+    ):
+        _run(sync_dimensions_from_erp(db, "orgDM"))
+    assert not any(
+        d["code"] == "RET" for d in db.list_dimensions(organization_id="orgDM")
+    )
+
+
+def test_inferred_resolver_cannot_reactivate_retired_dimension(db):
+    """Regression guard for the is_active passthrough: the inferred
+    capture-time path must never resurrect a dimension the ERP retired.
+    This holds because resolve_dimension matches retired rows and
+    short-circuits before the seeding upsert — pin that invariant."""
+    masters = [{"kind": "department", "external_id": "R2", "code": "R2",
+                "name": "Retired Two", "parent_external_id": None, "active": False}]
+    with patch(
+        "solden.integrations.erp_router.get_dimension_masters",
+        new=AsyncMock(return_value={"erp_type": "netsuite", "masters": masters}),
+    ):
+        _run(sync_dimensions_from_erp(db, "orgDM"))
+    # The inferred path (capture-time resolver) touches the same code:
+    # resolve_dimension matches the retired row and links WITHOUT upserting,
+    # so the writer-wins is_active clause is never reached for it.
+    from solden.services.dimension_resolver import resolve_dimensions_for_box
+    db.create_ap_item({
+        "id": "AP-react-1", "organization_id": "orgDM", "vendor_name": "Acme",
+        "amount": 5.0, "currency": "EUR", "invoice_number": "INV-react-1",
+        "state": "received", "department": "R2",
+    })
+    resolve_dimensions_for_box(
+        db, box_type="ap_item", box_id="AP-react-1",
+        item=db.get_ap_item("AP-react-1"), organization_id="orgDM",
+    )
+    rows = [d for d in db.list_dimensions(organization_id="orgDM") if d["code"] == "R2"]
+    assert rows == [], "retired dimension must not be reactivated by inferred writers"

@@ -3170,6 +3170,82 @@ class APStore:
 
         return {"events": events, "next_cursor": next_cursor}
 
+    def search_decision_reasons(
+        self,
+        *,
+        organization_id: str,
+        terms: List[str],
+        box_type: Optional[str] = None,
+        box_id: Optional[str] = None,
+        limit: int = 20,
+    ) -> List[Dict[str, Any]]:
+        """Org-scoped ILIKE search over decision whys ("Ask Solden" v1).
+
+        Constrained to ``memory_event:%`` rows: commit_memory_event copies the
+        rationale PROSE into the decision_reason column there, whereas plain
+        runtime rows carry machine slugs ("runtime_approve_invoice") in the
+        column and the prose only in payload metadata. Searching the
+        memory-event rows means real whys, not slug noise.
+
+        Bounded by design: terms >= 4 chars (max 5), LIMIT clamped <= 50, and
+        the org + NOT NULL + event-type predicates keep the scan narrow.
+        Relevance-ranked search over all rationale text is the Postgres
+        FTS/pg_trgm follow-up (TODOS.md).
+        """
+        org = str(organization_id or "").strip()
+        clean_terms = [
+            t.strip() for t in (terms or [])
+            if isinstance(t, str) and len(t.strip()) >= 4
+        ][:5]
+        if not (org and clean_terms):
+            return []
+        safe_limit = max(1, min(int(limit or 20), 50))
+
+        where = [
+            "organization_id = %s",
+            "decision_reason IS NOT NULL",
+            "event_type LIKE 'memory_event:%%'",
+        ]
+        params: List[Any] = [org]
+        term_clauses = []
+        for term in clean_terms:
+            term_clauses.append("decision_reason ILIKE %s")
+            params.append(f"%{term}%")
+        where.append("(" + " OR ".join(term_clauses) + ")")
+        if box_type:
+            where.append("box_type = %s")
+            params.append(box_type)
+        if box_id:
+            where.append("box_id = %s")
+            params.append(box_id)
+        params.append(safe_limit)
+
+        sql = f"""
+            SELECT id, ts, event_type, actor_id, box_id, box_type,
+                   new_state, decision_reason
+            FROM audit_events
+            WHERE {" AND ".join(where)}
+            ORDER BY ts DESC, id DESC
+            LIMIT %s
+        """
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(sql, tuple(params))
+            rows = cur.fetchall() or []
+        return [
+            {
+                "id": row["id"],
+                "ts": row["ts"],
+                "event_type": row["event_type"],
+                "actor_id": row["actor_id"],
+                "box_id": row["box_id"],
+                "box_type": row["box_type"],
+                "new_state": row["new_state"],
+                "decision_reason": row["decision_reason"],
+            }
+            for row in (dict(r) for r in rows)
+        ]
+
     # ------------------------------------------------------------------
     # Audit-export jobs (Module 7 v1 Pass 2)
     # ------------------------------------------------------------------

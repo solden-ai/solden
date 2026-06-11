@@ -303,7 +303,9 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         # 2026-06-10: H5 deepening — GET /api/workspace/dimensions/{id}/memory
         # (dimension as a memory object) + POST /api/workspace/dimensions/sync-erp
         # (admin-gated ERP master import). Cap 483 -> 485.
-        assert len(paths) <= 485
+        # 2026-06-10: Ask Solden — POST /api/workspace/ask (org-wide Q&A over
+        # the earned memory) + GET /api/workspace/ask/suggestions. Cap 485 -> 487.
+        assert len(paths) <= 487
         assert not any(path.startswith("/config/") for path in paths)
         assert "/erp/status/{organization_id}" not in paths
         assert "/erp/quickbooks/connect" not in paths
@@ -326,6 +328,8 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         assert "/api/workspace/policy-proposals/{proposal_id}/decline" in paths
         assert "/api/workspace/dimensions/{dimension_id}/memory" in paths
         assert "/api/workspace/dimensions/sync-erp" in paths
+        assert "/api/workspace/ask" in paths
+        assert "/api/workspace/ask/suggestions" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/approve" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/reject" in paths

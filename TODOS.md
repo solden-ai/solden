@@ -77,3 +77,40 @@ Use these documents for current status instead:
 - **Why:** Manual staging drills don't catch integration regressions; needed before broader launch claims
 - **Effort:** L
 - **Depends on:** Real ERP sandbox credentials, staging environment provisioned
+
+## P2 — Memory layer follow-ons (from the Ask Solden eng review, 2026-06-10)
+
+### Postgres FTS / pg_trgm over rationales + exception narratives
+- **What:** tsvector or trigram indexes + a relevance-ranked `search_rationales` read over decision whys and exception reasons.
+- **Why:** Ask Solden v1's whys channel is ILIKE constrained to memory-event rows — real fuzzy recall ("why were we cautious about X?") needs FTS.
+- **Pros:** relevance-ranked memory search; the deepest moat feature of the memory layer.
+- **Cons:** index migrations + query tuning (~1 day).
+- **Context:** `ap_store.search_decision_reasons` is the v1 stand-in; its docstring points here.
+- **Depends on:** Ask Solden shipped (proves demand).
+
+### Dimensions surface in the workspace SPA
+- **What:** a `/dimensions` route — list + per-dimension memory view over the existing `GET /api/workspace/dimensions*` APIs.
+- **Why:** Ask Solden dimension citation chips render inert today (`link.kind: "none"`); the backend rollups already exist.
+- **Pros:** "tell me about CC 402" becomes clickable end-to-end.
+- **Cons:** a page + route + tests (~half day with CC).
+- **Depends on:** nothing — APIs live since 5f708d49.
+
+### Converge Slack + Gmail Q&A onto the ask_solden service
+- **What:** route SLACK_QUERY's conversational handler and the Gmail sidebar query through `solden/services/ask_solden.py`.
+- **Why:** those surfaces use a weaker context (500-item dump, no dimensions/rules/whys, no citations); one Q&A brain, three surfaces.
+- **Cons:** touches two shipped surfaces (regression risk); Slack-side citation formatting needed.
+- **Depends on:** ask_solden proving itself in the workspace; service signature is already surface-agnostic.
+
+## P3 — Memory layer follow-ons
+
+### LLM eval suite for the Ask Solden citation/insufficiency contract
+- **What:** a small eval harness (seeded org, ~20 question/expected-behavior pairs) asserting answers cite real sources and decline on insufficiency. First eval pattern in the repo.
+- **Why:** the runtime hard-guard catches uncited answers in production; prompt/model regressions need pre-deploy detection.
+- **Cons:** new infra pattern; eval runs cost real LLM calls.
+- **Depends on:** a few weeks of real Ask Solden questions to seed from.
+
+### ERP dimension-master reconciliation (disappeared masters)
+- **What:** a reconciliation pass in `dimension_sync` that retires org dimensions whose `source=erp_master` external_id no longer appears in the fetch — with per-kind guards so a partial/failed fetch never mass-deactivates.
+- **Why:** upsert-only sync means masters deleted in the ERP stay `is_active=1` forever (explicit `active=false` is handled since the Ask Solden build's pre-step).
+- **Cons:** the partial-fetch guard is the hard part; fetchers return `[]` on error, which must never be read as "everything was deleted".
+- **Depends on:** live-sandbox validation of the dimension-master fetchers.

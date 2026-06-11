@@ -12,17 +12,13 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from solden.core.auth import get_current_user, require_workspace_admin
+from solden.core.auth import get_current_user, require_workspace_admin, session_org
 from solden.core.database import get_db
 
 router = APIRouter(prefix="/api/workspace", tags=["dimensions"])
 
-
-def _session_org(user: Any) -> str:
-    org = str(getattr(user, "organization_id", "") or "").strip()
-    if not org:
-        raise HTTPException(status_code=403, detail="user_missing_organization_id")
-    return org
+# Canonical org resolution lives in core.auth.session_org (one copy).
+_session_org = session_org
 
 
 @router.get("/dimensions")

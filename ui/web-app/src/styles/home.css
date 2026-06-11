@@ -1641,3 +1641,52 @@
   width: 100%;
   margin-bottom: 8px;
 }
+
+/* ── Ask Solden — org-wide Q&A over the earned memory ───────────────── */
+.cl-home-ask {
+  padding: 20px;
+  border: 1px solid var(--cl-border);
+  border-left: 3px solid var(--cl-teal-500);
+  border-radius: var(--cl-radius);
+  background: var(--cl-surface);
+}
+.cl-home-ask-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+.cl-home-ask-head h2 { margin: 0; font-size: 16px; }
+.cl-home-ask-head p { margin: 0; flex: 1; font-size: 12px; color: var(--cl-ink-secondary); }
+.cl-home-ask-clear {
+  font: inherit; font-size: 12px; border: 0; background: none;
+  color: var(--cl-ink-secondary); cursor: pointer; text-decoration: underline;
+}
+.cl-home-ask-thread { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; max-height: 320px; overflow-y: auto; }
+.cl-home-ask-q {
+  font-size: 13px; font-weight: 600; color: var(--cl-navy);
+  padding: 6px 10px; background: var(--cl-bg); border-radius: var(--cl-radius-sm);
+}
+.cl-home-ask-a { font-size: 13px; line-height: 1.55; padding: 6px 10px 2px; color: var(--cl-ink-primary); }
+.cl-home-ask-chip {
+  font: inherit; font-size: 11px; font-weight: 600;
+  padding: 0 6px; margin: 0 2px; border-radius: 999px;
+  border: 1px solid var(--cl-teal-500); background: transparent;
+  color: var(--cl-teal-600, var(--cl-teal-500)); cursor: pointer;
+  vertical-align: baseline;
+}
+.cl-home-ask-chip.is-inert { cursor: default; opacity: 0.7; }
+.cl-home-ask-fallback {
+  display: inline-block; margin-left: 8px; font-size: 11px; font-style: italic;
+  color: var(--cl-ink-muted, var(--cl-ink-secondary));
+}
+.cl-home-ask-suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.cl-home-ask-suggestion {
+  font: inherit; font-size: 12px; padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--cl-border); background: var(--cl-bg);
+  color: var(--cl-ink-primary); cursor: pointer;
+}
+.cl-home-ask-suggestion:hover { border-color: var(--cl-teal-500); }
+.cl-home-ask-form { display: flex; gap: 8px; }
+.cl-home-ask-form input {
+  flex: 1; font: inherit; font-size: 13px; padding: 9px 12px;
+  border: 1px solid var(--cl-border); border-radius: var(--cl-radius-sm);
+  background: var(--cl-bg);
+}
+.cl-home-ask-form input:focus { outline: 2px solid var(--cl-teal-500); outline-offset: -1px; }
+.cl-home-ask-error { margin: 8px 0 0; font-size: 12px; color: var(--cl-error, #DC2626); }
