@@ -198,7 +198,7 @@ export default function RulesPage({ api, toast }) {
         onVersions=${(r) => setVersionsForRule(r)}
       />
 
-      <section class="cl-rules-support-grid" aria-label="Approval policy context">
+      <section class="cl-rules-support-grid" data-testid="rules-support" aria-label="Approval policy context">
         <${PolicyGuide} />
         <${TemplatesGallery}
           templates=${templates}

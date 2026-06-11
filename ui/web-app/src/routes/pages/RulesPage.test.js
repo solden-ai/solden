@@ -86,8 +86,9 @@ describe('RulesPage', () => {
     expect(screen.getByText('Route to AP Manager')).toBeTruthy();
     expect(screen.getByText('Accounts Payable · All entities')).toBeTruthy();
     expect(screen.getByText('Accounts Payable · entity-emea')).toBeTruthy();
-    expect(container.querySelector('.cl-rules-side')).toBeNull();
-    expect(container.querySelector('.cl-rules-support-grid')).toBeTruthy();
+    // Support content renders as the grid section (the pre-2026 side-panel
+    // layout is long gone); query by testid, not styling classes.
+    expect(container.querySelector('[data-testid="rules-support"]')).toBeTruthy();
 
     await waitFor(() => {
       expect(container.textContent).not.toContain('Teach the agent how to route AP invoices');

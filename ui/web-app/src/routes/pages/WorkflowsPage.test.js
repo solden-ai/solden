@@ -51,12 +51,12 @@ describe('WorkflowsPage', () => {
     mount(api);
     await waitFor(() => screen.getByText('No workflow types yet'));
     // Comma-paste adds multiple state chips in one go.
-    fireEvent.input(document.querySelector('.wf-states'), {
+    fireEvent.input(screen.getByPlaceholderText('add a state, e.g. draft'), {
       target: { value: 'draft, approved' },
     });
     fireEvent.click(screen.getByText('Add'));
     // Chips rendered.
-    await waitFor(() => expect(document.querySelector('.wf-state-chips')).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId('wf-state-chips')).toBeTruthy());
     fireEvent.click(screen.getByText('Validate'));
     await waitFor(() => {
       expect(calls.some(
@@ -72,9 +72,9 @@ describe('WorkflowsPage', () => {
     const { api, calls } = makeApi([]);
     mount(api);
     await waitFor(() => screen.getByText('No workflow types yet'));
-    const typeInput = document.querySelector('.wf-builder input');
+    const typeInput = screen.getByPlaceholderText('contract_review');
     fireEvent.input(typeInput, { target: { value: 'contract_review' } });
-    fireEvent.input(document.querySelector('.wf-states'), {
+    fireEvent.input(screen.getByPlaceholderText('add a state, e.g. draft'), {
       target: { value: 'draft, approved' },
     });
     fireEvent.click(screen.getByText('Add'));
@@ -95,7 +95,7 @@ describe('WorkflowsPage', () => {
     await waitFor(() => screen.getByText('No workflow types yet'));
     fireEvent.click(screen.getByText('Approval'));
     await waitFor(() => {
-      const chips = document.querySelector('.wf-state-chips');
+      const chips = screen.getByTestId('wf-state-chips');
       expect(chips).toBeTruthy();
       expect(chips.textContent).toContain('pending_approval');
     });

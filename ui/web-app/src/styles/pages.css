@@ -20,6 +20,7 @@
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
   border-radius: var(--cl-radius);
+  box-shadow: var(--cl-shadow-sm);
   padding: 24px;
   margin-bottom: 16px;
 }
@@ -176,8 +177,9 @@
   min-height: 92px;
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
-  border-radius: 10px;
-  padding: 14px 16px;
+  border-radius: var(--cl-radius-lg);
+  box-shadow: var(--cl-shadow-sm);
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -210,7 +212,11 @@
 }
 
 .cl-settings-summary-card-success {
-  border-color: rgba(24, 191, 176, 0.32);
+  border-color: color-mix(in srgb, var(--cl-success) 32%, transparent);
+}
+
+.cl-settings-summary-card-success {
+  background: linear-gradient(0deg, var(--cl-success-soft), var(--cl-success-soft)), var(--cl-surface);
 }
 
 .cl-settings-summary-card-success strong {
@@ -228,7 +234,7 @@
 .cl-settings-layout {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
-  gap: 16px;
+  gap: 20px;
   align-items: start;
 }
 
@@ -241,8 +247,9 @@
   min-width: 0;
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
-  border-radius: 12px;
-  padding: 14px;
+  border-radius: var(--cl-radius-lg);
+  box-shadow: var(--cl-shadow-sm);
+  padding: 16px;
 }
 
 .cl-settings-nav-group {
@@ -4094,7 +4101,8 @@
 .cl-rules-list-card {
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
-  border-radius: 12px;
+  border-radius: var(--cl-radius-lg);
+  box-shadow: var(--cl-shadow-sm);
 }
 
 .cl-rules-guide,

@@ -282,7 +282,7 @@ export default function WorkflowsPage({ api, orgId, toast }) {
         </div>
         ${states.length === 0
           ? html`<p class="muted" style="font-size:12px;margin:0">No states yet. Add a few (or pick a template) to wire up the rest.</p>`
-          : html`<div class="secondary-card-tags wf-state-chips">
+          : html`<div class="secondary-card-tags wf-state-chips" data-testid="wf-state-chips">
               ${states.map((s) => html`
                 <span key=${s} class="secondary-chip" style="gap:6px">
                   ${s}

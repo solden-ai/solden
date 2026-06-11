@@ -115,8 +115,9 @@ describe('SettingsPage', () => {
     expect(screen.getByText('Policy controls')).toBeTruthy();
     expect(screen.getAllByText('Access').length).toBeGreaterThan(0);
     expect(screen.getByText('Operations')).toBeTruthy();
-    expect(container.querySelector('.settings-tabs-strip')).toBeNull();
-    expect(container.querySelector('.cl-settings-layout')).toBeTruthy();
+    // Grouped sidebar layout renders (the pre-2026 tab strip is long gone);
+    // query by testid, not styling classes.
+    expect(container.querySelector('[data-testid="settings-layout"]')).toBeTruthy();
     expect(screen.getByRole('heading', { level: 2, name: 'Workspace' })).toBeTruthy();
 
     fireEvent.click(screen.getByText('Team').closest('button'));

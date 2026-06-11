@@ -989,7 +989,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         `)}
       </section>
 
-      <div class="cl-settings-layout">
+      <div class="cl-settings-layout" data-testid="settings-layout">
         <nav class="cl-settings-nav" aria-label="Settings sections">
           ${SETTINGS_SECTION_GROUPS.map((group) => html`
             <section class="cl-settings-nav-group" key=${group.label}>

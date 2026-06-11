@@ -34,11 +34,8 @@ Use these documents for current status instead:
 ### ~~Workspace shell visual redesign — Wave 1~~ ✓
 - **Status:** Wave 1 DONE (2026-06-11) — warm neutral system ratified from a rendered style guide (cream canvas, stone borders, umber shadows; brand navy+teal unchanged), Instrument Sans/DM Sans/Geist Mono loaded, shared vocabulary shipped (`.cl-avatar`, `.cl-pill`, `.cl-progress`, unified `.btn-*`), shell rail + demo path + low-risk pages swept. See DESIGN.md decision 2026-06-11.
 
-### Workspace shell visual redesign — Wave 2
-- **What:** Layout polish for the three test-fragile pages: SettingsPage (3,688 lines; responsive logic baked into tests), RulesPage (`.cl-rules-side`/`.cl-rules-support-grid` structure tests), WorkflowsPage (builder tests query `.wf-*` classes). Test-first: switch the structural assertions to roles/data-attributes, then restyle onto the Wave-1 vocabulary.
-- **Why:** They inherit the warm token VALUES already (names never changed) but their layouts predate the card system.
-- **Effort:** M
-- **Depends on:** Wave 1 (DONE 2026-06-11)
+### ~~Workspace shell visual redesign — Wave 2~~ ✓
+- **Status:** DONE (2026-06-11) — test-first: Rules/Settings structural class assertions → data-testids, Workflows builder tests → placeholder/testid queries; then Rules support cards, Settings nav/summary cards, and the global `.panel` onto the Wave-1 card system. The full redesign TODO is closed.
 
 ### Gmail extension sidebar visual polish
 - **What:** Apply same visual redesign to extension sidebar — match the workspace shell quality bar
