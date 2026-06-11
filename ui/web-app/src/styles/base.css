@@ -4,15 +4,15 @@
      canvas, borders, and shadows AROUND data surfaces, never under text.
      Token NAMES never change (11.8k lines of CSS compile against them);
      values changed in place, new tokens are additive only. */
-  --cl-bg: #FAF7F2;
-  --cl-bg-deep: #F3EFE7;
+  --cl-bg: #FBF9F6;
+  --cl-bg-deep: #F4F0EA;
   --cl-surface: #FFFFFF;
   --cl-surface-raised: #FFFFFF;
   --cl-border: #E9E2D6;
   --cl-border-strong: #D7CDBE;
   --cl-ink-primary: #001137;
-  --cl-ink-secondary: #57534E;
-  --cl-ink-muted: #A8A29E;
+  --cl-ink-secondary: #44403C;
+  --cl-ink-muted: #78716C;
 
   /* Solden brand (rebrand active 2026-05-02). Navy is sampled from
      the canonical brand lockup (`public/solden-lockup-dark.png`) so

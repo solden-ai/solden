@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { h } from 'preact';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/preact';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/preact';
 import SettingsPage from './SettingsPage.js';
 
 function makeBootstrap() {
@@ -106,31 +106,33 @@ function renderSettingsPage({ routeId = '' } = {}) {
 describe('SettingsPage', () => {
   afterEach(() => cleanup());
 
-  it('uses grouped settings navigation instead of the old tab strip', async () => {
+  it('renders the ratified six-tab navigation with stacked groups', async () => {
     const { container, navigate } = renderSettingsPage();
 
     await screen.findByRole('heading', { name: 'Settings' });
-    expect(screen.getByRole('navigation', { name: 'Settings sections' })).toBeTruthy();
-    expect(screen.getAllByText('Workspace and systems').length).toBeGreaterThan(0);
-    expect(screen.getByText('Policy controls')).toBeTruthy();
-    expect(screen.getAllByText('Access').length).toBeGreaterThan(0);
-    expect(screen.getByText('Operations')).toBeTruthy();
-    // Grouped sidebar layout renders (the pre-2026 tab strip is long gone);
-    // query by testid, not styling classes.
+    const nav = screen.getByRole('navigation', { name: 'Settings sections' });
+    expect(nav).toBeTruthy();
+    for (const tab of ['Workspace', 'Policy', 'Team', 'Notifications', 'Billing', 'Data']) {
+      expect(within(nav).getByRole('button', { name: tab })).toBeTruthy();
+    }
     expect(container.querySelector('[data-testid="settings-layout"]')).toBeTruthy();
-    expect(screen.getByRole('heading', { level: 2, name: 'Workspace' })).toBeTruthy();
+    // The Workspace tab stacks the ratified two groups on one page.
+    expect(screen.getByRole('heading', { level: 3, name: 'Workspace' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'Operational guardrails' })).toBeTruthy();
+    expect(screen.getByLabelText('Auto-approve ceiling')).toBeTruthy();
+    expect(screen.getByLabelText('Dual approval threshold')).toBeTruthy();
+    expect(screen.getByText('Locked by policy')).toBeTruthy();
 
-    fireEvent.click(screen.getByText('Team').closest('button'));
+    fireEvent.click(within(nav).getByRole('button', { name: 'Team' }));
 
     expect(navigate).toHaveBeenCalledWith('/settings/team');
-    await screen.findByRole('heading', { level: 2, name: 'Team' });
+    await screen.findByText('Invite the people who need to work, monitor, or manage back-office operations.');
   });
 
-  it('opens the requested section from the settings route id', async () => {
+  it('opens the containing tab from a deep-link section route id', async () => {
     renderSettingsPage({ routeId: 'team' });
 
-    await screen.findByRole('heading', { level: 2, name: 'Team' });
-    expect(screen.getByText('Invite the people who need to work, monitor, or manage back-office operations.')).toBeTruthy();
+    await screen.findByText('Invite the people who need to work, monitor, or manage back-office operations.');
     await waitFor(() => {
       expect(screen.getByText('owner@acme.test')).toBeTruthy();
     });

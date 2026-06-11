@@ -235,11 +235,8 @@
 }
 
 .cl-settings-layout {
-  display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
-  gap: 40px;
-  align-items: start;
-  max-width: 1040px;
+  display: block;
+  max-width: 880px;
 }
 
 .cl-settings-nav {
@@ -7207,9 +7204,102 @@
 }
 .cl-settings-field:first-of-type { border-top: 0; }
 .cl-settings-field-label { font-weight: 600; font-size: 13.5px; color: var(--cl-ink-primary); }
-.cl-settings-field-desc { color: var(--cl-ink-secondary); font-size: 12.5px; margin-top: 3px; line-height: 1.5; }
+.cl-settings-field-desc { color: var(--cl-ink-secondary); font-size: 13px; margin-top: 3px; line-height: 1.5; }
 .cl-settings-field-value { display: flex; flex-direction: column; gap: 6px; min-width: 0; justify-content: center; }
 .cl-settings-field-value-inline { display: flex; align-items: center; gap: 10px; }
 @media (max-width: 860px) {
   .cl-settings-field { grid-template-columns: 1fr; gap: 8px; }
+}
+
+/* Horizontal settings tabs (the ratified IA): slim bar, teal underline. */
+.cl-settings-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--cl-border);
+  margin-bottom: 4px;
+}
+.cl-settings-tab {
+  font: 500 13.5px var(--cl-font-body);
+  color: var(--cl-ink-secondary);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 9px 14px;
+  cursor: pointer;
+}
+.cl-settings-tab:hover { color: var(--cl-ink-primary); }
+.cl-settings-tab.is-active {
+  color: var(--cl-ink-primary);
+  font-weight: 600;
+  border-bottom-color: var(--cl-teal-500);
+}
+
+/* Stacked groups within a tab: hairline-separated, generous rhythm. */
+.cl-settings-content > * + * {
+  border-top: 1px solid var(--cl-border);
+  margin-top: 8px;
+  padding-top: 28px;
+}
+.cl-settings-group-head { margin-bottom: 6px; }
+.cl-settings-group-head h3 {
+  font-family: var(--cl-font-display);
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+.cl-settings-group-head p { margin-top: 2px; font-size: 13px; }
+
+/* Toggle (mockup-exact) + locked states for invariant guardrails. */
+.cl-toggle {
+  display: inline-block;
+  width: 36px;
+  height: 21px;
+  border-radius: 999px;
+  background: var(--cl-border-strong);
+  position: relative;
+  flex: none;
+}
+.cl-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2.5px;
+  left: 2.5px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(64, 50, 32, 0.2);
+}
+.cl-toggle.is-on { background: var(--cl-teal-500); }
+.cl-toggle.is-on::after { left: 18px; }
+.cl-toggle.is-locked { opacity: 0.55; }
+
+/* Field inputs + the per-group save bar (mockup-exact). */
+.cl-settings-field-input {
+  font: 14px var(--cl-font-body);
+  color: var(--cl-ink-primary);
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border-strong);
+  border-radius: 8px;
+  padding: 8px 12px;
+  width: 100%;
+  max-width: 360px;
+}
+.cl-settings-field-input:focus {
+  outline: 2px solid var(--cl-teal-500);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+.cl-settings-field-input-amount {
+  max-width: 160px;
+  font-family: var(--cl-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.cl-settings-savebar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 20px 0 0;
+  border-top: 1px solid var(--cl-border);
+  margin-top: 10px;
 }

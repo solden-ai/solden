@@ -135,6 +135,22 @@ const SETTINGS_SECTION_GROUPS = [
   },
 ];
 
+
+// The ratified IA (2026-06-11): six tabs, the active tab's sections stack
+// as hairline groups on one page. Section ids survive for deep links.
+const SETTINGS_TABS = [
+  { id: 'workspace', label: 'Workspace', sections: ['workspace'] },
+  { id: 'policy', label: 'Policy', sections: ['policy', 'approval', 'vendor', 'autonomy', 'fraud'] },
+  { id: 'team', label: 'Team', sections: ['team', 'roles', 'sso'] },
+  { id: 'notifications', label: 'Notifications', sections: ['escalation', 'notifications'] },
+  { id: 'billing', label: 'Billing', sections: ['billing'] },
+  { id: 'data', label: 'Data', sections: ['erp', 'gl', 'matching', 'fx', 'export'] },
+];
+
+function tabForSection(sectionId) {
+  return SETTINGS_TABS.find((tab) => tab.sections.includes(sectionId)) || SETTINGS_TABS[0];
+}
+
 const SETTINGS_SECTIONS = SETTINGS_SECTION_GROUPS.flatMap((group) => group.items.map((item) => ({
   ...item,
   group: group.label,
@@ -564,6 +580,50 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
     if (typeof navigate === 'function') navigate('/connections');
   };
 
+  // ── Operational guardrails (the ratified Workspace-tab group) ──
+  // Draft state + one save bar; values come from real policy stores.
+  const savedAutoApprove = bootstrap?.organization?.settings?.auto_approve_amount_threshold ?? '';
+  const [guardDraft, setGuardDraft] = useState({ autoApprove: null, dualApproval: null });
+  const [dualApprovalSaved, setDualApprovalSaved] = useState(null);
+  const [savingGuardrails, setSavingGuardrails] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    api('/api/workspace/policy/dual-approval', { silent: true })
+      .then((resp) => { if (!cancelled) setDualApprovalSaved(resp?.dual_approval_threshold ?? null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [api]);
+  const guardAutoApprove = guardDraft.autoApprove ?? String(savedAutoApprove ?? '');
+  const guardDualApproval = guardDraft.dualApproval ?? (dualApprovalSaved == null ? '' : String(dualApprovalSaved));
+  const guardrailsDirty = guardDraft.autoApprove !== null || guardDraft.dualApproval !== null;
+  const discardGuardrails = () => setGuardDraft({ autoApprove: null, dualApproval: null });
+  const saveGuardrails = async () => {
+    setSavingGuardrails(true);
+    try {
+      if (guardDraft.autoApprove !== null) {
+        await api(`/settings/${encodeURIComponent(orgId)}`, {
+          method: 'PUT',
+          body: JSON.stringify({ auto_approve_amount_threshold: parseFloat(guardDraft.autoApprove) || 0 }),
+        });
+      }
+      if (guardDraft.dualApproval !== null) {
+        const raw = parseFloat(guardDraft.dualApproval);
+        await api('/api/workspace/policy/dual-approval', {
+          method: 'PUT',
+          body: JSON.stringify({ dual_approval_threshold: Number.isFinite(raw) && raw > 0 ? raw : null }),
+        });
+        setDualApprovalSaved(Number.isFinite(raw) && raw > 0 ? raw : null);
+      }
+      setGuardDraft({ autoApprove: null, dualApproval: null });
+      toast?.('Guardrails saved', 'success');
+      onRefresh?.();
+    } catch (_) {
+      toast?.('Save failed', 'error');
+    } finally {
+      setSavingGuardrails(false);
+    }
+  };
+
   const [createInvite, creatingInvite] = useAction(async () => {
     if (!canManageTeam) return;
     const emailInput = document.getElementById('cl-invite-email');
@@ -958,8 +1018,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
     teams,
     usage,
   };
-  const currentSection = getSettingsSection(activeSection);
-  const currentSectionStatus = getSettingsSectionStatus(activeSection, sectionContext);
+  const activeTab = tabForSection(activeSection);
 
   return html`
     <main class="cl-settings-page">
@@ -990,46 +1049,34 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
       </div>
 
       <div class="cl-settings-layout" data-testid="settings-layout">
-        <nav class="cl-settings-nav" aria-label="Settings sections">
-          ${SETTINGS_SECTION_GROUPS.map((group) => html`
-            <section class="cl-settings-nav-group" key=${group.label}>
-              <h2>${group.label}</h2>
-              <div class="cl-settings-nav-list">
-                ${group.items.map((item) => {
-                  const selected = activeSection === item.id;
-                  return html`
-                    <button
-                      type="button"
-                      class=${`cl-settings-nav-item${selected ? ' is-active' : ''}`}
-                      aria-current=${selected ? 'page' : undefined}
-                      onClick=${() => selectSection(item.id)}
-                      key=${item.id}>
-                      <span class="cl-settings-nav-copy">${item.label}</span>
-                    </button>
-                  `;
-                })}
-              </div>
-            </section>
-          `)}
+        <nav class="cl-settings-tabs" aria-label="Settings sections">
+          ${SETTINGS_TABS.map((tab) => {
+            const selected = activeTab.id === tab.id;
+            return html`
+              <button
+                type="button"
+                class=${`cl-settings-tab${selected ? ' is-active' : ''}`}
+                aria-current=${selected ? 'page' : undefined}
+                onClick=${() => selectSection(tab.sections[0])}
+                key=${tab.id}>
+                ${tab.label}
+              </button>
+            `;
+          })}
         </nav>
 
-        <section class="cl-settings-content" aria-labelledby="cl-settings-current-title">
-          <header class="cl-settings-section-head">
-            <div>
-              <span class="cl-settings-eyebrow">${currentSection.group}</span>
-              <h2 id="cl-settings-current-title">${currentSection.label}</h2>
-              <p>${currentSection.summary}</p>
-            </div>
-            <span class="cl-settings-section-status">${currentSectionStatus}</span>
-          </header>
+        <section class="cl-settings-content">
 
-          <div class="cl-settings-section-body">
       <!-- Workspace identity (org name + domain). The topbar reads
            bootstrap.organization.name; without this panel the auto-
            provisioned default ("default") sticks because the rename
            UI was previously hidden in a summary card. -->
-      ${activeSection === 'workspace' ? html`
+      ${activeTab.sections.includes('workspace') ? html`
       <div class="cl-settings-fields">
+        <div class="cl-settings-group-head">
+          <h3>Workspace</h3>
+          <p class="muted">Name, domain, and organization details.</p>
+        </div>
         <div class="cl-settings-field">
           <div>
             <div class="cl-settings-field-label">Display name</div>
@@ -1127,10 +1174,82 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           </div>
         </div>
       </div>
+
+      <div class="cl-settings-fields">
+        <div class="cl-settings-group-head">
+          <h3>Operational guardrails</h3>
+          <p class="muted">The hard limits the agent can never cross, regardless of rules or learned behavior.</p>
+        </div>
+
+        <div class="cl-settings-field">
+          <div>
+            <div class="cl-settings-field-label">Auto-approve ceiling</div>
+            <div class="cl-settings-field-desc">Invoices above this always require a human decision.</div>
+          </div>
+          <div class="cl-settings-field-value">
+            <input
+              type="number" step="100" min="0" placeholder="0"
+              class="cl-settings-field-input cl-settings-field-input-amount"
+              value=${guardAutoApprove}
+              disabled=${!canManageCompany || savingGuardrails}
+              onInput=${(e) => setGuardDraft((d) => ({ ...d, autoApprove: e.target.value }))}
+              aria-label="Auto-approve ceiling" />
+            <div class="muted small">Below this, clean 3-way-matched invoices auto-approve. 0 = everything needs a human.</div>
+          </div>
+        </div>
+
+        <div class="cl-settings-field">
+          <div>
+            <div class="cl-settings-field-label">Dual approval threshold</div>
+            <div class="cl-settings-field-desc">Two approvers required at or above this amount.</div>
+          </div>
+          <div class="cl-settings-field-value">
+            <input
+              type="number" step="1000" min="0" placeholder="Disabled"
+              class="cl-settings-field-input cl-settings-field-input-amount"
+              value=${guardDualApproval}
+              disabled=${!canManageCompany || savingGuardrails}
+              onInput=${(e) => setGuardDraft((d) => ({ ...d, dualApproval: e.target.value }))}
+              aria-label="Dual approval threshold" />
+            <div class="muted small">Leave empty to disable dual approval.</div>
+          </div>
+        </div>
+
+        <div class="cl-settings-field">
+          <div>
+            <div class="cl-settings-field-label">Bank-change holds</div>
+            <div class="cl-settings-field-desc">Freeze payment when a vendor's bank details change until a human verifies.</div>
+          </div>
+          <div class="cl-settings-field-value-inline">
+            <span class="cl-toggle is-on is-locked" role="switch" aria-checked="true" aria-disabled="true"></span>
+            <span class="muted" style="font-size:13px">Always on — high-signal approvals demand a typed why before money moves.</span>
+          </div>
+        </div>
+
+        <div class="cl-settings-field">
+          <div>
+            <div class="cl-settings-field-label">Vendor master writes</div>
+            <div class="cl-settings-field-desc">Solden never creates ERP vendor masters. Posting fails closed instead.</div>
+          </div>
+          <div class="cl-settings-field-value-inline">
+            <span class="cl-toggle is-locked" role="switch" aria-checked="false" aria-disabled="true"></span>
+            <span class="muted" style="font-size:13px">Locked by policy</span>
+          </div>
+        </div>
+
+        ${canManageCompany ? html`
+          <div class="cl-settings-savebar">
+            <button class="btn btn-secondary" onClick=${discardGuardrails} disabled=${!guardrailsDirty || savingGuardrails}>Discard</button>
+            <button class="btn btn-primary" onClick=${saveGuardrails} disabled=${!guardrailsDirty || savingGuardrails}>
+              ${savingGuardrails ? 'Saving…' : 'Save changes'}
+            </button>
+          </div>
+        ` : null}
+      </div>
       ` : null}
 
       <!-- §16.1 ERP Connection -->
-      ${activeSection === 'erp' ? html`
+      ${activeTab.sections.includes('erp') ? html`
       <div class="panel">
         <div class="panel-head compact">
           <div>
@@ -1176,7 +1295,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
       ` : null}
 
       <!-- §16.1b GL Account Mapping -->
-      ${activeSection === 'gl' ? html`
+      ${activeTab.sections.includes('gl') ? html`
       <div class="panel">
         <div class="panel-head compact">
           <div>
@@ -1266,7 +1385,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
       ` : null}
 
       <!-- §16.2 AP Policy -->
-      ${activeSection === 'policy' ? html`
+      ${activeTab.sections.includes('policy') ? html`
       <div class="panel">
         <div class="panel-head compact">
           <div>
@@ -1275,15 +1394,6 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           </div>
         </div>
         <div class="secondary-form-grid">
-          <div class="field-row">
-            <label>Auto-approve threshold</label>
-            <input
-              type="number" step="100" min="0" placeholder="500"
-              value=${bootstrap?.organization?.settings?.auto_approve_amount_threshold || ''}
-              onChange=${(e) => api(`/settings/${encodeURIComponent(orgId)}`, { method: 'PUT', body: JSON.stringify({ auto_approve_amount_threshold: parseFloat(e.target.value) || 0 }) }).then(() => toast('Threshold saved', 'success')).catch(() => toast('Save failed', 'error'))}
-            />
-            <div class="form-help">Invoices below this amount with passed 3-way match auto-approve. Default: £0 (all require approval).</div>
-          </div>
           <div class="field-row">
             <label>Duplicate detection window</label>
             <input
@@ -1307,7 +1417,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
       ` : null}
 
       <!-- §16.3 Matching mode + tolerances -->
-      ${activeSection === 'matching' ? html`
+      ${activeTab.sections.includes('matching') ? html`
       <div class="panel">
         <${MatchingSection}
           api=${api}
@@ -1318,7 +1428,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
       ` : null}
 
       <!-- §16.4 Vendor Onboarding Policy -->
-      ${activeSection === 'vendor' ? html`
+      ${activeTab.sections.includes('vendor') ? html`
       <div class="panel">
         <div class="panel-head compact">
           <div>
@@ -1352,7 +1462,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
       ` : null}
 
       <!-- §16.5 Autonomy Configuration -->
-      ${activeSection === 'autonomy' ? html`
+      ${activeTab.sections.includes('autonomy') ? html`
       <div class="panel">
         <div class="panel-head compact">
           <div>
@@ -1397,7 +1507,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
       </div>
       ` : null}
 
-      ${activeSection === 'team' ? html`
+      ${activeTab.sections.includes('team') ? html`
       <div class="panel">
         <div class="panel-head compact">
           <div>
@@ -1458,7 +1568,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
       </div>
       ` : null}
 
-      ${activeSection === 'billing' ? html`
+      ${activeTab.sections.includes('billing') ? html`
       <div class="panel">
         <div class="panel-head compact">
           <div>
@@ -1545,7 +1655,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
       </div>
       ` : null}
 
-      ${activeSection === 'roles' ? html`
+      ${activeTab.sections.includes('roles') ? html`
         <${CustomRolesPanel}
           api=${api}
           orgId=${orgId}
@@ -1560,7 +1670,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           canManage=${canManageTeam} />
       ` : null}
 
-      ${activeSection === 'sso' ? html`
+      ${activeTab.sections.includes('sso') ? html`
         <${SAMLPanel}
           api=${api}
           orgId=${orgId}
@@ -1568,21 +1678,21 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           canManage=${canManageCompany} />
       ` : null}
 
-      ${activeSection === 'escalation' ? html`
+      ${activeTab.sections.includes('escalation') ? html`
         <${EscalationPoliciesPanel}
           api=${api}
           toast=${toast}
           panelRef=${escalationRef} />
       ` : null}
 
-      ${activeSection === 'notifications' ? html`
+      ${activeTab.sections.includes('notifications') ? html`
         <${NotificationPreferencesPanel}
           api=${api}
           toast=${toast}
           panelRef=${notificationsRef} />
       ` : null}
 
-      ${activeSection === 'fraud' ? html`
+      ${activeTab.sections.includes('fraud') ? html`
         <${FraudThresholdsPanel}
           api=${api}
           orgId=${orgId}
@@ -1590,21 +1700,21 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           canManage=${canManageCompany} />
       ` : null}
 
-      ${activeSection === 'export' ? html`
+      ${activeTab.sections.includes('export') ? html`
         <${DataExportPanel}
           orgId=${orgId}
           toast=${toast}
           canManage=${canManageCompany} />
       ` : null}
 
-      ${activeSection === 'fx' ? html`
+      ${activeTab.sections.includes('fx') ? html`
         <${FxRatesPanel}
           api=${api}
           toast=${toast}
           panelRef=${fxRatesRef} />
       ` : null}
 
-      ${activeSection === 'approval' ? html`
+      ${activeTab.sections.includes('approval') ? html`
       <div class="panel">
         <div class="panel-head compact">
           <div>
@@ -1691,7 +1801,6 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         </div>
       </div>
       ` : null}
-          </div>
         </section>
       </div>
     </main>
