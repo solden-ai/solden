@@ -23,7 +23,7 @@
 7. **Each surface should feel native to its host.** Gmail pages feel Gmail-native; Slack / Teams approvals feel chat-native; ERP follow-ons feel system-native. The Gmail extension follows Streak's in-inbox grammar; that is the Gmail-surface model, not the whole product.
 
 ## Aesthetic Direction
-- **Direction:** A calm, content-forward control center for back-office work, plus embedded panels native to each render target.
+- **Direction:** A calm, content-forward control center for back-office work, plus embedded panels native to each render target. **Temperature (2026-06-11): warm** — cream paper canvas, warm stone neutrals, umber shadows (Fyxer-style warmth); structure and density still per the console references below.
 - **Mood:** Fast, calm, precise, trustworthy.
 - **Decoration level:** Minimal. Flat surfaces, strong typography, quiet borders, extremely light shadow. Minimalist by default: light chrome, the work carries the color.
 - **Reference hierarchy:**
@@ -37,7 +37,7 @@
 - **Logomark:** Three stacked slabs forming a stylized "S" — two navy horizontal bars top + bottom with a teal middle stripe running upper-right to lower-left. The slants on the navy bars feed visually into the diagonal so the silhouette reads as a continuous S. Implemented as inline SVG in [`ui/web-app/src/shell/BrandMark.js`](ui/web-app/src/shell/BrandMark.js).
 - **Wordmark:** "solden" — Inter, weight 700, lowercase, letter-spacing -1% to -2%.
 - **Brand color (primary accent):** Teal `#18BFB0` (`--cl-teal-500`).
-- **Brand dark (primary ink):** Navy `#0A1F44` (`--cl-navy`).
+- **Brand dark (primary ink):** Navy `#001137` (`--cl-navy`, sampled from the lockup).
 - **Variants:** Primary lockup (navy + teal-stripe on white) for light surfaces, including the workspace sidebar; one-color white lockup for dark / teal-fill surfaces only (e.g. the login + invite-accept hero cards). The workspace sidebar is a **light rail** (see decision 2026-05-21), not a navy slab.
 - **Personality:** Practical, reliable, efficient. The product should feel more like an operator's workspace than a marketing surface.
 
@@ -67,7 +67,7 @@
 | `--cl-teal-400` | `#1FC7B6` | Gradient start, hover-light variant |
 | `--cl-teal-600` | `#12B3A6` | Gradient end, hover-deep variant |
 | `--cl-teal-soft` | `#DDF7F3` | Light status fills, supportive emphasis |
-| `--cl-navy` | `#0A1F44` | Primary ink, dark controls, logo navy bars (NOT the sidebar — the rail is light, see 2026-05-21) |
+| `--cl-navy` | `#001137` | Primary ink, dark controls, logo navy bars (NOT the sidebar — the rail is light, see 2026-05-21) |
 | `--cl-navy-light` | `#1E293B` | Dark hover states |
 | `--cl-mint*` (legacy) | aliased | Old `--cl-mint` / `--cl-mint-strong` / `--cl-mint-soft` tokens are aliased to the teal palette so existing call sites keep working until renamed. |
 
@@ -75,20 +75,20 @@
 | Token | Hex | Usage |
 |-------|-----|-------|
 | `--surface` | `#FFFFFF` | Cards, panels, inputs |
-| `--bg` | `#FAFAF8` | Warm Gmail route background |
+| `--bg` | `#FAF7F2` | Warm Gmail route background |
 
 ### Text
 | Token | Hex | Usage |
 |-------|-----|-------|
 | `--ink` | `#0F172A` | Primary text |
-| `--ink-secondary` | `#475569` | Supporting text |
-| `--ink-muted` | `#94A3B8` | Timestamps, tertiary labels |
+| `--ink-secondary` | `#57534E` | Supporting text |
+| `--ink-muted` | `#A8A29E` | Timestamps, tertiary labels |
 
 ### Borders
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `--border` | `#E2E8F0` | Default borders |
-| `--border-hover` | `#CBD5E1` | Hover borders, separators |
+| `--border` | `#E9E2D6` | Default borders |
+| `--border-hover` | `#D7CDBE` | Hover borders, separators |
 
 ### Semantic
 | Token | Hex | Soft | Usage |
@@ -255,6 +255,7 @@ The Gmail extension keeps its own in-inbox navigation following Streak's grammar
 | 2026-05-02 | Solden rebrand applied | Mo lifted the rebrand hold and shipped the brand kit: navy `#0A1F44`, teal palette `#1FC7B6 / #18BFB0 / #12B3A6`, white. Wordmark "solden" in Inter 700 lowercase, tracking -1% to -2%. Logomark is a three-slab stylized S (navy bars + teal middle stripe). DESIGN.md, the SidebarNav, login + invite-accept cards, footer, page title, legal copy, and operational status strings were swept to Solden. Public brand copy and email addresses use `soldenai.com`; legacy Clearledgr domains and env names remain only as compatibility aliases where the shipped integrations still need them. Old `--cl-mint*` tokens are aliased to the teal palette so unfinished call sites keep compiling. |
 | 2026-05-21 | Workspace sidebar goes light | Mo: "we don't need it. I'm a minimalist." The navy slab sidebar was the more enterprise-dashboard look and at odds with the Linear / Vercel references the control center aims for. Sidebar is now a light rail: `--cl-surface` background, `--cl-ink-primary` text, `--cl-border` hairline divider, muted group labels, subtle `--cl-bg` hover, and a faint `--cl-teal-soft` active fill with `--cl-teal-600` text. Brand lockup flips to the navy `primary` variant. Navy is reserved for ink, the logomark, dark controls, and accents, not chrome fills. |
 | 2026-05-21 | Doctrine updated from Clearledgr to Solden | Mo: "that design file was written for Clearledgr; update it to match Solden." The brand kit was already Solden, but the positioning was still the Clearledgr/Gmail-wedge era ("embedded finance ops", "Streak for finance ops", "Gmail-first AP is the first production wedge", a dead Gmail IA, `workspace.soldenai.com`). Rewrote Product Context, Core UX Doctrine, and Aesthetic Direction to Solden's shipped reality: back-office work across many box types, AP as one wedge rather than the product, the broad "transcends finance" position from the live landing page, and the control-center references (Linear / Vercel / Datadog / Modal). Replaced the legacy Gmail IA with the current workspace nav and scoped the Streak/foyer model to the Gmail extension only. Fixed the domain to `soldenai.com` and "mint" copy to "teal". Brand system (color / type / tokens / components) and the Workspace Surface + Records patterns were already current and kept. |
+| 2026-06-11 | Workspace neutral system goes WARM (Wave 1) | Mo re-opened the visual direction against the stale Fyxer/Mixmax TODO and chose warmth: cream canvas `#FAF7F2` (+ deep paper `#F3EFE7` for inset wells), warm stone borders `#E9E2D6`/`#D7CDBE`, warm grays `#57534E`/`#A8A29E`, umber-based shadows `rgba(64,50,32,…)`, card radius 12px, semantic soft fills warmed (parchment, not lemon/pink). Brand UNCHANGED: navy `#001137` ink + teal CTA; the lockup untouched. Sidebar rail now sits on the canvas (`--cl-bg`) so white cards float. Instrument Sans / DM Sans / Geist Mono finally loaded (they were specified but never served). Shared vocabulary shipped: `.cl-avatar` (+ deterministic warm hues), `.cl-pill` semantic set, `.cl-progress` linear bar, unified `.btn-*` (the `cl-home-btn`/`cl-onb-btn` forks deleted). Ratified from a rendered style guide before the sweep. Wave 2 (Settings/Rules/Workflows layout polish) scheduled. Supersedes the cool-slate values in earlier entries; Linear/Vercel structure references stand. |
 | 2026-05-31 | Positioning sharpened around operational memory | YC-founder market chatter reinforced the same insight: models are no longer the blocker; the hidden blocker is tacit work context trapped in senior people's heads and scattered threads. Solden should not chase a generic "company brain" category. The sharper story is operational memory for live back-office work: a system of record for work in progress that keeps owner, next step, context, blocker, proof, and audit together across the tools where work already happens. |
 | 2026-06-03 | Workspace workflow nav labels name box types | WORK TYPES items should name the workflow / box type the operator is entering, not the generic data object. The AP surface is labeled Accounts Payable; individual rows remain records. `/accounts-payable` is the route; `/records` is not a product route. |
 | 2026-06-03 | Workspace sidebar tightened around operator work | Sidebar grouping changed from WORKFLOWS to WORK TYPES, Admin was reduced to Connections / Approval rules / Settings, and API keys / Plan / Status / Onboarding moved to command-palette or secondary surfaces. The rail may show quiet operational pressure counts for Exceptions and Accounts Payable plus Activity stream presence, but should not become a KPI strip. |

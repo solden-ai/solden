@@ -820,8 +820,8 @@
   justify-content: center;
   gap: 6px;
   height: 36px;
-  padding: 0 14px;
-  border-radius: var(--cl-radius-sm);
+  padding: 0 16px;
+  border-radius: 8px;
   border: 1px solid transparent;
   font-family: inherit;
   font-size: 13px;
@@ -833,6 +833,7 @@
 }
 
 .btn-primary {
+  font-weight: 600;
   background: var(--cl-mint);
   color: var(--cl-navy);
 }
@@ -926,6 +927,12 @@
   border-color: var(--cl-navy);
 }
 
+.btn-lg {
+  height: 40px;
+  padding: 0 20px;
+  font-size: 14px;
+}
+
 .btn-sm {
   height: 30px;
   padding: 0 12px;
@@ -979,21 +986,21 @@
 }
 
 .status-badge.connected {
-  background: var(--cl-mint-soft);
-  color: var(--cl-mint-strong);
-  border-color: rgba(24, 191, 176, 0.3);
+  background: var(--cl-success-soft);
+  color: var(--cl-success);
+  border-color: transparent;
 }
 
 .status-badge.warning {
-  background: rgba(180, 83, 9, 0.08);
+  background: var(--cl-warning-soft);
   color: var(--cl-warning);
-  border-color: rgba(180, 83, 9, 0.3);
+  border-color: transparent;
 }
 
 .status-badge.danger {
-  background: rgba(220, 38, 38, 0.06);
+  background: var(--cl-danger-soft);
   color: var(--cl-danger);
-  border-color: rgba(220, 38, 38, 0.3);
+  border-color: transparent;
 }
 
 /* Status chip helper for "Not connected" → "Connect" CTA pattern.
@@ -1278,16 +1285,17 @@
 }
 
 .cl-audit-table thead {
-  background: var(--cl-bg-subtle, #f8f8f8);
+  background: var(--cl-bg-deep);
 }
 
 .cl-audit-table th {
   padding: 10px 12px;
   text-align: left;
+  font-family: var(--cl-font-display);
   font-size: 11px;
   font-weight: 600;
   color: var(--cl-ink-muted);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   border-bottom: 1px solid var(--cl-border);
 }
@@ -2832,7 +2840,7 @@
 .cl-record-confidence {
   position: relative;
   height: 10px;
-  background: #F1F5F9;
+  background: var(--cl-bg-deep);
   border-radius: 999px;
   overflow: hidden;
   display: flex;
@@ -2843,7 +2851,7 @@
 .cl-record-confidence-bar {
   position: absolute;
   top: 0; left: 0; bottom: 0;
-  background: var(--cl-mint);
+  background: linear-gradient(90deg, var(--cl-teal-400), var(--cl-teal-600));
   transition: width 200ms ease;
 }
 .cl-record-confidence-warning { background: #F59E0B; }
@@ -3920,10 +3928,11 @@
 }
 .cl-settings-table thead th {
   text-align: left;
+  font-family: var(--cl-font-display);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   color: var(--cl-ink-muted);
   padding: 8px 12px;
   border-bottom: 1px solid var(--cl-border);
@@ -7108,27 +7117,6 @@
 }
 
 /* OnboardingPage btn-secondary alias for legacy callsites */
-.cl-onb-btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 14px;
-  background: var(--cl-surface);
-  color: var(--cl-ink-primary);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-sm);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 0.12s, background 0.12s;
-}
-.cl-onb-btn-secondary:hover:not(:disabled) {
-  border-color: var(--cl-border-strong);
-  background: var(--cl-bg);
-}
 
 /* OnboardingPage health-row variant the regex audit flagged */
 .cl-onb-health-row-good { border-left: 3px solid var(--cl-teal-500); }

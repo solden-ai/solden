@@ -51,47 +51,9 @@
   gap: 8px;
 }
 
-.cl-home-btn {
-  display: inline-flex;
-  align-items: center;
-  height: 36px;
-  padding: 0 16px;
-  border-radius: var(--cl-radius-sm);
-  border: 1px solid transparent;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-}
 
-.cl-home-btn-primary {
-  background: var(--cl-teal-500);
-  color: var(--cl-navy);
-  border-color: var(--cl-teal-500);
-}
-.cl-home-btn-primary:hover {
-  background: var(--cl-teal-600);
-  border-color: var(--cl-teal-600);
-}
 
-.cl-home-btn-secondary {
-  background: var(--cl-surface);
-  border-color: var(--cl-border);
-  color: var(--cl-ink-primary);
-}
-.cl-home-btn-secondary:hover { border-color: var(--cl-ink-muted); }
 
-.cl-home-btn:focus-visible,
-.cl-home-link:focus-visible,
-.cl-home-stat-clickable:focus-visible,
-.cl-home-row[role="button"]:focus-visible,
-.cl-home-activity-row[role="button"]:focus-visible,
-.cl-home-worktype-row-clickable:focus-visible,
-.cl-home-workload-row[role="button"]:focus-visible {
-  outline: 2px solid var(--cl-teal-500);
-  outline-offset: 2px;
-}
 
 .cl-home-onboarding-banner {
   display: flex;
@@ -111,7 +73,8 @@
 .cl-home-checklist {
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius);
+  border-radius: var(--cl-radius-lg);
+  box-shadow: var(--cl-shadow-sm);
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
@@ -200,7 +163,8 @@
   padding: 14px 16px 12px;
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius);
+  border-radius: var(--cl-radius-lg);
+  box-shadow: var(--cl-shadow-sm);
   transition: border-color 0.12s, transform 0.08s;
   min-height: 90px;
   display: flex;
@@ -255,9 +219,10 @@
 }
 
 .cl-home-stat-value {
-  font-size: 26px;
+  font-family: var(--cl-font-mono);
+  font-size: 28px;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   color: var(--cl-ink-primary);
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
@@ -580,7 +545,8 @@
   padding: 24px;
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius);
+  border-radius: var(--cl-radius-lg);
+  box-shadow: var(--cl-shadow-sm);
 }
 
 .cl-home-workload-head {
@@ -908,7 +874,8 @@
   min-height: 620px;
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius);
+  border-radius: var(--cl-radius-lg);
+  box-shadow: var(--cl-shadow-sm);
   overflow: hidden;
   box-shadow: 0 1px 0 rgba(10, 31, 68, 0.03);
 }
@@ -1196,9 +1163,11 @@
   color: var(--cl-ink-secondary);
 }
 
+/* Thin extension of the shared .cl-avatar recipe (components.css) —
+   the class name survives for HomePage.test.js; values stay aligned. */
 .cl-home-owner-avatar {
-  width: 28px;
-  height: 28px;
+  width: var(--cl-avatar-md);
+  height: var(--cl-avatar-md);
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
@@ -1647,7 +1616,8 @@
   padding: 20px;
   border: 1px solid var(--cl-border);
   border-left: 3px solid var(--cl-teal-500);
-  border-radius: var(--cl-radius);
+  border-radius: var(--cl-radius-lg);
+  box-shadow: var(--cl-shadow-sm);
   background: var(--cl-surface);
 }
 .cl-home-ask-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }

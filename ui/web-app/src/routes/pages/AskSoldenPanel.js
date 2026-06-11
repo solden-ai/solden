@@ -145,7 +145,7 @@ export default function AskSoldenPanel() {
           maxlength="1000"
           onInput=${(e) => setQuestion(e.target.value)}
         />
-        <button class="cl-home-btn cl-home-btn-primary" type="submit"
+        <button class="btn btn-primary" type="submit"
                 disabled=${loading || !question.trim()}>
           ${loading ? 'Checking the record…' : 'Ask'}
         </button>

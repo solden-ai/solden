@@ -176,10 +176,10 @@ export function HomePage() {
           <p class="cl-home-sub">${orgName} · work in progress</p>
         </div>
         <div class="cl-home-actions">
-          <button class="cl-home-btn cl-home-btn-secondary" onClick=${() => navigate('/activity')}>
+          <button class="btn btn-secondary" onClick=${() => navigate('/activity')}>
             Open activity
           </button>
-          <button class="cl-home-btn cl-home-btn-primary" onClick=${() => navigate('/exceptions')}>
+          <button class="btn btn-primary" onClick=${() => navigate('/exceptions')}>
             Review exceptions
           </button>
         </div>
@@ -191,7 +191,7 @@ export function HomePage() {
               <div>
                 <strong>Setup is in progress.</strong> Complete onboarding to start routing work across your connected surfaces.
               </div>
-              <button class="cl-home-btn cl-home-btn-primary" onClick=${() => navigate('/onboarding')}>
+              <button class="btn btn-primary" onClick=${() => navigate('/onboarding')}>
                 Resume setup
               </button>
             </aside>
@@ -304,7 +304,7 @@ function ImplementationChecklist({ orgId, navigate }) {
             ${completedCount} of ${total} done
           </span>
         </div>
-        <button class="cl-home-btn cl-home-btn-secondary" onClick=${() => navigate('/settings')}>
+        <button class="btn btn-secondary" onClick=${() => navigate('/settings')}>
           Open settings
         </button>
       </header>
@@ -501,12 +501,12 @@ function HomeLiveConsole({
               <div class="cl-home-context-actions">
                 <button
                   type="button"
-                  class="cl-home-btn cl-home-btn-primary"
+                  class="btn btn-primary"
                   onClick=${() => navigate(accountPayableRecordPath(selectedItem.id))}>
                   Open record
                 </button>
                 ${exceptionItems.some((row) => String(row.box_id || '') === String(selectedItem.id || '')) ? html`
-                  <button type="button" class="cl-home-btn cl-home-btn-secondary" onClick=${() => navigate('/exceptions')}>
+                  <button type="button" class="btn btn-secondary" onClick=${() => navigate('/exceptions')}>
                     Review blocker
                   </button>
                 ` : null}

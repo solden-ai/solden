@@ -31,12 +31,14 @@ Use these documents for current status instead:
 
 ## P1 — Design & UX
 
-### Workspace shell visual redesign
-- **What:** Full visual redesign of the workspace shell to match Fyxer/Mixmax quality bar — warm palette, generous whitespace, card-based layout, setup wizard with progress bar, dense data tables with avatars and status pills, professional typography
-- **Why:** Current workspace shell is usable and broad, but as a secondary/admin surface it is still below the desired customer-facing polish bar
-- **Effort:** L
-- **Depends on:** Preact component architecture (DONE), design tokens (DONE)
-- **References:** app.fyxer.com (warm minimal), app.mixmax.com (dense productivity)
+### ~~Workspace shell visual redesign — Wave 1~~ ✓
+- **Status:** Wave 1 DONE (2026-06-11) — warm neutral system ratified from a rendered style guide (cream canvas, stone borders, umber shadows; brand navy+teal unchanged), Instrument Sans/DM Sans/Geist Mono loaded, shared vocabulary shipped (`.cl-avatar`, `.cl-pill`, `.cl-progress`, unified `.btn-*`), shell rail + demo path + low-risk pages swept. See DESIGN.md decision 2026-06-11.
+
+### Workspace shell visual redesign — Wave 2
+- **What:** Layout polish for the three test-fragile pages: SettingsPage (3,688 lines; responsive logic baked into tests), RulesPage (`.cl-rules-side`/`.cl-rules-support-grid` structure tests), WorkflowsPage (builder tests query `.wf-*` classes). Test-first: switch the structural assertions to roles/data-attributes, then restyle onto the Wave-1 vocabulary.
+- **Why:** They inherit the warm token VALUES already (names never changed) but their layouts predate the card system.
+- **Effort:** M
+- **Depends on:** Wave 1 (DONE 2026-06-11)
 
 ### Gmail extension sidebar visual polish
 - **What:** Apply same visual redesign to extension sidebar — match the workspace shell quality bar

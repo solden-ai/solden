@@ -191,15 +191,12 @@
 }
 
 /* State pill — reused inside the table and the focused-thread row */
+/* State pills now ride the shared .cl-pill vocabulary (components.css);
+   this class only constrains them inside the dense grid cell. */
 .cl-records-state {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  padding: 3px 9px;
-  border-radius: 999px;
-  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Flat table — CSS grid columns, click-to-detail rows */
@@ -244,10 +241,10 @@
   border-bottom: 0;
 }
 .cl-records-row:hover:not(.cl-records-row-header) {
-  background: #F8FAFC;
+  background: var(--cl-bg);
 }
 .cl-records-row-header {
-  background: #F8FAFC;
+  background: var(--cl-bg-deep);
   color: var(--ink-muted, #64748B);
   font: 600 11px/1.4 inherit;
   text-transform: uppercase;
@@ -307,9 +304,9 @@
   font: 600 11px/1.2 inherit;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #FFF7ED;
-  border: 1px solid #FED7AA;
-  color: #9A3412;
+  background: var(--cl-warning-soft);
+  border: 1px solid transparent;
+  color: var(--cl-warning);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -323,12 +320,9 @@
   color: var(--ink-muted, #64748B);
   font-size: 12px;
 }
+/* Due badges ride .cl-pill; cell-level constraint only. */
 .cl-records-due {
-  display: inline-block;
-  font: 700 10px/1.2 inherit;
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid;
+  max-width: 100%;
 }
 .cl-records-cell-erp {
   display: flex;
@@ -341,9 +335,9 @@
   height: 21px;
   padding: 0 7px;
   border-radius: 999px;
-  border: 1px solid #E2E8F0;
-  background: #F8FAFC;
-  color: #475569;
+  border: 1px solid transparent;
+  background: var(--cl-neutral-soft);
+  color: var(--cl-ink-secondary);
   font: 700 10px/1 inherit;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -358,15 +352,15 @@
   color: var(--cl-teal-600, #12B3A6);
 }
 .cl-records-erp.is-posted {
-  background: #ECFDF5;
-  border-color: #BBF7D0;
-  color: #047857;
+  background: var(--cl-success-soft);
+  border-color: transparent;
+  color: var(--cl-success);
 }
 .cl-records-erp.is-failed,
 .cl-records-erp.is-not_connected {
-  background: #FEF2F2;
-  border-color: #FECACA;
-  color: #B91C1C;
+  background: var(--cl-danger-soft);
+  border-color: transparent;
+  color: var(--cl-danger);
 }
 
 .cl-records-empty {
@@ -590,4 +584,14 @@
   .cl-records-page-controls button {
     flex: 1;
   }
+}
+
+
+/* Owner cell: avatar + compact name (warm redesign 2026-06-11). */
+.cl-records-owner-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
 }

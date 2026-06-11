@@ -19,7 +19,7 @@ Always read DESIGN.md before making any visual or UI decisions.
 All font choices, colors, spacing, and aesthetic direction are defined there.
 Do not deviate without explicit user approval.
 In QA mode, flag any code that doesn't match DESIGN.md.
-Brand colors (Solden rebrand, active 2026-05-02): navy `#001137` (sampled from `ui/web-app/public/solden-lockup-dark.png`) + teal `#18BFB0`. Use the CSS tokens `var(--cl-navy)` and `var(--cl-teal-500)`, not hardcoded hex. NOT terracotta/orange.
+Brand colors (Solden rebrand, active 2026-05-02): navy `#001137` (sampled from `ui/web-app/public/solden-lockup-dark.png`) + teal `#18BFB0`. Use the CSS tokens `var(--cl-navy)` and `var(--cl-teal-500)`, not hardcoded hex. NOT terracotta/orange. Workspace NEUTRALS are WARM since 2026-06-11 (cream `#FAF7F2` canvas, stone borders, warm grays, umber shadows — see DESIGN.md decision log); brand accents unchanged.
 
 ## API endpoints — strict-profile allowlist (READ BEFORE ADDING NEW ROUTES)
 

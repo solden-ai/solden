@@ -1,0 +1,100 @@
+/* Shared component vocabulary — warm redesign Wave 1 (ratified 2026-06-11).
+   The ONE place for primitives every page composes: avatars, status pills,
+   progress bars, table treatment. Buttons stay canonical in pages.css
+   (.btn-*); this file only ADDS vocabulary — it never redefines existing
+   class names from other sheets. */
+
+/* ── Avatars ─────────────────────────────────────────────────────────
+   Initials on a circle. Navy is the default (matches the topbar + Home
+   precedents); data-hue gives tables a deterministic muted-warm tint per
+   person/vendor so dense rows scan without a sea of navy. */
+.cl-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: var(--cl-avatar-md);
+  height: var(--cl-avatar-md);
+  border-radius: 50%;
+  background: var(--cl-navy);
+  color: #fff;
+  font-family: var(--cl-font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  user-select: none;
+}
+.cl-avatar--sm { width: var(--cl-avatar-sm); height: var(--cl-avatar-sm); font-size: 10px; }
+.cl-avatar[data-hue="0"] { background: #8C6A4F; }
+.cl-avatar[data-hue="1"] { background: #5F7464; }
+.cl-avatar[data-hue="2"] { background: #7A6580; }
+.cl-avatar[data-hue="3"] { background: #946B5C; }
+.cl-avatar[data-hue="4"] { background: #5C7B8A; }
+.cl-avatar[data-hue="5"] { background: #7E7457; }
+
+/* ── Status pills ────────────────────────────────────────────────────
+   One semantic vocabulary for every state/severity/connection badge.
+   11px/600, soft warmed fill + semantic ink, fully rounded. */
+.cl-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-family: var(--cl-font-body);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  background: var(--cl-neutral-soft);
+  color: var(--cl-ink-secondary);
+}
+.cl-pill--success { background: var(--cl-success-soft); color: var(--cl-success); }
+.cl-pill--warning { background: var(--cl-warning-soft); color: var(--cl-warning); }
+.cl-pill--danger  { background: var(--cl-danger-soft);  color: var(--cl-danger); }
+.cl-pill--info    { background: var(--cl-info-soft);    color: var(--cl-info); }
+.cl-pill--neutral { background: var(--cl-neutral-soft); color: var(--cl-ink-secondary); }
+.cl-pill--brand   { background: var(--cl-teal-soft);    color: var(--cl-teal-600); }
+
+/* ── Linear progress ─────────────────────────────────────────────────
+   Track on the deep paper, teal-gradient fill. Consumers set the fill
+   width inline (style="width: NN%") and carry aria-valuenow on the
+   track element. */
+.cl-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--cl-bg-deep);
+  overflow: hidden;
+}
+.cl-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--cl-teal-400), var(--cl-teal-600));
+  transition: width 0.3s ease;
+}
+
+/* ── Shared table treatment ──────────────────────────────────────────
+   Applied by composition: grid-row tables (records) and HTML tables
+   (audit/settings) keep their own structural classes and pick these up
+   via their existing selectors being restyled onto the same recipe:
+   header = micro display type on deep paper, hover = canvas tint,
+   amounts = mono + tabular-nums. The helpers below are for NEW markup. */
+.cl-th {
+  font-family: var(--cl-font-display);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cl-ink-muted);
+}
+.cl-num {
+  font-family: var(--cl-font-mono);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.cl-row-who { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
+.cl-row-who > .cl-avatar { flex: 0 0 auto; }

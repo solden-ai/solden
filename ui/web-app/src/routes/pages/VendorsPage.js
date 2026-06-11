@@ -174,7 +174,14 @@ export default function VendorsPage({ api, orgId, navigate, toast }) {
           : filtered.map((vendor) => html`
               <div key=${vendor.vendor_name} class="secondary-card">
                 <div class="secondary-card-head">
-                  <div class="secondary-card-copy">
+                  <div class="secondary-card-copy cl-row-who">
+                    ${(() => {
+                      const name = String(vendor.vendor_name || '').trim();
+                      const initials = name.split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || '?';
+                      const hue = [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 6;
+                      return html`<span class="cl-avatar" data-hue=${hue} aria-hidden="true">${initials}</span>`;
+                    })()}
+                    <div>
                     <strong class="secondary-card-title">${vendor.vendor_name}</strong>
                     <div class="secondary-card-meta">
                       ${vendor.primary_email || 'No primary sender'} · Last activity ${vendor.last_activity_at ? fmtDateTime(vendor.last_activity_at) : '—'}
@@ -227,6 +234,7 @@ export default function VendorsPage({ api, orgId, navigate, toast }) {
                             ${formatVendorStatusLabel(vendor.profile.status)}
                           </span>`
                         : null}
+                    </div>
                     </div>
                   </div>
                   <div class="secondary-card-stat">

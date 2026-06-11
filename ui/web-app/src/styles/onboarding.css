@@ -46,10 +46,11 @@
   display: grid;
   grid-template-columns: 36px 1fr;
   gap: 14px;
-  padding: 18px 20px;
+  padding: 22px 24px;
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius);
+  border-radius: var(--cl-radius-lg);
+  box-shadow: var(--cl-shadow-sm);
   transition: border-color 0.12s, box-shadow 0.12s;
 }
 
@@ -149,40 +150,9 @@
   margin-top: 4px;
 }
 
-.cl-onb-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 34px;
-  padding: 0 14px;
-  border-radius: var(--cl-radius-sm);
-  border: 1px solid transparent;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-}
 
-.cl-onb-btn-primary {
-  background: var(--cl-navy);
-  color: #fff;
-}
-.cl-onb-btn-primary:hover { background: #14233e; }
 
-.cl-onb-btn-ghost {
-  background: transparent;
-  border-color: var(--cl-border);
-  color: var(--cl-ink-secondary);
-}
-.cl-onb-btn-ghost:hover { border-color: var(--cl-ink-muted); color: var(--cl-ink-primary); }
 
-.cl-onb-btn[disabled] {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
 .cl-onb-step-time {
   font-size: 11px;
@@ -298,4 +268,22 @@
     width: 100%;
     flex-wrap: wrap;
   }
+}
+
+/* Linear setup progress (warm redesign 2026-06-11) — the bar answers
+   "how far along am I" at a glance; the per-step pips below stay as the
+   per-step state markers. */
+.cl-onb-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+.cl-onb-progress-row .cl-progress { flex: 1 1 auto; max-width: 420px; }
+.cl-onb-progress-count {
+  font-family: var(--cl-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--cl-ink-secondary);
+  white-space: nowrap;
 }

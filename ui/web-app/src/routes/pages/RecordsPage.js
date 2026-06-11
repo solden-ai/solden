@@ -60,20 +60,22 @@ const html = htm.bind(h);
 
 const RECORDS_PAGE_SIZE = 50;
 
-const STATE_STYLES = {
-  needs_approval: { bg: '#FEFCE8', text: '#A16207', label: 'Needs approval' },
-  needs_second_approval: { bg: '#FEFCE8', text: '#A16207', label: 'Second approval' },
-  needs_info: { bg: '#FEFCE8', text: '#A16207', label: 'Needs info' },
-  validated: { bg: '#EFF6FF', text: '#1D4ED8', label: 'Validated' },
-  received: { bg: '#F1F5F9', text: '#64748B', label: 'Received' },
-  approved: { bg: '#ECFDF5', text: '#059669', label: 'Approved' },
-  ready_to_post: { bg: '#DCFCE7', text: '#166534', label: 'Ready to post' },
-  posted_to_erp: { bg: '#ECFDF5', text: '#10B981', label: 'Posted' },
-  snoozed: { bg: '#EEF2FF', text: '#4338CA', label: 'Snoozed' },
-  reversed: { bg: '#FEF2F2', text: '#DC2626', label: 'Reversed' },
-  closed: { bg: '#F1F5F9', text: '#64748B', label: 'Closed' },
-  rejected: { bg: '#FEF2F2', text: '#DC2626', label: 'Rejected' },
-  failed_post: { bg: '#FEF2F2', text: '#DC2626', label: 'Failed post' },
+// State -> shared pill variant (components.css). Labels are byte-identical
+// to the old STATE_STYLES — RecordsPage tests assert on the text.
+const STATE_VARIANTS = {
+  needs_approval: { variant: 'warning', label: 'Needs approval' },
+  needs_second_approval: { variant: 'warning', label: 'Second approval' },
+  needs_info: { variant: 'warning', label: 'Needs info' },
+  validated: { variant: 'info', label: 'Validated' },
+  received: { variant: 'neutral', label: 'Received' },
+  approved: { variant: 'success', label: 'Approved' },
+  ready_to_post: { variant: 'success', label: 'Ready to post' },
+  posted_to_erp: { variant: 'success', label: 'Posted' },
+  snoozed: { variant: 'info', label: 'Snoozed' },
+  reversed: { variant: 'danger', label: 'Reversed' },
+  closed: { variant: 'neutral', label: 'Closed' },
+  rejected: { variant: 'danger', label: 'Rejected' },
+  failed_post: { variant: 'danger', label: 'Failed post' },
 };
 
 const BLOCKER_LABELS = {
@@ -154,10 +156,10 @@ function formatDurationMinutes(value) {
 
 function StatePill({ state }) {
   const normalized = String(state || '').toLowerCase();
-  const tone = STATE_STYLES[normalized] || {
-    bg: '#F1F5F9', text: '#64748B', label: normalized.replace(/_/g, ' ') || 'unknown',
+  const tone = STATE_VARIANTS[normalized] || {
+    variant: 'neutral', label: normalized.replace(/_/g, ' ') || 'unknown',
   };
-  return html`<span class="cl-records-state" style=${`background:${tone.bg};color:${tone.text}`}>${tone.label}</span>`;
+  return html`<span class=${`cl-pill cl-pill--${tone.variant} cl-records-state`}>${tone.label}</span>`;
 }
 
 function ErpStatusPill({ item }) {
@@ -249,13 +251,10 @@ function dueBadge(dueDate) {
   if (!Number.isFinite(ms)) return null;
   const days = Math.round((ms - Date.now()) / 86400000);
   if (days < 0) {
-    return { label: `${Math.abs(days)}d overdue`, bg: '#FEF2F2', color: '#B91C1C', border: '#FECACA' };
+    return { label: `${Math.abs(days)}d overdue`, variant: 'danger' };
   }
   if (days <= 7) {
-    return {
-      label: days === 0 ? 'Due today' : `Due in ${days}d`,
-      bg: '#FFFBEB', color: '#92400E', border: '#FDE68A',
-    };
+    return { label: days === 0 ? 'Due today' : `Due in ${days}d`, variant: 'warning' };
   }
   return null;
 }
@@ -768,8 +767,18 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
                   <span class="cl-records-cell-amount cl-records-num" role="cell">
                     ${getAmountLabel(item)}
                   </span>
-                  <span class="cl-records-cell-owner" role="cell" title=${ownerTitle}>
-                    ${getOwnerLabel(item)}
+                  <span class="cl-records-cell-owner cl-row-who" role="cell" title=${ownerTitle}>
+                    ${(() => {
+                      const label = getOwnerLabel(item);
+                      const name = String(label || '').trim();
+                      if (!name || name === '—') return html`<span class="muted">—</span>`;
+                      const initials = name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+                      const hue = [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 6;
+                      return html`
+                        <span class="cl-avatar cl-avatar--sm" data-hue=${hue} aria-hidden="true">${initials}</span>
+                        <span class="cl-records-owner-name">${name}</span>
+                      `;
+                    })()}
                   </span>
                   <span class="cl-records-cell-next" role="cell">
                     <span class="cl-records-next-label">${getNextStepLabel(item)}</span>
@@ -785,7 +794,7 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
                     ${formatDurationMinutes(getQueueAgeMinutes(item))}
                   </span>
                   <span class="cl-records-cell-due" role="cell">
-                    ${due ? html`<span class="cl-records-due" style=${`background:${due.bg};color:${due.color};border-color:${due.border}`}>${due.label}</span>` : html`<span class="muted">—</span>`}
+                    ${due ? html`<span class=${`cl-pill cl-pill--${due.variant} cl-records-due`}>${due.label}</span>` : html`<span class="muted">—</span>`}
                   </span>
                   <span class="cl-records-cell-erp" role="cell">
                     <${ErpStatusPill} item=${item} />

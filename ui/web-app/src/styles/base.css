@@ -1,11 +1,18 @@
 :root {
-  --cl-bg: #FAFAF8;
+  /* Warm neutral system (ratified 2026-06-11): cream paper canvas + warm
+     stone borders/grays. Cards stay pure white — warmth lives in the
+     canvas, borders, and shadows AROUND data surfaces, never under text.
+     Token NAMES never change (11.8k lines of CSS compile against them);
+     values changed in place, new tokens are additive only. */
+  --cl-bg: #FAF7F2;
+  --cl-bg-deep: #F3EFE7;
   --cl-surface: #FFFFFF;
-  --cl-border: #E2E8F0;
-  --cl-border-strong: #CBD5E1;
+  --cl-surface-raised: #FFFFFF;
+  --cl-border: #E9E2D6;
+  --cl-border-strong: #D7CDBE;
   --cl-ink-primary: #001137;
-  --cl-ink-secondary: #475569;
-  --cl-ink-muted: #94A3B8;
+  --cl-ink-secondary: #57534E;
+  --cl-ink-muted: #A8A29E;
 
   /* Solden brand (rebrand active 2026-05-02). Navy is sampled from
      the canonical brand lockup (`public/solden-lockup-dark.png`) so
@@ -26,14 +33,30 @@
   --cl-mint-strong: var(--cl-teal-600);
   --cl-mint-soft:   var(--cl-teal-soft);
 
-  --cl-danger: #DC2626;
+  /* Semantic set — soft fills are warmed (parchment, not lemon/pink). */
+  --cl-success: #1A8A52;
+  --cl-success-soft: #EDF7EC;
   --cl-warning: #B45309;
+  --cl-warning-soft: #FBF3E4;
+  --cl-danger: #DC2626;
+  --cl-danger-soft: #FBEFEC;
+  --cl-info: #2563EB;
+  --cl-info-soft: #EEF3FA;
+  --cl-neutral-soft: #F1EDE5;
+
   --cl-radius-sm: 6px;
-  --cl-radius: 10px;
+  --cl-radius: 12px;
   --cl-radius-lg: 16px;
-  --cl-shadow-sm: 0 1px 2px rgba(0, 17, 55, 0.04);
-  --cl-shadow: 0 4px 12px rgba(0, 17, 55, 0.06);
-  --cl-font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Umber-based shadows — navy shadows read cold/blue on cream. */
+  --cl-shadow-sm: 0 1px 2px rgba(64, 50, 32, 0.05);
+  --cl-shadow: 0 4px 12px rgba(64, 50, 32, 0.07);
+  --cl-shadow-lg: 0 12px 32px rgba(64, 50, 32, 0.10);
+
+  --cl-avatar-sm: 24px;
+  --cl-avatar-md: 28px;
+
+  --cl-font-display: 'Instrument Sans', 'Inter', system-ui, sans-serif;
+  --cl-font-body: 'DM Sans', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --cl-font-brand: 'Inter', system-ui, -apple-system, sans-serif;
   --cl-font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
@@ -48,7 +71,7 @@ html, body, #app {
   color: var(--cl-ink-primary);
   font-family: var(--cl-font-body);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -88,6 +111,6 @@ h1, h2, h3, h4 {
   letter-spacing: -0.01em;
 }
 
-h1 { font-size: 22px; font-weight: 600; }
-h2 { font-size: 18px; font-weight: 600; }
-h3 { font-size: 15px; font-weight: 600; }
+h1 { font-family: var(--cl-font-display); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+h2 { font-family: var(--cl-font-display); font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+h3 { font-family: var(--cl-font-display); font-size: 15px; font-weight: 600; }

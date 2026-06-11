@@ -159,6 +159,20 @@ export function OnboardingPage() {
             ? 'Every required integration is connected. You can revisit any step from this page; nothing here is destructive.'
             : 'Four steps; the last one is optional. Each step links to the page where you actually configure the integration — come back here when you\'re done.'}
         </p>
+        ${steps.length > 0 ? (() => {
+          const doneCount = steps.filter((step) => stepStatus(step.id) === 'done').length;
+          const pct = Math.round((doneCount / steps.length) * 100);
+          return html`
+            <div class="cl-onb-progress-row">
+              <div class="cl-progress" role="progressbar"
+                   aria-valuenow=${pct} aria-valuemin="0" aria-valuemax="100"
+                   aria-label="Setup progress">
+                <span class="cl-progress-fill" style=${`width: ${pct}%`}></span>
+              </div>
+              <span class="cl-onb-progress-count">${doneCount} of ${steps.length} steps</span>
+            </div>
+          `;
+        })() : ''}
       </header>
 
       ${!completed ? html`
@@ -171,7 +185,7 @@ export function OnboardingPage() {
                 Catches expired tokens or misconfigured connections before bills start flowing.
               </p>
             </div>
-            <button class="cl-onb-btn cl-onb-btn-secondary" onClick=${runHealthGate} disabled=${probingHealth}>
+            <button class="btn btn-secondary" onClick=${runHealthGate} disabled=${probingHealth}>
               ${probingHealth ? 'Running…' : 'Run health check'}
             </button>
           </div>
@@ -223,7 +237,7 @@ export function OnboardingPage() {
                   ${step.id === 4
                     ? html`
                         <a
-                          class="cl-onb-btn cl-onb-btn-primary"
+                          class="btn btn-primary"
                           href="https://chrome.google.com/webstore/category/extensions"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -231,7 +245,7 @@ export function OnboardingPage() {
                       `
                     : html`
                         <button
-                          class="cl-onb-btn cl-onb-btn-primary"
+                          class="btn btn-primary"
                           disabled=${busy}
                           onClick=${() => navigate(destination)}>
                           ${status === 'done' ? 'Re-configure' : 'Set up'}
@@ -240,7 +254,7 @@ export function OnboardingPage() {
                   ${status !== 'done' && step.id !== 4
                     ? html`
                         <button
-                          class="cl-onb-btn cl-onb-btn-ghost"
+                          class="btn btn-ghost"
                           disabled=${busy}
                           onClick=${() => markStepDone(step.id)}>
                           Mark done manually
@@ -262,12 +276,12 @@ export function OnboardingPage() {
       <footer class="cl-onb-footer">
         ${completed
           ? html`
-              <button class="cl-onb-btn cl-onb-btn-primary" onClick=${() => navigate('/')}>
+              <button class="btn btn-primary" onClick=${() => navigate('/')}>
                 Open workspace
               </button>
             `
           : html`
-              <button class="cl-onb-btn cl-onb-btn-ghost" onClick=${finishLater}>
+              <button class="btn btn-ghost" onClick=${finishLater}>
                 Finish later
               </button>
               <span class="cl-onb-footer-hint">
@@ -385,17 +399,17 @@ function SampleDataSection() {
         <div class="cl-sample-actions">
           ${count > 0
             ? html`
-                <button class="cl-onb-btn cl-onb-btn-ghost"
+                <button class="btn btn-ghost"
                   onClick=${togglePreview} disabled=${busy}>
                   ${showItems ? 'Hide' : 'View'} (${count})
                 </button>
-                <button class="cl-onb-btn cl-onb-btn-ghost"
+                <button class="btn btn-ghost"
                   onClick=${onClear} disabled=${busy}>
                   Clear
                 </button>
               `
             : html`
-                <button class="cl-onb-btn cl-onb-btn-primary"
+                <button class="btn btn-primary"
                   onClick=${onLoad} disabled=${busy}>
                   ${busy ? 'Loading…' : 'Load sample invoices'}
                 </button>
