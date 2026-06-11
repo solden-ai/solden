@@ -105,7 +105,6 @@ export function HomePage() {
     return () => source.close();
   }, [orgId]);
 
-  const userName = bootstrap?.current_user?.name || bootstrap?.current_user?.email?.split('@')[0] || 'there';
   const orgName = displayOrgName(bootstrap?.organization?.name) || 'your workspace';
   const onboardingPending = bootstrap?.onboarding && bootstrap.onboarding.completed === false;
 
@@ -172,8 +171,10 @@ export function HomePage() {
       <header class="cl-home-header">
         <div class="cl-home-headline">
           <div class="cl-home-eyebrow">${today}</div>
-          <h1 class="cl-home-title">Welcome back, ${userName}.</h1>
-          <p class="cl-home-sub">${orgName} · work in progress</p>
+          <h1 class="cl-home-title">Operational memory</h1>
+          <p class="cl-home-sub">
+            ${orgName} · owners, blockers, proof, and decisions across work in progress.
+          </p>
         </div>
         <div class="cl-home-actions">
           <button class="btn btn-secondary" onClick=${() => navigate('/activity')}>

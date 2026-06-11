@@ -8,18 +8,20 @@
  * activity within ~15s of the agent acting. */
 
 .cl-home {
-  max-width: 1240px;
+  width: 100%;
+  max-width: 1320px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
 .cl-home-header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 24px;
+  gap: 28px;
   flex-wrap: wrap;
+  padding: 2px 2px 4px;
 }
 
 .cl-home-headline {
@@ -27,17 +29,21 @@
 }
 
 .cl-home-eyebrow {
-  font-size: 12px;
+  font-family: var(--cl-font-mono);
+  font-size: 11px;
+  font-weight: 600;
   color: var(--cl-ink-muted);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .cl-home-title {
-  font-size: 28px;
+  font-family: var(--cl-font-display);
+  font-size: 30px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  margin: 4px 0 4px;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  margin: 6px 0 5px;
 }
 
 .cl-home-sub {
@@ -49,6 +55,7 @@
 .cl-home-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
 
@@ -151,7 +158,7 @@
 .cl-home-stat-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  gap: 12px;
 }
 
 @media (max-width: 880px) {
@@ -160,12 +167,12 @@
 
 .cl-home-stat {
   position: relative;
-  padding: 14px 16px 12px;
+  padding: 15px 16px 13px;
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-lg);
+  border-radius: var(--cl-radius);
   box-shadow: var(--cl-shadow-sm);
-  transition: border-color 0.12s, transform 0.08s;
+  transition: border-color 0.12s, box-shadow 0.12s, transform 0.08s;
   min-height: 90px;
   display: flex;
   flex-direction: column;
@@ -177,6 +184,7 @@
 }
 .cl-home-stat-clickable:hover {
   border-color: var(--cl-border-strong);
+  box-shadow: var(--cl-shadow);
   transform: translateY(-1px);
 }
 
@@ -189,8 +197,8 @@
 
 .cl-home-stat-label {
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--cl-ink-muted);
 }
@@ -220,9 +228,9 @@
 
 .cl-home-stat-value {
   font-family: var(--cl-font-mono);
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: 29px;
+  font-weight: 700;
+  letter-spacing: 0;
   color: var(--cl-ink-primary);
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
@@ -870,14 +878,13 @@
 
 .cl-home-console {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 380px);
-  min-height: 620px;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 408px);
+  min-height: 668px;
   background: var(--cl-surface);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-lg);
-  box-shadow: var(--cl-shadow-sm);
+  border: 1px solid color-mix(in srgb, var(--cl-border-strong) 78%, var(--cl-border));
+  border-radius: var(--cl-radius);
   overflow: hidden;
-  box-shadow: 0 1px 0 rgba(10, 31, 68, 0.03);
+  box-shadow: var(--cl-shadow-shell);
 }
 
 .cl-home-console-bar {
@@ -885,11 +892,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 16px 20px;
+  gap: 24px;
+  padding: 19px 22px;
   border-bottom: 1px solid var(--cl-border);
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--cl-teal-500) 3.5%, transparent), transparent),
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-teal-500) 4.5%, transparent), transparent 70%),
+    linear-gradient(90deg, rgba(255,255,255,0.74), rgba(255,255,255,0)),
     var(--cl-surface);
 }
 
@@ -901,10 +909,11 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
+  font-family: var(--cl-font-mono);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--cl-ink-muted);
 }
@@ -920,7 +929,8 @@
 
 .cl-home-console-title-block h2 {
   margin: 0;
-  font-size: 22px;
+  font-family: var(--cl-font-display);
+  font-size: 24px;
   line-height: 1.2;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -928,7 +938,7 @@
 }
 
 .cl-home-console-title-block p {
-  margin: 4px 0 0;
+  margin: 5px 0 0;
   font-size: 13px;
   color: var(--cl-ink-secondary);
 }
@@ -936,7 +946,7 @@
 .cl-home-console-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   margin-top: 12px;
   color: var(--cl-ink-muted);
   font-size: 12px;
@@ -971,16 +981,16 @@
 }
 
 .cl-home-console-search {
-  width: min(420px, 42vw);
-  flex: 0 1 420px;
+  width: min(460px, 42vw);
+  flex: 0 1 460px;
 }
 
 .cl-home-console-search input {
   width: 100%;
-  height: 40px;
+  height: 42px;
   border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-sm);
-  background: var(--cl-bg);
+  border-radius: 10px;
+  background: var(--cl-surface);
   color: var(--cl-ink-primary);
   font: inherit;
   font-size: 13px;
@@ -996,6 +1006,7 @@
 .cl-home-console-search input:focus {
   border-color: var(--cl-teal-500);
   background: var(--cl-surface);
+  box-shadow: var(--cl-focus-ring);
 }
 
 .cl-home-context-section-label {
@@ -1010,21 +1021,23 @@
 .cl-home-workstream {
   min-width: 0;
   border-right: 1px solid var(--cl-border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(255,255,255,0));
 }
 
 .cl-home-workstream-head {
-  min-height: 74px;
+  min-height: 76px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 17px 20px;
+  padding: 18px 22px;
   border-bottom: 1px solid var(--cl-border);
 }
 
 .cl-home-workstream-head h3,
 .cl-home-context-head h3 {
   margin: 0;
+  font-family: var(--cl-font-display);
   font-size: 16px;
   line-height: 1.25;
   font-weight: 700;
@@ -1053,12 +1066,12 @@
 
 .cl-home-workstream-row {
   width: 100%;
-  min-height: 82px;
+  min-height: 78px;
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 14px;
-  padding: 14px 20px;
+  gap: 15px;
+  padding: 13px 22px;
   border: 0;
   border-bottom: 1px solid var(--cl-border);
   border-left: 3px solid transparent;
@@ -1067,7 +1080,7 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background 0.1s, border-color 0.1s;
+  transition: background 0.1s, border-color 0.1s, box-shadow 0.1s;
 }
 
 .cl-home-workstream-row:hover,
@@ -1078,7 +1091,10 @@
 
 .cl-home-workstream-row.is-selected {
   border-left-color: var(--cl-teal-500);
-  background: color-mix(in srgb, var(--cl-teal-500) 7%, transparent);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--cl-teal-500) 9%, transparent), rgba(255,255,255,0) 62%),
+    var(--cl-surface);
+  box-shadow: inset 0 -1px 0 var(--cl-border);
 }
 
 .cl-home-work-dot {
@@ -1181,8 +1197,10 @@
 
 .cl-home-context-panel {
   min-width: 0;
-  padding: 20px 22px;
-  background: var(--cl-surface);
+  padding: 22px 24px;
+  background:
+    linear-gradient(180deg, rgba(251, 249, 246, 0.78), rgba(255, 255, 255, 0.95) 38%),
+    var(--cl-surface);
 }
 
 .cl-home-context-head {
@@ -1191,7 +1209,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding-bottom: 18px;
+  padding-bottom: 19px;
   border-bottom: 1px solid var(--cl-border);
 }
 
@@ -1208,14 +1226,14 @@
   grid-template-columns: minmax(86px, 0.55fr) minmax(0, 1fr);
   gap: 14px;
   align-items: baseline;
-  padding: 11px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--cl-border);
 }
 
 .cl-home-context-row dt {
   margin: 0;
   color: var(--cl-ink-muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .cl-home-context-row dd {
@@ -1241,7 +1259,7 @@
 
 .cl-home-context-callout {
   margin-top: 14px;
-  padding: 12px 14px;
+  padding: 13px 14px;
   border: 1px solid color-mix(in srgb, var(--cl-warning) 20%, transparent);
   border-radius: var(--cl-radius-sm);
   background: rgba(180, 83, 9, 0.06);
@@ -1263,11 +1281,11 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .cl-home-context-activity {
-  margin-top: 24px;
+  margin-top: 26px;
 }
 
 .cl-home-context-activity header {
