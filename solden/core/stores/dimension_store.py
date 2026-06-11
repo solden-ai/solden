@@ -148,7 +148,18 @@ class DimensionStore:
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (organization_id, dimension_type, code) DO UPDATE SET
                 label = COALESCE(EXCLUDED.label, context_dimensions.label),
-                source = COALESCE(context_dimensions.source, EXCLUDED.source),
+                source = CASE
+                    WHEN COALESCE(context_dimensions.source, '') IN ('', 'inferred', 'suggested', 'resolver')
+                         AND EXCLUDED.source IN ('erp_master', 'erp_coa', 'erp_sync')
+                    THEN EXCLUDED.source
+                    ELSE COALESCE(context_dimensions.source, EXCLUDED.source)
+                END,
+                metadata_json = CASE
+                    WHEN COALESCE(context_dimensions.metadata_json, '{}') IN ('{}', '')
+                         OR EXCLUDED.source IN ('erp_master', 'erp_coa', 'erp_sync')
+                    THEN EXCLUDED.metadata_json
+                    ELSE context_dimensions.metadata_json
+                END,
                 is_active = EXCLUDED.is_active,
                 updated_at = EXCLUDED.updated_at
             RETURNING *
@@ -392,6 +403,16 @@ class DimensionStore:
         if parent_dimension_id == child_dimension_id:
             raise ValueError("self-edge rejected")
         self.initialize()
+        parent = self.get_dimension(
+            organization_id=organization_id,
+            dimension_id=parent_dimension_id,
+        )
+        child = self.get_dimension(
+            organization_id=organization_id,
+            dimension_id=child_dimension_id,
+        )
+        if not parent or not child:
+            raise ValueError("dimension edge endpoints must exist in organization")
         if edge_type == "hierarchy":
             reachable = self.list_descendant_dimension_ids(
                 organization_id=organization_id, dimension_id=child_dimension_id
@@ -451,33 +472,58 @@ class DimensionStore:
     def list_descendant_dimension_ids(
         self, *, organization_id: str, dimension_id: str
     ) -> List[str]:
-        """All hierarchy descendants of a dimension (depth-capped, cycle-safe
-        via the path-tracking guard). Equivalence edges are NOT traversed."""
-        self.initialize()
-        with self.connect() as conn:
-            cur = conn.cursor()
-            cur.execute(
-                """
-                WITH RECURSIVE descendants(dimension_id, depth, path) AS (
-                    SELECT de.child_dimension_id, 1,
-                           ARRAY[de.parent_dimension_id, de.child_dimension_id]
-                    FROM dimension_edges de
-                    WHERE de.organization_id = %s
-                      AND de.parent_dimension_id = %s
-                      AND de.edge_type = 'hierarchy'
-                    UNION ALL
-                    SELECT de.child_dimension_id, d.depth + 1,
-                           d.path || de.child_dimension_id
-                    FROM dimension_edges de
-                    JOIN descendants d ON de.parent_dimension_id = d.dimension_id
-                    WHERE de.organization_id = %s
-                      AND de.edge_type = 'hierarchy'
-                      AND d.depth < %s
-                      AND NOT de.child_dimension_id = ANY(d.path)
-                )
-                SELECT DISTINCT dimension_id FROM descendants
-                """,
-                (organization_id, dimension_id, organization_id, self._EDGE_MAX_DEPTH),
+        """All hierarchy descendant ids. Equivalence edges are not traversed."""
+        return [
+            str(row.get("id"))
+            for row in self.list_dimension_descendants(
+                organization_id=organization_id,
+                dimension_id=dimension_id,
             )
-            rows = cur.fetchall() or []
-        return [str(dict(r)["dimension_id"]) for r in rows]
+            if row.get("id")
+        ]
+
+    def list_dimension_descendants(
+        self, *, organization_id: str, dimension_id: str
+    ) -> List[Dict[str, Any]]:
+        """Hierarchy descendants with depth metadata.
+
+        Kept in Python instead of recursive SQL so the behavior is identical
+        across SQLite test runs and Postgres production.
+        """
+        self.initialize()
+        if not (organization_id and dimension_id):
+            return []
+        out: List[Dict[str, Any]] = []
+        seen_depth: Dict[str, int] = {}
+        frontier = [
+            (child, 1)
+            for child in self.list_dimension_children(
+                organization_id=organization_id,
+                dimension_id=dimension_id,
+            )
+            if str(child.get("edge_type") or "hierarchy") == "hierarchy"
+        ]
+        while frontier:
+            child, depth = frontier.pop(0)
+            child_id = str(child.get("id") or "")
+            if not child_id:
+                continue
+            if depth > self._EDGE_MAX_DEPTH:
+                continue
+            previous_depth = seen_depth.get(child_id)
+            if previous_depth is not None and previous_depth <= depth:
+                continue
+            seen_depth[child_id] = depth
+            row = dict(child)
+            row["depth"] = depth
+            out.append(row)
+            if depth >= self._EDGE_MAX_DEPTH:
+                continue
+            for grandchild in self.list_dimension_children(
+                organization_id=organization_id,
+                dimension_id=child_id,
+            ):
+                if str(grandchild.get("edge_type") or "hierarchy") != "hierarchy":
+                    continue
+                frontier.append((grandchild, depth + 1))
+        return out

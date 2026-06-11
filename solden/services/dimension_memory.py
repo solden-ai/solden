@@ -24,6 +24,17 @@ _MAX_BOXES = 500
 _MAX_AUDIT_ROWS = 200
 _RECENT_WHYS = 5
 
+_SOURCE_AUTHORITY = {
+    "erp_master": "authoritative",
+    "erp_coa": "authoritative",
+    "erp_sync": "authoritative",
+    "payment_request": "record_observed",
+    "resolver": "record_observed",
+    "resolver_fuzzy": "inferred",
+    "inferred": "inferred",
+    "suggested": "suggested",
+}
+
 
 def _safe_json(value: Any) -> Dict[str, Any]:
     if isinstance(value, dict):
@@ -86,6 +97,10 @@ def _standing_rules_for_dimension(
     return matched
 
 
+def _source_authority(source: Any) -> str:
+    return _SOURCE_AUTHORITY.get(str(source or "").strip(), "unknown")
+
+
 def build_dimension_memory(
     db: Any,
     *,
@@ -109,10 +124,18 @@ def build_dimension_memory(
     boxes = boxes[:_MAX_BOXES]
 
     by_box_type: Dict[str, int] = {}
+    link_statuses: Dict[str, int] = {}
+    confidence_values: List[float] = []
     ap_ids: List[str] = []
     for box in boxes:
         bt = str(box.get("box_type") or "")
         by_box_type[bt] = by_box_type.get(bt, 0) + 1
+        link_status = str(box.get("status") or "unknown")
+        link_statuses[link_status] = link_statuses.get(link_status, 0) + 1
+        try:
+            confidence_values.append(float(box.get("confidence")))
+        except (TypeError, ValueError):
+            pass
         if bt == "ap_item":
             ap_ids.append(str(box.get("box_id")))
 
@@ -187,6 +210,40 @@ def build_dimension_memory(
             row = cur.fetchone()
             open_exceptions = int(dict(row).get("n") or 0) if row else 0
 
+    parents = [
+        {"dimension_id": p.get("id"), "code": p.get("code"), "dimension_type": p.get("dimension_type")}
+        for p in db.list_dimension_parents(
+            organization_id=organization_id, dimension_id=dimension_id
+        )
+    ]
+    children = [
+        {"dimension_id": c.get("id"), "code": c.get("code"), "dimension_type": c.get("dimension_type")}
+        for c in db.list_dimension_children(
+            organization_id=organization_id, dimension_id=dimension_id
+        )
+    ]
+    descendants = [
+        {
+            "dimension_id": d.get("id"),
+            "code": d.get("code"),
+            "dimension_type": d.get("dimension_type"),
+            "depth": d.get("depth"),
+        }
+        for d in (
+            db.list_dimension_descendants(
+                organization_id=organization_id,
+                dimension_id=dimension_id,
+            )
+            if hasattr(db, "list_dimension_descendants")
+            else []
+        )
+    ]
+    descendant_depths = [
+        int(d["depth"])
+        for d in descendants
+        if isinstance(d.get("depth"), int)
+    ]
+
     return {
         "dimension": {
             "dimension_id": dimension.get("id"),
@@ -194,24 +251,25 @@ def build_dimension_memory(
             "code": dimension.get("code"),
             "label": dimension.get("label"),
             "source": dimension.get("source"),
+            "source_authority": _source_authority(dimension.get("source")),
+            "is_active": bool(dimension.get("is_active", True)),
         },
         "hierarchy": {
-            "parents": [
-                {"dimension_id": p.get("id"), "code": p.get("code"), "dimension_type": p.get("dimension_type")}
-                for p in db.list_dimension_parents(
-                    organization_id=organization_id, dimension_id=dimension_id
-                )
-            ],
-            "children": [
-                {"dimension_id": c.get("id"), "code": c.get("code"), "dimension_type": c.get("dimension_type")}
-                for c in db.list_dimension_children(
-                    organization_id=organization_id, dimension_id=dimension_id
-                )
-            ],
+            "parents": parents,
+            "children": children,
+            "descendants": descendants,
+            "descendant_count": len(descendants),
+            "max_depth": max(descendant_depths) if descendant_depths else 0,
         },
         "records": {
             "count": len(boxes),
             "by_box_type": by_box_type,
+            "link_statuses": link_statuses,
+            "average_link_confidence": (
+                round(sum(confidence_values) / len(confidence_values), 3)
+                if confidence_values
+                else None
+            ),
             "states": states,
             "totals_by_currency": totals_by_currency,
             "capped": capped,
@@ -223,4 +281,20 @@ def build_dimension_memory(
         },
         "open_exceptions": open_exceptions,
         "standing_rules": _standing_rules_for_dimension(db, organization_id, dimension),
+        "quality": {
+            "source_authority": _source_authority(dimension.get("source")),
+            "is_active": bool(dimension.get("is_active", True)),
+            "record_link_count": len(boxes),
+            "record_link_statuses": link_statuses,
+            "average_link_confidence": (
+                round(sum(confidence_values) / len(confidence_values), 3)
+                if confidence_values
+                else None
+            ),
+            "direct_parent_count": len(parents),
+            "direct_child_count": len(children),
+            "descendant_count": len(descendants),
+            "max_depth": max(descendant_depths) if descendant_depths else 0,
+            "capped": capped,
+        },
     }

@@ -200,6 +200,7 @@ class GenericBoxStore:
                 "_insert_generic_audit_event_txn requires box_id and box_type"
             )
         from solden.services.audit_memory import ensure_memory_payload_for_audit_event
+        from solden.services.memory_invariants import assert_work_item_audit_event_memory_payload
 
         payload_json = ensure_memory_payload_for_audit_event(
             payload,
@@ -208,6 +209,11 @@ class GenericBoxStore:
             payload_json=payload_json,
             external_refs=external_refs,
             now=now,
+        )
+        assert_work_item_audit_event_memory_payload(
+            box_type=str(box_type),
+            box_id=str(box_id),
+            payload_json=payload_json,
         )
 
         governance_verdict = payload.get("governance_verdict")

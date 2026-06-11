@@ -1967,6 +1967,10 @@ class VendorStore:
             "from_state": current,
             "to_state": target,
             "reason": reason,
+            "dependency": {
+                "type": "vendor_onboarding_state",
+                "reason": reason,
+            } if reason else None,
         }
         # Decision-reason carries the same one-line narrative the
         # audit feed consumers filter on. Structured fields
@@ -1975,6 +1979,32 @@ class VendorStore:
         audit_decision_reason = (
             f"Vendor onboarding session {session_id}: {current} -> {target}"
             + (f" — {reason}" if reason else "")
+        )
+        from solden.services.audit_memory import ensure_memory_payload_for_audit_event
+        from solden.services.memory_invariants import assert_work_item_audit_event_memory_payload
+
+        audit_payload = ensure_memory_payload_for_audit_event(
+            {
+                "event_type": "vendor_onboarding_state_transition",
+                "from_state": str(current or ""),
+                "to_state": target,
+                "actor_type": "user" if actor_id and actor_id != "agent" else "agent",
+                "actor_id": actor_id or "agent",
+                "source": "vendor_onboarding_state_machine",
+                "decision_reason": audit_decision_reason,
+                "organization_id": session.get("organization_id") or "",
+                "ts": now,
+            },
+            box_type="vendor_onboarding_session",
+            box_id=session_id,
+            payload_json=audit_payload,
+            external_refs={"vendor_onboarding_session_id": session_id},
+            now=now,
+        )
+        assert_work_item_audit_event_memory_payload(
+            box_type="vendor_onboarding_session",
+            box_id=session_id,
+            payload_json=audit_payload,
         )
 
         try:

@@ -10,6 +10,8 @@ from solden.services.memory_invariants import (
     PRIMARY_MEMORY_COVERAGE_SURFACES,
     MemoryInvariantError,
     assert_memory_event_payload,
+    assert_work_item_audit_event_memory_payload,
+    audit_event_requires_operational_memory,
     memory_event_invariant_violations,
     missing_coverage_tokens,
 )
@@ -139,6 +141,33 @@ def test_memory_payload_invariants_reject_invalid_confidence():
         )
 
         assert "memory_event.confidence must be between 0 and 1" in violations
+
+
+def test_work_item_audit_events_require_canonical_operational_memory():
+    assert audit_event_requires_operational_memory(
+        box_type="payment_request",
+        box_id="PAYREQ-1",
+    )
+
+    with pytest.raises(MemoryInvariantError):
+        assert_work_item_audit_event_memory_payload(
+            box_type="payment_request",
+            box_id="PAYREQ-1",
+            payload_json={"summary": "Payment request changed state."},
+        )
+
+
+def test_reference_audit_events_do_not_require_operational_memory():
+    for box_type in ("organization", "vendor", "user", "workspace_audit", "audit_export"):
+        assert not audit_event_requires_operational_memory(
+            box_type=box_type,
+            box_id="ref-1",
+        )
+        assert_work_item_audit_event_memory_payload(
+            box_type=box_type,
+            box_id="ref-1",
+            payload_json={"summary": "Reference audit row."},
+        )
 
 
 def test_memory_event_builder_records_provenance_when_evidence_is_not_explicit():

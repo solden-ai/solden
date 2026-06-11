@@ -32,6 +32,21 @@ def test_upsert_is_idempotent_and_keeps_source(db):
     assert d2["source"] == "erp_coa"
 
 
+def test_authoritative_erp_source_upgrades_inferred_dimension(db):
+    inferred = db.upsert_dimension(
+        organization_id="orgDimA", dimension_type="department",
+        code="OPS", label="Ops", source="inferred",
+    )
+    upgraded = db.upsert_dimension(
+        organization_id="orgDimA", dimension_type="department",
+        code="OPS", label="Operations", source="erp_master",
+        metadata={"external_id": "D-OPS", "erp_type": "netsuite"},
+    )
+    assert inferred["id"] == upgraded["id"]
+    assert upgraded["source"] == "erp_master"
+    assert upgraded["metadata"]["external_id"] == "D-OPS"
+
+
 def test_resolve_exact_alias_and_miss(db):
     d = db.upsert_dimension(
         organization_id="orgDimA", dimension_type="gl_account",
@@ -121,6 +136,23 @@ def test_edges_add_list_and_self_edge_rejected(db):
         )
 
 
+def test_edges_reject_missing_or_cross_org_endpoints(db):
+    a = _dim(db, "X-A")
+    other_org = _dim(db, "X-B", org="orgDimB")
+    with pytest.raises(ValueError):
+        db.add_dimension_edge(
+            organization_id="orgDimA",
+            parent_dimension_id=a["id"],
+            child_dimension_id="DIM-missing",
+        )
+    with pytest.raises(ValueError):
+        db.add_dimension_edge(
+            organization_id="orgDimA",
+            parent_dimension_id=a["id"],
+            child_dimension_id=other_org["id"],
+        )
+
+
 def test_recursive_descendants_and_cycle_rejection(db):
     top = _dim(db, "H-TOP")
     mid = _dim(db, "H-MID")
@@ -129,6 +161,8 @@ def test_recursive_descendants_and_cycle_rejection(db):
     db.add_dimension_edge(organization_id="orgDimA", parent_dimension_id=mid["id"], child_dimension_id=leaf["id"])
     desc = db.list_descendant_dimension_ids(organization_id="orgDimA", dimension_id=top["id"])
     assert set(desc) == {mid["id"], leaf["id"]}
+    rich_desc = db.list_dimension_descendants(organization_id="orgDimA", dimension_id=top["id"])
+    assert {d["code"]: d["depth"] for d in rich_desc} == {"H-MID": 1, "H-LEAF": 2}
     # Closing the loop (leaf -> top) must be refused.
     with pytest.raises(ValueError):
         db.add_dimension_edge(

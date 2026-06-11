@@ -154,6 +154,15 @@ PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
         ),
     ),
     MemoryCoverageSurface(
+        name="vendor_onboarding_state_funnel",
+        path="solden/core/stores/vendor_store.py",
+        required_tokens=(
+            "vendor_onboarding_state_transition",
+            "ensure_memory_payload_for_audit_event",
+            "assert_work_item_audit_event_memory_payload",
+        ),
+    ),
+    MemoryCoverageSurface(
         name="workflow_routes_generic_state_api",
         path="solden/api/workflow_routes.py",
         required_tokens=("update_generic_box_state", "actor_id", "reason"),
@@ -179,6 +188,15 @@ PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
             "erp_native_sage_accounting",
         ),
     ),
+)
+
+
+NON_OPERATIONAL_MEMORY_BOX_TYPES: Tuple[str, ...] = (
+    "organization",
+    "vendor",
+    "user",
+    "workspace_audit",
+    "audit_export",
 )
 
 
@@ -268,6 +286,25 @@ def assert_memory_event_payload(payload_json: Dict[str, Any]) -> None:
         raise MemoryInvariantError(
             "memory_event_invariant_violation: " + ", ".join(violations)
         )
+
+
+def audit_event_requires_operational_memory(*, box_type: Any, box_id: Any) -> bool:
+    resolved_box_type = _text(box_type).lower()
+    resolved_box_id = _text(box_id)
+    if not resolved_box_type or not resolved_box_id:
+        return False
+    return resolved_box_type not in NON_OPERATIONAL_MEMORY_BOX_TYPES
+
+
+def assert_work_item_audit_event_memory_payload(
+    *,
+    box_type: Any,
+    box_id: Any,
+    payload_json: Dict[str, Any],
+) -> None:
+    if not audit_event_requires_operational_memory(box_type=box_type, box_id=box_id):
+        return
+    assert_memory_event_payload(payload_json)
 
 
 def missing_coverage_tokens(

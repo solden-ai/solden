@@ -99,10 +99,18 @@ def test_dimension_memory_rollup(db):
         db, organization_id="orgDM", dimension_id=emea["id"], include_descendants=True,
     )
     assert memory["dimension"]["code"] == "EMEA"
+    assert memory["dimension"]["source_authority"] == "authoritative"
     assert memory["records"]["count"] == 2
+    assert memory["records"]["link_statuses"] == {"confirmed": 2}
+    assert memory["records"]["average_link_confidence"] is None
     assert memory["records"]["totals_by_currency"]["EUR"] == pytest.approx(350.0)
     assert memory["records"]["states"] == {"approved": 1, "needs_approval": 1}
     assert memory["open_exceptions"] == 1
+    assert memory["hierarchy"]["descendant_count"] == 1
+    assert memory["hierarchy"]["max_depth"] == 1
+    assert memory["quality"]["source_authority"] == "authoritative"
+    assert memory["quality"]["record_link_count"] == 2
+    assert memory["quality"]["descendant_count"] == 1
     whys = [w["why"] for w in memory["decisions"]["recent_whys"]]
     assert any("Dana signed off" in w for w in whys)
     assert not any(w.strip().lower() == "ok" for w in whys)  # thin filtered

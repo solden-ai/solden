@@ -76,6 +76,21 @@ def _ensure_memory_payload_for_audit_event(
     )
 
 
+def _assert_work_item_audit_event_memory_payload(
+    *,
+    box_type: str,
+    box_id: str,
+    payload_json: Dict[str, Any],
+) -> None:
+    from solden.services.memory_invariants import assert_work_item_audit_event_memory_payload
+
+    assert_work_item_audit_event_memory_payload(
+        box_type=box_type,
+        box_id=box_id,
+        payload_json=payload_json,
+    )
+
+
 class APStore:
     """Mixin providing all AP-domain persistence methods."""
 
@@ -527,6 +542,11 @@ class APStore:
                     payload_json=audit_payload,
                     external_refs={},
                     now=now,
+                )
+                _assert_work_item_audit_event_memory_payload(
+                    box_type="ap_item",
+                    box_id=ap_item_id,
+                    payload_json=audit_payload,
                 )
                 cur.execute(
                     audit_sql,
@@ -2554,6 +2574,11 @@ class APStore:
             external_refs=external_refs,
             now=now,
         )
+        _assert_work_item_audit_event_memory_payload(
+            box_type=str(box_type),
+            box_id=str(box_id),
+            payload_json=payload_json,
+        )
 
         # P4 (audit 2026-04-28): governance_verdict + agent_confidence are
         # structured columns now (migration v50). Callers can pass them
@@ -2838,6 +2863,11 @@ class APStore:
             payload_json=owner_audit_payload,
             external_refs={},
             now=now,
+        )
+        _assert_work_item_audit_event_memory_payload(
+            box_type="ap_item",
+            box_id=ap_item_id,
+            payload_json=owner_audit_payload,
         )
         try:
             with self.connect() as conn:
