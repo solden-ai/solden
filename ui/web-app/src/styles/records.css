@@ -10,9 +10,9 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 24px 28px;
+  padding: 4px 0 48px;
   max-width: 1280px;
-  margin: 0 auto;
+  margin: 0;
   width: 100%;
 }
 .cl-records *,
@@ -550,7 +550,7 @@
 
 @media (max-width: 980px) {
   .cl-records {
-    padding: 16px 14px;
+    padding: 0 0 32px;
   }
   .cl-records-row {
     grid-template-columns: 1fr 1fr;

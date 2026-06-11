@@ -5,6 +5,7 @@ import { html } from '../src/utils/htm.js';
 import RecordsPage from '../src/routes/pages/RecordsPage.js';
 import '../src/styles/shell.css';
 import '../src/styles/components.css';
+import '../src/styles/canvas.css';
 import '../src/styles/pages.css';
 import '../src/styles/records.css';
 
@@ -40,8 +41,8 @@ const api = async (path) => {
 
 function Harness() {
   return html`
-    <div class="cl-app" style="grid-template-columns: 0 1fr;">
-      <div></div>
+    <div class="cl-app">
+      <aside class="cl-app-sidebar" aria-label="Workspace sidebar"></aside>
       <div class="cl-app-main">
         <main class="cl-app-content">
           <${RecordsPage}
