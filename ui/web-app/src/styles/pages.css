@@ -117,14 +117,17 @@
 }
 
 .cl-settings-hero {
-  background: var(--cl-surface);
-  border: 1px solid var(--cl-border);
-  border-radius: 12px;
-  padding: 22px 24px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
+  /* Naked typographic header (ratified 2026-06-11) — no card, no actions. */
+  background: transparent;
+  border: 0;
+  padding: 0;
+  display: block;
+}
+
+.cl-settings-hero-sub {
+  color: var(--cl-ink-secondary);
+  max-width: 56ch;
+  margin-top: 6px;
 }
 
 .cl-settings-hero-copy {
@@ -7155,3 +7158,58 @@
 .cl-settings-status-item strong { color: var(--cl-ink-primary); font-weight: 600; }
 .cl-settings-status-item.is-warning strong { color: var(--cl-warning); }
 .cl-settings-status-sep { color: var(--cl-border-strong); }
+
+
+.cl-settings-status-dot.is-ok { color: var(--cl-success); }
+.cl-settings-status-dot.is-warn { color: var(--cl-warning); }
+.cl-settings-status-ok { color: var(--cl-success); font-weight: 600; }
+.cl-settings-status-warn { color: var(--cl-warning); font-weight: 600; }
+.cl-settings-status-link {
+  font: inherit;
+  border: 0;
+  background: none;
+  color: var(--cl-ink-secondary);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+}
+.cl-settings-status-link:hover { color: var(--cl-ink-primary); }
+
+/* De-box the section bodies (ratified grammar): inside settings content,
+   panels lose their card chrome — the page's hairlines carry structure. */
+.cl-settings-content .panel {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  margin-bottom: 28px;
+}
+.cl-settings-content .panel-head {
+  border-bottom: 0;
+  padding-bottom: 0;
+  margin-bottom: 12px;
+}
+.cl-settings-content .panel-head h3 {
+  font-family: var(--cl-font-display);
+  font-size: 15px;
+}
+
+/* Field grammar for settings (ratified 2026-06-11): label-left /
+   control-right rows with hairlines. Distinct from the legacy boxed
+   .cl-settings-row still used by unconverted sections. */
+.cl-settings-field {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 32px;
+  padding: 18px 0;
+  border-top: 1px solid color-mix(in srgb, var(--cl-border) 55%, transparent);
+}
+.cl-settings-field:first-of-type { border-top: 0; }
+.cl-settings-field-label { font-weight: 600; font-size: 13.5px; color: var(--cl-ink-primary); }
+.cl-settings-field-desc { color: var(--cl-ink-secondary); font-size: 12.5px; margin-top: 3px; line-height: 1.5; }
+.cl-settings-field-value { display: flex; flex-direction: column; gap: 6px; min-width: 0; justify-content: center; }
+.cl-settings-field-value-inline { display: flex; align-items: center; gap: 10px; }
+@media (max-width: 860px) {
+  .cl-settings-field { grid-template-columns: 1fr; gap: 8px; }
+}

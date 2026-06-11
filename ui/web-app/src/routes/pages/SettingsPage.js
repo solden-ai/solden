@@ -960,32 +960,33 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
   };
   const currentSection = getSettingsSection(activeSection);
   const currentSectionStatus = getSettingsSectionStatus(activeSection, sectionContext);
-  const summaryCards = getSettingsSummaryCards(sectionContext);
 
   return html`
     <main class="cl-settings-page">
       <header class="cl-settings-hero">
-        <div class="cl-settings-hero-copy">
-          <span class="cl-settings-eyebrow">Admin</span>
-          <h1>Settings</h1>
-          <p>
-            Configure workspace identity, connected systems, policy controls,
-            access, and operational guardrails from one place.
-          </p>
-        </div>
-        <div class="cl-settings-hero-actions">
-          <button class="btn-secondary" onClick=${goToConnections}>Open connections</button>
-          <button class="btn-primary" onClick=${() => selectSection('team')}>Invite teammate</button>
-        </div>
+        <span class="cl-settings-eyebrow">Admin</span>
+        <h1>Settings</h1>
+        <p class="cl-settings-hero-sub">
+          Workspace identity, policy controls, access, and operational guardrails.
+        </p>
       </header>
 
       <div class="cl-settings-statusline" aria-label="Settings summary">
-        ${summaryCards.map((card, i) => html`
-          <span class=${`cl-settings-status-item${card.tone === 'warning' ? ' is-warning' : ''}`} key=${card.label}>
-            ${i > 0 ? html`<span class="cl-settings-status-sep" aria-hidden="true">·</span>` : ''}
-            <strong>${card.value}</strong> ${card.label.toLowerCase()}
-          </span>
-        `)}
+        ${(() => {
+          const connectedApprovals = !!(slack.connected || teams.connected);
+          const systems = [erp.connected, gmail.connected, connectedApprovals].filter(Boolean).length;
+          const allUp = systems === 3;
+          return html`
+            <span class=${`cl-settings-status-dot ${allUp ? 'is-ok' : 'is-warn'}`} aria-hidden="true">●</span>
+            <span class=${allUp ? 'cl-settings-status-ok' : 'cl-settings-status-warn'}>
+              ${allUp ? 'All systems connected' : `${systems} of 3 systems connected`}
+            </span>
+            <span class="cl-settings-status-sep" aria-hidden="true">·</span>
+            <span>${planName} plan</span>
+            <span class="cl-settings-status-sep" aria-hidden="true">·</span>
+            <button type="button" class="cl-settings-status-link" onClick=${goToConnections}>Open connections →</button>
+          `;
+        })()}
       </div>
 
       <div class="cl-settings-layout" data-testid="settings-layout">
@@ -1028,16 +1029,13 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
            provisioned default ("default") sticks because the rename
            UI was previously hidden in a summary card. -->
       ${activeSection === 'workspace' ? html`
-      <div class="panel">
-        <div class="panel-head compact">
+      <div class="cl-settings-fields">
+        <div class="cl-settings-field">
           <div>
-            <h3>Workspace</h3>
-            <p class="muted">The display name and domain for this organization. The name appears in the topbar and on every email the agent sends.</p>
+            <div class="cl-settings-field-label">Display name</div>
+            <div class="cl-settings-field-desc">Shown in the topbar and on every email the agent sends.</div>
           </div>
-        </div>
-        <div class="settings-section-grid" style="grid-template-columns: 1fr 1fr; gap:20px">
-          <div>
-            <label class="muted small" style="display:block;margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase">Workspace name</label>
+          <div class="cl-settings-field-value">
             ${editingOrgName
               ? html`
                 <div class="cl-inline-edit">
@@ -1064,18 +1062,24 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
                   </div>
                 </div>`
               : html`
-                <div style="display:flex;align-items:center;gap:12px">
-                  <span style="font-size:16px;font-weight:600">${displayOrgName(org.name) || 'Untitled'}</span>
+                <div class="cl-settings-field-value-inline">
+                  <span style="font-weight:600">${displayOrgName(org.name) || 'Untitled'}</span>
                   ${canManageCompany
-                    ? html`<button class="btn btn-sm btn-tertiary" onClick=${beginEditOrgName} aria-label="Rename workspace">Rename</button>`
+                    ? html`<button class="btn btn-sm btn-ghost" onClick=${beginEditOrgName} aria-label="Rename workspace">Rename</button>`
                     : null}
                 </div>
                 ${(org.name || '').trim().toLowerCase() === 'default'
-                  ? html`<p class="muted small" style="margin-top:6px;color:var(--warning)">This is the placeholder name. Rename it to your company so it shows correctly in the topbar and in vendor emails.</p>`
+                  ? html`<p class="muted small" style="color:var(--cl-warning)">This is the placeholder name. Rename it to your company so it shows correctly in the topbar and in vendor emails.</p>`
                   : null}`}
           </div>
+        </div>
+
+        <div class="cl-settings-field">
           <div>
-            <label class="muted small" style="display:block;margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase">Email domain</label>
+            <div class="cl-settings-field-label">Email domain</div>
+            <div class="cl-settings-field-desc">Used for SAML/SCIM matching and outbound vendor email.</div>
+          </div>
+          <div class="cl-settings-field-value">
             ${editingOrgDomain
               ? html`
                 <div class="cl-inline-edit">
@@ -1103,18 +1107,24 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
                   </div>
                 </div>`
               : html`
-                <div style="display:flex;align-items:center;gap:12px">
-                  <span style="font-size:14px">${org.domain || html`<span class="muted">Not set</span>`}</span>
+                <div class="cl-settings-field-value-inline">
+                  <span>${org.domain || html`<span class="muted">Not set</span>`}</span>
                   ${canManageCompany
-                    ? html`<button class="btn btn-sm btn-tertiary" onClick=${beginEditOrgDomain} aria-label="Edit workspace domain">${org.domain ? 'Edit' : 'Add'}</button>`
+                    ? html`<button class="btn btn-sm btn-ghost" onClick=${beginEditOrgDomain} aria-label="Edit workspace domain">${org.domain ? 'Edit' : 'Add'}</button>`
                     : null}
-                </div>
-                <p class="muted small" style="margin-top:6px">Used for SAML/SCIM matching and outbound vendor email.</p>`}
+                </div>`}
           </div>
         </div>
-        <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--cl-line);font-size:12px;color:var(--cl-ink-muted);display:flex;gap:24px;flex-wrap:wrap">
-          <span><strong style="color:var(--cl-ink-secondary)">Organization ID</strong> · <code style="font-family:var(--cl-font-mono)">${org.id || orgId}</code></span>
-          <span><strong style="color:var(--cl-ink-secondary)">Mode</strong> · ${org.integration_mode === 'per_org' ? 'Per organization' : 'Shared workspace'}</span>
+
+        <div class="cl-settings-field">
+          <div>
+            <div class="cl-settings-field-label">Organization ID</div>
+            <div class="cl-settings-field-desc">Reference this in API calls and support requests.</div>
+          </div>
+          <div class="cl-settings-field-value-inline">
+            <code style="font-family:var(--cl-font-mono);font-size:13px">${org.id || orgId}</code>
+            <span class="muted small">· ${org.integration_mode === 'per_org' ? 'Per organization' : 'Shared workspace'}</span>
+          </div>
         </div>
       </div>
       ` : null}
