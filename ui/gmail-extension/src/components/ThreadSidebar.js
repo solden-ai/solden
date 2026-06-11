@@ -30,6 +30,7 @@ import InviteVendorModal from './InviteVendorModal.js';
 import BudgetPausedBanner from './BudgetPausedBanner.js';
 import { workspaceItemUrl } from '../utils/workspace-link.js';
 import { formatTimeAgo, formatAmount as fmtAmount, getAgentMemoryView } from '../utils/formatters.js';
+import { getWorkStateNotice } from '../utils/work-actions.js';
 
 // ---------------------------------------------------------------------------
 // CSS
@@ -1471,6 +1472,24 @@ export function ThreadSidebar({
   const canSnooze = ['needs_approval', 'pending_approval', 'needs_info', 'validated', 'failed_post'].includes(state);
   const isSnoozed = state === 'snoozed';
   const snoozedUntil = item.metadata?.snoozed_until || item.snoozed_until;
+  // In needs_info there is often nothing for the operator to click — the
+  // agent is waiting on someone else. Without this notice the bar renders
+  // a lone Snooze button that reads as "the agent has nothing for me"
+  // instead of "the agent is handling it". Best available truth, in order:
+  // the substate notice, the actual question the agent asked, a generic
+  // but honest fallback.
+  let stateNotice = '';
+  if (state === 'needs_info') {
+    try {
+      stateNotice = String(getWorkStateNotice(state, 'invoice', item) || '');
+    } catch (_) { stateNotice = ''; }
+    if (!stateNotice) {
+      const question = String(item.needs_info_question || '').trim();
+      stateNotice = question
+        ? `Waiting on: ${question}`
+        : 'Waiting on the requested info. Solden follows up automatically and the record moves the moment it arrives.';
+    }
+  }
 
   return html`
     <div class="cl-thread-sidebar">
@@ -1526,6 +1545,12 @@ export function ThreadSidebar({
           <div class="cl-ts-awaiting-approval" role="status">
             <div class="cl-ts-awaiting-approval-title">Awaiting approval in Slack</div>
             <div class="cl-ts-awaiting-approval-sub">Approver notified. Decision returns here.</div>
+          </div>
+        ` : ''}
+        ${state === 'needs_info' && stateNotice ? html`
+          <div class="cl-ts-awaiting-approval" role="status">
+            <div class="cl-ts-awaiting-approval-title">Solden is on it</div>
+            <div class="cl-ts-awaiting-approval-sub">${stateNotice}</div>
           </div>
         ` : ''}
         ${canSnooze && onSnooze ? html`

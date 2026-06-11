@@ -3205,6 +3205,10 @@ class APStore:
             "organization_id = %s",
             "decision_reason IS NOT NULL",
             "event_type LIKE 'memory_event:%%'",
+            # Audit rows are append-only, so events outlive deleted boxes
+            # (e.g. cleared sample data). Org-wide answers must only cite
+            # records that still exist.
+            "EXISTS (SELECT 1 FROM ap_items i WHERE i.id = audit_events.box_id)",
         ]
         params: List[Any] = [org]
         term_clauses = []

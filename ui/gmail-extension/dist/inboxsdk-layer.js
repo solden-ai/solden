@@ -1,4 +1,4 @@
-/* clearledgr-source-fingerprint:7124f79f92f20403b37732e2c1b4132f53fd659a54453bc40021e7a7d1f87d00 */
+/* clearledgr-source-fingerprint:40a9b5523c68127eda38f4a16084dd0a78fc400911cb3f8907093a201e48d217 */
 (() => {
   var __create = Object.create;
   var __getProtoOf = Object.getPrototypeOf;
@@ -58271,6 +58271,15 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     current_parse: "Current invoice parse",
     ocr: "Current invoice parse"
   };
+  var FINANCE_EFFECT_REASON_LABELS = {
+    linked_finance_target_amount_missing: "Target amount missing",
+    linked_finance_target_not_invoice: "The linked document is not an invoice",
+    linked_credit_adjustment_present: "Linked credit changes payable amount",
+    linked_cash_application_present: "Linked cash activity changes settlement",
+    linked_over_credit: "Linked credits exceed invoice amount",
+    linked_overpayment: "Linked cash exceeds remaining balance",
+    linked_refund_exceeds_cash_out: "Refund exceeds linked cash out"
+  };
   function getFieldLabel(field) {
     const token = String(field || "").trim().toLowerCase();
     if (!token)
@@ -58419,6 +58428,39 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     const summary = `${fieldLabels.slice(0, -1).join(", ")} and ${fieldLabels[fieldLabels.length - 1]}`;
     const hasSourceConflict = blockers.some((blocker) => blocker?.kind === "source_conflict");
     return hasSourceConflict ? `Review ${summary} before this invoice moves forward because the email and attachment do not match.` : `Review ${summary} before this invoice moves forward.`;
+  }
+  function getFinanceEffectBlockers(item = {}) {
+    const rawBlockers = Array.isArray(item?.finance_effect_blockers) ? item.finance_effect_blockers : [];
+    return rawBlockers.map((blocker) => {
+      if (!blocker || typeof blocker !== "object")
+        return null;
+      const code = String(blocker.code || "").trim();
+      if (!code)
+        return null;
+      return {
+        code,
+        label: FINANCE_EFFECT_REASON_LABELS[code] || humanizeSnakeText(code.replace(/^linked_/, "")),
+        detail: String(blocker.detail || "").trim()
+      };
+    }).filter(Boolean);
+  }
+  function getFinanceEffectNotice(item = {}) {
+    const summary = item?.finance_effect_summary && typeof item.finance_effect_summary === "object" ? item.finance_effect_summary : {};
+    const blockers = getFinanceEffectBlockers(item);
+    if (Boolean(item?.finance_effect_review_required)) {
+      return blockers[0]?.detail || "Applied credits or payments reduce the amount owed. Verify the balance is correct.";
+    }
+    if (!summary || Object.keys(summary).length === 0)
+      return "";
+    const creditTotal = Number(summary.applied_credit_total || 0);
+    const netCashTotal = Number(summary.net_cash_applied_total || 0);
+    const remainingBalance = Number(summary.remaining_balance_amount || 0);
+    if (!Number.isFinite(creditTotal) && !Number.isFinite(netCashTotal))
+      return "";
+    if ((creditTotal > 0 || netCashTotal !== 0) && Number.isFinite(remainingBalance)) {
+      return `Remaining balance after credits and payments: ${formatAmount(remainingBalance, summary.currency || item?.currency)}.`;
+    }
+    return "";
   }
   function readLocalStorage(key) {
     try {
@@ -59234,6 +59276,221 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   }
   function workspaceRecordsUrl() {
     return `${WORKSPACE_URL}/records`;
+  }
+
+  // src/utils/roles.js
+  function normalizeUserRole(role) {
+    return String(role || "").trim().toLowerCase();
+  }
+  function hasOpsAccessRole(role) {
+    return ["owner", "admin", "operator"].includes(normalizeUserRole(role));
+  }
+  function hasAdminAccessRole(role) {
+    return ["owner", "admin"].includes(normalizeUserRole(role));
+  }
+
+  // src/utils/document-types.js
+  var DOCUMENT_TYPE_ALIASES = {
+    invoice: "invoice",
+    invoices: "invoice",
+    payment: "receipt",
+    payments: "receipt",
+    payment_confirmation: "receipt",
+    receipt: "receipt",
+    receipts: "receipt",
+    refund: "refund",
+    refunds: "refund",
+    credit_note: "credit_note",
+    credit_notes: "credit_note",
+    creditnote: "credit_note",
+    credit_memo: "credit_note",
+    credit_memos: "credit_note",
+    creditmemo: "credit_note",
+    debit_note: "debit_note",
+    payment_request: "payment_request",
+    payment_requests: "payment_request",
+    paymentrequest: "payment_request",
+    subscription_notification: "subscription",
+    subscription: "subscription",
+    saas_charge: "subscription",
+    recurring_charge: "subscription",
+    remittance_advice: "remittance",
+    remittance: "remittance",
+    statement: "statement",
+    statements: "statement",
+    bank_statement: "statement",
+    bank_statements: "statement",
+    vendor_statement: "statement",
+    bank_notification: "bank_notification",
+    po_confirmation: "po_confirmation",
+    tax_document: "tax_document",
+    contract_renewal: "contract",
+    contract: "contract",
+    dispute_response: "dispute_response",
+    other: "other"
+  };
+  var DOCUMENT_TYPE_LABELS = {
+    invoice: "Invoice",
+    receipt: "Receipt",
+    refund: "Refund",
+    credit_note: "Credit note",
+    debit_note: "Debit note",
+    payment_request: "Payment request",
+    subscription: "Subscription charge",
+    remittance: "Remittance advice",
+    statement: "Vendor statement",
+    bank_notification: "Bank notification",
+    po_confirmation: "PO confirmation",
+    tax_document: "Tax document",
+    contract: "Contract / renewal",
+    dispute_response: "Dispute response",
+    other: "Finance document"
+  };
+  var DOCUMENT_TYPE_PLURAL_LABELS = {
+    invoice: "Invoices",
+    receipt: "Receipts",
+    refund: "Refunds",
+    credit_note: "Credit notes",
+    debit_note: "Debit notes",
+    payment_request: "Payment requests",
+    subscription: "Subscription charges",
+    remittance: "Remittance advices",
+    statement: "Vendor statements",
+    bank_notification: "Bank notifications",
+    po_confirmation: "PO confirmations",
+    tax_document: "Tax documents",
+    contract: "Contracts & renewals",
+    dispute_response: "Dispute responses",
+    other: "Finance documents"
+  };
+  function normalizeDocumentType(value) {
+    const raw = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    if (!raw)
+      return "invoice";
+    return DOCUMENT_TYPE_ALIASES[raw] || raw;
+  }
+  function isInvoiceDocumentType(value) {
+    return normalizeDocumentType(value) === "invoice";
+  }
+  function getDocumentTypeLabel(value, options = {}) {
+    const { plural = false, lowercase = false } = options;
+    const normalized = normalizeDocumentType(value);
+    const base = plural ? DOCUMENT_TYPE_PLURAL_LABELS[normalized] || DOCUMENT_TYPE_PLURAL_LABELS.other : DOCUMENT_TYPE_LABELS[normalized] || DOCUMENT_TYPE_LABELS.other;
+    if (!lowercase)
+      return base;
+    return `${base.charAt(0).toLowerCase()}${base.slice(1)}`;
+  }
+
+  // src/utils/work-actions.js
+  var RESUME_WORKFLOW_REASON_CODES = new Set([
+    "field_review_required",
+    "blocking_source_conflicts",
+    "confidence_field_review_required"
+  ]);
+  function humanizeToken(value) {
+    return String(value || "").trim().replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+  function hasErpPostingConnection(item = null) {
+    const status = String(item?.erp_status || "").trim().toLowerCase();
+    if (status === "not_connected")
+      return false;
+    if (item?.erp_connector_available === false)
+      return false;
+    if (Boolean(item?.erp_connector_available))
+      return true;
+    if (String(item?.erp_type || "").trim())
+      return true;
+    return false;
+  }
+  function normalizeWorkState(state) {
+    const normalized = String(state || "").trim().toLowerCase();
+    if (!normalized)
+      return "received";
+    if (normalized === "pending_approval")
+      return "needs_approval";
+    if (normalized === "posted")
+      return "posted_to_erp";
+    return normalized;
+  }
+  function getWorkStateNotice(state, documentType = "invoice", item = null) {
+    const normalized = normalizeWorkState(state);
+    const financeEffectNotice = getFinanceEffectNotice(item);
+    if (!isInvoiceDocumentType(documentType)) {
+      const documentLabel = getDocumentTypeLabel(documentType, { lowercase: true });
+      const resolution = item && typeof item === "object" && item.non_invoice_resolution && typeof item.non_invoice_resolution === "object" ? item.non_invoice_resolution : {};
+      const accountingTreatment = String(item?.non_invoice_accounting_treatment || resolution?.accounting_treatment || "").trim();
+      const downstreamQueue = String(item?.non_invoice_downstream_queue || resolution?.downstream_queue || "").trim();
+      const resolved = Boolean(resolution?.resolved_at);
+      if (resolved && accountingTreatment) {
+        const treatmentText = humanizeToken(accountingTreatment).replace(/^Finance Document Reviewed$/i, "Review recorded");
+        const queueText = downstreamQueue ? ` Next queue: ${humanizeToken(downstreamQueue).toLowerCase()}.` : "";
+        return `This ${documentLabel} has been resolved. ${treatmentText}.${queueText}`;
+      }
+      if (normalized === "rejected") {
+        return `This ${documentLabel} has been rejected.`;
+      }
+      if (normalized === "closed") {
+        return `This ${documentLabel} has been closed.`;
+      }
+      if (documentType === "statement") {
+        return "This bank statement goes to reconciliation, not invoice approval or ERP posting.";
+      }
+      if (documentType === "payment_request") {
+        return "This payment request is handled outside the invoice flow. Approval and ERP posting are not available here.";
+      }
+      if (documentType === "payment") {
+        return "This payment confirmation shows money already moved. It is tracked outside the invoice flow.";
+      }
+      if (documentType === "receipt") {
+        return "This receipt is supporting evidence for a completed payment, not an open invoice.";
+      }
+      return `This ${documentLabel} is tracked as a non-invoice record. Invoice approval and ERP posting are not available here.`;
+    }
+    if (financeEffectNotice) {
+      return financeEffectNotice;
+    }
+    if (normalized === "needs_info") {
+      const followupNextAction = String(item?.followup_next_action || "").trim().toLowerCase();
+      if (followupNextAction === "await_vendor_response") {
+        return "Waiting on vendor reply. Solden will send reminders automatically.";
+      }
+      if (followupNextAction === "manual_vendor_escalation") {
+        return "Vendor did not reply. Manual escalation needed.";
+      }
+      if (followupNextAction === "nudge_vendor_followup") {
+        return "The vendor has not replied yet. Send the next follow-up when you are ready.";
+      }
+    }
+    if (normalized === "needs_approval") {
+      const approvalFollowup = item?.approval_followup && typeof item.approval_followup === "object" ? item.approval_followup : {};
+      const pendingAssignees = Array.isArray(approvalFollowup?.pending_assignees) ? approvalFollowup.pending_assignees : [];
+      if (approvalFollowup?.escalation_due) {
+        return "Approval is overdue. Escalate or reassign now.";
+      }
+      if (approvalFollowup?.sla_breached) {
+        return "Approval is overdue. Send a reminder now.";
+      }
+      if (pendingAssignees.length > 0) {
+        return `Waiting on ${pendingAssignees.slice(0, 3).join(", ")}. Solden is monitoring this approval and will remind or escalate if it slips.`;
+      }
+      return "Waiting on approval. Solden is monitoring this request and will remind or escalate if it slips.";
+    }
+    if ((normalized === "approved" || normalized === "ready_to_post" || normalized === "failed_post") && !hasErpPostingConnection(item)) {
+      return "ERP is not connected. Connect a supported ERP before Solden can post this invoice.";
+    }
+    if (normalized === "approved") {
+      return "Approval received. Solden is preparing the posting step.";
+    }
+    if (normalized === "ready_to_post") {
+      return "Invoice is ready and Solden can post it to the ERP.";
+    }
+    if (normalized === "posted_to_erp" || normalized === "closed") {
+      return "Invoice has already been posted to the ERP.";
+    }
+    if (normalized === "rejected") {
+      return "Invoice has been rejected.";
+    }
+    return "";
   }
 
   // src/components/ThreadSidebar.js
@@ -60579,6 +60836,18 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     const canSnooze = ["needs_approval", "pending_approval", "needs_info", "validated", "failed_post"].includes(state);
     const isSnoozed = state === "snoozed";
     const snoozedUntil = item.metadata?.snoozed_until || item.snoozed_until;
+    let stateNotice = "";
+    if (state === "needs_info") {
+      try {
+        stateNotice = String(getWorkStateNotice(state, "invoice", item) || "");
+      } catch (_2) {
+        stateNotice = "";
+      }
+      if (!stateNotice) {
+        const question = String(item.needs_info_question || "").trim();
+        stateNotice = question ? `Waiting on: ${question}` : "Waiting on the requested info. Solden follows up automatically and the record moves the moment it arrives.";
+      }
+    }
     return m3`
     <div class="cl-thread-sidebar">
       <style>${THREAD_SIDEBAR_CSS}</style>
@@ -60633,6 +60902,12 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
           <div class="cl-ts-awaiting-approval" role="status">
             <div class="cl-ts-awaiting-approval-title">Awaiting approval in Slack</div>
             <div class="cl-ts-awaiting-approval-sub">Approver notified. Decision returns here.</div>
+          </div>
+        ` : ""}
+        ${state === "needs_info" && stateNotice ? m3`
+          <div class="cl-ts-awaiting-approval" role="status">
+            <div class="cl-ts-awaiting-approval-title">Solden is on it</div>
+            <div class="cl-ts-awaiting-approval-sub">${stateNotice}</div>
           </div>
         ` : ""}
         ${canSnooze && onSnooze ? m3`
@@ -60766,24 +61041,6 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     </div>
   `;
   }
-
-  // src/utils/roles.js
-  function normalizeUserRole(role) {
-    return String(role || "").trim().toLowerCase();
-  }
-  function hasOpsAccessRole(role) {
-    return ["owner", "admin", "operator"].includes(normalizeUserRole(role));
-  }
-  function hasAdminAccessRole(role) {
-    return ["owner", "admin"].includes(normalizeUserRole(role));
-  }
-
-  // src/utils/work-actions.js
-  var RESUME_WORKFLOW_REASON_CODES = new Set([
-    "field_review_required",
-    "blocking_source_conflicts",
-    "confidence_field_review_required"
-  ]);
 
   // src/utils/inbox-route.js
   function populateRouteId(routeId, params = {}) {

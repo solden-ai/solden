@@ -285,3 +285,51 @@ class TestAPI:
             "/api/workspace/onboarding/sample-data/status"
         ).json()
         assert a_status["sample_count"] == 10
+
+
+def test_sample_rows_carry_real_memory_trails(db):
+    """The memory layer is the product — sample data must demo it.
+
+    Every curated row commits REAL memory events (decision whys,
+    escalations, a machine_distilled "Solden's read", retries) through
+    commit_memory_event, so every surface renders production behavior."""
+    sample_svc.load_sample_data(db, "org-sample-memory")
+    items = {
+        str(i.get("invoice_number")): i
+        for i in db.list_ap_items("org-sample-memory", limit=50)
+    }
+
+    # The po-required row (the demo's needs_info case) has the full story:
+    # match evaluation -> a typed human why -> the follow-up promise.
+    po = items["SAMPLE-PO-REQUIRED"]
+    events = db.list_ap_audit_events(po["id"])
+    types = [e["event_type"] for e in events]
+    assert "memory_event:request_info" in types
+    whys = [e.get("decision_reason") or "" for e in events]
+    assert any("Cisco's contract requires a PO" in w for w in whys)
+
+    # The historic Slack row demos Build 1: a thin human why followed by a
+    # machine_distilled "Solden's read".
+    slack = items["SAMPLE-HISTORIC-CLEAN-1"]
+    ev2 = db.list_ap_audit_events(slack["id"])
+    assert "memory_event:rationale_distilled" in [e["event_type"] for e in ev2]
+
+    # Every spec row has at least one memory event.
+    for inv, item in items.items():
+        assert any(
+            str(e["event_type"]).startswith("memory_event:")
+            for e in db.list_ap_audit_events(item["id"])
+        ), f"{inv} has no memory trail"
+
+    # Ask Solden can answer from the sample whys while samples exist…
+    hits = db.search_decision_reasons(
+        organization_id="org-sample-memory", terms=["Cisco", "hardware"],
+    )
+    assert hits
+
+    # …and the whys vanish from answers when samples are cleared (the
+    # audit rows are append-only; the box-must-exist guard contains them).
+    sample_svc.clear_sample_data(db, "org-sample-memory")
+    assert db.search_decision_reasons(
+        organization_id="org-sample-memory", terms=["Cisco", "hardware"],
+    ) == []
