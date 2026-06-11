@@ -58,7 +58,7 @@ import {
 
 const html = htm.bind(h);
 
-const RECORDS_PAGE_SIZE = 50;
+const RECORDS_PAGE_SIZE = 15;
 
 // State -> shared pill variant (components.css). Labels are byte-identical
 // to the old STATE_STYLES — RecordsPage tests assert on the text.

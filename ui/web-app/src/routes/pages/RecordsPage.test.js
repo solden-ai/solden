@@ -55,7 +55,7 @@ describe('RecordsPage', () => {
     await waitFor(() => {
       const url = parseUrl(recordsCallUrls(api)[0]);
       expect(url.searchParams.get('organization_id')).toBe('org-test');
-      expect(url.searchParams.get('limit')).toBe('50');
+      expect(url.searchParams.get('limit')).toBe('15');
       expect(url.searchParams.get('offset')).toBe('0');
       expect(url.searchParams.get('active_slice_id')).toBe('all_open');
       expect(url.searchParams.get('sort_col')).toBe('queue_age');
@@ -64,19 +64,19 @@ describe('RecordsPage', () => {
   });
 
   it('pages through AP records with server offsets', async () => {
-    const firstPage = Array.from({ length: 50 }, (_, index) => item(`A-${index + 1}`));
-    const secondPage = Array.from({ length: 25 }, (_, index) => item(`B-${index + 1}`));
+    const firstPage = Array.from({ length: 15 }, (_, index) => item(`A-${index + 1}`));
+    const secondPage = Array.from({ length: 15 }, (_, index) => item(`B-${index + 1}`));
     const api = vi.fn(async (path) => {
       if (String(path).startsWith('/api/workspace/records')) {
         const url = parseUrl(path);
         const offset = Number(url.searchParams.get('offset') || 0);
         return {
-          items: offset === 50 ? secondPage : firstPage,
-          total: 75,
-          limit: 50,
+          items: offset === 15 ? secondPage : firstPage,
+          total: 46,
+          limit: 15,
           offset,
           has_more: offset === 0,
-          slice_counts: { all: 75, all_open: 75, blocked_exception: 0, overdue: 0 },
+          slice_counts: { all: 46, all_open: 46, blocked_exception: 0, overdue: 0 },
         };
       }
       return {};
@@ -91,13 +91,13 @@ describe('RecordsPage', () => {
       navigate: () => {},
     }));
 
-    await screen.findByText('1-50');
+    await screen.findByText('1-15');
     fireEvent.click(screen.getByRole('button', { name: 'Next records page' }));
 
-    await screen.findByText('51-75');
+    await screen.findByText('16-30');
     const offsets = recordsCallUrls(api).map((path) => parseUrl(path).searchParams.get('offset'));
     expect(offsets).toContain('0');
-    expect(offsets).toContain('50');
+    expect(offsets).toContain('15');
   });
 
   it('sends search to the workspace records API', async () => {
@@ -106,7 +106,7 @@ describe('RecordsPage', () => {
         return {
           items: [],
           total: 0,
-          limit: 50,
+          limit: 15,
           offset: Number(parseUrl(path).searchParams.get('offset') || 0),
           has_more: false,
           slice_counts: { all: 0, all_open: 0, blocked_exception: 0, overdue: 0 },
@@ -149,7 +149,7 @@ describe('RecordsPage', () => {
         return {
           items: [row],
           total: 1,
-          limit: 50,
+          limit: 15,
           offset: 0,
           has_more: false,
           slice_counts: { all: 1, all_open: 1, blocked_exception: 1, overdue: 0 },
@@ -180,7 +180,7 @@ describe('RecordsPage', () => {
         return {
           items: [],
           total: 0,
-          limit: 50,
+          limit: 15,
           offset: Number(parseUrl(path).searchParams.get('offset') || 0),
           has_more: false,
           slice_counts: { all: 0, all_open: 0, blocked_exception: 0, overdue: 0 },

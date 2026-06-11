@@ -20,7 +20,7 @@ describe('ExceptionsPage', () => {
       if (String(path).startsWith('/api/workspace/exceptions')) {
         return {
           total: 1,
-          limit: 50,
+          limit: 12,
           offset: 0,
           has_more: false,
           items: [{
@@ -48,7 +48,7 @@ describe('ExceptionsPage', () => {
     });
     expect(api.mock.calls.some(([path]) => (
       String(path).startsWith('/api/workspace/exceptions?')
-      && String(path).includes('limit=50')
+      && String(path).includes('limit=12')
       && String(path).includes('offset=0')
     ))).toBe(true);
     expect(api.mock.calls.some(([path]) => path === '/api/workspace/exceptions/stats')).toBe(true);
@@ -103,7 +103,7 @@ describe('ExceptionsPage', () => {
         return {
           items,
           total: items.length,
-          limit: 50,
+          limit: 12,
           offset: 0,
           has_more: false,
         };
@@ -142,7 +142,7 @@ describe('ExceptionsPage', () => {
       if (String(path).startsWith('/api/workspace/exceptions')) {
         return {
           total: 1,
-          limit: 50,
+          limit: 12,
           offset: 0,
           has_more: false,
           items: [{
@@ -200,7 +200,7 @@ describe('ExceptionsPage', () => {
       if (String(path).startsWith('/api/workspace/exceptions')) {
         return {
           total: 1,
-          limit: 50,
+          limit: 12,
           offset: 0,
           has_more: false,
           items: [{
@@ -231,7 +231,7 @@ describe('ExceptionsPage', () => {
   });
 
   it('requests server pages and moves through paginated results', async () => {
-    const pageOne = Array.from({ length: 50 }, (_, index) => ({
+    const pageOne = Array.from({ length: 12 }, (_, index) => ({
       id: `exc-page-1-${index}`,
       box_type: 'ap_item',
       box_id: `AP-${index}`,
@@ -242,36 +242,36 @@ describe('ExceptionsPage', () => {
         invoice_number: `INV-${index}`,
       },
     }));
-    const pageTwo = Array.from({ length: 25 }, (_, index) => ({
+    const pageTwo = Array.from({ length: 12 }, (_, index) => ({
       id: `exc-page-2-${index}`,
       box_type: 'ap_item',
-      box_id: `AP-${index + 50}`,
+      box_id: `AP-${index + 12}`,
       severity: 'low',
       exception_type: 'approval_wait',
       box_summary: {
         vendor_name: index === 0 ? 'Second page vendor' : `Later Vendor ${index}`,
-        invoice_number: `INV-${index + 50}`,
+        invoice_number: `INV-${index + 12}`,
       },
     }));
     const api = vi.fn(async (path) => {
       if (String(path).startsWith('/api/workspace/exceptions/stats')) {
         return {
-          total_unresolved: 75,
-          by_severity: { medium: 50, low: 25 },
-          by_type: { approval_wait: 75 },
-          by_box_type: { ap_item: 75 },
+          total_unresolved: 30,
+          by_severity: { medium: 12, low: 18 },
+          by_type: { approval_wait: 30 },
+          by_box_type: { ap_item: 30 },
         };
       }
       if (String(path).startsWith('/api/workspace/exceptions')) {
         const url = new URL(String(path), 'http://workspace.test');
         const offset = Number(url.searchParams.get('offset') || 0);
-        const items = offset >= 50 ? pageTwo : pageOne;
+        const items = offset >= 12 ? pageTwo : pageOne;
         return {
           items,
-          total: 75,
-          limit: 50,
+          total: 30,
+          limit: 12,
           offset,
-          has_more: offset < 50,
+          has_more: offset < 18,
         };
       }
       return {};
@@ -280,14 +280,14 @@ describe('ExceptionsPage', () => {
     render(h(ExceptionsPage, { api, navigate: () => {} }));
 
     await waitFor(() => expect(screen.getByText(/First page vendor/)).toBeTruthy());
-    expect(screen.getAllByText('Showing 1-50 of 75').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Showing 1-12 of 30').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
 
     await waitFor(() => expect(screen.getByText(/Second page vendor/)).toBeTruthy());
-    expect(screen.getAllByText('Showing 51-75 of 75').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Showing 13-24 of 30').length).toBeGreaterThan(0);
     expect(api.mock.calls.some(([path]) => (
       String(path).startsWith('/api/workspace/exceptions?')
-      && String(path).includes('offset=50')
+      && String(path).includes('offset=12')
     ))).toBe(true);
   });
 });

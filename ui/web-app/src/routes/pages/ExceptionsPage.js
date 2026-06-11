@@ -6,7 +6,7 @@ import { accountPayableRecordPath } from '../../utils/record-route.js';
 
 const SEVERITIES = ['critical', 'high', 'medium', 'low'];
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 12;
 
 function humanizeExceptionType(code) {
   if (!code) return 'Exception raised';

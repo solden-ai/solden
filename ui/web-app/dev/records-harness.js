@@ -33,7 +33,15 @@ const items = Array.from({ length: 14 }, (_, i) => mk(i));
 const api = async (path) => {
   const route = String(path);
   if (route.startsWith('/api/workspace/records')) {
-    return { items, total_count: items.length, filtered_count: items.length };
+    return {
+      items,
+      total: items.length,
+      limit: 15,
+      offset: 0,
+      has_more: false,
+      total_count: items.length,
+      filtered_count: items.length,
+    };
   }
   if (route.startsWith('/api/ap/items/metrics')) return {};
   return {};

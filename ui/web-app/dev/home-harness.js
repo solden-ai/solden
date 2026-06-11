@@ -235,7 +235,7 @@ const responses = {
   '/api/workspace/records': {
     items: records,
     total: 45,
-    limit: 50,
+    limit: 15,
     offset: 0,
     has_more: false,
     total_count: 45,
@@ -252,7 +252,7 @@ const responses = {
   '/api/workspace/exceptions': {
     count: 7,
     total: 7,
-    limit: 50,
+    limit: 12,
     offset: 0,
     has_more: false,
     items: [
