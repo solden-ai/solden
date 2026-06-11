@@ -108,9 +108,12 @@
 /* ------------------------------------------------------------ */
 
 .cl-settings-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px 32px 48px;
+  /* Left-aligned against the rail (2026-06-11): the shell's content
+     padding IS the gutter — no self-centering, no stacked padding.
+     The 880px cap holds the readable measure. */
+  max-width: 880px;
+  margin: 0;
+  padding: 4px 0 48px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -236,7 +239,6 @@
 
 .cl-settings-layout {
   display: block;
-  max-width: 880px;
 }
 
 .cl-settings-nav {
@@ -411,7 +413,7 @@
 
 @media (max-width: 720px) {
   .cl-settings-page {
-    padding: 16px;
+    padding: 4px 0 32px;
   }
 
   .cl-settings-hero,
