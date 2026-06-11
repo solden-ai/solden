@@ -979,15 +979,14 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         </div>
       </header>
 
-      <section class="cl-settings-summary-grid" aria-label="Settings summary">
-        ${summaryCards.map((card) => html`
-          <div class=${`cl-settings-summary-card cl-settings-summary-card-${card.tone || 'default'}`} key=${card.label}>
-            <span>${card.label}</span>
-            <strong>${card.value}</strong>
-            <small>${card.detail}</small>
-          </div>
+      <div class="cl-settings-statusline" aria-label="Settings summary">
+        ${summaryCards.map((card, i) => html`
+          <span class=${`cl-settings-status-item${card.tone === 'warning' ? ' is-warning' : ''}`} key=${card.label}>
+            ${i > 0 ? html`<span class="cl-settings-status-sep" aria-hidden="true">·</span>` : ''}
+            <strong>${card.value}</strong> ${card.label.toLowerCase()}
+          </span>
         `)}
-      </section>
+      </div>
 
       <div class="cl-settings-layout" data-testid="settings-layout">
         <nav class="cl-settings-nav" aria-label="Settings sections">
@@ -997,7 +996,6 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
               <div class="cl-settings-nav-list">
                 ${group.items.map((item) => {
                   const selected = activeSection === item.id;
-                  const status = getSettingsSectionStatus(item.id, sectionContext);
                   return html`
                     <button
                       type="button"
@@ -1005,11 +1003,7 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
                       aria-current=${selected ? 'page' : undefined}
                       onClick=${() => selectSection(item.id)}
                       key=${item.id}>
-                      <span class="cl-settings-nav-copy">
-                        <strong>${item.label}</strong>
-                        <small>${item.summary}</small>
-                      </span>
-                      <span class="cl-settings-nav-status">${status}</span>
+                      <span class="cl-settings-nav-copy">${item.label}</span>
                     </button>
                   `;
                 })}

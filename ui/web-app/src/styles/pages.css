@@ -233,23 +233,22 @@
 
 .cl-settings-layout {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 40px;
   align-items: start;
+  max-width: 1040px;
 }
 
 .cl-settings-nav {
+  /* Naked rail (ratified 2026-06-11): no card chrome — group micro-labels
+     + plain links; the content column is the page's one surface. */
   position: sticky;
   top: 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 22px;
   min-width: 0;
-  background: var(--cl-surface);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-lg);
-  box-shadow: var(--cl-shadow-sm);
-  padding: 16px;
+  padding: 4px 0;
 }
 
 .cl-settings-nav-group {
@@ -277,47 +276,36 @@
 .cl-settings-nav-item {
   width: 100%;
   min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  display: flex;
   align-items: center;
-  border: 1px solid transparent;
-  border-radius: 8px;
+  border: 0;
+  border-radius: 7px;
   background: transparent;
-  color: var(--cl-ink-primary);
+  color: var(--cl-ink-secondary);
   font-family: inherit;
-  padding: 9px 10px;
+  font-size: 13.5px;
+  padding: 6px 10px;
   text-align: left;
   cursor: pointer;
 }
 
 .cl-settings-nav-item:hover {
-  background: var(--cl-bg);
-  border-color: var(--cl-border);
+  background: var(--cl-bg-deep);
+  color: var(--cl-ink-primary);
 }
 
 .cl-settings-nav-item.is-active {
   background: var(--cl-teal-soft);
-  border-color: rgba(24, 191, 176, 0.34);
+  color: var(--cl-ink-primary);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--cl-teal-500);
 }
 
 .cl-settings-nav-copy {
   min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.cl-settings-nav-copy strong {
-  color: var(--cl-ink-primary);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-.cl-settings-nav-copy small {
-  color: var(--cl-ink-muted);
-  font-size: 11px;
-  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cl-settings-nav-status {
@@ -350,10 +338,11 @@
 }
 
 .cl-settings-section-head {
-  background: var(--cl-surface);
-  border: 1px solid var(--cl-border);
-  border-radius: 12px;
-  padding: 18px 20px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--cl-border);
+  border-radius: 0;
+  padding: 0 0 16px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -7149,3 +7138,20 @@
   min-width: 0;
   flex: 1 1 auto;
 }
+
+
+/* Settings status line (ratified 2026-06-11) — replaces the summary-card
+   strip: status is a sentence, not four competing boxes. */
+.cl-settings-statusline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 14px 0 28px;
+  font-size: 13px;
+  color: var(--cl-ink-secondary);
+}
+.cl-settings-status-item { display: inline-flex; align-items: baseline; gap: 8px; }
+.cl-settings-status-item strong { color: var(--cl-ink-primary); font-weight: 600; }
+.cl-settings-status-item.is-warning strong { color: var(--cl-warning); }
+.cl-settings-status-sep { color: var(--cl-border-strong); }
