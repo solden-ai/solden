@@ -19,7 +19,8 @@ import '../src/styles/records.css';
 import '../src/styles/billing.css';
 import '../src/styles/mobile.css';
 
-window.history.replaceState({}, '', '/');
+const route = new URLSearchParams(window.location.search).get('route') || '/';
+window.history.replaceState({}, '', route.startsWith('/') ? route : `/${route}`);
 
 const now = Date.now();
 const minute = 60000;
@@ -207,11 +208,11 @@ const records = [
 ];
 
 const activityItems = [
-  { id: 'act-1', box_id: 'AP-1001', action: 'Asked vendor for missing PO context', subject: 'Cisco Systems - CIS-INV-4482', actor_label: 'Solden agent', surface: 'Gmail', tone: 'warning', ts: isoAgo(12) },
-  { id: 'act-2', box_id: 'AP-1002', action: 'Validated account coding', subject: 'AWS Cloud Services - AWS-77421', actor_label: 'Dana O.', surface: 'NetSuite', tone: 'success', ts: isoAgo(18) },
-  { id: 'act-3', box_id: 'AP-1003', action: 'Routed for second approval', subject: 'Booking Holdings BV - BOOK-2026-112', actor_label: 'Solden agent', surface: 'Teams', tone: 'warning', ts: isoAgo(44) },
-  { id: 'act-4', box_id: 'AP-1005', action: 'Posted bill to ERP', subject: 'Northwind Traders - NW-8901', actor_label: 'Solden agent', surface: 'Sage Intacct', tone: 'success', ts: isoAgo(33) },
-  { id: 'act-5', box_id: 'AP-1006', action: 'Slack approval card delivered', subject: 'Acme Coffee Supplies - ACM-2119', actor_label: 'Solden agent', surface: 'Slack', tone: 'info', ts: isoAgo(91) },
+  { id: 'act-1', box_type: 'ap_item', box_id: 'AP-1001', action: 'Asked vendor for missing PO context', subject: 'Cisco Systems - CIS-INV-4482', actor_label: 'Solden agent', surface: 'Gmail', tone: 'warning', ts: isoAgo(12) },
+  { id: 'act-2', box_type: 'ap_item', box_id: 'AP-1002', action: 'Validated account coding', subject: 'AWS Cloud Services - AWS-77421', actor_label: 'Dana O.', surface: 'NetSuite', tone: 'success', ts: isoAgo(18) },
+  { id: 'act-3', box_type: 'ap_item', box_id: 'AP-1003', action: 'Routed for second approval', subject: 'Booking Holdings BV - BOOK-2026-112', actor_label: 'Solden agent', surface: 'Teams', tone: 'warning', ts: isoAgo(44) },
+  { id: 'act-4', box_type: 'ap_item', box_id: 'AP-1005', action: 'Posted bill to ERP', subject: 'Northwind Traders - NW-8901', actor_label: 'Solden agent', surface: 'Sage Intacct', tone: 'success', ts: isoAgo(33) },
+  { id: 'act-5', box_type: 'ap_item', box_id: 'AP-1006', action: 'Slack approval card delivered', subject: 'Acme Coffee Supplies - ACM-2119', actor_label: 'Solden agent', surface: 'Slack', tone: 'info', ts: isoAgo(91) },
 ];
 
 const responses = {
@@ -231,7 +232,16 @@ const responses = {
     ],
   },
   '/api/ap/items/metrics/aggregation': { metrics: { exceptions_count: 7 } },
-  '/api/workspace/records': { items: records, total: 45, total_count: 45, filtered_count: 45 },
+  '/api/workspace/records': {
+    items: records,
+    total: 45,
+    limit: 50,
+    offset: 0,
+    has_more: false,
+    total_count: 45,
+    filtered_count: 45,
+    slice_counts: { all_open: 45, blocked_exception: 7, overdue: 4 },
+  },
   '/api/workspace/dashboard/approver-workload': {
     approvers: [
       { approver_id: 'maya', name: 'Maya R.', email: 'maya@soldenai.com', pending_count: 4, oldest_pending_age_days: 2 },
@@ -241,12 +251,59 @@ const responses = {
   },
   '/api/workspace/exceptions': {
     count: 7,
+    total: 7,
+    limit: 50,
+    offset: 0,
+    has_more: false,
     items: [
-      { id: 'ex-1', box_id: 'AP-1001', exception_type: 'po_context_missing', severity: 'medium' },
-      { id: 'ex-2', box_id: 'AP-1003', exception_type: 'second_approval_required', severity: 'high' },
+      {
+        id: 'ex-1',
+        box_type: 'ap_item',
+        box_id: 'AP-1001',
+        exception_type: 'po_context_missing',
+        severity: 'medium',
+        reason: 'Vendor has not confirmed the PO coverage for the Cisco renewal.',
+        raised_at: isoAgo(12),
+        box_summary: {
+          vendor_name: 'Cisco Systems',
+          invoice_number: 'CIS-INV-4482',
+          amount: 12400,
+          currency: 'USD',
+        },
+      },
+      {
+        id: 'ex-2',
+        box_type: 'ap_item',
+        box_id: 'AP-1003',
+        exception_type: 'second_approval_required',
+        severity: 'high',
+        reason: 'Dual-control threshold requires CFO approval before posting.',
+        raised_at: isoAgo(44),
+        box_summary: {
+          vendor_name: 'Booking Holdings BV',
+          invoice_number: 'BOOK-2026-112',
+          amount: 78000,
+          currency: 'USD',
+        },
+      },
+      {
+        id: 'ex-3',
+        box_type: 'vendor_onboarding_session',
+        box_id: 'VOS-1007',
+        exception_type: 'bank_detail_review',
+        severity: 'medium',
+        reason: 'New beneficiary details need registry and IBAN proof before first payment.',
+        raised_at: isoAgo(66),
+        metadata: { vendor_name: 'Google Cloud EMEA Limited' },
+      },
     ],
   },
-  '/api/workspace/exceptions/stats': { total_unresolved: 7 },
+  '/api/workspace/exceptions/stats': {
+    total_unresolved: 7,
+    by_severity: { critical: 0, high: 2, medium: 5, low: 0 },
+    by_type: { po_context_missing: 3, second_approval_required: 2, bank_detail_review: 2 },
+    by_box_type: { ap_item: 5, vendor_onboarding_session: 2 },
+  },
   '/api/workspace/dashboard/recent-activity': { items: activityItems },
   '/api/workspace/implementation/status': { all_complete: true, steps: [] },
   '/api/workspace/policy-proposals': { proposals: [] },

@@ -589,7 +589,7 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
   const canPageBackward = pageMeta.offset > 0 && !pageLoading;
   const canPageForward = (
     !pageLoading
-    && (pageMeta.hasMore || pageMeta.offset + displayed.length < pageMeta.total)
+    && (pageMeta.hasMore || pageMeta.offset + pageMeta.limit < pageMeta.total)
   );
   const previousPage = () => {
     setPageOffset(Math.max(0, pageMeta.offset - pageMeta.limit));
@@ -606,6 +606,7 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
     <div class="cl-records">
       <header class="cl-records-head">
         <div>
+          <div class="cl-records-eyebrow">AP workflow surface</div>
           <h1 class="cl-records-title">Accounts Payable</h1>
           <p class="cl-records-sub">
             Search, filter, and inspect AP records. Approvals happen in Slack and Teams;
@@ -634,90 +635,92 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
         </div>
       </header>
 
-      <div class="cl-records-search">
-        <input
-          placeholder="Search vendor, invoice number, PO, sender…"
-          value=${searchQuery}
-          onInput=${(event) => {
-            setPageOffset(0);
-            setSearchQuery(event.target.value);
-          }}
-          aria-label="Search records"
-        />
-      </div>
+      <section class="cl-records-console" aria-label="Accounts payable controls">
+        <div class="cl-records-search">
+          <input
+            placeholder="Search vendor, invoice number, PO, sender..."
+            value=${searchQuery}
+            onInput=${(event) => {
+              setPageOffset(0);
+              setSearchQuery(event.target.value);
+            }}
+            aria-label="Search records"
+          />
+        </div>
 
-      ${focusedItem ? html`
-        <div class="cl-records-focus" role="region" aria-label="Linked thread">
-          <div class="cl-records-focus-copy">
-            <div class="cl-records-focus-head">
-              <strong>Thread record</strong>
-              <${StatePill} state=${focusedItem.state} />
+        ${focusedItem ? html`
+          <div class="cl-records-focus" role="region" aria-label="Linked thread">
+            <div class="cl-records-focus-copy">
+              <div class="cl-records-focus-head">
+                <strong>Thread record</strong>
+                <${StatePill} state=${focusedItem.state} />
+              </div>
+              <div class="cl-records-focus-meta">
+                ${focusedItem.vendor_name || focusedItem.vendor || 'Vendor not extracted'} ·
+                ${getDocumentSummary(focusedItem)} · ${getAmountLabel(focusedItem)}
+              </div>
             </div>
-            <div class="cl-records-focus-meta">
-              ${focusedItem.vendor_name || focusedItem.vendor || 'Vendor not extracted'} ·
-              ${getDocumentSummary(focusedItem)} · ${getAmountLabel(focusedItem)}
+            <div class="cl-records-focus-actions">
+              ${!focusedItemVisible ? html`
+                <button class="btn-primary btn-sm" onClick=${revealFocusedItem}>Show</button>
+              ` : null}
+              <button class="btn-secondary btn-sm" onClick=${() => openRecord(focusedItem)}>Open</button>
+              <button class="btn-ghost btn-sm" onClick=${clearFocus} aria-label="Clear linked thread">×</button>
             </div>
           </div>
-          <div class="cl-records-focus-actions">
-            ${!focusedItemVisible ? html`
-              <button class="btn-primary btn-sm" onClick=${revealFocusedItem}>Show</button>
-            ` : null}
-            <button class="btn-secondary btn-sm" onClick=${() => openRecord(focusedItem)}>Open</button>
-            <button class="btn-ghost btn-sm" onClick=${clearFocus} aria-label="Clear linked thread">×</button>
+        ` : null}
+
+        <div class="cl-records-scope" role="tablist" aria-label="Record scope">
+          ${[
+            { id: 'all_open', label: 'All open' },
+            { id: 'blocked_exception', label: 'Exceptions' },
+            { id: 'overdue', label: 'Overdue' },
+          ].map((scope) => {
+            const isActive = viewPrefs.activeSliceId === scope.id;
+            const count = sliceCounts[scope.id] || 0;
+            return html`
+              <button
+                key=${scope.id}
+                role="tab"
+                aria-selected=${isActive}
+                class=${`cl-records-scope-pill ${isActive ? 'is-active' : ''}`}
+                onClick=${() => applySlice(scope.id)}>
+                <span>${scope.label}</span>
+                <span class="cl-records-scope-count">${count}</span>
+              </button>
+            `;
+          })}
+        </div>
+
+        <div class="cl-records-results-meta" aria-live="polite">
+          <div class="cl-records-range">
+            <strong>${pageMeta.total === 0 ? 'No records' : `${pageStart}-${pageEnd}`}</strong>
+            <span>${pageMeta.total === 0 ? 'match this view' : `of ${pageMeta.total} records`}</span>
+            ${pageLoading ? html`<span class="cl-records-updating">Updating</span>` : null}
+          </div>
+          <div class="cl-records-pagination">
+            <span class="cl-records-page-count">
+              ${pageMeta.total === 0 ? 'Page 0 of 0' : `Page ${currentPage} of ${pageCount}`}
+            </span>
+            <div class="cl-records-page-controls">
+              <button
+                class="btn-secondary btn-sm"
+                onClick=${previousPage}
+                disabled=${!canPageBackward}
+                aria-label="Previous records page">
+                Prev
+              </button>
+              <button
+                class="btn-secondary btn-sm"
+                onClick=${nextPage}
+                disabled=${!canPageForward}
+                aria-label="Next records page">
+                Next
+              </button>
+            </div>
           </div>
         </div>
-      ` : null}
-
-      <div class="cl-records-scope" role="tablist" aria-label="Record scope">
-        ${[
-          { id: 'all_open', label: 'All open' },
-          { id: 'blocked_exception', label: 'Exceptions' },
-          { id: 'overdue', label: 'Overdue' },
-        ].map((scope) => {
-          const isActive = viewPrefs.activeSliceId === scope.id;
-          const count = sliceCounts[scope.id] || 0;
-          return html`
-            <button
-              key=${scope.id}
-              role="tab"
-              aria-selected=${isActive}
-              class=${`cl-records-scope-pill ${isActive ? 'is-active' : ''}`}
-              onClick=${() => applySlice(scope.id)}>
-              <span>${scope.label}</span>
-              <span class="cl-records-scope-count">${count}</span>
-            </button>
-          `;
-        })}
-      </div>
-
-      <div class="cl-records-results-meta" aria-live="polite">
-        <div class="cl-records-range">
-          <strong>${pageMeta.total === 0 ? 'No records' : `${pageStart}-${pageEnd}`}</strong>
-          <span>${pageMeta.total === 0 ? 'match this view' : `of ${pageMeta.total} records`}</span>
-          ${pageLoading ? html`<span class="cl-records-updating">Updating</span>` : null}
-        </div>
-        <div class="cl-records-pagination">
-          <span class="cl-records-page-count">
-            ${pageMeta.total === 0 ? 'Page 0 of 0' : `Page ${currentPage} of ${pageCount}`}
-          </span>
-          <div class="cl-records-page-controls">
-            <button
-              class="btn-secondary btn-sm"
-              onClick=${previousPage}
-              disabled=${!canPageBackward}
-              aria-label="Previous records page">
-              Prev
-            </button>
-            <button
-              class="btn-secondary btn-sm"
-              onClick=${nextPage}
-              disabled=${!canPageForward}
-              aria-label="Next records page">
-              Next
-            </button>
-          </div>
-        </div>
-      </div>
+      </section>
 
       ${displayed.length === 0
         ? html`<div class="cl-records-empty">

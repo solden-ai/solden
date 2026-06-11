@@ -6564,10 +6564,12 @@
 
 /* Exceptions page */
 .cl-exceptions-page {
-  max-width: 1240px;
+  width: 100%;
+  max-width: 1320px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
+  padding: 4px 0 48px;
 }
 
 .cl-exceptions-head {
@@ -6576,29 +6578,47 @@
   justify-content: space-between;
   gap: 24px;
   flex-wrap: wrap;
+  padding: 8px 2px 2px;
 }
 
 .cl-exceptions-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--cl-font-mono);
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--cl-ink-muted);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.cl-exceptions-eyebrow::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cl-warning);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--cl-warning) 12%, transparent);
 }
 
 .cl-exceptions-title {
-  font-size: 28px;
+  font-family: var(--cl-font-display);
+  font-size: clamp(30px, 3vw, 38px);
+  line-height: 1.04;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  margin: 0 0 4px;
+  letter-spacing: -0.03em;
+  margin: 0 0 6px;
+  color: var(--cl-navy);
 }
 
 .cl-exceptions-sub {
   margin: 0;
   color: var(--cl-ink-secondary);
-  font-size: 14px;
-  max-width: 680px;
+  font-size: 15px;
+  line-height: 1.45;
+  max-width: 720px;
 }
 
 .cl-exceptions-actions {
@@ -6619,27 +6639,49 @@
 .cl-exceptions-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .cl-exceptions-summary-cell {
-  min-height: 88px;
-  padding: 14px 16px 12px;
-  background: var(--cl-surface);
-  border: 1px solid var(--cl-border);
+  position: relative;
+  min-height: 98px;
+  padding: 15px 16px 13px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.9)),
+    var(--cl-surface);
+  border: 1px solid color-mix(in srgb, var(--cl-border) 82%, #fff);
   border-radius: var(--cl-radius);
+  box-shadow: var(--cl-shadow-sm);
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
 }
 
+.cl-exceptions-summary-cell::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 0;
+  height: 2px;
+  background: color-mix(in srgb, var(--cl-border-strong) 42%, transparent);
+}
+
 .cl-exceptions-summary-cell-brand {
-  border-color: color-mix(in srgb, var(--cl-teal-500) 25%, transparent);
+  border-color: color-mix(in srgb, var(--cl-teal-500) 26%, var(--cl-border));
+}
+
+.cl-exceptions-summary-cell-brand::before {
+  background: var(--cl-teal-500);
 }
 
 .cl-exceptions-summary-cell-warn {
-  border-color: color-mix(in srgb, var(--cl-warning) 30%, transparent);
+  border-color: color-mix(in srgb, var(--cl-warning) 30%, var(--cl-border));
+}
+
+.cl-exceptions-summary-cell-warn::before {
+  background: var(--cl-warning);
 }
 
 .cl-exceptions-summary-label {
@@ -6651,7 +6693,8 @@
 }
 
 .cl-exceptions-summary-value {
-  font-size: 26px;
+  font-family: var(--cl-font-mono);
+  font-size: 28px;
   line-height: 1.1;
   font-weight: 600;
   color: var(--cl-ink-primary);
@@ -6679,25 +6722,28 @@
 
 .cl-exceptions-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  gap: 16px;
   align-items: start;
 }
 
 .cl-exceptions-panel,
 .cl-exceptions-breakdown {
   background: var(--cl-surface);
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius);
+  border: 1px solid color-mix(in srgb, var(--cl-border) 88%, #fff);
+  border-radius: 14px;
+  box-shadow: var(--cl-shadow-sm);
   overflow: hidden;
 }
 
 .cl-exceptions-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.45fr);
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.42fr);
   gap: 12px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--cl-border);
+  padding: 16px 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--cl-border) 88%, #fff);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-bg-deep) 38%, #fff), #fff);
 }
 
 .cl-exceptions-toolbar-main {
@@ -6716,9 +6762,10 @@
 
 .cl-exceptions-filter span,
 .cl-exceptions-search span {
+  font-family: var(--cl-font-mono);
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--cl-ink-muted);
 }
@@ -6727,8 +6774,8 @@
 .cl-exceptions-search input {
   height: 34px;
   width: 100%;
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-sm);
+  border: 1px solid color-mix(in srgb, var(--cl-border) 88%, #fff);
+  border-radius: 8px;
   background: var(--cl-surface);
   color: var(--cl-ink-primary);
   font: inherit;
@@ -6738,9 +6785,9 @@
 
 .cl-exceptions-filter select:focus,
 .cl-exceptions-search input:focus {
-  outline: 2px solid var(--cl-teal-500);
-  outline-offset: 1px;
+  outline: none;
   border-color: var(--cl-teal-500);
+  box-shadow: var(--cl-focus-ring);
 }
 
 .cl-exceptions-list-head {
@@ -6749,13 +6796,14 @@
   justify-content: space-between;
   gap: 12px;
   padding: 14px 18px;
-  border-bottom: 1px solid var(--cl-border);
+  border-bottom: 1px solid color-mix(in srgb, var(--cl-border) 88%, #fff);
+  background: #fff;
 }
 
 .cl-exceptions-list-head h2,
 .cl-exceptions-breakdown h2 {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -6785,12 +6833,14 @@
 }
 
 .cl-exceptions-row {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 14px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--cl-border);
-  transition: background 0.08s;
+  padding: 15px 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--cl-border) 86%, #fff);
+  background: #fff;
+  transition: background 0.12s, box-shadow 0.12s;
 }
 
 .cl-exceptions-row:last-child {
@@ -6802,7 +6852,8 @@
 }
 
 .cl-exceptions-row-clickable:hover {
-  background: var(--cl-bg);
+  background: color-mix(in srgb, var(--cl-teal-500) 3.5%, var(--cl-bg));
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--cl-teal-500) 72%, transparent);
 }
 
 .cl-exceptions-row-clickable:focus-visible,
@@ -6824,7 +6875,7 @@
 }
 
 .cl-exceptions-row-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--cl-ink-primary);
   white-space: nowrap;
@@ -6833,14 +6884,15 @@
 }
 
 .cl-exceptions-row-meta {
-  margin-top: 2px;
+  margin-top: 3px;
+  font-family: var(--cl-font-mono);
   font-size: 11px;
   color: var(--cl-ink-muted);
 }
 
 .cl-exceptions-row-reason {
   margin-left: 18px;
-  margin-top: 5px;
+  margin-top: 6px;
   font-size: 12px;
   line-height: 1.45;
   color: var(--cl-ink-secondary);
@@ -6855,6 +6907,7 @@
 }
 
 .cl-exceptions-row-amount {
+  font-family: var(--cl-font-mono);
   font-size: 13px;
   font-weight: 600;
   color: var(--cl-ink-primary);
@@ -6869,12 +6922,13 @@
 }
 
 .cl-exceptions-severity-dot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   margin-top: 7px;
   flex: none;
   background: var(--cl-ink-muted);
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 9%, transparent);
 }
 
 .cl-exceptions-severity-dot-critical,
@@ -6923,6 +6977,7 @@
   height: 20px;
   padding: 0 8px;
   border-radius: 999px;
+  font-family: var(--cl-font-body);
   font-size: 11px;
   font-weight: 600;
   text-transform: capitalize;
@@ -6944,9 +6999,10 @@
 }
 
 .cl-exceptions-pagination {
-  min-height: 52px;
-  padding: 10px 18px;
-  border-top: 1px solid var(--cl-border);
+  min-height: 56px;
+  padding: 11px 18px;
+  border-top: 1px solid color-mix(in srgb, var(--cl-border) 88%, #fff);
+  background: color-mix(in srgb, var(--cl-bg) 56%, #fff);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -6975,7 +7031,7 @@
 }
 
 .cl-exceptions-breakdown {
-  padding: 14px 16px 16px;
+  padding: 15px 16px 16px;
 }
 
 .cl-exceptions-breakdown-list {
@@ -6986,7 +7042,7 @@
   width: 100%;
   min-height: 34px;
   border: 0;
-  border-radius: var(--cl-radius-sm);
+  border-radius: 8px;
   background: transparent;
   color: var(--cl-ink-primary);
   display: flex;
@@ -6999,7 +7055,7 @@
 
 .cl-exceptions-breakdown-row:hover,
 .cl-exceptions-breakdown-row.is-active {
-  background: var(--cl-bg);
+  background: color-mix(in srgb, var(--cl-teal-500) 8%, var(--cl-bg));
 }
 
 .cl-exceptions-breakdown-label {

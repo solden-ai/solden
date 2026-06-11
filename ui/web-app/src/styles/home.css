@@ -1483,10 +1483,12 @@
  * classes (see top of this file). */
 
 .cl-activity-page {
-  max-width: 1240px;
+  width: 100%;
+  max-width: 1320px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
+  padding: 4px 0 48px;
 }
 
 .cl-activity-page-head {
@@ -1495,20 +1497,46 @@
   justify-content: space-between;
   gap: 24px;
   flex-wrap: wrap;
+  padding: 8px 2px 2px;
+}
+
+.cl-activity-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-family: var(--cl-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+}
+
+.cl-activity-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cl-teal-500);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--cl-teal-500) 13%, transparent);
 }
 
 .cl-activity-page-title {
-  font-size: 28px;
+  font-family: var(--cl-font-display);
+  font-size: clamp(30px, 3vw, 38px);
+  line-height: 1.04;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  margin: 0 0 4px;
+  letter-spacing: -0.03em;
+  margin: 0 0 6px;
+  color: var(--cl-navy);
 }
 
 .cl-activity-page-sub {
   margin: 0;
   color: var(--cl-ink-secondary);
-  font-size: 14px;
-  max-width: 540px;
+  font-size: 15px;
+  line-height: 1.45;
+  max-width: 620px;
 }
 
 .cl-activity-page-actions {
@@ -1520,35 +1548,54 @@
 .cl-activity-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .cl-activity-summary-cell {
-  min-height: 86px;
-  padding: 14px 16px 12px;
-  background: var(--cl-surface);
-  border: 1px solid var(--cl-border);
+  position: relative;
+  min-height: 96px;
+  padding: 15px 16px 13px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.9)),
+    var(--cl-surface);
+  border: 1px solid color-mix(in srgb, var(--cl-border) 82%, #fff);
   border-radius: var(--cl-radius);
+  box-shadow: var(--cl-shadow-sm);
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
 }
 
+.cl-activity-summary-cell::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 0;
+  height: 2px;
+  background: color-mix(in srgb, var(--cl-border-strong) 42%, transparent);
+}
+
 .cl-activity-summary-cell-brand {
-  border-color: color-mix(in srgb, var(--cl-teal-500) 25%, transparent);
+  border-color: color-mix(in srgb, var(--cl-teal-500) 26%, var(--cl-border));
+}
+
+.cl-activity-summary-cell-brand::before {
+  background: var(--cl-teal-500);
 }
 
 .cl-activity-summary-label {
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--cl-ink-muted);
 }
 
 .cl-activity-summary-value {
-  font-size: 24px;
+  font-family: var(--cl-font-mono);
+  font-size: 27px;
   line-height: 1.1;
   font-weight: 600;
   color: var(--cl-ink-primary);
@@ -1564,6 +1611,47 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.cl-activity-page .cl-home-activity {
+  border-color: color-mix(in srgb, var(--cl-border) 86%, #fff);
+  border-radius: 14px;
+  box-shadow: var(--cl-shadow-shell);
+}
+
+.cl-activity-page .cl-home-activity-head {
+  padding: 16px 20px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-teal-500) 5%, transparent), rgba(255, 255, 255, 0)),
+    var(--cl-surface);
+}
+
+.cl-activity-page .cl-home-activity-head h2 {
+  font-size: 15px;
+}
+
+.cl-activity-page .cl-home-activity-row {
+  min-height: 62px;
+  padding: 14px 20px;
+}
+
+.cl-activity-page .cl-home-activity-row:hover {
+  background: color-mix(in srgb, var(--cl-teal-500) 4%, var(--cl-bg));
+}
+
+.cl-activity-page .cl-home-activity-action {
+  font-size: 14px;
+}
+
+.cl-activity-page .cl-home-activity-subject {
+  font-size: 13px;
+  color: var(--cl-ink-secondary);
+}
+
+.cl-activity-page .cl-home-activity-meta-row {
+  margin-top: 4px;
+  font-family: var(--cl-font-mono);
+  font-size: 11px;
 }
 
 @media (max-width: 880px) {

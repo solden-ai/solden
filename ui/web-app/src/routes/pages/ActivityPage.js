@@ -57,6 +57,10 @@ export default function ActivityPage({ api, orgId, onRefresh, navigate }) {
     <div class="cl-activity-page">
       <header class="cl-activity-page-head">
         <div>
+          <div class="cl-activity-eyebrow">
+            <span class="cl-activity-live-dot" aria-hidden="true"></span>
+            Cross-surface trail
+          </div>
           <h1 class="cl-activity-page-title">Activity stream</h1>
           <p class="cl-activity-page-sub">Every agent and operator action across work types and connected surfaces.</p>
         </div>
@@ -99,7 +103,9 @@ export default function ActivityPage({ api, orgId, onRefresh, navigate }) {
         items=${items}
         live=${!!liveActivity}
         navigate=${navigate}
+        variant="hero"
         title="Activity stream"
+        metaSuffix=${`last ${Math.min(items.length || ACTIVITY_LIMIT, ACTIVITY_LIMIT)} events`}
         emptyTitle="Nothing has happened yet."
         emptyDescription="As Solden watches inboxes, chat approvals, ERP events, and work-type records, every material action lands here."
       />

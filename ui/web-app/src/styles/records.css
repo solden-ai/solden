@@ -9,9 +9,9 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   padding: 4px 0 48px;
-  max-width: 1280px;
+  max-width: 1320px;
   margin: 0;
   width: 100%;
 }
@@ -24,44 +24,89 @@
 .cl-records-head {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: flex-end;
   gap: 24px;
   flex-wrap: wrap;
+  padding: 8px 2px 2px;
+}
+
+.cl-records-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-family: var(--cl-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+}
+
+.cl-records-eyebrow::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cl-teal-500);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--cl-teal-500) 13%, transparent);
 }
 
 .cl-records-title {
-  font: 700 24px/1.2 var(--font-display, 'DM Sans'), sans-serif;
+  font-family: var(--cl-font-display);
+  font-size: clamp(30px, 3vw, 38px);
+  line-height: 1.04;
+  font-weight: 700;
+  letter-spacing: -0.03em;
   color: var(--cl-navy);
-  margin: 0 0 4px;
+  margin: 0 0 6px;
 }
 
 .cl-records-sub {
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--ink-muted, #64748B);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--cl-ink-secondary);
   margin: 0;
-  max-width: 640px;
+  max-width: 740px;
 }
 
 .cl-records-head-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.cl-records-console {
+  background: var(--cl-surface);
+  border: 1px solid color-mix(in srgb, var(--cl-border) 88%, #fff);
+  border-radius: 14px;
+  box-shadow: var(--cl-shadow-sm);
+  overflow: hidden;
 }
 
 .cl-records-search input {
   width: 100%;
-  padding: 9px 12px;
-  border: 1px solid var(--cl-border, #E2E8F0);
-  border-radius: 8px;
-  font-size: 13px;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--cl-border) 88%, #fff);
+  border-radius: 10px;
+  font-size: 14px;
   font-family: inherit;
   background: #fff;
-  transition: border-color 120ms;
+  color: var(--cl-ink-primary);
+  transition: border-color 120ms, box-shadow 120ms;
+}
+.cl-records-search {
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--cl-border) 88%, #fff);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cl-bg-deep) 36%, #fff), #fff);
 }
 .cl-records-search input:focus {
   outline: none;
-  border-color: var(--cl-navy);
+  border-color: var(--cl-teal-500);
+  box-shadow: var(--cl-focus-ring);
 }
 
 /* Focused thread row — when the operator arrived from a Gmail thread,
@@ -72,9 +117,10 @@
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
-  padding: 10px 14px;
-  background: #FFFBEB;
-  border: 1px solid #FDE68A;
+  margin: 0 18px 14px;
+  padding: 12px 14px;
+  background: var(--cl-warning-soft);
+  border: 1px solid color-mix(in srgb, var(--cl-warning) 24%, transparent);
   border-radius: 10px;
 }
 .cl-records-focus-copy {
@@ -90,10 +136,10 @@
 }
 .cl-records-focus-head strong {
   font-size: 13px;
-  color: #92400E;
+  color: var(--cl-warning);
 }
 .cl-records-focus-meta {
-  color: var(--ink-muted, #64748B);
+  color: var(--cl-ink-secondary);
   font-size: 12px;
 }
 .cl-records-focus-actions {
@@ -105,51 +151,62 @@
 /* Scope toggle pills */
 .cl-records-scope {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
+  padding: 12px 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--cl-border) 88%, #fff);
+  background: #fff;
 }
 .cl-records-scope-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 11px;
-  border-radius: 999px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 9px;
   font: 600 12px/1 inherit;
-  border: 1px solid #E2E8F0;
+  border: 1px solid color-mix(in srgb, var(--cl-border) 88%, #fff);
   background: #fff;
   color: var(--cl-navy);
   cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms, box-shadow 120ms;
+}
+.cl-records-scope-pill:hover {
+  background: color-mix(in srgb, var(--cl-teal-500) 5%, var(--cl-bg));
+  border-color: color-mix(in srgb, var(--cl-teal-500) 18%, var(--cl-border));
 }
 .cl-records-scope-pill.is-active {
-  background: var(--cl-navy);
-  color: #fff;
-  border-color: var(--cl-navy);
+  background: color-mix(in srgb, var(--cl-teal-500) 12%, #fff);
+  color: var(--cl-navy);
+  border-color: color-mix(in srgb, var(--cl-teal-500) 38%, var(--cl-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cl-teal-500) 14%, transparent);
 }
 .cl-records-scope-count {
   font-size: 10px;
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 999px;
-  background: #F1F5F9;
-  color: #64748B;
+  background: var(--cl-neutral-soft);
+  color: var(--cl-ink-muted);
   min-width: 16px;
   text-align: center;
 }
 .cl-records-scope-pill.is-active .cl-records-scope-count {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--cl-teal-500);
   color: #fff;
 }
 
 .cl-records-results-meta {
-  min-height: 36px;
+  min-height: 54px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 0 2px;
-  color: var(--ink-muted, #64748B);
+  padding: 10px 18px;
+  color: var(--cl-ink-muted);
   font-size: 12px;
+  background: color-mix(in srgb, var(--cl-bg) 54%, #fff);
 }
 .cl-records-range {
   display: flex;
@@ -159,7 +216,7 @@
 }
 .cl-records-range strong {
   color: var(--cl-navy);
-  font: 600 13px/1 var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font: 600 13px/1 var(--cl-font-mono);
   font-variant-numeric: tabular-nums;
 }
 .cl-records-updating {
@@ -169,7 +226,7 @@
   padding: 0 7px;
   border: 1px solid var(--cl-teal-soft, #DDF7F3);
   border-radius: 999px;
-  background: #F0FDFA;
+  background: var(--cl-teal-soft);
   color: var(--cl-teal-600, #12B3A6);
   font: 700 10px/1 inherit;
   text-transform: uppercase;
@@ -181,7 +238,7 @@
   gap: 10px;
 }
 .cl-records-page-count {
-  font: 500 12px/1 var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font: 500 12px/1 var(--cl-font-mono);
   font-variant-numeric: tabular-nums;
 }
 .cl-records-page-controls {
@@ -203,10 +260,11 @@
 .cl-records-table {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--cl-border, #E2E8F0);
-  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--cl-border) 88%, #fff);
+  border-radius: 14px;
   background: #fff;
   overflow: hidden;
+  box-shadow: var(--cl-shadow-shell);
 }
 .cl-records-table.is-updating {
   opacity: 0.72;
@@ -226,7 +284,8 @@
     minmax(88px, 0.56fr); /* ERP */
   gap: 12px;
   align-items: center;
-  padding: 11px 16px;
+  min-height: 58px;
+  padding: 11px 18px;
   border: 0;
   background: transparent;
   width: 100%;
@@ -235,35 +294,50 @@
   font-size: 13px;
   color: var(--cl-navy);
   cursor: pointer;
-  border-bottom: 1px solid #F1F5F9;
+  border-bottom: 1px solid color-mix(in srgb, var(--cl-border) 72%, #fff);
+  transition: background 120ms, box-shadow 120ms;
 }
 .cl-records-row:last-child {
   border-bottom: 0;
 }
 .cl-records-row:hover:not(.cl-records-row-header) {
-  background: var(--cl-bg);
+  background: color-mix(in srgb, var(--cl-teal-500) 3.5%, var(--cl-bg));
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--cl-teal-500) 72%, transparent);
+}
+.cl-records-row:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 3px 0 0 var(--cl-teal-500),
+    var(--cl-focus-ring);
 }
 .cl-records-row-header {
-  background: var(--cl-bg-deep);
-  color: var(--ink-muted, #64748B);
-  font: 600 11px/1.4 inherit;
+  min-height: 42px;
+  background: color-mix(in srgb, var(--cl-bg-deep) 74%, #fff);
+  color: var(--cl-ink-muted);
+  font-family: var(--cl-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   cursor: default;
 }
 .cl-records-row-header:hover {
-  background: #F8FAFC;
+  background: color-mix(in srgb, var(--cl-bg-deep) 74%, #fff);
+  box-shadow: none;
 }
 
 .cl-records-cell-vendor {
-  font-weight: 600;
+  font-size: 13.5px;
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .cl-records-cell-ref code {
-  font: 12px/1.2 var(--font-mono, ui-monospace, SFMono-Regular, monospace);
-  color: var(--ink-muted, #64748B);
+  font: 12px/1.2 var(--cl-font-mono);
+  color: var(--cl-ink-muted);
+  background: color-mix(in srgb, var(--cl-bg-deep) 48%, #fff);
 }
 .cl-records-cell-owner {
   font-size: 12px;
@@ -289,6 +363,8 @@
   white-space: nowrap;
 }
 .cl-records-num {
+  font-family: var(--cl-font-mono);
+  font-weight: 600;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -313,11 +389,12 @@
 }
 .cl-records-blocker-extra {
   font: 600 10px/1 inherit;
-  color: var(--ink-muted, #64748B);
+  color: var(--cl-ink-muted);
 }
 .cl-records-cell-age {
+  font-family: var(--cl-font-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--ink-muted, #64748B);
+  color: var(--cl-ink-muted);
   font-size: 12px;
 }
 /* Due badges ride .cl-pill; cell-level constraint only. */
@@ -365,10 +442,11 @@
 
 .cl-records-empty {
   background: #fff;
-  border: 1px dashed var(--cl-border, #E2E8F0);
-  border-radius: 10px;
+  border: 1px dashed color-mix(in srgb, var(--cl-border) 88%, #fff);
+  border-radius: 14px;
   padding: 36px 24px;
   text-align: center;
+  box-shadow: var(--cl-shadow-sm);
 }
 .cl-records-empty strong {
   display: block;
@@ -383,7 +461,8 @@
 .cl-records-popover-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(10, 22, 40, 0.28);
+  background: rgba(64, 50, 32, 0.18);
+  backdrop-filter: blur(2px);
   z-index: 9500;
 }
 .cl-records-popover {
@@ -395,9 +474,9 @@
   max-height: calc(100vh - 120px);
   overflow: auto;
   background: #fff;
-  border: 1px solid var(--cl-border, #E2E8F0);
+  border: 1px solid color-mix(in srgb, var(--cl-border) 88%, #fff);
   border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(10, 22, 40, 0.2);
+  box-shadow: var(--cl-shadow-lg);
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -409,10 +488,10 @@
   justify-content: space-between;
 }
 .cl-records-popover-label {
-  font: 600 11px/1 inherit;
-  color: var(--ink-muted, #64748B);
+  font: 600 11px/1 var(--cl-font-mono);
+  color: var(--cl-ink-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   margin-top: 4px;
 }
 .cl-records-popover-list {
@@ -435,15 +514,15 @@
   text-align: left;
 }
 .cl-records-popover-row:hover {
-  background: #F1F5F9;
+  background: var(--cl-bg);
 }
 .cl-records-popover-row.is-active {
-  background: #ECFDF5;
-  color: #059669;
+  background: color-mix(in srgb, var(--cl-teal-500) 10%, #fff);
+  color: var(--cl-teal-600);
 }
 .cl-records-popover-count {
   font: 700 11px/1 inherit;
-  color: var(--ink-muted, #64748B);
+  color: var(--cl-ink-muted);
 }
 .cl-records-popover-saved {
   display: flex;
@@ -453,7 +532,7 @@
   border-radius: 8px;
 }
 .cl-records-popover-saved.is-active {
-  background: #ECFDF5;
+  background: color-mix(in srgb, var(--cl-teal-500) 10%, #fff);
 }
 .cl-records-popover-saved-name {
   flex: 1;
@@ -473,7 +552,7 @@
 .cl-records-popover-save input {
   flex: 1;
   padding: 7px 10px;
-  border: 1px solid var(--cl-border, #E2E8F0);
+  border: 1px solid color-mix(in srgb, var(--cl-border) 88%, #fff);
   border-radius: 6px;
   font: inherit;
   font-size: 13px;
@@ -488,8 +567,8 @@
   width: 380px;
   max-width: 100vw;
   background: #fff;
-  border-left: 1px solid var(--cl-border, #E2E8F0);
-  box-shadow: -12px 0 32px rgba(10, 22, 40, 0.12);
+  border-left: 1px solid color-mix(in srgb, var(--cl-border) 88%, #fff);
+  box-shadow: -12px 0 32px rgba(64, 50, 32, 0.12);
   padding: 18px;
   overflow-y: auto;
   display: flex;
@@ -503,15 +582,15 @@
   font: inherit;
 }
 .cl-records-field > span {
-  font: 600 11px/1 inherit;
-  color: var(--ink-muted, #64748B);
+  font: 600 11px/1 var(--cl-font-mono);
+  color: var(--cl-ink-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
 }
 .cl-records-field input,
 .cl-records-field select {
   padding: 8px 12px;
-  border: 1px solid var(--cl-border, #E2E8F0);
+  border: 1px solid color-mix(in srgb, var(--cl-border) 88%, #fff);
   border-radius: 6px;
   font: inherit;
   font-size: 13px;
