@@ -417,7 +417,7 @@ function summaryCellsFor(reportId, s) {
 }
 
 
-// ─── Time-series chart (inline SVG bar chart) ──────────────────────
+// ─── Time-series chart ──────────────────────────────────────────────
 
 function TimeSeriesChart({ report, series }) {
   const valueKey = chartValueKeyFor(report.id);
@@ -426,10 +426,9 @@ function TimeSeriesChart({ report, series }) {
   const values = series.map((row) => Number(row[valueKey] || 0));
   const max = Math.max(...values, 0);
   const safeMax = max > 0 ? max : 1;
-
-  // viewBox is fixed; bars stretch by percentage.
-  const barWidth = 100 / values.length;
   const valueLabel = chartValueLabelFor(report.id);
+  const labelEvery = values.length <= 7 ? 1 : Math.ceil(values.length / 5);
+  const yTicks = [safeMax, safeMax / 2, 0];
 
   return html`
     <section class="cl-reports-chart-card">
@@ -437,36 +436,63 @@ function TimeSeriesChart({ report, series }) {
         <h3>${valueLabel} over time</h3>
         <span class="cl-reports-chart-meta">${series.length} buckets</span>
       </header>
-      <svg class="cl-reports-chart" viewBox="0 0 100 40" preserveAspectRatio="none"
-        role="img" aria-label=${`${valueLabel} time series`}>
-        <line x1="0" y1="40" x2="100" y2="40" stroke="var(--cl-border)" stroke-width="0.2" />
-        ${values.map((v, idx) => {
-          const heightPct = (v / safeMax) * 36;  // leaves 4px for axis
-          const x = idx * barWidth + barWidth * 0.1;
-          const w = barWidth * 0.8;
-          const y = 40 - heightPct;
-          return html`
-            <rect
-              key=${idx}
-              x=${x}
-              y=${y}
-              width=${w}
-              height=${heightPct}
-              fill="var(--cl-teal-500)"
-              opacity="0.9"
-            ><title>${series[idx].bucket}: ${formatChartValue(report.id, v)}</title></rect>
-          `;
-        })}
-      </svg>
-      <div class="cl-reports-chart-axis">
-        <span>${series[0]?.bucket || ''}</span>
-        <span class="cl-reports-chart-axis-mid">
-          ${series.length > 2 ? series[Math.floor(series.length / 2)]?.bucket : ''}
-        </span>
-        <span>${series[series.length - 1]?.bucket || ''}</span>
+      <div
+        class="cl-reports-chart"
+        role="img"
+        aria-label=${`${valueLabel} time series`}
+      >
+        <div class="cl-reports-chart-y-axis" aria-hidden="true">
+          ${yTicks.map((tick) => html`
+            <span key=${tick}>${formatChartValue(report.id, tick)}</span>
+          `)}
+        </div>
+        <div class="cl-reports-chart-plot" style=${{ '--bucket-count': values.length }}>
+          <div class="cl-reports-chart-grid" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="cl-reports-chart-bars">
+            ${values.map((v, idx) => {
+              const barHeight = v > 0 ? Math.max(4, (v / safeMax) * 88) : 0;
+              const showBucket = idx === 0 || idx === values.length - 1 || idx % labelEvery === 0;
+              const bucketLabel = chartBucketLabel(series[idx].bucket);
+
+              return html`
+                <div
+                  key=${idx}
+                  class="cl-reports-chart-bucket"
+                  style=${{ '--bar-height': `${barHeight}%` }}
+                  title=${`${series[idx].bucket}: ${formatChartValue(report.id, v)}`}
+                >
+                  <span class="cl-reports-chart-bar-area">
+                    ${v > 0 ? html`
+                      <span class="cl-reports-chart-value">${formatChartValue(report.id, v)}</span>
+                    ` : null}
+                    <span class="cl-reports-chart-bar"></span>
+                  </span>
+                  ${showBucket ? html`
+                    <span class="cl-reports-chart-x-label">${bucketLabel}</span>
+                  ` : html`<span class="cl-reports-chart-x-label" aria-hidden="true"></span>`}
+                </div>
+              `;
+            })}
+          </div>
+        </div>
       </div>
     </section>
   `;
+}
+
+function chartBucketLabel(bucket) {
+  const text = String(bucket || '');
+  const compactWeek = text.match(/^(\d{4})-W(\d{2})$/);
+  if (compactWeek) return `W${compactWeek[2]}`;
+
+  const compactDate = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (compactDate) return `${compactDate[2]}/${compactDate[3]}`;
+
+  return text;
 }
 
 function chartValueKeyFor(reportId) {

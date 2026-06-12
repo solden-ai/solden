@@ -77,6 +77,19 @@ describe('ReportsPage', () => {
     });
   });
 
+  it('renders report charts with readable axes and value labels', async () => {
+    const { container } = renderReports();
+
+    await screen.findByText('GBP 84,200.00');
+
+    expect(screen.getByRole('img', { name: 'Invoice count time series' })).toBeTruthy();
+    expect(container.querySelectorAll('.cl-reports-chart-grid span')).toHaveLength(3);
+    expect(container.querySelectorAll('.cl-reports-chart-bar')).toHaveLength(2);
+    expect(container.querySelectorAll('.cl-reports-chart-value')).toHaveLength(2);
+    expect(screen.getByText('05/04')).toBeTruthy();
+    expect(screen.getByText('05/11')).toBeTruthy();
+  });
+
   it('treats zero-volume summaries with metadata as empty report data', async () => {
     renderReports({
       volume: {

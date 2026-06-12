@@ -587,6 +587,96 @@ const responses = {
       'Which records need human judgment?',
     ],
   },
+  '/api/workspace/reports/subscriptions': { subscriptions: [] },
+  '/api/workspace/reports/volume': {
+    summary: {
+      total_invoices: 40,
+      total_amount: 8.39,
+      distinct_vendors: 7,
+      currency: 'USD',
+    },
+    series: [
+      { bucket: '2026-W17', invoice_count: 3 },
+      { bucket: '2026-W18', invoice_count: 17 },
+      { bucket: '2026-W19', invoice_count: 13 },
+      { bucket: '2026-W20', invoice_count: 4 },
+      { bucket: '2026-W24', invoice_count: 2 },
+    ],
+    breakdown: [
+      { vendor_name: 'Google Cloud EMEA Limited', invoice_count: 21, total_amount: 8.39, currency: 'USD' },
+      { vendor_name: 'Account Name: | MICROSOFT', invoice_count: 11, total_amount: 0, currency: 'ZAR' },
+      { vendor_name: 'Google Payments', invoice_count: 4, total_amount: 0, currency: 'USD' },
+    ],
+  },
+  '/api/workspace/reports/agent-performance': {
+    summary: {
+      total_items: 40,
+      auto_resolved_count: 28,
+      exception_count: 7,
+      avg_confidence: 0.86,
+    },
+    series: [
+      { bucket: '2026-W17', auto_resolution_rate: 0.62 },
+      { bucket: '2026-W18', auto_resolution_rate: 0.71 },
+      { bucket: '2026-W19', auto_resolution_rate: 0.76 },
+      { bucket: '2026-W20', auto_resolution_rate: 0.69 },
+      { bucket: '2026-W24', auto_resolution_rate: 0.8 },
+    ],
+    breakdown: [],
+  },
+  '/api/workspace/reports/cycle-time': {
+    summary: {
+      avg_cycle_days: 1.8,
+      p50_cycle_days: 1.1,
+      p90_cycle_days: 3.4,
+      posted_count: 23,
+    },
+    series: [
+      { bucket: '2026-W17', avg_cycle_days: 2.6 },
+      { bucket: '2026-W18', avg_cycle_days: 2.1 },
+      { bucket: '2026-W19', avg_cycle_days: 1.7 },
+      { bucket: '2026-W20', avg_cycle_days: 1.4 },
+      { bucket: '2026-W24', avg_cycle_days: 1.2 },
+    ],
+    breakdown: [
+      { entity_name: 'Solden Group', posted_count: 23, avg_cycle_days: 1.8, p90_cycle_days: 3.4 },
+    ],
+  },
+  '/api/workspace/reports/exception-breakdown': {
+    summary: {
+      total_exceptions: 30,
+      distinct_codes: 3,
+      top_code: 'critical_field_low_confidence',
+      top_code_count: 18,
+    },
+    series: [
+      { bucket: '2026-W17', total_exceptions: 4 },
+      { bucket: '2026-W18', total_exceptions: 9 },
+      { bucket: '2026-W19', total_exceptions: 7 },
+      { bucket: '2026-W20', total_exceptions: 6 },
+      { bucket: '2026-W24', total_exceptions: 4 },
+    ],
+    breakdown: [
+      { exception_code: 'critical_field_low_confidence', count: 18, share: 0.6 },
+      { exception_code: 'field_conflict', count: 7, share: 0.23 },
+      { exception_code: 'invalid_amount', count: 5, share: 0.17 },
+    ],
+  },
+  '/api/workspace/reports/vendor-quality': {
+    summary: {
+      ranked_vendor_count: 7,
+      avg_exception_rate: 0.44,
+      worst_vendor: 'Google Cloud EMEA Limited',
+      worst_exception_rate: 1,
+      min_invoices_floor: 3,
+    },
+    series: [],
+    breakdown: [
+      { vendor_name: 'Google Cloud EMEA Limited', invoice_count: 21, exception_count: 21, exception_rate: 1 },
+      { vendor_name: 'Account Name: | MICROSOFT', invoice_count: 11, exception_count: 11, exception_rate: 1 },
+      { vendor_name: 'Cisco Systems', invoice_count: 6, exception_count: 2, exception_rate: 0.33 },
+    ],
+  },
   '/health': { status: 'ok' },
 };
 
