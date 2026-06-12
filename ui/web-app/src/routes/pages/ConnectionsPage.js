@@ -158,6 +158,84 @@ function groupSurfaces(surfaces, family) {
   return (surfaces || []).filter((row) => String(row.family || '') === family);
 }
 
+const CUSTOMER_SURFACE_COPY = {
+  netsuite: {
+    description: 'Connect NetSuite bills, vendors, and posting status.',
+    where: 'Inside NetSuite bill records',
+    actions: 'Review context, request info, approve, and post after checks pass.',
+    readiness: 'Embedded app available',
+  },
+  sap: {
+    description: 'Connect SAP supplier invoices and vendor context.',
+    where: 'Inside SAP supplier invoice screens',
+    actions: 'Review context, request info, approve, and post after checks pass.',
+    readiness: 'Embedded app available',
+  },
+  sage_intacct: {
+    description: 'Connect Sage Intacct bills and approval context.',
+    where: 'Inside Sage Intacct bill records',
+    actions: 'Review context, request info, approve, and prepare AP posting.',
+    readiness: 'Sandbox validation needed',
+  },
+  quickbooks: {
+    description: 'Connect QuickBooks bills, vendors, and ERP references.',
+    where: 'Linked to QuickBooks bills',
+    actions: 'Sync bills, keep Solden context attached, and post approved work.',
+    readiness: 'API connection available',
+  },
+  xero: {
+    description: 'Connect Xero bills, vendors, and payment status.',
+    where: 'Linked to Xero bills',
+    actions: 'Sync bills, keep Solden context attached, and post approved work.',
+    readiness: 'API connection available',
+  },
+  sage_accounting: {
+    description: 'Connect Sage Accounting purchases and vendor records.',
+    where: 'Linked to Sage Accounting purchases',
+    actions: 'Sync bills, keep Solden context attached, and prepare posting.',
+    readiness: 'Sandbox validation needed',
+  },
+  gmail: {
+    description: 'Capture work and evidence from Gmail threads.',
+    where: 'Gmail thread panel',
+    actions: 'Attach source emails, follow up with vendors, and keep context on the record.',
+    readiness: 'Ready to use',
+  },
+  outlook: {
+    description: 'Capture work and evidence from Outlook mail.',
+    where: 'Outlook mail add-in',
+    actions: 'Attach source emails, follow up with vendors, and keep context on the record.',
+    readiness: 'Ready to use',
+  },
+  slack: {
+    description: 'Send approval requests and exceptions to Slack.',
+    where: 'Slack approval cards',
+    actions: 'Approve, reject, request info, and save the decision to the record.',
+    readiness: 'Ready to use',
+  },
+  teams: {
+    description: 'Send approval requests and exceptions to Microsoft Teams.',
+    where: 'Teams adaptive cards',
+    actions: 'Approve, reject, request info, and save the decision to the record.',
+    readiness: 'Ready to use',
+  },
+  workspace: {
+    description: 'Monitor work, exceptions, connections, and audit from one place.',
+    where: 'Workspace control center',
+    actions: 'Configure surfaces, investigate stuck work, and intervene when the agent escalates.',
+    readiness: 'Ready to use',
+  },
+};
+
+function customerSurfaceCopy(row = {}) {
+  return CUSTOMER_SURFACE_COPY[row.key] || {
+    description: row.role,
+    where: row.memory_surface,
+    actions: row.decision_actions,
+    readiness: row.maturity_label,
+  };
+}
+
 function SurfaceMaturityPanel({ api, orgId }) {
   const [data, setData] = useState(null);
   const [err, setErr] = useState('');
@@ -187,8 +265,8 @@ function SurfaceMaturityPanel({ api, orgId }) {
     <div class="panel cl-surface-maturity-panel">
       <div class="panel-head compact">
         <div class="cl-connection-panel-copy">
-          <h3>Surface maturity</h3>
-          <p>One contract for what is native embedded, API-memory-only, sandbox-pending, or feature-gated.</p>
+          <h3>Where Solden works</h3>
+          <p>Connect the inboxes, chat tools, ERPs, and workspace views where your team will see context and take action.</p>
         </div>
         ${data ? html`
           <span class="secondary-chip">
@@ -201,7 +279,7 @@ function SurfaceMaturityPanel({ api, orgId }) {
       ${data && html`
         <div class="cl-surface-maturity-sections">
           <${SurfaceMaturityTable}
-            title="ERP surfaces"
+            title="ERP systems"
             rows=${erpSurfaces}
           />
           <${SurfaceMaturityTable}
@@ -223,23 +301,24 @@ function SurfaceMaturityTable({ title, rows = [] }) {
       </div>
       <div class="cl-surface-maturity-table">
         ${rows.map((row) => {
+          const copy = customerSurfaceCopy(row);
           const tone = surfaceStatusTone(row.connection_status, row.maturity);
           return html`
             <div class="cl-surface-maturity-row" key=${row.key}>
               <div class="cl-surface-maturity-name">
                 <strong>${row.label}</strong>
-                <span>${row.role}</span>
+                <span>${copy.description}</span>
               </div>
               <div>
-                <span class="cl-surface-maturity-label">Memory</span>
-                <strong>${row.memory_surface}</strong>
+                <span class="cl-surface-maturity-label">Where it appears</span>
+                <strong>${copy.where}</strong>
               </div>
               <div>
-                <span class="cl-surface-maturity-label">Actions</span>
-                <span>${row.decision_actions}</span>
+                <span class="cl-surface-maturity-label">What users can do</span>
+                <span>${copy.actions}</span>
               </div>
               <div class="cl-surface-maturity-stage">
-                <span class=${`cl-surface-chip cl-surface-chip-${tone}`}>${row.maturity_label}</span>
+                <span class=${`cl-surface-chip cl-surface-chip-${tone}`}>${copy.readiness}</span>
                 <small>${surfaceStatusLabel(row.connection_status)}</small>
               </div>
             </div>

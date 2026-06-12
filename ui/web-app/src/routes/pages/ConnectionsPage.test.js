@@ -102,10 +102,12 @@ describe('ConnectionsPage', () => {
 
     await screen.findByText('Connections');
     expect(screen.getByText('Connected surfaces')).toBeTruthy();
-    expect(screen.getByText('Surface maturity')).toBeTruthy();
-    expect(screen.getByText('Native panel ready')).toBeTruthy();
-    expect(screen.getByText('API memory ready')).toBeTruthy();
-    expect(screen.getByText('Provider-neutral ERP memory API')).toBeTruthy();
+    expect(screen.getByText('Where Solden works')).toBeTruthy();
+    expect(screen.getByText('Embedded app available')).toBeTruthy();
+    expect(screen.getByText('API connection available')).toBeTruthy();
+    expect(screen.getByText('Linked to QuickBooks bills')).toBeTruthy();
+    expect(screen.getAllByText('What users can do').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Provider-neutral ERP memory API')).toBeNull();
     expect(screen.getByText('Connection health')).toBeTruthy();
     expect(screen.getByText('Setup order')).toBeTruthy();
     expect(screen.getByText('Inbox')).toBeTruthy();
