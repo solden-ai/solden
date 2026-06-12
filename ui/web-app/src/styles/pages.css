@@ -4675,24 +4675,27 @@
 .cl-vendor-detail {
   box-sizing: border-box;
   width: 100%;
-  max-width: 1200px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 24px 32px 48px;
+  padding: 20px 28px 56px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .cl-vendor-detail-topbar {
   display: flex;
   align-items: center;
+  min-height: 32px;
 }
 
 .cl-vendor-header {
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius);
-  padding: 24px;
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(64, 50, 32, 0.045);
 }
 
 .cl-vendor-header-primary {
@@ -4700,7 +4703,37 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
-  padding-bottom: 14px;
+  padding: 20px 22px 16px;
+  background: linear-gradient(180deg, var(--cl-surface) 0%, rgba(251, 249, 246, 0.78) 100%);
+}
+
+.cl-vendor-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+}
+
+.cl-vendor-header-avatar {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  margin-top: 2px;
+  font-size: 14px;
+}
+
+.cl-vendor-header .cl-record-header-eyebrow {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.cl-vendor-header .cl-record-header-vendor-name {
+  margin: 0;
+  color: var(--cl-ink-primary);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
 .cl-vendor-header-sub {
@@ -4722,11 +4755,12 @@
   grid-template-columns: 116px minmax(180px, 0.36fr) minmax(0, 1fr);
   gap: 10px 18px;
   align-items: baseline;
-  margin: 0 0 18px;
-  padding: 12px 14px;
-  border: 1px solid var(--cl-border);
+  margin: 0;
+  padding: 13px 22px;
+  border-top: 1px solid var(--cl-border);
+  border-bottom: 1px solid var(--cl-border);
   border-left: 3px solid var(--cl-teal-500);
-  border-radius: var(--cl-radius-sm);
+  border-radius: 0;
   background: var(--cl-bg);
 }
 .cl-vendor-focus > span {
@@ -4751,6 +4785,122 @@
 .cl-vendor-focus-error { border-left-color: var(--cl-danger); }
 .cl-vendor-focus-info { border-left-color: var(--cl-border-strong); }
 
+.cl-vendor-header .cl-record-header-meta {
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 0;
+  padding: 16px 22px 18px;
+}
+
+.cl-vendor-header .cl-record-header-meta-cell {
+  min-width: 0;
+  padding: 2px 16px 2px 0;
+}
+
+.cl-vendor-header .cl-record-header-meta-cell dd {
+  color: var(--cl-ink-primary);
+  font-family: var(--cl-font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-vendor-profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 380px);
+  gap: 16px;
+  align-items: start;
+}
+
+.cl-vendor-profile-main,
+.cl-vendor-profile-aside {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cl-vendor-profile-aside {
+  position: static;
+}
+
+.cl-vendor-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.cl-vendor-main-grid .cl-record-panel {
+  min-width: 0;
+  height: 100%;
+}
+
+.cl-vendor-trust-details .cl-record-panel-head {
+  margin-bottom: 16px;
+}
+
+.cl-vendor-trust-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.cl-vendor-trust-details .cl-vendor-section {
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+}
+
+.cl-vendor-trust-details .cl-record-bill-grid {
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin: 0;
+}
+
+.cl-vendor-trust-details .cl-record-bill-cell {
+  padding: 9px 0;
+  border-top: 1px solid var(--cl-border);
+}
+
+.cl-vendor-trust-details .cl-record-bill-cell:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.cl-vendor-profile-layout .cl-record-panel {
+  border-radius: 12px;
+  box-shadow: 0 10px 24px rgba(64, 50, 32, 0.035);
+}
+
+.cl-vendor-profile-aside .cl-record-panel {
+  padding: 18px;
+}
+
+.cl-vendor-profile-aside .cl-record-panel-head {
+  margin-bottom: 12px;
+}
+
+.cl-vendor-profile-aside .cl-record-panel-head h2 {
+  font-size: 15px;
+}
+
+.cl-vendor-profile-aside .cl-record-bill-grid {
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin: 0;
+}
+
+.cl-vendor-profile-aside .cl-record-bill-cell {
+  padding: 9px 0;
+  border-top: 1px solid var(--cl-border);
+}
+
+.cl-vendor-profile-aside .cl-record-bill-cell:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
 .cl-vendor-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -4759,6 +4909,22 @@
 }
 
 @media (max-width: 960px) {
+  .cl-vendor-profile-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-vendor-profile-aside {
+    position: static;
+  }
+
+  .cl-vendor-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-vendor-trust-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
   .cl-vendor-grid {
     grid-template-columns: 1fr;
   }
@@ -4780,7 +4946,25 @@
     padding: 16px 14px 32px;
   }
   .cl-vendor-header {
-    padding: 18px;
+    border-radius: 10px;
+  }
+  .cl-vendor-header-primary,
+  .cl-vendor-focus,
+  .cl-vendor-header .cl-record-header-meta {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .cl-vendor-identity {
+    gap: 10px;
+  }
+  .cl-vendor-header-avatar {
+    flex-basis: 36px;
+    width: 36px;
+    height: 36px;
+    font-size: 12px;
+  }
+  .cl-vendor-header .cl-record-header-vendor-name {
+    font-size: 21px;
   }
 }
 
@@ -4893,7 +5077,7 @@
 
 .cl-vendor-check-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(144px, 1fr));
   gap: 8px;
 }
 .cl-vendor-check {
@@ -4929,6 +5113,10 @@
 .cl-vendor-check-warning { border-left-color: var(--cl-warning); }
 .cl-vendor-check-error { border-left-color: var(--cl-danger); }
 .cl-vendor-check-info { border-left-color: var(--cl-border-strong); }
+
+.cl-vendor-registry-check-tile button {
+  margin-top: 8px;
+}
 
 .cl-vendor-note-row {
   display: flex;
@@ -5018,17 +5206,6 @@
   .cl-vendor-work-meta {
     justify-content: flex-start;
     flex-wrap: wrap;
-  }
-}
-
-@media (max-width: 520px) {
-  .cl-vendor-registry-banner {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .cl-vendor-registry-banner .btn,
-  .cl-vendor-registry-banner button {
-    align-self: flex-start;
   }
 }
 
@@ -5837,31 +6014,6 @@
   display: flex;
   gap: 8px;
   align-items: center;
-}
-
-
-/* ─── Module 4 — registry verify banner ────────────────────────── */
-
-.cl-vendor-registry-banner {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin: 16px 0;
-  padding: 14px 16px;
-  background: #FFFFFF;
-  border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius);
-}
-.cl-vendor-registry-banner p {
-  margin: 4px 0 0;
-  font-size: 13px;
-  line-height: 1.5;
-}
-.cl-vendor-registry-banner code {
-  font-family: 'Geist Mono', monospace;
-  font-size: 12px;
-  color: var(--cl-ink);
 }
 
 

@@ -270,6 +270,133 @@ const vendorDirectory = [
   },
 ];
 
+const googleCloudVendorDetail = {
+  vendor_name: 'Google Cloud EMEA Limited',
+  profile: {
+    status: 'active',
+    currency: 'EUR',
+    terms: 'Net 30',
+    registry_verified: true,
+    registry_verification_provider: 'OpenCorporates',
+    registry_verification_at: isoAgo(7200),
+    registry_verification_payload: {
+      company_number: 'IE551887',
+      jurisdiction: 'ie',
+      match_score: 0.94,
+    },
+    sender_domains: ['google.com', 'googlepayments.com'],
+    vendor_aliases: ['Google Payments', 'Google Cloud'],
+    custom_routing: {
+      approver_group: 'finance_ops',
+      channel: 'slack',
+      reason: 'cloud_infrastructure',
+    },
+    requires_po: true,
+    agent_confidence: 0.86,
+  },
+  erp: {
+    vendor_id: 'NS-VEND-00482',
+    tax_id: 'IE6388047V',
+    registration_number: '551887',
+    jurisdiction: 'IE',
+    payment_terms: 'Net 30',
+    address: '70 Sir John Rogerson Quay, Dublin',
+    primary_contact_email: 'payments-noreply@google.com',
+  },
+  summary: {
+    invoice_count: 21,
+    open_count: 21,
+    posted_count: 0,
+    issue_count: 21,
+    total_amount: 439,
+    currency: 'EUR',
+    primary_email: 'payments-noreply@google.com',
+    last_activity_at: isoAgo(42),
+    agent_confidence: 0.86,
+  },
+  risk: {
+    score: 32,
+    components: [
+      { label: 'Field extraction confidence below threshold' },
+      { label: 'Vendor aliases require review' },
+    ],
+  },
+  issue_summary: {
+    total: 21,
+    needs_info: 2,
+    field_review: 19,
+  },
+  top_exception_codes: [
+    { exception_code: 'critical_field_low_confidence', count: 19 },
+    { exception_code: 'field_conflict', count: 1 },
+  ],
+  verified_ibans: [
+    { iban_masked: 'IE29 **** 8310', source: 'bank_verification', verified_at: isoAgo(12000) },
+  ],
+  fraud_flags: [],
+  open_issues: [
+    {
+      id: 'AP-1004',
+      invoice_number: 'GCP-5527387118',
+      amount: 40.5,
+      currency: 'EUR',
+      state: 'received',
+      issue_kind: 'field_review',
+      issue_label: 'Field review',
+      issue_summary: 'Vendor and amount confidence need confirmation before ERP follow-up.',
+      updated_at: isoAgo(42),
+      exception_code: 'critical_field_low_confidence',
+    },
+    {
+      id: 'AP-1011',
+      invoice_number: 'GCP-5541991049',
+      amount: 0,
+      currency: 'USD',
+      state: 'received',
+      issue_kind: 'field_review',
+      issue_label: 'Field review',
+      issue_summary: 'Zero-value invoice needs operator confirmation.',
+      updated_at: isoAgo(220),
+      exception_code: 'field_conflict',
+    },
+  ],
+  recent_items: [
+    {
+      id: 'AP-1004',
+      invoice_number: 'GCP-5527387118',
+      amount: 40.5,
+      currency: 'EUR',
+      state: 'received',
+      exception_code: 'critical_field_low_confidence',
+      updated_at: isoAgo(42),
+    },
+    {
+      id: 'AP-1011',
+      invoice_number: 'GCP-5541991049',
+      amount: 0,
+      currency: 'USD',
+      state: 'received',
+      exception_code: 'field_conflict',
+      updated_at: isoAgo(220),
+    },
+    {
+      id: 'AP-1012',
+      invoice_number: 'GCP-5499678906',
+      amount: 38.46,
+      currency: 'EUR',
+      state: 'received',
+      exception_code: 'critical_field_low_confidence',
+      updated_at: isoAgo(480),
+    },
+  ],
+  exception_trend: [
+    { bucket: 'Mar', exception_count: 3 },
+    { bucket: 'Apr', exception_count: 5 },
+    { bucket: 'May', exception_count: 8 },
+    { bucket: 'Jun', exception_count: 5 },
+  ],
+};
+
 const activityItems = [
   { id: 'act-1', box_type: 'ap_item', box_id: 'AP-1001', action: 'Asked vendor for missing PO context', subject: 'Cisco Systems - CIS-INV-4482', actor_label: 'Solden agent', surface: 'Gmail', tone: 'warning', ts: isoAgo(12) },
   { id: 'act-2', box_type: 'ap_item', box_id: 'AP-1002', action: 'Validated account coding', subject: 'AWS Cloud Services - AWS-77421', actor_label: 'Dana O.', surface: 'NetSuite', tone: 'success', ts: isoAgo(18) },
@@ -297,6 +424,7 @@ const responses = {
   '/api/ap/items/vendors': {
     vendors: vendorDirectory,
   },
+  '/api/ap/items/vendors/Google%20Cloud%20EMEA%20Limited': googleCloudVendorDetail,
   '/api/workspace/vendor-intelligence/duplicates': {
     clusters: [],
   },

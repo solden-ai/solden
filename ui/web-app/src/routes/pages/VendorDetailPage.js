@@ -193,6 +193,15 @@ function getInvoiceState(invoice) {
   return invoice?.state || invoice?.final_state || invoice?.status || '';
 }
 
+function getVendorInitials(name) {
+  const text = String(name || '').trim();
+  return text.split(/\s+/).slice(0, 2).map((word) => word[0] || '').join('').toUpperCase() || '?';
+}
+
+function getVendorHue(name) {
+  return [...String(name || '')].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 6;
+}
+
 function getIssueSummaryRows(issueSummary = {}) {
   return [
     ['needs_info', 'Needs info'],
@@ -353,44 +362,55 @@ export default function VendorDetailPage({ api, orgId, navigate, toast, vendorNa
         risk=${risk}
         invoices=${invoices} />
 
-      <${RegistryVerifyBanner}
-        api=${api}
-        vendorName=${vendorName}
-        profile=${profile}
-        toast=${toast}
-        onChanged=${load} />
+      <div class="cl-vendor-profile-layout">
+        <main class="cl-vendor-profile-main">
+          <${VendorOpenWorkPanel}
+            openIssues=${openIssues}
+            issueSummary=${issueSummary}
+            summary=${summary}
+            invoices=${invoices}
+            navigate=${navigate} />
 
-      <${VendorOpenWorkPanel}
-        openIssues=${openIssues}
-        issueSummary=${issueSummary}
-        summary=${summary}
-        invoices=${invoices}
-        navigate=${navigate} />
+          <${RecentInvoicesPanel} invoices=${invoices} navigate=${navigate} />
+        </main>
 
-      <div class="cl-vendor-grid">
+        <aside class="cl-vendor-profile-aside" aria-label="Vendor trust profile">
+          <${SoldenLayerPanel}
+            api=${api}
+            vendorName=${vendorName}
+            profile=${profile}
+            verifiedIbans=${verifiedIbans}
+            fraudFlags=${fraudFlags}
+            summary=${summary}
+            issueSummary=${issueSummary}
+            topExceptionCodes=${topExceptionCodes}
+            risk=${risk}
+            toast=${toast}
+            onChanged=${load} />
+        </aside>
+      </div>
+
+      <div class="cl-vendor-main-grid">
         <${VendorMasterPanel}
           erp=${erp}
           profile=${profile}
           summary=${summary}
           invoices=${invoices} />
-        <${SoldenLayerPanel}
-          profile=${profile}
-          verifiedIbans=${verifiedIbans}
-          fraudFlags=${fraudFlags}
-          summary=${summary}
-          issueSummary=${issueSummary}
+
+        <${ExceptionPatternPanel}
+          trend=${exceptionTrend}
           topExceptionCodes=${topExceptionCodes}
-          risk=${risk} />
+          issueSummary=${issueSummary}
+          summary=${summary}
+          invoices=${invoices} />
       </div>
 
-      <${ExceptionPatternPanel}
-        trend=${exceptionTrend}
-        topExceptionCodes=${topExceptionCodes}
-        issueSummary=${issueSummary}
+      <${VendorTrustDetailsPanel}
+        profile=${profile}
+        verifiedIbans=${verifiedIbans}
+        fraudFlags=${fraudFlags}
         summary=${summary}
-        invoices=${invoices} />
-
-      <${RecentInvoicesPanel} invoices=${invoices} navigate=${navigate} />
+        topExceptionCodes=${topExceptionCodes} />
     </div>
   `;
 }
@@ -420,13 +440,18 @@ function VendorHeader({
   return html`
     <section class="cl-vendor-header">
       <div class="cl-vendor-header-primary">
-        <div>
+        <div class="cl-vendor-identity">
+          <span class="cl-avatar cl-vendor-header-avatar" data-hue=${getVendorHue(name)} aria-hidden="true">
+            ${getVendorInitials(name)}
+          </span>
+          <div>
           <span class="cl-record-header-eyebrow">Vendor record</span>
           <h1 class="cl-record-header-vendor-name">${name}</h1>
           <p class="cl-vendor-header-sub">
             ${firstPresent(summary.primary_email, profile.primary_contact_email, 'No primary sender on file')}
             ${summary.last_activity_at ? ` · last activity ${fmtDateTime(summary.last_activity_at)}` : ''}
           </p>
+          </div>
         </div>
         <div class="cl-vendor-header-chips">
           <span class=${`cl-record-chip cl-record-chip-${vendorStatusTone(status)}`}>
@@ -615,7 +640,7 @@ function VendorMasterPanel({ erp, profile, summary, invoices }) {
 // ─── Solden-layer panel ────────────────────────────────────────
 
 function SoldenLayerPanel({
-  profile, verifiedIbans, fraudFlags, summary, issueSummary, topExceptionCodes, risk,
+  api, vendorName, profile, verifiedIbans, fraudFlags, summary, issueSummary, topExceptionCodes, risk, toast, onChanged,
 }) {
   const agentConfidence = summary.agent_confidence ?? profile.agent_confidence;
   const requiresPo = profile.requires_po;
@@ -623,23 +648,21 @@ function SoldenLayerPanel({
   const riskScore = numberOrNull(risk.score);
   const riskComponents = coalesceArray(risk.components);
   const issueCount = integerOrZero(firstPresent(issueSummary.total, summary.issue_count));
-  const registryVerified = !!profile.registry_verified;
 
   return html`
     <section class="cl-record-panel">
       <header class="cl-record-panel-head">
-        <h2>Solden checks</h2>
+        <h2>Trust checks</h2>
         <span class="cl-record-panel-eyebrow">Payment and risk context</span>
       </header>
 
       <div class="cl-vendor-check-grid">
-        <${VendorCheck}
-          label="Registry"
-          tone=${registryVerified ? 'success' : 'info'}
-          value=${registryVerified ? 'Verified' : 'Not checked'}
-          detail=${registryVerified
-            ? `Checked via ${profile.registry_verification_provider || 'registry'}${profile.registry_verification_at ? ` on ${fmtDate(profile.registry_verification_at)}` : ''}`
-            : 'Run the registry check before first payment or when identity is unclear.'} />
+        <${RegistryCheckTile}
+          api=${api}
+          vendorName=${vendorName}
+          profile=${profile}
+          toast=${toast}
+          onChanged=${onChanged} />
         <${VendorCheck}
           label="Bank account"
           tone=${verifiedIbans.length ? 'success' : 'warning'}
@@ -670,79 +693,97 @@ function SoldenLayerPanel({
               ? riskComponents.slice(0, 2).map((entry) => entry.label).join(' · ')
               : 'No risk components detected.'} />` : null}
       </div>
+    </section>
+  `;
+}
 
-      <div class="cl-vendor-section">
-        <h3 class="cl-vendor-subhead">Verified IBANs</h3>
-        ${verifiedIbans.length === 0 ? html`
-          <div class="cl-vendor-note-row">
-            <strong>Verification will run before first payment</strong>
-            <span>Solden has not recorded a verified IBAN for this vendor yet.</span>
-          </div>
-        ` : html`
-          <ul class="cl-vendor-list">
-            ${verifiedIbans.map((entry, idx) => html`
-              <li key=${idx} class="cl-vendor-list-row">
-                <code>${entry.iban_masked || entry.iban || '—'}</code>
-                <span class="cl-record-muted">
-                  ${entry.verified_at ? `verified ${fmtDate(entry.verified_at)}` : 'pending'}
-                  ${entry.source ? ` · ${formatVendorSourceLabel(entry.source)}` : ''}
-                </span>
-              </li>`)}
-          </ul>
-        `}
-      </div>
+function VendorTrustDetailsPanel({
+  profile, verifiedIbans, fraudFlags, summary, topExceptionCodes,
+}) {
+  const agentConfidence = summary.agent_confidence ?? profile.agent_confidence;
+  const requiresPo = profile.requires_po;
+  const customRouting = profile.custom_routing;
 
-      <div class="cl-vendor-section">
-        <h3 class="cl-vendor-subhead">Fraud signals</h3>
-        ${fraudFlags.length === 0 ? html`
-          <div class="cl-vendor-note-row">
-            <strong>No active fraud signals</strong>
-            <span>Bank changes, domain changes, and anomaly flags are clear for this profile.</span>
-          </div>
-        ` : html`
-          <ul class="cl-vendor-list">
-            ${fraudFlags.map((flag, idx) => html`
-              <li key=${idx} class="cl-vendor-list-row">
-                <span class=${`cl-record-chip cl-record-chip-${fraudTone(flag.severity)}`}>
-                  ${humanizeSnakeText(getFraudFlagToken(flag) || 'review')}
-                </span>
-                ${getFraudFlagMessage(flag) ? html`<span>${getFraudFlagMessage(flag)}</span>` : null}
-                ${getFraudFlagDate(flag) ? html`
-                  <span class="cl-record-muted">${fmtDate(getFraudFlagDate(flag))}</span>` : null}
-              </li>`)}
-          </ul>
-        `}
-      </div>
+  return html`
+    <section class="cl-record-panel cl-vendor-trust-details">
+      <header class="cl-record-panel-head">
+        <h2>Trust detail</h2>
+        <span class="cl-record-panel-eyebrow">Bank, fraud, and routing context</span>
+      </header>
+      <div class="cl-vendor-trust-detail-grid">
+        <div class="cl-vendor-section">
+          <h3 class="cl-vendor-subhead">Verified IBANs</h3>
+          ${verifiedIbans.length === 0 ? html`
+            <div class="cl-vendor-note-row">
+              <strong>Verification will run before first payment</strong>
+              <span>Solden has not recorded a verified IBAN for this vendor yet.</span>
+            </div>
+          ` : html`
+            <ul class="cl-vendor-list">
+              ${verifiedIbans.map((entry, idx) => html`
+                <li key=${idx} class="cl-vendor-list-row">
+                  <code>${entry.iban_masked || entry.iban || '—'}</code>
+                  <span class="cl-record-muted">
+                    ${entry.verified_at ? `verified ${fmtDate(entry.verified_at)}` : 'pending'}
+                    ${entry.source ? ` · ${formatVendorSourceLabel(entry.source)}` : ''}
+                  </span>
+                </li>`)}
+            </ul>
+          `}
+        </div>
 
-      <div class="cl-vendor-section">
-        <h3 class="cl-vendor-subhead">Agent context</h3>
-        <dl class="cl-record-bill-grid cl-vendor-context-grid">
-          ${typeof agentConfidence === 'number' ? html`
-            <div class="cl-record-bill-cell">
-              <dt>Agent confidence</dt>
-              <dd>${(agentConfidence * 100).toFixed(0)}%</dd>
-            </div>` : null}
-          ${requiresPo !== undefined ? html`
-            <div class="cl-record-bill-cell">
-              <dt>PO required</dt>
-              <dd>${requiresPo ? 'Yes' : 'No'}</dd>
-            </div>` : null}
-          ${customRouting ? html`
-            <div class="cl-record-bill-cell">
-              <dt>Custom routing</dt>
-              <dd>${formatCustomRouting(customRouting)}</dd>
-            </div>` : null}
-          ${profile.bank_details_changed_at ? html`
-            <div class="cl-record-bill-cell">
-              <dt>Bank details changed</dt>
-              <dd>${fmtDate(profile.bank_details_changed_at)}</dd>
-            </div>` : null}
-          ${topExceptionCodes.length ? html`
-            <div class="cl-record-bill-cell">
-              <dt>Most common blocker</dt>
-              <dd>${getExceptionLabel(topExceptionCodes[0].exception_code)} · ${topExceptionCodes[0].count}</dd>
-            </div>` : null}
-        </dl>
+        <div class="cl-vendor-section">
+          <h3 class="cl-vendor-subhead">Fraud signals</h3>
+          ${fraudFlags.length === 0 ? html`
+            <div class="cl-vendor-note-row">
+              <strong>No active fraud signals</strong>
+              <span>Bank changes, domain changes, and anomaly flags are clear for this profile.</span>
+            </div>
+          ` : html`
+            <ul class="cl-vendor-list">
+              ${fraudFlags.map((flag, idx) => html`
+                <li key=${idx} class="cl-vendor-list-row">
+                  <span class=${`cl-record-chip cl-record-chip-${fraudTone(flag.severity)}`}>
+                    ${humanizeSnakeText(getFraudFlagToken(flag) || 'review')}
+                  </span>
+                  ${getFraudFlagMessage(flag) ? html`<span>${getFraudFlagMessage(flag)}</span>` : null}
+                  ${getFraudFlagDate(flag) ? html`
+                    <span class="cl-record-muted">${fmtDate(getFraudFlagDate(flag))}</span>` : null}
+                </li>`)}
+            </ul>
+          `}
+        </div>
+
+        <div class="cl-vendor-section">
+          <h3 class="cl-vendor-subhead">Agent context</h3>
+          <dl class="cl-record-bill-grid cl-vendor-context-grid">
+            ${typeof agentConfidence === 'number' ? html`
+              <div class="cl-record-bill-cell">
+                <dt>Agent confidence</dt>
+                <dd>${(agentConfidence * 100).toFixed(0)}%</dd>
+              </div>` : null}
+            ${requiresPo !== undefined ? html`
+              <div class="cl-record-bill-cell">
+                <dt>PO required</dt>
+                <dd>${requiresPo ? 'Yes' : 'No'}</dd>
+              </div>` : null}
+            ${customRouting ? html`
+              <div class="cl-record-bill-cell">
+                <dt>Custom routing</dt>
+                <dd>${formatCustomRouting(customRouting)}</dd>
+              </div>` : null}
+            ${profile.bank_details_changed_at ? html`
+              <div class="cl-record-bill-cell">
+                <dt>Bank details changed</dt>
+                <dd>${fmtDate(profile.bank_details_changed_at)}</dd>
+              </div>` : null}
+            ${topExceptionCodes.length ? html`
+              <div class="cl-record-bill-cell">
+                <dt>Most common blocker</dt>
+                <dd>${getExceptionLabel(topExceptionCodes[0].exception_code)} · ${topExceptionCodes[0].count}</dd>
+              </div>` : null}
+          </dl>
+        </div>
       </div>
     </section>
   `;
@@ -922,15 +963,15 @@ function RecentInvoicesPanel({ invoices, navigate }) {
 }
 
 
-// ─── Module 4 — Business registry verification banner ────────────
+// ─── Module 4 — Business registry verification ───────────────────
 //
 // Spec line 158: "Verification: agent attempts auto-verification on
 // creation (IBAN check, business registry lookup, prior payment
-// match)." This banner exposes the registry-lookup verb with a
-// click-to-verify button. Persists the result on the vendor profile
-// so subsequent views show the verified state without re-querying.
+// match)." The Trust checks panel exposes the registry lookup verb
+// with a click-to-verify button. Persists the result on the vendor
+// profile so subsequent views show the verified state without re-querying.
 
-function RegistryVerifyBanner({ api, vendorName, profile, toast, onChanged }) {
+function RegistryCheckTile({ api, vendorName, profile, toast, onChanged }) {
   const [busy, setBusy] = useState(false);
   const verified = !!profile?.registry_verified;
   const provider = profile?.registry_verification_provider;
@@ -965,25 +1006,17 @@ function RegistryVerifyBanner({ api, vendorName, profile, toast, onChanged }) {
   };
 
   return html`
-    <section class="cl-vendor-registry-banner">
-      <div>
-        <strong>Registry check</strong>
-        ${verified ? html`
-          <p class="cl-record-muted">
-            Verified via ${provider || 'registry'}${verifiedAt ? ` · ${new Date(verifiedAt).toLocaleDateString()}` : ''}
-            ${payload.company_number ? html` · <code>${payload.company_number}</code>` : null}
-            ${payload.jurisdiction ? html` · ${String(payload.jurisdiction).toUpperCase()}` : null}
-            ${typeof payload.match_score === 'number' ? html` · match ${Math.round(payload.match_score * 100)}%` : null}
-          </p>
-        ` : html`
-          <p class="cl-record-muted">
-            Check the legal entity before first payment, bank-detail changes, or vendor onboarding review.
-          </p>
-        `}
-      </div>
+    <div class=${`cl-vendor-check cl-vendor-check-${verified ? 'success' : 'info'} cl-vendor-registry-check-tile`}>
+      <span>Registry</span>
+      <strong>${verified ? 'Verified' : 'Not checked'}</strong>
+      <p>
+        ${verified
+          ? `Via ${provider || 'registry'}${verifiedAt ? ` on ${fmtDate(verifiedAt)}` : ''}${payload.company_number ? ` · ${payload.company_number}` : ''}${payload.jurisdiction ? ` · ${String(payload.jurisdiction).toUpperCase()}` : ''}${typeof payload.match_score === 'number' ? ` · match ${Math.round(payload.match_score * 100)}%` : ''}`
+          : 'Check the legal entity before first payment, bank-detail changes, or onboarding review.'}
+      </p>
       <button class="btn btn-secondary btn-sm" onClick=${onVerify} disabled=${busy}>
         ${busy ? 'Checking…' : (verified ? 'Re-check' : 'Run registry check')}
       </button>
-    </section>
+    </div>
   `;
 }
