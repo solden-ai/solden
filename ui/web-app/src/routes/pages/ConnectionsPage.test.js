@@ -10,7 +10,7 @@ function makeBootstrap() {
     integrations: [
       { name: 'gmail', status: 'connected', connected: true },
       { name: 'outlook', status: 'disconnected', connected: false },
-      { name: 'erp', status: 'disconnected', connected: false, erp_type: 'quickbooks' },
+      { name: 'erp', status: 'connected', connected: true, connections: [{ erp_type: 'netsuite' }] },
       { name: 'slack', status: 'connected', connected: true, approval_channel: '#approvals' },
       { name: 'teams', status: 'disabled_in_v1', connected: false },
     ],
@@ -61,12 +61,17 @@ describe('ConnectionsPage', () => {
     renderConnectionsPage();
 
     await screen.findByText('Connections');
-    expect(screen.getByText('Integration matrix')).toBeTruthy();
+    expect(screen.getByText('Connected surfaces')).toBeTruthy();
+    expect(screen.getByText('Connection health')).toBeTruthy();
+    expect(screen.getByText('Setup order')).toBeTruthy();
     expect(screen.getByText('Inbox')).toBeTruthy();
     expect(screen.getByText('Approvals')).toBeTruthy();
     expect(screen.getAllByText('ERP').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Access').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/NetSuite/).length).toBeGreaterThan(0);
+    expect(screen.getByText('Admin access')).toBeTruthy();
     expect(screen.getByLabelText('Approval channel')).toBeTruthy();
+    expect(screen.queryByText(/FEATURE_/)).toBeNull();
+    expect(screen.queryByText(/api\/worker\/beat/)).toBeNull();
     expect(screen.queryByText('Setup and reconnects live here')).toBeNull();
     expect(screen.queryByText('At a glance')).toBeNull();
   });

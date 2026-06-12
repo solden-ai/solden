@@ -23,6 +23,14 @@ function getErpOptionLabel(value) {
   return ERP_OPTIONS.find((option) => option.value === token)?.label || 'ERP';
 }
 
+function getConnectedErpType(erp = {}) {
+  const direct = erp.erp_type || erp.erp_kind || erp.type;
+  const nested = Array.isArray(erp.connections)
+    ? erp.connections.find((conn) => conn?.erp_type)?.erp_type
+    : '';
+  return String(direct || nested || '').trim().toLowerCase();
+}
+
 function normalizeConnectionStatus(status, connected = false) {
   const token = String(status || '').trim().toLowerCase();
   if (connected || token === 'connected') return 'connected';
@@ -231,9 +239,14 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
     slack,
     erp,
   });
-  const [erpType, setErpType] = useState(String(erp.erp_type || 'quickbooks').trim().toLowerCase() || 'quickbooks');
+  const connectedErpType = getConnectedErpType(erp);
+  const [erpType, setErpType] = useState(connectedErpType || 'quickbooks');
   const [erpFormSpec, setErpFormSpec] = useState(null);
   const [erpFormValues, setErpFormValues] = useState({});
+
+  useEffect(() => {
+    if (connectedErpType) setErpType(connectedErpType);
+  }, [connectedErpType]);
 
   const readiness = [
     {
@@ -255,14 +268,8 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
     {
       label: 'ERP',
       value: erp.connected ? 'Ready' : 'Not connected',
-      detail: erp.connected ? `${getErpOptionLabel(erp.erp_type || erpType)} is connected.` : `Connect ${getErpOptionLabel(erpType)} or another ERP.`,
+      detail: erp.connected ? `${getErpOptionLabel(connectedErpType || erpType)} is connected.` : `Connect ${getErpOptionLabel(erpType)} or another ERP.`,
       tone: erp.connected ? 'success' : 'danger',
-    },
-    {
-      label: 'Access',
-      value: canEditConnections ? 'Admin' : 'Read-only',
-      detail: canEditConnections ? 'You can change setup here.' : 'Admins manage connection setup.',
-      tone: canEditConnections ? 'neutral' : 'warning',
     },
   ];
 
@@ -271,10 +278,13 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
       <div class=${`cl-connections-hero ${canEditConnections ? '' : 'is-readonly'}`}>
         <div class="cl-connections-hero-copy">
           <span>Admin</span>
-          <h3>Connections</h3>
+          <h1>Connections</h1>
           <p>${canEditConnections ? setupMode : 'Connection status is visible here. Admins manage inbox, approval, and ERP setup.'}</p>
         </div>
         <div class="cl-connections-hero-actions">
+          <span class=${`cl-connections-access-pill ${canEditConnections ? '' : 'is-readonly'}`}>
+            ${canEditConnections ? 'Admin access' : 'Read-only'}
+          </span>
           ${gmail.connected || gmailReconnectRequired
             ? html`<button class="btn-primary btn-sm" onClick=${connectGmail} disabled=${gmailPending || !canEditConnections}>${gmailPending ? 'Working…' : (gmailReconnectRequired ? 'Reconnect Gmail' : 'Refresh Gmail auth')}</button>`
             : html`<button class="btn-primary btn-sm" onClick=${connectGmail} disabled=${gmailPending || !canEditConnections}>${gmailPending ? 'Working…' : 'Connect Gmail'}</button>`}
@@ -293,15 +303,15 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
         `)}
       </div>
 
+      <${ConnectionHealthPanel} api=${api} orgId=${orgId} />
+
     <div class="secondary-shell cl-connections-shell">
       <div class="secondary-main">
-        <${ConnectionHealthPanel} api=${api} orgId=${orgId} />
-
         <div class="panel cl-connections-matrix-panel">
           <div class="panel-head compact">
             <div class="cl-connection-panel-copy">
-              <h3>Integration matrix</h3>
-              <p>Connection state, owner action, and the next setup step for each surface.</p>
+              <h3>Connected surfaces</h3>
+              <p>Where Solden reads work, asks for decisions, posts to ERP, and sends event updates.</p>
             </div>
           </div>
           <div class="cl-connections-matrix">
@@ -322,7 +332,7 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
               label="Outlook"
               status=${outlook.status || (outlook.connected ? 'connected' : 'disconnected')}
               detail=${!outlookEnabled
-                ? 'Outlook intake is gated behind FEATURE_OUTLOOK_ENABLED. Flip the env var on api/worker/beat once the Entra app is registered (MICROSOFT_CLIENT_ID + SECRET).'
+                ? 'Outlook intake is not enabled for this workspace yet.'
                 : outlook.connected
                   ? (outlookReconnectRequired
                     ? 'Reconnect Outlook to keep this inbox connected.'
@@ -350,16 +360,16 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
               label="Teams"
               status=${teams.status || (teams.connected ? 'connected' : 'disconnected')}
               detail=${!teamsEnabled
-                ? 'Teams approvals are gated behind FEATURE_TEAMS_ENABLED. Flip the env var on api/worker/beat once the Entra app + Bot Framework registrations are complete. See ui/teams/INSTALL.md for the full Microsoft-side runbook.'
+                ? 'Teams approvals are not enabled for this workspace yet.'
                 : teams.connected
                   ? `Teams approvals are connected${teams.webhook_configured ? ' via webhook' : ' via bot'}.`
-                  : 'Configure a Teams webhook below for notifications, or install the Teams bot for interactive approve / reject cards. See the Teams panel below.'}
+                  : 'Configure Teams for approval notifications or interactive approve and reject cards.'}
             />
             <${ConnectionRow}
               label="ERP"
               status=${erp.status || (erp.connected ? 'connected' : 'disconnected')}
               detail=${erp.connected
-                ? `${erp.erp_type || 'ERP'} is connected.`
+                ? `${getErpOptionLabel(connectedErpType || erpType)} is connected.`
                 : `Choose ${getErpOptionLabel(erpType)} or another ERP below before posting approved records.`}
               actionLabel=${erp.connected ? '' : 'Connect ERP'}
               onAction=${() => document.getElementById('cl-erp-connect-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
@@ -419,21 +429,18 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
           status=${teams.status || (teams.connected ? 'connected' : 'disconnected')}
           detail=${teamsEnabled
             ? 'Two install paths. Pick interactive bot for full Approve / Reject cards, or webhook for notification-only.'
-            : 'Teams approvals are gated behind FEATURE_TEAMS_ENABLED.'}
+            : 'Teams approvals are not enabled for this workspace yet.'}
         >
           ${!teamsEnabled ? html`
             <div class="secondary-note">
-              Set <code>FEATURE_TEAMS_ENABLED=true</code> on api/worker/beat once the Microsoft-side registrations are complete. The full runbook is in <a href="https://github.com/solden-ai/solden/blob/main/ui/teams/INSTALL.md" target="_blank" rel="noreferrer">ui/teams/INSTALL.md</a>.
+              Use Slack approvals now. Teams can be added when the Microsoft approval app is ready for this workspace.
             </div>
           ` : html`
             <div class="secondary-section" style="margin-top:6px">
               <strong style="font-size:13px">Interactive bot (Approve / Reject cards)</strong>
               <p class="muted" style="margin:4px 0 8px;font-size:12px">
-                Requires an Entra app + Bot Framework registration and the
-                Teams app package sideloaded into your tenant. End state:
-                Adaptive Cards in any channel with working Approve / Reject
-                buttons that round-trip through Solden's audit chain. Full
-                steps in <a href="https://github.com/solden-ai/solden/blob/main/ui/teams/INSTALL.md" target="_blank" rel="noreferrer">ui/teams/INSTALL.md</a>.
+                Best for teams that want decisions to happen directly inside Microsoft Teams,
+                with approve and reject actions written back to the audit trail.
               </p>
               <div class="secondary-inline-actions">
                 <a class="btn-secondary btn-sm" href="/api/workspace/integrations/teams/manifest?organization_id=${encodeURIComponent(orgId)}" target="_blank" rel="noreferrer">Download Teams app package</a>
@@ -443,7 +450,7 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
             <div class="secondary-section" style="margin-top:14px">
               <strong style="font-size:13px">Webhook (notifications only)</strong>
               <p class="muted" style="margin:4px 0 8px;font-size:12px">
-                Paste an Incoming Webhook URL to receive approval card notifications. The Approve / Reject buttons render but don't post back without the full bot — use this as a quick-start while you wait for Microsoft-side registrations.
+                Send approval notifications into a Teams channel while interactive actions are still being set up.
               </p>
               <div class="secondary-inline-actions cl-connection-control-row">
                 <div class="field-row cl-connection-control-field cl-connection-control-field-wide">
@@ -460,17 +467,42 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
       </div>
 
       <div class="secondary-side cl-connections-side">
-        <div class="panel cl-connections-permission-panel">
+        <div class="panel cl-connections-setup-panel">
           <div class="panel-head compact">
             <div class="cl-connection-panel-copy">
-              <h3>Access</h3>
-              <p>${canEditConnections ? 'Admin controls are enabled.' : 'Read-only workspace view.'}</p>
+              <h3>Setup order</h3>
+              <p>The minimum path for a workspace that can ingest, decide, and post work.</p>
             </div>
           </div>
-          <div class="secondary-note">
-            ${canEditConnections
-              ? 'You can change connection setup from here.'
-              : 'You can review status here, but only admins can reconnect Gmail, change approval routing, or update ERP setup.'}
+          <div class="cl-connections-setup-list">
+            <div class=${`cl-connections-setup-step ${inboxConnected && !inboxReconnectRequired ? 'is-done' : 'is-open'}`}>
+              <span>1</span>
+              <div>
+                <strong>Connect intake</strong>
+                <small>${inboxConnected ? 'Gmail or Outlook is available.' : 'Connect the inbox where work arrives.'}</small>
+              </div>
+            </div>
+            <div class=${`cl-connections-setup-step ${approvalConnected && !slack?.requires_reauthorization ? 'is-done' : 'is-open'}`}>
+              <span>2</span>
+              <div>
+                <strong>Connect approvals</strong>
+                <small>${approvalConnected ? getApprovalSummary(slack, teams) : 'Use Slack or Teams for decisions.'}</small>
+              </div>
+            </div>
+            <div class=${`cl-connections-setup-step ${erp.connected ? 'is-done' : 'is-open'}`}>
+              <span>3</span>
+              <div>
+                <strong>Connect ERP</strong>
+                <small>${erp.connected ? `${getErpOptionLabel(connectedErpType || erpType)} is ready.` : 'Connect the posting destination.'}</small>
+              </div>
+            </div>
+            <div class="cl-connections-setup-step">
+              <span>4</span>
+              <div>
+                <strong>Add event webhooks</strong>
+                <small>Optional outbound events for downstream systems.</small>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -546,7 +578,7 @@ function ERPConnectionCard({
           </select>
         </div>
         <button class="btn-primary btn-sm" onClick=${startErpConnect} disabled=${erpConnectPending || !canManageConnections}>
-          ${erpConnectPending ? 'Working…' : `Connect ${getErpOptionLabel(erpType)}`}
+          ${erpConnectPending ? 'Working…' : `${erp.connected ? 'Reconnect' : 'Connect'} ${getErpOptionLabel(erpType)}`}
         </button>
         ${erp.connected && html`<span class="secondary-chip">${getErpOptionLabel(erp.erp_type || erpType)} connected</span>`}
       </div>

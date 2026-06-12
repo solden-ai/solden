@@ -595,6 +595,36 @@ const responses = {
     filtered_count: 45,
     slice_counts: { all_open: 45, blocked_exception: 7, overdue: 4 },
   },
+  '/api/workspace/connections/health': {
+    computed_at: isoAgo(1),
+    integrations: [
+      {
+        integration_type: 'gmail',
+        label: 'Gmail',
+        status: 'healthy',
+        last_sync_at: isoAgo(8),
+        events_24h: 34,
+        errors_24h: 0,
+      },
+      {
+        integration_type: 'slack',
+        label: 'Slack',
+        status: 'healthy',
+        last_sync_at: isoAgo(12),
+        events_24h: 11,
+        errors_24h: 0,
+      },
+      {
+        integration_type: 'netsuite',
+        label: 'NetSuite',
+        status: 'healthy',
+        last_sync_at: isoAgo(18),
+        events_24h: 9,
+        errors_24h: 0,
+      },
+    ],
+    webhooks: { delivered: 18, retrying: 0, failed: 0 },
+  },
   '/api/workspace/dashboard/approver-workload': {
     approvers: [
       { approver_id: 'maya', name: 'Maya R.', email: 'maya@soldenai.com', pending_count: 4, oldest_pending_age_days: 2 },

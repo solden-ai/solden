@@ -6599,6 +6599,9 @@
 
 .cl-connections-page {
   max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .cl-connections-hero {
@@ -6607,10 +6610,10 @@
   justify-content: space-between;
   gap: 24px;
   padding: 22px 24px;
-  margin-bottom: 12px;
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
   border-radius: var(--cl-radius);
+  box-shadow: var(--cl-shadow);
 }
 
 .cl-connections-hero.is-readonly {
@@ -6633,7 +6636,7 @@
   color: var(--cl-ink-muted);
 }
 
-.cl-connections-hero-copy h3 {
+.cl-connections-hero-copy h1 {
   margin: 0;
   font-size: 24px;
   font-weight: 650;
@@ -6651,17 +6654,39 @@
 
 .cl-connections-hero-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
   flex-shrink: 0;
 }
 
+.cl-connections-access-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(24, 191, 176, 0.32);
+  border-radius: 999px;
+  background: var(--cl-teal-soft);
+  color: var(--cl-teal-600);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cl-connections-access-pill.is-readonly {
+  border-color: rgba(180, 83, 9, 0.28);
+  background: #FFF7ED;
+  color: #B45309;
+}
+
 .cl-connections-readiness-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 16px;
 }
 
 .cl-connections-readiness-card {
@@ -6826,13 +6851,17 @@
 }
 
 .cl-connection-control-row {
-  align-items: end;
+  align-items: flex-end;
   gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  background: var(--cl-bg);
 }
 
 .cl-connection-control-field {
   flex: 1 1 240px;
-  max-width: 420px;
+  max-width: none;
   gap: 5px;
 }
 
@@ -6842,7 +6871,7 @@
 }
 
 .cl-connection-control-field-wide {
-  max-width: 520px;
+  max-width: none;
 }
 
 .cl-connection-control-field input,
@@ -6856,10 +6885,73 @@
 .cl-connection-control-row .btn-secondary,
 .cl-connection-control-row .btn-ghost {
   flex: 0 0 auto;
+  min-height: 36px;
 }
 
-.cl-connections-permission-panel .secondary-note {
-  padding: 0;
+.cl-connections-setup-list {
+  display: grid;
+  gap: 10px;
+}
+
+.cl-connections-setup-step {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  background: var(--cl-surface);
+}
+
+.cl-connections-setup-step > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--cl-bg);
+  color: var(--cl-ink-secondary);
+  font-family: var(--cl-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cl-connections-setup-step strong,
+.cl-connections-setup-step small {
+  display: block;
+}
+
+.cl-connections-setup-step strong {
+  color: var(--cl-ink-primary);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.cl-connections-setup-step small {
+  margin-top: 2px;
+  color: var(--cl-ink-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.cl-connections-setup-step.is-done {
+  border-color: rgba(24, 191, 176, 0.32);
+}
+
+.cl-connections-setup-step.is-done > span {
+  background: var(--cl-teal-soft);
+  color: var(--cl-teal-600);
+}
+
+.cl-connections-setup-step.is-open {
+  border-color: rgba(180, 83, 9, 0.28);
+}
+
+.cl-connections-setup-step.is-open > span {
+  background: #FFF7ED;
+  color: #B45309;
 }
 
 .cl-connection-empty {
