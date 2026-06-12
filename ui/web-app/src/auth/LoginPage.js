@@ -119,10 +119,10 @@ export function LoginPage() {
     <main class="cl-auth-shell">
       <div class="cl-auth-card">
         <div class="cl-auth-brand">
-          <${BrandMark} height=${32} tone="primary" />
+          <${BrandMark} height=${30} tone="primary" />
         </div>
-        <h1 class="cl-auth-title">Sign in to Solden</h1>
-        <p class="cl-auth-sub">Access your workspace and continue the work in progress.</p>
+        <h1 class="cl-auth-title">Welcome back</h1>
+        <p class="cl-auth-sub">Continue to your workspace.</p>
 
         ${error ? html`<div class="cl-auth-error">${error}</div>` : null}
 
