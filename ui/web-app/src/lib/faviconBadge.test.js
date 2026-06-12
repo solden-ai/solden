@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { decideFaviconHref, formatBadgeCount } from './faviconBadge.js';
+import { afterEach, describe, it, expect } from 'vitest';
+import { decideFaviconHref, ensureFaviconLinksForTests, formatBadgeCount } from './faviconBadge.js';
+
+afterEach(() => {
+  document.head.innerHTML = '';
+});
 
 describe('formatBadgeCount', () => {
   it('returns empty string for zero or negative', () => {
@@ -66,5 +70,20 @@ describe('decideFaviconHref', () => {
     expect(
       decideFaviconHref({ count: 7, baseDataUrl: null, paintedDataUrl: null })
     ).toBe('/favicon.png');
+  });
+});
+
+describe('ensureFaviconLinksForTests', () => {
+  it('promotes every production favicon link, not just the first one', () => {
+    document.head.innerHTML = `
+      <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+      <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+      <link rel="icon" type="image/png" sizes="128x128" href="/favicon.png" />
+    `;
+
+    expect(ensureFaviconLinksForTests()).toBe(3);
+    const links = Array.from(document.querySelectorAll('link[rel~="icon"]'));
+    expect(links.every((link) => link.getAttribute('data-id') === 'cl-favicon-dynamic')).toBe(true);
+    expect(links.every((link) => link.getAttribute('type') === 'image/png')).toBe(true);
   });
 });

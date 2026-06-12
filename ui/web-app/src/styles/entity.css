@@ -29,6 +29,16 @@
   background: var(--cl-bg);
 }
 
+.cl-entity-trigger:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.cl-entity-trigger.is-loading:hover {
+  border-color: var(--cl-border);
+  background: var(--cl-surface);
+}
+
 .cl-entity-trigger.is-open {
   border-color: var(--cl-mint);
   background: var(--cl-mint-soft);
@@ -117,4 +127,11 @@
   height: 1px;
   background: var(--cl-border);
   margin: 4px 0;
+}
+
+.cl-entity-empty {
+  padding: 10px 12px;
+  color: var(--cl-ink-muted);
+  font-size: 12px;
+  line-height: 1.35;
 }

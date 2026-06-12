@@ -2,9 +2,9 @@
  * Status-aware favicon badge for the workspace SPA.
  *
  * The base favicon (the Solden logomark) lives at /favicon.png and
- * is referenced by ``<link rel="icon" href="/favicon.png">`` in
- * ``index.html``. When there's something operator-actionable in the
- * pipeline (pending approvals waiting on the current user), this
+ * is referenced by the favicon links in ``index.html``. When there's
+ * something operator-actionable in the pipeline (pending approvals
+ * waiting on the current user), this
  * module composites a small red badge onto the upper-right of the
  * mark and swaps the link's href to the resulting data URL — same
  * pattern Gmail / Slack / Linear use to make the tab a notification
@@ -86,24 +86,35 @@ export function decideFaviconHref({ count, baseDataUrl, paintedDataUrl }) {
   return paintedDataUrl || baseDataUrl || BASE_FAVICON_URL;
 }
 
-function _ensureLink() {
-  if (typeof document === 'undefined') return null;
-  // Replace the static <link rel="icon"> with a dedicated dynamic one
-  // on first use, and keep using that node for subsequent updates.
-  // Browsers re-fetch the icon on href change, but only if the *node*
-  // is the live <link rel="icon"> in the head.
-  let link = document.querySelector(`link[data-id="${LINK_ID_HINT}"]`);
-  if (link) return link;
-  // Promote whichever <link rel="icon"> exists, or create one.
-  link = document.querySelector('link[rel="icon"]');
-  if (!link) {
-    link = document.createElement('link');
+function _ensureLinks() {
+  if (typeof document === 'undefined') return [];
+  // Production ships several favicon sizes. Updating only the first
+  // link leaves browsers free to keep displaying an untouched 32/128px
+  // icon, which is why the badge could appear in the dev harness but
+  // not in the real app tab. Promote every icon link and mutate them
+  // together so the browser has no stale favicon candidate.
+  let links = Array.from(document.querySelectorAll('link[rel~="icon"]'));
+  if (links.length === 0) {
+    const link = document.createElement('link');
     link.setAttribute('rel', 'icon');
     document.head.appendChild(link);
+    links = [link];
   }
-  link.setAttribute('data-id', LINK_ID_HINT);
-  link.setAttribute('type', 'image/png');
-  return link;
+  for (const link of links) {
+    link.setAttribute('data-id', LINK_ID_HINT);
+    link.setAttribute('type', 'image/png');
+  }
+  return links;
+}
+
+function _setIconHref(links, href) {
+  for (const link of links) {
+    link.setAttribute('href', href);
+  }
+}
+
+export function ensureFaviconLinksForTests() {
+  return _ensureLinks().length;
 }
 
 function _paint(baseImg, count) {
@@ -173,8 +184,8 @@ export async function setFaviconBadge(count) {
     _lastRenderedKey = cacheKey;
     return;
   }
-  const link = _ensureLink();
-  if (!link) return;
+  const links = _ensureLinks();
+  if (!links.length) return;
 
   let baseImg;
   try {
@@ -182,7 +193,7 @@ export async function setFaviconBadge(count) {
   } catch (err) {
     // Network/CORS issue loading the base PNG. Fall back to the static
     // path so the tab still shows *some* icon.
-    link.setAttribute('href', BASE_FAVICON_URL);
+    _setIconHref(links, BASE_FAVICON_URL);
     _lastRenderedKey = cacheKey;
     return;
   }
@@ -199,16 +210,16 @@ export async function setFaviconBadge(count) {
   }
 
   if (n === 0) {
-    link.setAttribute('href', _baseDataUrl || BASE_FAVICON_URL);
+    _setIconHref(links, _baseDataUrl || BASE_FAVICON_URL);
     _lastRenderedKey = cacheKey;
     return;
   }
 
   const painted = _paint(baseImg, n);
   if (painted) {
-    link.setAttribute('href', painted);
+    _setIconHref(links, painted);
   } else {
-    link.setAttribute('href', _baseDataUrl || BASE_FAVICON_URL);
+    _setIconHref(links, _baseDataUrl || BASE_FAVICON_URL);
   }
   _lastRenderedKey = cacheKey;
 }

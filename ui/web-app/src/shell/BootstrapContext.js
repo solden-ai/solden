@@ -29,6 +29,24 @@ function resolveBootstrapOrgId(data) {
   );
 }
 
+function clampMetric(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+export function workspaceFaviconBadgeCount(data) {
+  const dashboard = data?.dashboard_stats || data?.dashboard || {};
+  if (Object.prototype.hasOwnProperty.call(dashboard, 'pending_approval')) {
+    return clampMetric(dashboard.pending_approval);
+  }
+  return clampMetric(
+    dashboard.awaiting_approval ??
+    dashboard.needs_approval ??
+    dashboard.approvals_pending ??
+    0
+  );
+}
+
 export function BootstrapProvider({ children }) {
   const [state, setState] = useState({ status: 'loading', data: null, error: null });
 
@@ -61,9 +79,7 @@ export function BootstrapProvider({ children }) {
   // see solden/api/workspace_shell.py L1113. Setting count=0
   // restores the unbadged Solden mark.
   useEffect(() => {
-    const dashboard = state.data?.dashboard_stats || state.data?.dashboard || {};
-    const count = Number(dashboard.pending_approval || 0);
-    void setFaviconBadge(count);
+    void setFaviconBadge(workspaceFaviconBadgeCount(state.data));
   }, [state.data]);
 
   const value = useMemo(() => ({ data: state.data, refresh: load }), [state.data, load]);

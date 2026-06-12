@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { h } from 'preact';
 import { cleanup, render, screen, waitFor } from '@testing-library/preact';
 import { api } from '../api/client.js';
-import { BootstrapProvider, useBootstrap } from './BootstrapContext.js';
+import { BootstrapProvider, useBootstrap, workspaceFaviconBadgeCount } from './BootstrapContext.js';
 import { setFaviconBadge } from '../lib/faviconBadge.js';
 
 vi.mock('../api/client.js', () => ({
@@ -80,5 +80,16 @@ describe('BootstrapProvider', () => {
       expect(screen.getByText("We couldn't load your workspace.")).toBeTruthy();
     });
     expect(screen.queryByText(/Loaded/)).toBeNull();
+  });
+});
+
+describe('workspaceFaviconBadgeCount', () => {
+  it('uses pending approval from the canonical dashboard payload', () => {
+    expect(workspaceFaviconBadgeCount({ dashboard_stats: { pending_approval: 7 } })).toBe(7);
+  });
+
+  it('falls back only when pending approval is absent', () => {
+    expect(workspaceFaviconBadgeCount({ dashboard_stats: { awaiting_approval: 4 } })).toBe(4);
+    expect(workspaceFaviconBadgeCount({ dashboard_stats: { pending_approval: 0, awaiting_approval: 4 } })).toBe(0);
   });
 });
