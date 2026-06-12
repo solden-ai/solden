@@ -397,6 +397,81 @@ const googleCloudVendorDetail = {
   ],
 };
 
+const microsoftVendorInvoices = [
+  ['E0100YIZ24', 33000],
+  ['E0100WKD65', 47647],
+  ['E0100W9CTC', 47647],
+  ['E0100WUUI4', 47647],
+  ['E0100X6DAA', 47647],
+  ['E0100XH23J', 47647],
+  ['E0100XQE15', 47648],
+  ['E0100XZ07W', 47648],
+  ['E0100Y8WQR', 47648],
+  ['E0100YRABT', 47648],
+  ['E0100Z0BRY', 47649],
+];
+
+const microsoftVendorDetail = {
+  vendor_name: 'Account Name: | MICROSOFT',
+  profile: {
+    status: 'active',
+    currency: 'ZAR',
+    primary_contact_email: 'microsoft-noreply@microsoft.com',
+    requires_po: false,
+    agent_confidence: 0.72,
+  },
+  erp: {
+    primary_contact_email: 'microsoft-noreply@microsoft.com',
+    currency: 'ZAR',
+  },
+  summary: {
+    invoice_count: 11,
+    open_count: 11,
+    posted_count: 0,
+    issue_count: 11,
+    total_amount: 0,
+    currency: 'ZAR',
+    primary_email: 'microsoft-noreply@microsoft.com',
+    last_activity_at: isoAgo(33000),
+    agent_confidence: 0.72,
+  },
+  risk: {
+    score: 0,
+    components: [],
+  },
+  issue_summary: {
+    total: 11,
+    field_review: 11,
+  },
+  top_exception_codes: [
+    { exception_code: 'critical_field_low_confidence', count: 11 },
+  ],
+  verified_ibans: [],
+  fraud_flags: [],
+  open_issues: microsoftVendorInvoices.map(([invoiceNumber, age], idx) => ({
+    id: `AP-MS-${idx + 1}`,
+    invoice_number: invoiceNumber,
+    amount: 0,
+    currency: 'ZAR',
+    state: 'received',
+    issue_kind: 'field_review',
+    issue_label: 'Field review',
+    issue_summary: 'Review amount before this invoice moves forward.',
+    updated_at: isoAgo(age),
+    exception_code: 'critical_field_low_confidence',
+  })),
+  recent_items: microsoftVendorInvoices.map(([invoiceNumber, age], idx) => ({
+    id: `AP-MS-${idx + 1}`,
+    invoice_number: invoiceNumber,
+    amount: 0,
+    currency: 'ZAR',
+    state: 'received',
+    exception_code: 'critical_field_low_confidence',
+    updated_at: isoAgo(age),
+  })),
+  exception_trend: [],
+};
+
 const activityItems = [
   { id: 'act-1', box_type: 'ap_item', box_id: 'AP-1001', action: 'Asked vendor for missing PO context', subject: 'Cisco Systems - CIS-INV-4482', actor_label: 'Solden agent', surface: 'Gmail', tone: 'warning', ts: isoAgo(12) },
   { id: 'act-2', box_type: 'ap_item', box_id: 'AP-1002', action: 'Validated account coding', subject: 'AWS Cloud Services - AWS-77421', actor_label: 'Dana O.', surface: 'NetSuite', tone: 'success', ts: isoAgo(18) },
@@ -425,6 +500,7 @@ const responses = {
     vendors: vendorDirectory,
   },
   '/api/ap/items/vendors/Google%20Cloud%20EMEA%20Limited': googleCloudVendorDetail,
+  '/api/ap/items/vendors/Account%20Name%3A%20%7C%20MICROSOFT': microsoftVendorDetail,
   '/api/workspace/vendor-intelligence/duplicates': {
     clusters: [],
   },

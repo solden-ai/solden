@@ -4823,18 +4823,6 @@
   position: static;
 }
 
-.cl-vendor-main-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
-  gap: 14px;
-  align-items: start;
-}
-
-.cl-vendor-main-grid .cl-record-panel {
-  min-width: 0;
-  height: 100%;
-}
-
 .cl-vendor-trust-details .cl-record-panel-head {
   margin-bottom: 16px;
 }
@@ -4885,6 +4873,25 @@
   font-size: 15px;
 }
 
+.cl-vendor-profile-aside .cl-vendor-trust-details .cl-record-panel-head {
+  margin-bottom: 12px;
+}
+
+.cl-vendor-profile-aside .cl-vendor-trust-detail-grid {
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.cl-vendor-profile-aside .cl-vendor-trust-details .cl-vendor-section {
+  padding-top: 14px;
+  border-top: 1px solid var(--cl-border);
+}
+
+.cl-vendor-profile-aside .cl-vendor-trust-details .cl-vendor-section:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
 .cl-vendor-profile-aside .cl-record-bill-grid {
   grid-template-columns: 1fr;
   gap: 0;
@@ -4915,10 +4922,6 @@
 
   .cl-vendor-profile-aside {
     position: static;
-  }
-
-  .cl-vendor-main-grid {
-    grid-template-columns: 1fr;
   }
 
   .cl-vendor-trust-detail-grid {

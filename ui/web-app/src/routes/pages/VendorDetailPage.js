@@ -387,30 +387,28 @@ export default function VendorDetailPage({ api, orgId, navigate, toast, vendorNa
             risk=${risk}
             toast=${toast}
             onChanged=${load} />
+
+          <${ExceptionPatternPanel}
+            trend=${exceptionTrend}
+            topExceptionCodes=${topExceptionCodes}
+            issueSummary=${issueSummary}
+            summary=${summary}
+            invoices=${invoices} />
+
+          <${VendorMasterPanel}
+            erp=${erp}
+            profile=${profile}
+            summary=${summary}
+            invoices=${invoices} />
+
+          <${VendorTrustDetailsPanel}
+            profile=${profile}
+            verifiedIbans=${verifiedIbans}
+            fraudFlags=${fraudFlags}
+            summary=${summary}
+            topExceptionCodes=${topExceptionCodes} />
         </aside>
       </div>
-
-      <div class="cl-vendor-main-grid">
-        <${VendorMasterPanel}
-          erp=${erp}
-          profile=${profile}
-          summary=${summary}
-          invoices=${invoices} />
-
-        <${ExceptionPatternPanel}
-          trend=${exceptionTrend}
-          topExceptionCodes=${topExceptionCodes}
-          issueSummary=${issueSummary}
-          summary=${summary}
-          invoices=${invoices} />
-      </div>
-
-      <${VendorTrustDetailsPanel}
-        profile=${profile}
-        verifiedIbans=${verifiedIbans}
-        fraudFlags=${fraudFlags}
-        summary=${summary}
-        topExceptionCodes=${topExceptionCodes} />
     </div>
   `;
 }
