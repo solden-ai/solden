@@ -4675,9 +4675,9 @@
 .cl-vendor-detail {
   box-sizing: border-box;
   width: 100%;
-  max-width: 1320px;
-  margin: 0 auto;
-  padding: 20px 28px 56px;
+  max-width: none;
+  margin: 0;
+  padding: 0 0 56px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -4943,7 +4943,7 @@
 
 @media (max-width: 640px) {
   .cl-vendor-detail {
-    padding: 16px 14px 32px;
+    padding: 0 0 32px;
   }
   .cl-vendor-header {
     border-radius: 10px;

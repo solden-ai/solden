@@ -17,8 +17,8 @@
 }
 
 .cl-app-content {
-  /* Tighter side gutters than the original 40px on phones */
-  padding: 24px clamp(16px, 4vw, 40px) 56px;
+  /* Keep the workspace gutter inside DESIGN.md's 20-32px route range. */
+  padding: 24px clamp(20px, 1.6vw, 28px) 56px;
 }
 
 /* Lifted-page common containers — match the workspace shell width
