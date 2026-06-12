@@ -1201,6 +1201,18 @@
   flex-direction: column;
   gap: 16px;
 }
+.cl-audit-page .secondary-banner {
+  align-items: center;
+}
+.cl-audit-page .secondary-banner-actions {
+  align-items: center;
+  gap: 8px;
+}
+.cl-audit-page .secondary-banner-actions .btn-sm {
+  height: 34px;
+  padding-inline: 14px;
+  font-size: 13px;
+}
 
 .cl-audit-filters {
   display: grid;
@@ -6648,14 +6660,22 @@
 
 /* AuditLogPage retention block */
 .cl-audit-retention {
-  margin-top: 12px;
-  padding: 12px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 12px;
   background: var(--cl-bg);
   border: 1px solid var(--cl-border);
   border-radius: var(--cl-radius-sm);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--cl-ink-secondary);
-  line-height: 1.5;
+  line-height: 1;
+  white-space: nowrap;
+}
+.cl-audit-retention strong {
+  color: var(--cl-ink-primary);
+  font-weight: 600;
 }
 
 /* Audit chain integrity badge */
@@ -6676,11 +6696,12 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
+  min-height: 34px;
+  padding: 0 12px;
   background: var(--cl-bg);
   border: 1px solid var(--cl-border);
   border-radius: var(--cl-radius-sm);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--cl-ink-primary);
   cursor: pointer;
   font-family: inherit;

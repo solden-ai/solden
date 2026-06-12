@@ -1211,8 +1211,9 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
             onRefresh=${refreshChainStatus} />
           ${retention ? html`
             <span class="cl-audit-retention">
-              Retention: <strong>${retention.effective_days} days</strong>
-              <span class="muted"> (plan ceiling ${retention.tier_ceiling_days})</span>
+              <span>Retention</span>
+              <strong>${retention.effective_days} days</strong>
+              <span class="muted">(plan ceiling ${retention.tier_ceiling_days})</span>
             </span>
             <button class="btn-secondary btn-sm" onClick=${onChangeRetention}>Configure</button>
           ` : null}
