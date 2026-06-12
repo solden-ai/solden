@@ -464,9 +464,7 @@
   margin: 12px 0 20px;
 }
 
-/* Auth shell — Linear-inspired: pale-gray bg, no card chrome, pill
-   buttons, generous whitespace, centred composition. The visual
-   reference is linear.app/login + linear.app/signup. */
+/* Auth shell: focused warm panel, aligned with Solden's workspace system. */
 
 .cl-auth-shell {
   display: flex;
@@ -474,53 +472,55 @@
   justify-content: center;
   min-height: 100vh;
   padding: 48px 16px;
-  background: #FAFAFA;
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--cl-teal-soft) 44%, transparent) 0, transparent 360px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0, transparent 260px),
+    var(--cl-bg);
 }
 
 .cl-auth-card {
   width: 100%;
-  /* 380px is the comfortable industry default (Stripe, Slack,
-     Notion). Linear sits at ~290px because their auth is heavily
-     OAuth-first (one email field for magic links, no password);
-     we accept email + password + optional display name so a
-     wider column reads better. No bg / border / shadow — elements
-     float on the page bg. The "card" class is preserved only for
-     layout (width + padding) so existing class names keep their
-     meaning. */
-  max-width: 380px;
-  padding: 8px 0;
+  max-width: 420px;
+  padding: 30px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  box-shadow: var(--cl-shadow-shell);
 }
 
 .cl-auth-brand {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
 .cl-auth-title {
-  font-size: 22px;
-  font-weight: 600;
-  margin: 0 0 28px;
+  font-family: var(--cl-font-display);
+  font-size: 24px;
+  line-height: 1.15;
+  font-weight: 650;
+  margin: 0 0 7px;
   text-align: center;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   color: var(--cl-ink-primary);
 }
 
 .cl-auth-sub {
-  margin: -20px 0 24px;
+  margin: 0 0 24px;
   color: var(--cl-ink-secondary);
   text-align: center;
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .cl-auth-error {
   margin-bottom: 16px;
   padding: 10px 14px;
-  background: rgba(220, 38, 38, 0.06);
+  background: var(--cl-danger-soft);
   color: var(--cl-danger);
-  border: 1px solid rgba(220, 38, 38, 0.2);
-  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--cl-danger) 22%, var(--cl-border));
+  border-radius: var(--cl-radius-sm);
   font-size: 13px;
   text-align: center;
 }
@@ -531,37 +531,36 @@
   justify-content: center;
   gap: 10px;
   width: 100%;
-  height: 46px;
+  height: 44px;
   padding: 0 18px;
-  /* Pill shape — fully rounded ends, matches Linear. */
-  border-radius: 999px;
+  border-radius: 8px;
   border: 1px solid transparent;
   font-family: inherit;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   text-align: center;
   text-decoration: none;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, transform 0.06s;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.06s;
   margin-bottom: 10px;
 }
 
 .cl-auth-btn:active { transform: scale(0.99); }
 
 .cl-auth-btn-primary {
-  background: var(--cl-navy);
-  color: #fff;
+  background: var(--cl-teal-500);
+  color: var(--cl-navy);
 }
-.cl-auth-btn-primary:hover { background: #14233e; }
+.cl-auth-btn-primary:hover { background: var(--cl-teal-600); }
 
 .cl-auth-btn-secondary {
-  background: #fff;
+  background: var(--cl-surface);
   color: var(--cl-ink-primary);
-  border-color: rgba(10, 31, 68, 0.12);
+  border-color: var(--cl-border);
 }
 .cl-auth-btn-secondary:hover {
-  border-color: rgba(10, 31, 68, 0.24);
-  background: #fff;
+  border-color: var(--cl-border-strong);
+  background: var(--cl-bg);
 }
 
 .cl-auth-divider {
@@ -579,13 +578,13 @@
   top: 50%;
   width: calc(50% - 28px);
   height: 1px;
-  background: rgba(10, 31, 68, 0.12);
+  background: var(--cl-border);
 }
 .cl-auth-divider::before { left: 0; }
 .cl-auth-divider::after { right: 0; }
 
 .cl-auth-divider span {
-  background: #FAFAFA;
+  background: var(--cl-surface);
   padding: 0 10px;
   position: relative;
   color: var(--cl-ink-muted);
@@ -603,7 +602,7 @@
   padding: 40px;
   text-align: center;
   color: var(--cl-ink-muted);
-  background: #FAFAFA;
+  background: var(--cl-bg);
   min-height: 100vh;
 }
 
@@ -633,13 +632,11 @@
 }
 
 .cl-auth-field input {
-  height: 46px;
+  height: 44px;
   padding: 0 16px;
-  background: #fff;
-  border: 1px solid rgba(10, 31, 68, 0.12);
-  /* Pill inputs match the button shape so the whole form reads
-     as one consistent pill-shaped vocabulary. */
-  border-radius: 999px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: 8px;
   font-family: inherit;
   font-size: 14px;
   color: var(--cl-ink-primary);
@@ -648,8 +645,8 @@
 
 .cl-auth-field input:focus {
   outline: none;
-  border-color: var(--cl-navy);
-  box-shadow: 0 0 0 3px rgba(10, 31, 68, 0.08);
+  border-color: var(--cl-teal-500);
+  box-shadow: var(--cl-focus-ring);
 }
 
 .cl-auth-form .cl-auth-btn {
