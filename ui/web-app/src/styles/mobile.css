@@ -196,6 +196,22 @@
     left: 24px;
   }
 
+  .cl-auth-ribbon {
+    top: 120px;
+    right: -300px;
+    width: 520px;
+    height: 520px;
+    opacity: 0.42;
+  }
+
+  .cl-auth-orb {
+    top: 148px;
+    right: -250px;
+    width: 390px;
+    height: 390px;
+    opacity: 0.34;
+  }
+
   .cl-auth-card {
     padding: 28px 22px;
   }

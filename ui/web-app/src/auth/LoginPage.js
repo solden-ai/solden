@@ -116,7 +116,11 @@ export function LoginPage() {
   if (isLoading) return html`<div class="cl-auth-loading">Loading…</div>`;
 
   return html`
-    <main class="cl-auth-shell">
+    <main class="cl-auth-shell cl-auth-login-shell">
+      <div class="cl-auth-backdrop" aria-hidden="true">
+        <div class="cl-auth-ribbon"></div>
+        <div class="cl-auth-orb"></div>
+      </div>
       <div class="cl-auth-topbar">
         <${BrandMark} height=${30} tone="primary" />
       </div>
