@@ -24,13 +24,14 @@ function AuthParticleSphere() {
     const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const color = getComputedStyle(canvas).color;
     const accent = getComputedStyle(canvas).getPropertyValue('--cl-teal-500').trim() || color;
-    const particles = Array.from({ length: 1680 }, (_, index) => ({
+    const particleCount = 2280;
+    const particles = Array.from({ length: particleCount }, (_, index) => ({
       seed: index * 17.13,
-      latitude: Math.acos(2 * ((index + 0.5) / 1680) - 1) - Math.PI / 2,
+      latitude: Math.acos(2 * ((index + 0.5) / particleCount) - 1) - Math.PI / 2,
       longitude: index * 2.399963229728653,
       radiusJitter: 0.9 + ((index * 37) % 31) / 160,
     }));
-    const traces = Array.from({ length: 118 }, (_, index) => ({
+    const traces = Array.from({ length: 168 }, (_, index) => ({
       seed: index * 12.71,
       latitude: -0.92 + ((index * 47) % 184) / 100,
       phase: index * 0.39,
@@ -52,9 +53,9 @@ function AuthParticleSphere() {
       ctx.clearRect(0, 0, width, height);
 
       const narrow = width < 680;
-      const cx = narrow ? width * 0.96 : width * 0.72;
-      const cy = narrow ? height * 0.36 : height * 0.47;
-      const radius = Math.min(width, height) * (narrow ? 0.45 : 0.36);
+      const cx = narrow ? width * 0.62 : width * 0.58;
+      const cy = narrow ? height * 0.4 : height * 0.5;
+      const radius = narrow ? Math.min(width * 0.9, height * 0.48) : Math.min(width * 0.47, height * 0.74);
       const spinY = t * 1.35;
       const spinX = -0.46 + Math.sin(t * 0.6) * 0.08;
       const cosX = Math.cos(spinX);
@@ -62,25 +63,26 @@ function AuthParticleSphere() {
       const cosY = Math.cos(spinY);
       const sinY = Math.sin(spinY);
 
-      ctx.globalAlpha = 0.032;
+      ctx.globalAlpha = narrow ? 0.02 : 0.026;
       ctx.fillStyle = accent;
       ctx.beginPath();
       ctx.arc(cx, cy, radius * 1.14, 0, Math.PI * 2);
       ctx.fill();
-      ctx.globalAlpha = 0.018;
+      ctx.globalAlpha = narrow ? 0.012 : 0.014;
       ctx.beginPath();
       ctx.arc(cx, cy, radius * 0.72, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
 
       traces.forEach((trace, index) => {
+        if (narrow && index % 2 === 1) return;
         const latitude = trace.latitude + Math.sin(t * 0.8 + trace.seed) * 0.08;
-        ctx.globalAlpha = 0.028 + (index % 5) * 0.006;
+        ctx.globalAlpha = 0.022 + (index % 5) * 0.005;
         ctx.strokeStyle = color;
-        ctx.lineWidth = 0.62;
+        ctx.lineWidth = narrow ? 0.5 : 0.58;
         ctx.beginPath();
 
-        for (let step = 0; step <= 42; step += 1) {
+        for (let step = 0; step <= 48; step += 1) {
           const longitude = trace.phase + spinY * (0.74 + (index % 7) * 0.025) + step * 0.16;
           const x0 = Math.cos(latitude) * Math.cos(longitude);
           const y0 = Math.sin(latitude + Math.sin(step * 0.55 + trace.seed) * 0.022 + trace.tilt * 0.04);
@@ -100,6 +102,7 @@ function AuthParticleSphere() {
       });
 
       particles.forEach((particle, index) => {
+        if (narrow && index % 2 === 1) return;
         const latitude = particle.latitude + Math.sin(t * 2.1 + particle.seed) * 0.022;
         const longitude = particle.longitude + spinY + Math.sin(t + particle.seed) * 0.032;
         const sphereRadius = radius * particle.radiusJitter;
@@ -115,8 +118,8 @@ function AuthParticleSphere() {
         const projectedY = cy + y1 * sphereRadius * perspective * 0.96;
         const rim = Math.min(1, Math.sqrt(x1 * x1 + y1 * y1));
         const depth = (z2 + 1) / 2;
-        const size = 0.26 + rim * 0.78 + depth * 0.14;
-        const alpha = 0.14 + rim * 0.52 + depth * 0.14;
+        const size = (narrow ? 0.2 : 0.23) + rim * (narrow ? 0.62 : 0.72) + depth * 0.12;
+        const alpha = 0.11 + rim * 0.48 + depth * 0.12;
 
         if (index % 31 === 0) {
           const next = particles[(index + 17) % particles.length];
@@ -146,7 +149,7 @@ function AuthParticleSphere() {
         ctx.fill();
       });
 
-      ctx.globalAlpha = 0.22;
+      ctx.globalAlpha = 0.2;
       ctx.strokeStyle = color;
       ctx.lineWidth = 1.1;
       ctx.beginPath();
