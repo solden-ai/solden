@@ -13,12 +13,12 @@ import { STATE_LABELS, humanizeSnakeText } from '../../utils/formatters.js';
 
 const html = htm.bind(h);
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 20;
 
 const COMMON_EVENT_TYPES = [
   { value: '', label: 'All event types' },
   { value: 'state_transition', label: 'State changes' },
-  { value: 'invoice_approved,invoice_rejected', label: 'Approval decisions' },
+  { value: 'invoice_approved,invoice_rejected,approval_requested', label: 'Approval decisions' },
   { value: 'erp_post_completed,erp_post_failed', label: 'ERP posting' },
   { value: 'organization_renamed,organization_domain_changed,organization_integration_mode_changed', label: 'Workspace configuration' },
   { value: 'audit_search_viewed,audit_event_viewed,audit_retention_updated,audit_export_started,audit_export_downloaded', label: 'Audit administration' },
@@ -42,6 +42,7 @@ const EVENT_TYPE_LABELS = {
   invoice_approved: 'Invoice approved',
   invoice_rejected: 'Invoice rejected',
   invoice_auto_approved: 'Invoice auto-approved',
+  approval_requested: 'Approval requested',
   invoice_created: 'Invoice created',
   decision_made: 'Decision recorded',
   enrichment_complete: 'Data extracted',
@@ -76,6 +77,7 @@ const RECORD_TYPE_LABELS = {
 
 const ACTOR_TYPE_LABELS = {
   user: 'User',
+  human: 'User',
   system: 'System',
   agent: 'Agent',
   api: 'API',
@@ -158,6 +160,112 @@ function formatConfidence(value, digits = 0) {
   return typeof value === 'number' ? `${(value * 100).toFixed(digits)}%` : '';
 }
 
+function formatActorType(value) {
+  const token = normalizeToken(value);
+  return ACTOR_TYPE_LABELS[token] || formatToken(token || 'system');
+}
+
+function shortId(value, length = 18) {
+  const id = String(value || '').trim();
+  if (!id) return '';
+  return id.length > length ? `${id.slice(0, length)}…` : id;
+}
+
+function parseMaybeJson(value) {
+  if (!value) return {};
+  if (typeof value === 'object') return value;
+  try {
+    const parsed = JSON.parse(String(value));
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function getEventCategory(event) {
+  const eventType = normalizeToken(event?.event_type);
+  const boxType = normalizeToken(event?.box_type);
+  const verdict = normalizeToken(event?.governance_verdict);
+  const source = normalizeToken(event?.source);
+  if (eventType.startsWith('audit_') || boxType === 'workspace_audit' || boxType === 'audit_export') {
+    return { label: 'Access', cls: 'cl-audit-type-access' };
+  }
+  if (eventType.includes('blocked') || eventType.includes('failed') || eventType.includes('rejected') || verdict === 'blocked' || verdict === 'vetoed') {
+    return { label: 'Control', cls: 'cl-audit-type-control' };
+  }
+  if (eventType.includes('approval')) {
+    return { label: 'Approval', cls: 'cl-audit-type-approval' };
+  }
+  if (eventType.includes('erp') || source.includes('erp') || source.includes('netsuite') || source.includes('sage') || source.includes('sap')) {
+    return { label: 'ERP', cls: 'cl-audit-type-erp' };
+  }
+  if (eventType.includes('organization') || eventType.includes('config') || boxType === 'organization' || boxType === 'user') {
+    return { label: 'Admin', cls: 'cl-audit-type-admin' };
+  }
+  if (eventType.includes('plan') || eventType.includes('agent') || eventType.includes('memory')) {
+    return { label: 'Agent', cls: 'cl-audit-type-agent' };
+  }
+  return { label: 'Workflow', cls: 'cl-audit-type-workflow' };
+}
+
+function getEventSource(event) {
+  const payload = parseMaybeJson(event?.payload_json);
+  return formatSource(event?.source || payload.source || payload.surface || payload.channel || '');
+}
+
+function getEventContextLine(event) {
+  if (event?.decision_reason) return event.decision_reason;
+  const payload = parseMaybeJson(event?.payload_json);
+  if (payload.reason) return payload.reason;
+  if (payload.message) return payload.message;
+  if (payload.filters) return 'Search filters recorded for audit access review.';
+  if (event?.prev_state || event?.new_state) {
+    return `${formatState(event.prev_state)} changed to ${formatState(event.new_state)}.`;
+  }
+  const source = getEventSource(event);
+  if (source) return `Recorded from ${source}.`;
+  return 'Immutable event recorded.';
+}
+
+function getOutcomeMeta(event) {
+  if (event?.governance_verdict) return formatVerdict(event.governance_verdict);
+  const eventType = normalizeToken(event?.event_type);
+  if (eventType.includes('failed') || eventType.includes('blocked') || eventType.includes('rejected')) {
+    return { label: 'Needs review', cls: 'cl-audit-verdict-blocked' };
+  }
+  if (eventType.includes('viewed') || eventType.includes('searched')) {
+    return { label: 'Viewed', cls: 'cl-audit-verdict-neutral' };
+  }
+  return { label: 'Recorded', cls: 'cl-audit-verdict-neutral' };
+}
+
+function eventHasIntegrityMeta(event) {
+  return Boolean(
+    event?.policy_version ||
+    event?.chain_seq ||
+    event?.hash ||
+    event?.hash_prefix ||
+    event?.prev_hash ||
+    typeof event?.agent_confidence === 'number'
+  );
+}
+
+function auditStats(events) {
+  const rows = Array.isArray(events) ? events : [];
+  let controlEvents = 0;
+  let accessEvents = 0;
+  let workflowEvents = 0;
+  let sourceCount = 0;
+  for (const event of rows) {
+    const category = getEventCategory(event).label;
+    if (category === 'Control') controlEvents += 1;
+    if (category === 'Access') accessEvents += 1;
+    if (['Workflow', 'Approval', 'ERP', 'Agent'].includes(category)) workflowEvents += 1;
+    if (getEventSource(event)) sourceCount += 1;
+  }
+  return { shown: rows.length, controlEvents, accessEvents, workflowEvents, sourceCount };
+}
+
 function eventAriaLabel(event) {
   const eventLabel = formatAuditEventType(event?.event_type);
   const recordType = formatRecordType(event?.box_type);
@@ -182,88 +290,98 @@ function FilterBar({ filters, setFilters, onApply, onReset, onExport, exportStat
   const exportBusy = exportState && (exportState.status === 'queued' || exportState.status === 'running');
 
   return html`
-    <div class="cl-audit-filters">
-      <label class="cl-audit-filter-field">
-        <span>From</span>
-        <input
-          type="datetime-local"
-          value=${filters.from_ts}
-          onChange=${(e) => setField('from_ts', e.target.value)}
-          disabled=${busy} />
-      </label>
-      <label class="cl-audit-filter-field">
-        <span>To</span>
-        <input
-          type="datetime-local"
-          value=${filters.to_ts}
-          onChange=${(e) => setField('to_ts', e.target.value)}
-          disabled=${busy} />
-      </label>
-      <label class="cl-audit-filter-field">
-        <span>Event type</span>
-        <select
-          value=${filters.event_type_preset}
-          onChange=${(e) => setField('event_type_preset', e.target.value)}
-          disabled=${busy}>
-          ${COMMON_EVENT_TYPES.map((opt) => html`
-            <option value=${opt.value}>${opt.label}</option>
-          `)}
-        </select>
-      </label>
-      <label class="cl-audit-filter-field">
-        <span>Record type</span>
-        <select
-          value=${filters.box_type}
-          onChange=${(e) => setField('box_type', e.target.value)}
-          disabled=${busy}>
-          ${COMMON_RECORD_TYPES.map((opt) => html`
-            <option value=${opt.value}>${opt.label}</option>
-          `)}
-        </select>
-      </label>
-      <label class="cl-audit-filter-field">
-        <span>Actor</span>
-        <input
-          type="text"
-          placeholder="email, user ID, or system"
-          value=${filters.actor_id}
-          onInput=${(e) => setField('actor_id', e.target.value)}
-          disabled=${busy} />
-      </label>
-      <label class="cl-audit-filter-field">
-        <span>Record ID</span>
-        <input
-          type="text"
-          placeholder="ap-12345"
-          value=${filters.box_id}
-          onInput=${(e) => setField('box_id', e.target.value)}
-          disabled=${busy} />
-      </label>
-      <div class="cl-audit-filter-actions">
-        <button class="btn btn-sm btn-primary" onClick=${onApply} disabled=${busy}>
-          ${busy ? 'Searching…' : 'Search'}
-        </button>
-        <button
-          class=${`btn btn-sm ${exportState?.status === 'failed' ? 'btn-danger' : 'btn-secondary'}`}
-          onClick=${() => onExport('csv')}
-          disabled=${busy || exportBusy}
-          title=${exportState?.status === 'failed' && exportState?.error_message
-            ? exportState.error_message
-            : 'Download the current filter set as CSV'}>
-          ${(exportState?.export_format || exportState?.format || 'csv') === 'csv' ? exportLabel : 'Export CSV'}
-        </button>
-        <button
-          class="btn btn-sm btn-secondary"
-          onClick=${() => onExport('pdf')}
-          disabled=${busy || exportBusy}
-          title="Download the current filter set as PDF (capped at 5K rows; CSV is unbounded)">
-          ${(exportState?.export_format || exportState?.format) === 'pdf' ? exportLabel : 'Export PDF'}
-        </button>
-        <button class="btn btn-sm btn-tertiary" onClick=${onReset} disabled=${busy}>
-          Reset
-        </button>
+    <section class="cl-audit-query-card" aria-label="Audit query">
+      <div class="cl-audit-query-head">
+        <div>
+          <h2>Search the trail</h2>
+          <p>Newest events first. Filters and exports are logged back into the same tamper-evident chain.</p>
+        </div>
+        <div class="cl-audit-export-actions">
+          <button
+            class=${`btn btn-sm ${exportState?.status === 'failed' ? 'btn-danger' : 'btn-secondary'}`}
+            onClick=${() => onExport('csv')}
+            disabled=${busy || exportBusy}
+            title=${exportState?.status === 'failed' && exportState?.error_message
+              ? exportState.error_message
+              : 'Download the current filter set as CSV'}>
+            ${(exportState?.export_format || exportState?.format || 'csv') === 'csv' ? exportLabel : 'Export CSV'}
+          </button>
+          <button
+            class="btn btn-sm btn-secondary"
+            onClick=${() => onExport('pdf')}
+            disabled=${busy || exportBusy}
+            title="Download the current filter set as PDF (capped at 5K rows; CSV is unbounded)">
+            ${(exportState?.export_format || exportState?.format) === 'pdf' ? exportLabel : 'Export PDF'}
+          </button>
+          <button class="btn btn-sm btn-tertiary" onClick=${onReset} disabled=${busy}>
+            Reset
+          </button>
+        </div>
       </div>
-    </div>`;
+      <div class="cl-audit-filters">
+        <label class="cl-audit-filter-field">
+          <span>From</span>
+          <input
+            type="datetime-local"
+            value=${filters.from_ts}
+            onChange=${(e) => setField('from_ts', e.target.value)}
+            disabled=${busy} />
+        </label>
+        <label class="cl-audit-filter-field">
+          <span>To</span>
+          <input
+            type="datetime-local"
+            value=${filters.to_ts}
+            onChange=${(e) => setField('to_ts', e.target.value)}
+            disabled=${busy} />
+        </label>
+        <label class="cl-audit-filter-field">
+          <span>Event type</span>
+          <select
+            value=${filters.event_type_preset}
+            onChange=${(e) => setField('event_type_preset', e.target.value)}
+            disabled=${busy}>
+            ${COMMON_EVENT_TYPES.map((opt) => html`
+              <option value=${opt.value}>${opt.label}</option>
+            `)}
+          </select>
+        </label>
+        <label class="cl-audit-filter-field">
+          <span>Record type</span>
+          <select
+            value=${filters.box_type}
+            onChange=${(e) => setField('box_type', e.target.value)}
+            disabled=${busy}>
+            ${COMMON_RECORD_TYPES.map((opt) => html`
+              <option value=${opt.value}>${opt.label}</option>
+            `)}
+          </select>
+        </label>
+        <label class="cl-audit-filter-field">
+          <span>Actor</span>
+          <input
+            type="text"
+            placeholder="email, user ID, or system"
+            value=${filters.actor_id}
+            onInput=${(e) => setField('actor_id', e.target.value)}
+            disabled=${busy} />
+        </label>
+        <label class="cl-audit-filter-field">
+          <span>Record ID</span>
+          <input
+            type="text"
+            placeholder="ap-12345"
+            value=${filters.box_id}
+            onInput=${(e) => setField('box_id', e.target.value)}
+            disabled=${busy} />
+        </label>
+        <div class="cl-audit-filter-actions">
+          <button class="btn btn-sm btn-primary" onClick=${onApply} disabled=${busy}>
+            ${busy ? 'Searching…' : 'Search'}
+          </button>
+        </div>
+      </div>
+    </section>`;
 }
 
 
@@ -271,9 +389,12 @@ function EventRow({ event, isActive, onSelect }) {
   const ts = fmtDateTime(event.ts);
   const summary = formatAuditEventType(event.event_type);
   const actor = formatActor(event.actor_id, event.actor_type);
-  const verdict = event.governance_verdict;
-  const verdictMeta = verdict ? formatVerdict(verdict) : null;
+  const outcomeMeta = getOutcomeMeta(event);
   const confidence = event.agent_confidence;
+  const category = getEventCategory(event);
+  const source = getEventSource(event);
+  const contextLine = getEventContextLine(event);
+  const hasIntegrity = eventHasIntegrityMeta(event);
   const select = () => onSelect(event);
   const onKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -290,18 +411,13 @@ function EventRow({ event, isActive, onSelect }) {
       tabIndex="0"
       aria-label=${eventAriaLabel(event)}>
       <td class="cl-audit-cell-ts">${ts}</td>
+      <td class="cl-audit-cell-type">
+        <span class=${`cl-audit-type-pill ${category.cls}`}>${category.label}</span>
+        ${source ? html`<span class="cl-audit-source">${source}</span>` : null}
+      </td>
       <td class="cl-audit-cell-event">
         <span class="cl-audit-event-name">${summary}</span>
-        ${verdictMeta?.label
-          ? html`<span class=${`cl-audit-chip ${verdictMeta.cls}`}>${verdictMeta.label}</span>`
-          : null}
-      </td>
-      <td class="cl-audit-cell-actor">${actor}</td>
-      <td class="cl-audit-cell-box">
-        <span class="cl-audit-box-type">${formatRecordType(event.box_type)}</span>
-        <span class="cl-audit-box-id">${event.box_id || ''}</span>
-      </td>
-      <td class="cl-audit-cell-state">
+        <span class="cl-audit-event-context">${contextLine}</span>
         ${event.prev_state || event.new_state
           ? html`<span class="cl-audit-state-pair">
               <span>${formatState(event.prev_state)}</span>
@@ -310,10 +426,22 @@ function EventRow({ event, isActive, onSelect }) {
             </span>`
           : null}
       </td>
-      <td class="cl-audit-cell-confidence">
+      <td class="cl-audit-cell-actor">
+        <span>${actor}</span>
+        <small>${formatActorType(event.actor_type)}</small>
+      </td>
+      <td class="cl-audit-cell-box">
+        <span class="cl-audit-box-type">${formatRecordType(event.box_type)}</span>
+        <span class="cl-audit-box-id">${shortId(event.box_id, 28) || '—'}</span>
+      </td>
+      <td class="cl-audit-cell-integrity">
+        <span class=${`cl-audit-chip ${outcomeMeta.cls}`}>${outcomeMeta.label}</span>
         ${typeof confidence === 'number'
           ? html`<span class="cl-audit-confidence">${formatConfidence(confidence)}</span>`
           : null}
+        ${event.policy_version ? html`<span class="cl-audit-integrity-token">Policy ${event.policy_version}</span>` : null}
+        ${event.chain_seq ? html`<span class="cl-audit-integrity-token">Seq ${event.chain_seq}</span>` : null}
+        ${!hasIntegrity ? html`<span class="cl-audit-integrity-muted">Trace stored</span>` : null}
       </td>
     </tr>`;
 }
@@ -351,21 +479,45 @@ function DetailPanel({ event, onClose, api, orgId }) {
   const externalRefsJson = externalRefs
     ? (typeof externalRefs === 'string' ? externalRefs : JSON.stringify(externalRefs, null, 2))
     : null;
+  const category = getEventCategory(full || {});
+  const outcomeMeta = getOutcomeMeta(full || {});
+  const source = getEventSource(full || {});
+  const contextLine = getEventContextLine(full || {});
 
   return html`
     <aside class="cl-audit-detail">
       <div class="cl-audit-detail-head">
-        <h3>${formatAuditEventType(full?.event_type)}</h3>
+        <div>
+          <span class=${`cl-audit-type-pill ${category.cls}`}>${category.label}</span>
+          <h3>${formatAuditEventType(full?.event_type)}</h3>
+        </div>
         <button class="btn btn-sm btn-tertiary" onClick=${onClose} aria-label="Close detail">Close</button>
       </div>
       ${err ? html`<${ErrorRetry} message=${err} onRetry=${loadDetail} />` : null}
       ${loading ? html`<${LoadingSkeleton} rows=${4} />` : null}
       ${!loading && !err ? html`
+        <section class="cl-audit-detail-summary" aria-label="Audit event context">
+          <div>
+            <span>Outcome</span>
+            <strong><span class=${`cl-audit-chip ${outcomeMeta.cls}`}>${outcomeMeta.label}</span></strong>
+          </div>
+          <div>
+            <span>Context</span>
+            <p>${contextLine}</p>
+          </div>
+          ${source ? html`
+            <div>
+              <span>Surface</span>
+              <strong>${source}</strong>
+            </div>
+          ` : null}
+        </section>
         <dl class="cl-audit-detail-grid">
           <dt>Event ID</dt><dd><code>${full?.id}</code></dd>
           <dt>Timestamp</dt><dd>${fmtDateTime(full?.ts)}</dd>
           <dt>Record</dt><dd>${formatRecordType(full?.box_type)} <code>${full?.box_id || '—'}</code></dd>
           <dt>Actor</dt><dd>${formatActor(full?.actor_id, full?.actor_type)}</dd>
+          <dt>Actor type</dt><dd>${formatActorType(full?.actor_type)}</dd>
           ${full?.prev_state || full?.new_state ? html`
             <dt>State</dt>
             <dd>${formatState(full.prev_state)} → ${formatState(full.new_state)}</dd>
@@ -391,10 +543,25 @@ function DetailPanel({ event, onClose, api, orgId }) {
           ${full?.source ? html`
             <dt>Source</dt><dd>${formatSource(full.source)}</dd>
           ` : null}
+          ${full?.policy_version ? html`
+            <dt>Policy version</dt><dd>${full.policy_version}</dd>
+          ` : null}
+          ${full?.capability_id ? html`
+            <dt>Capability</dt><dd><code>${full.capability_id}</code></dd>
+          ` : null}
+          ${full?.chain_seq ? html`
+            <dt>Chain seq</dt><dd>${full.chain_seq}</dd>
+          ` : null}
+          ${full?.hash || full?.hash_prefix ? html`
+            <dt>Hash</dt><dd><code>${full.hash || `${full.hash_prefix}…`}</code></dd>
+          ` : null}
+          ${full?.prev_hash ? html`
+            <dt>Previous hash</dt><dd><code>${full.prev_hash}</code></dd>
+          ` : null}
         </dl>
         ${payload && Object.keys(payload).length > 0 ? html`
-          <details class="cl-audit-detail-payload" open>
-            <summary>Payload</summary>
+          <details class="cl-audit-detail-payload">
+            <summary>Payload and before/after data</summary>
             <pre><code>${payloadJson}</code></pre>
           </details>
         ` : null}
@@ -953,6 +1120,72 @@ function ChainStatusBadge({ status, loading, onRefresh }) {
   `;
 }
 
+function AuditHero({ events, pageIndex, chainStatus, chainLoading, refreshChainStatus, retention, onChangeRetention }) {
+  const stats = auditStats(events);
+  const retentionLabel = retention
+    ? `${retention.effective_days} days`
+    : 'Loading';
+  const chainLabel = chainStatus?.chain_intact === false
+    ? 'Broken'
+    : (chainStatus?.chain_intact === true ? 'Intact' : 'Checking');
+
+  return html`
+    <section class="cl-audit-hero">
+      <div class="cl-audit-hero-main">
+        <div class="cl-audit-hero-copy">
+          <span class="cl-audit-eyebrow">Governance trail</span>
+          <h1>Audit log</h1>
+          <p>
+            Immutable record of workflow actions, policy decisions, exports, configuration changes,
+            and the evidence trail behind work in progress.
+          </p>
+        </div>
+        <div class="cl-audit-hero-actions">
+          <${ChainStatusBadge}
+            status=${chainStatus}
+            loading=${chainLoading}
+            onRefresh=${refreshChainStatus} />
+          ${retention ? html`
+            <span class="cl-audit-retention">
+              <span>Retention</span>
+              <strong>${retentionLabel}</strong>
+              <span class="muted">(plan ceiling ${retention.tier_ceiling_days})</span>
+            </span>
+            <button class="btn-secondary btn-sm" onClick=${onChangeRetention}>Configure</button>
+          ` : null}
+        </div>
+      </div>
+      <div class="cl-audit-status-strip" aria-label="Current audit page summary">
+        <div>
+          <span>Shown</span>
+          <strong>${stats.shown}</strong>
+          <small>page ${pageIndex + 1}</small>
+        </div>
+        <div>
+          <span>Work events</span>
+          <strong>${stats.workflowEvents}</strong>
+          <small>workflow, agent, ERP</small>
+        </div>
+        <div>
+          <span>Control events</span>
+          <strong>${stats.controlEvents}</strong>
+          <small>blocked or failed</small>
+        </div>
+        <div>
+          <span>Access events</span>
+          <strong>${stats.accessEvents}</strong>
+          <small>audit surface use</small>
+        </div>
+        <div>
+          <span>Chain</span>
+          <strong>${chainLabel}</strong>
+          <small>${chainStatus?.chain_length ? `${chainStatus.chain_length} events` : 'tamper evidence'}</small>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
 
 export default function AuditLogPage({ api, orgId, bootstrap }) {
   const [filters, setFilters] = useState({
@@ -1197,28 +1430,14 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
 
   return html`
     <div class="cl-audit-page">
-      <div class="secondary-banner">
-        <div class="secondary-banner-copy">
-          <h3>Audit log</h3>
-          <p class="muted">
-            Tamper-evident record of workflow actions, policy decisions, exports, and configuration changes.
-          </p>
-        </div>
-        <div class="secondary-banner-actions">
-          <${ChainStatusBadge}
-            status=${chainStatus}
-            loading=${chainLoading}
-            onRefresh=${refreshChainStatus} />
-          ${retention ? html`
-            <span class="cl-audit-retention">
-              <span>Retention</span>
-              <strong>${retention.effective_days} days</strong>
-              <span class="muted">(plan ceiling ${retention.tier_ceiling_days})</span>
-            </span>
-            <button class="btn-secondary btn-sm" onClick=${onChangeRetention}>Configure</button>
-          ` : null}
-        </div>
-      </div>
+      <${AuditHero}
+        events=${events}
+        pageIndex=${pageIndex}
+        chainStatus=${chainStatus}
+        chainLoading=${chainLoading}
+        refreshChainStatus=${refreshChainStatus}
+        retention=${retention}
+        onChangeRetention=${onChangeRetention} />
 
       <${SiemSection} api=${api} orgId=${orgId} />
 
@@ -1245,11 +1464,11 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
               <thead>
                 <tr>
                   <th>When</th>
+                  <th>Type</th>
                   <th>Event</th>
                   <th>Actor</th>
-                  <th>Box</th>
-                  <th>State</th>
-                  <th>Confidence</th>
+                  <th>Record</th>
+                  <th>Integrity</th>
                 </tr>
               </thead>
               <tbody>
@@ -1264,7 +1483,9 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
             </table>
             <div class="cl-audit-mobile-list">
               ${events.map((event) => {
-                const verdictMeta = event.governance_verdict ? formatVerdict(event.governance_verdict) : null;
+                const outcomeMeta = getOutcomeMeta(event);
+                const category = getEventCategory(event);
+                const source = getEventSource(event);
                 return html`
                   <button
                     type="button"
@@ -1276,10 +1497,15 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
                         <strong>${formatAuditEventType(event.event_type)}</strong>
                         <small>${fmtDateTime(event.ts)}</small>
                       </span>
-                      ${verdictMeta?.label
-                        ? html`<span class=${`cl-audit-chip ${verdictMeta.cls}`}>${verdictMeta.label}</span>`
-                        : null}
+                      <span class=${`cl-audit-type-pill ${category.cls}`}>${category.label}</span>
                     </span>
+                    <span class="cl-audit-mobile-context">${getEventContextLine(event)}</span>
+                    ${source ? html`
+                      <span class="cl-audit-mobile-card-row">
+                        <span>Surface</span>
+                        <strong>${source}</strong>
+                      </span>
+                    ` : null}
                     <span class="cl-audit-mobile-card-row">
                       <span>Record</span>
                       <strong>${formatRecordType(event.box_type)} ${event.box_id || ''}</strong>
@@ -1300,6 +1526,10 @@ export default function AuditLogPage({ api, orgId, bootstrap }) {
                         <strong>${formatConfidence(event.agent_confidence)}</strong>
                       </span>
                     ` : null}
+                    <span class="cl-audit-mobile-card-row">
+                      <span>Outcome</span>
+                      <strong><span class=${`cl-audit-chip ${outcomeMeta.cls}`}>${outcomeMeta.label}</span></strong>
+                    </span>
                   </button>`;
               })}
             </div>

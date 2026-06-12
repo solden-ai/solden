@@ -72,7 +72,7 @@ describe('AuditLogPage', () => {
   it('renders audit records with operator-readable labels instead of raw backend tokens', async () => {
     const { container } = renderAuditPage();
 
-    await screen.findByText('Tamper-evident record of workflow actions, policy decisions, exports, and configuration changes.');
+    await screen.findByText(/Immutable record of workflow actions/);
     expect((await screen.findAllByText('State change')).length).toBeGreaterThan(0);
     expect(screen.getAllByText('Accounts Payable').length).toBeGreaterThan(0);
     expect(screen.getByText('Needs info')).toBeTruthy();
@@ -101,8 +101,10 @@ describe('AuditLogPage', () => {
     await screen.findByText('detail unavailable');
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
 
-    await screen.findByText('Vendor confirmed the invoice.');
-    expect(screen.getByText('NetSuite panel')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getAllByText('Vendor confirmed the invoice.').length).toBeGreaterThan(0);
+    });
+    expect(screen.getAllByText('NetSuite panel').length).toBeGreaterThan(0);
     expect(api.mock.calls.filter(([path]) => String(path).startsWith('/api/workspace/audit/event/evt-1')).length).toBe(2);
   });
 
@@ -154,7 +156,7 @@ describe('AuditLogPage', () => {
       expect(screen.getAllByText('AP-100').length).toBeGreaterThan(0);
     });
     expect(screen.queryAllByText('AP-200')).toHaveLength(0);
-    expect(screen.getByText('Page 1 · 1 event shown · 50 per page')).toBeTruthy();
+    expect(screen.getByText('Page 1 · 1 event shown · 20 per page')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
 
@@ -162,7 +164,7 @@ describe('AuditLogPage', () => {
       expect(screen.getAllByText('AP-200').length).toBeGreaterThan(0);
     });
     expect(screen.queryAllByText('AP-100')).toHaveLength(0);
-    expect(screen.getByText('Page 2 · 1 event shown · 50 per page')).toBeTruthy();
+    expect(screen.getByText('Page 2 · 1 event shown · 20 per page')).toBeTruthy();
     expect(searchHandler.mock.calls.some(([route]) => String(route).includes('cursor=cursor-page-2'))).toBe(true);
 
     fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
@@ -171,7 +173,7 @@ describe('AuditLogPage', () => {
       expect(screen.getAllByText('AP-100').length).toBeGreaterThan(0);
     });
     expect(screen.queryAllByText('AP-200')).toHaveLength(0);
-    expect(screen.getByText('Page 1 · 1 event shown · 50 per page')).toBeTruthy();
+    expect(screen.getByText('Page 1 · 1 event shown · 20 per page')).toBeTruthy();
   });
 
   it('submits export filters against the same audit query fields', async () => {

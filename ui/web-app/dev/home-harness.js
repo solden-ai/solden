@@ -480,6 +480,86 @@ const activityItems = [
   { id: 'act-5', box_type: 'ap_item', box_id: 'AP-1006', action: 'Slack approval card delivered', subject: 'Acme Coffee Supplies - ACM-2119', actor_label: 'Solden agent', surface: 'Slack', tone: 'info', ts: isoAgo(91) },
 ];
 
+const auditEvents = [
+  {
+    id: 'evt-audit-1',
+    ts: isoAgo(8),
+    event_type: 'state_transition',
+    actor_id: 'agent_runtime',
+    actor_type: 'system',
+    box_type: 'ap_item',
+    box_id: 'AP-1004',
+    prev_state: 'received',
+    new_state: 'needs_info',
+    governance_verdict: 'observed',
+    agent_confidence: 0.86,
+    decision_reason: 'Field confidence below threshold; operator review required.',
+    source: 'gmail',
+    policy_version: 'ap-policy-2026.06',
+    capability: 'field_review',
+    chain_seq: 39,
+    hash: 'hash_evt_audit_1',
+    prev_hash: 'hash_evt_audit_0',
+    payload_json: {
+      work_item: 'AP-1004',
+      blocker: 'Amount confidence below threshold',
+      evidence_ref: 'gmail:thread:gcp-5527387118',
+      next_action: 'Operator review required before ERP follow-up',
+    },
+  },
+  {
+    id: 'evt-audit-2',
+    ts: isoAgo(18),
+    event_type: 'approval_requested',
+    actor_id: 'maya@soldenai.com',
+    actor_type: 'human',
+    box_type: 'ap_item',
+    box_id: 'AP-1006',
+    prev_state: 'validated',
+    new_state: 'pending_approval',
+    governance_verdict: 'allowed',
+    agent_confidence: 0.91,
+    decision_reason: 'Manager approval required by policy.',
+    source: 'slack',
+    policy_version: 'ap-policy-2026.06',
+    capability: 'approval_routing',
+    chain_seq: 40,
+    hash: 'hash_evt_audit_2',
+    prev_hash: 'hash_evt_audit_1',
+    payload_json: {
+      approver: 'maya@soldenai.com',
+      approval_surface: 'slack',
+      threshold: 'manager approval',
+    },
+  },
+  {
+    id: 'evt-audit-3',
+    ts: isoAgo(33),
+    event_type: 'erp_post_completed',
+    actor_id: 'agent_runtime',
+    actor_type: 'system',
+    box_type: 'ap_item',
+    box_id: 'AP-1005',
+    prev_state: 'validated',
+    new_state: 'posted_to_erp',
+    governance_verdict: 'allowed',
+    agent_confidence: 0.94,
+    decision_reason: 'Invoice passed validation and posted to Sage Intacct.',
+    source: 'sage_intacct',
+    policy_version: 'ap-policy-2026.06',
+    capability: 'erp_post',
+    chain_seq: 41,
+    hash: 'hash_evt_audit_3',
+    prev_hash: 'hash_evt_audit_2',
+    payload_json: {
+      erp: 'sage_intacct',
+      erp_record_id: 'SI-BILL-1005',
+      posted_amount: 6180,
+      currency: 'USD',
+    },
+  },
+];
+
 const responses = {
   '/auth/me': {
     email: 'mo@soldenai.com',
@@ -690,53 +770,7 @@ const responses = {
   '/api/workspace/audit/search': {
     count: 3,
     next_cursor: null,
-    events: [
-      {
-        id: 'evt-audit-1',
-        ts: isoAgo(8),
-        event_type: 'state_transition',
-        actor_id: 'agent_runtime',
-        actor_type: 'system',
-        box_type: 'ap_item',
-        box_id: 'AP-1004',
-        prev_state: 'received',
-        new_state: 'needs_info',
-        governance_verdict: 'observed',
-        agent_confidence: 0.86,
-        decision_reason: 'Field confidence below threshold; operator review required.',
-        source: 'gmail',
-      },
-      {
-        id: 'evt-audit-2',
-        ts: isoAgo(18),
-        event_type: 'approval_requested',
-        actor_id: 'maya@soldenai.com',
-        actor_type: 'human',
-        box_type: 'ap_item',
-        box_id: 'AP-1006',
-        prev_state: 'validated',
-        new_state: 'pending_approval',
-        governance_verdict: 'allowed',
-        agent_confidence: 0.91,
-        decision_reason: 'Manager approval required by policy.',
-        source: 'slack',
-      },
-      {
-        id: 'evt-audit-3',
-        ts: isoAgo(33),
-        event_type: 'erp_post_completed',
-        actor_id: 'agent_runtime',
-        actor_type: 'system',
-        box_type: 'ap_item',
-        box_id: 'AP-1005',
-        prev_state: 'validated',
-        new_state: 'posted_to_erp',
-        governance_verdict: 'allowed',
-        agent_confidence: 0.94,
-        decision_reason: 'Invoice passed validation and posted to Sage Intacct.',
-        source: 'sage_intacct',
-      },
-    ],
+    events: auditEvents,
   },
   '/health': { status: 'ok' },
 };
@@ -760,6 +794,13 @@ window.fetch = async (input) => {
         { id: 's2', summary: 'Booking approval route', link: { kind: 'record', ref: 'AP-1003' } },
       ],
     });
+  }
+  if (path.startsWith('/api/workspace/audit/event/')) {
+    const eventId = decodeURIComponent(path.split('/').pop() || '');
+    const event = auditEvents.find((item) => item.id === eventId);
+    return event
+      ? jsonResponse({ event })
+      : jsonResponse({ detail: `No dev harness audit event for ${eventId}` }, 404);
   }
   const direct = responses[path];
   if (direct) return jsonResponse(direct);
