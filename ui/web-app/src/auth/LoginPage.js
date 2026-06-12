@@ -348,11 +348,14 @@ export function LoginPage() {
           Don't have an account yet? <a href="https://soldenai.com/contact.html">Request a demo</a>.
           If your team admin sent you an invite link, open it directly.
         </p>
-        <p class="cl-auth-fineprint">
-          By continuing you agree to our <a href="/terms">Terms</a>${' '}
-          and <a href="/privacy">Privacy Policy</a>.
-        </p>
       </div>
+      <footer class="cl-auth-footer" aria-label="Legal">
+        <span>© 2026 Solden</span>
+        <nav class="cl-auth-legal-links" aria-label="Legal links">
+          <a href="/terms">Terms</a>
+          <a href="/privacy">Privacy Policy</a>
+        </nav>
+      </footer>
     </main>
   `;
 }

@@ -35,10 +35,15 @@ describe('LoginPage', () => {
     window.history.replaceState({}, '', '/login');
   });
 
-  it('renders legal fineprint with readable spacing', () => {
+  it('renders legal links in the page footer', () => {
     mountLogin();
-    expect(document.body.textContent).toContain('Terms and Privacy Policy');
-    expect(document.body.textContent).not.toContain('Termsand Privacy Policy');
+    const footer = document.querySelector('.cl-auth-footer');
+    const card = document.querySelector('.cl-auth-card');
+
+    expect(footer?.textContent).toContain('© 2026 Solden');
+    expect(footer?.querySelector('a[href="/terms"]')?.textContent).toBe('Terms');
+    expect(footer?.querySelector('a[href="/privacy"]')?.textContent).toBe('Privacy Policy');
+    expect(card?.textContent).not.toContain('By continuing');
   });
 
   it('surfaces OAuth callback errors and cleans the URL', async () => {

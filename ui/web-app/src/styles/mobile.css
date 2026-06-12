@@ -186,9 +186,12 @@
 
   /* Auth shell: keep the card centered but pad less. */
   .cl-auth-shell {
+    flex-direction: column;
     padding: 16px 12px;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: flex-start;
     padding-top: 88px;
+    padding-bottom: 22px;
   }
 
   .cl-auth-topbar {
@@ -202,6 +205,25 @@
 
   .cl-auth-card {
     padding: 28px 22px;
+  }
+
+  .cl-auth-footer {
+    left: 24px;
+    right: 24px;
+    bottom: 24px;
+    width: auto;
+  }
+
+  @media (max-height: 700px) {
+    .cl-auth-footer {
+      position: relative;
+      left: auto;
+      right: auto;
+      bottom: auto;
+      width: 100%;
+      margin-top: 22px;
+      padding: 0 10px;
+    }
   }
 
   /* Footer: stack into two rows, tighten gaps. */

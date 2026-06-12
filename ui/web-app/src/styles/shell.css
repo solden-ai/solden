@@ -547,6 +547,39 @@
   box-shadow: var(--cl-shadow-shell);
 }
 
+.cl-auth-footer {
+  position: absolute;
+  left: max(32px, calc((100vw - 960px) / 2));
+  right: max(32px, calc((100vw - 960px) / 2));
+  bottom: 28px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  color: var(--cl-ink-muted);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.cl-auth-legal-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cl-auth-footer a {
+  color: var(--cl-ink-secondary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cl-auth-footer a:hover {
+  color: var(--cl-navy);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .cl-auth-brand {
   display: flex;
   align-items: center;
