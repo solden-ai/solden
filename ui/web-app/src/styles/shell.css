@@ -512,106 +512,18 @@
 
 .cl-auth-backdrop::after {
   background:
-    radial-gradient(circle at 74% 43%, color-mix(in srgb, var(--cl-teal-soft) 72%, transparent) 0, transparent 340px),
+    radial-gradient(circle at 74% 43%, color-mix(in srgb, var(--cl-teal-soft) 36%, transparent) 0, transparent 320px),
     radial-gradient(circle at 61% 15%, color-mix(in srgb, var(--cl-surface) 86%, transparent) 0, transparent 280px);
-  opacity: 0.78;
+  opacity: 0.36;
 }
 
-.cl-auth-ribbon {
-  position: absolute;
-  top: 78px;
-  right: max(-260px, calc((100vw - 1120px) / 2 - 310px));
-  width: 820px;
-  height: 760px;
-  border-radius: 999px;
-  background:
-    radial-gradient(ellipse at 48% 50%, color-mix(in srgb, var(--cl-surface) 76%, transparent) 0 25%, transparent 47%),
-    conic-gradient(
-      from 236deg at 52% 50%,
-      transparent 0deg,
-      color-mix(in srgb, var(--cl-teal-500) 7%, transparent) 48deg,
-      color-mix(in srgb, var(--cl-teal-500) 20%, transparent) 78deg,
-      color-mix(in srgb, var(--cl-navy) 13%, transparent) 112deg,
-      transparent 154deg,
-      transparent 360deg
-    );
-  filter: blur(0.4px);
-  opacity: 0.7;
-  transform: rotate(-24deg);
-  animation: cl-auth-ribbon-drift 24s ease-in-out infinite alternate;
-}
-
-.cl-auth-orb {
-  position: absolute;
-  top: 92px;
-  right: max(-140px, calc((100vw - 1120px) / 2 - 185px));
-  width: 560px;
-  height: 560px;
-  border-radius: 50%;
-  opacity: 0.56;
-  transform: rotate(-12deg);
-  animation: cl-auth-orb-drift 20s ease-in-out infinite alternate;
-}
-
-.cl-auth-orb::before,
-.cl-auth-orb::after {
-  content: '';
+.cl-auth-particle-canvas {
   position: absolute;
   inset: 0;
-  border-radius: inherit;
-}
-
-.cl-auth-orb::before {
-  background:
-    radial-gradient(circle at 42% 35%, color-mix(in srgb, var(--cl-surface) 70%, transparent) 0 24%, transparent 34%),
-    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--cl-teal-500) 18%, transparent) 0 46%, transparent 66%),
-    radial-gradient(circle, color-mix(in srgb, var(--cl-navy) 24%, transparent) 0 0.85px, transparent 1px),
-    radial-gradient(circle, color-mix(in srgb, var(--cl-teal-500) 34%, transparent) 0 1px, transparent 1.2px);
-  background-size: 100% 100%, 100% 100%, 7px 7px, 13px 13px;
-  background-position: 0 0, 0 0, 0 0, 3px 5px;
-  box-shadow:
-    inset 0 0 88px color-mix(in srgb, var(--cl-surface) 76%, transparent),
-    0 42px 90px color-mix(in srgb, var(--cl-navy) 8%, transparent);
-  mask-image: radial-gradient(circle at 50% 50%, black 0 62%, transparent 76%);
-}
-
-.cl-auth-orb::after {
-  inset: 54px;
-  background:
-    conic-gradient(
-      from 118deg,
-      transparent 0deg,
-      color-mix(in srgb, var(--cl-navy) 15%, transparent) 42deg,
-      transparent 86deg,
-      color-mix(in srgb, var(--cl-teal-500) 18%, transparent) 164deg,
-      transparent 226deg,
-      color-mix(in srgb, var(--cl-navy) 10%, transparent) 292deg,
-      transparent 360deg
-    ),
-    repeating-conic-gradient(
-      from 12deg,
-      color-mix(in srgb, var(--cl-navy) 16%, transparent) 0deg 0.42deg,
-      transparent 0.42deg 2.6deg
-    );
-  mask-image: radial-gradient(circle at 50% 50%, transparent 0 42%, black 50% 66%, transparent 76%);
-  opacity: 0.78;
-}
-
-@keyframes cl-auth-ribbon-drift {
-  from { transform: translate3d(0, 0, 0) rotate(-24deg); }
-  to { transform: translate3d(-28px, 18px, 0) rotate(-20deg); }
-}
-
-@keyframes cl-auth-orb-drift {
-  from { transform: translate3d(0, 0, 0) rotate(-12deg) scale(1); }
-  to { transform: translate3d(-20px, 18px, 0) rotate(6deg) scale(1.025); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cl-auth-ribbon,
-  .cl-auth-orb {
-    animation: none;
-  }
+  width: 100%;
+  height: 100%;
+  color: color-mix(in srgb, var(--cl-navy) 86%, var(--cl-teal-500));
+  opacity: 0.96;
 }
 
 .cl-auth-topbar {
