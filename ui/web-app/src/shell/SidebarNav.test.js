@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { h } from 'preact';
-import { render, screen } from '@testing-library/preact';
+import { fireEvent, render, screen } from '@testing-library/preact';
 import { Router } from 'wouter-preact';
 import { SidebarNav } from './SidebarNav.js';
 
-function mount() {
-  return render(h(Router, {}, h(SidebarNav, {})));
+function mount(props = {}) {
+  return render(h(Router, {}, h(SidebarNav, props)));
 }
 
 describe('SidebarNav grouping', () => {
@@ -40,5 +40,22 @@ describe('SidebarNav grouping', () => {
     expect(screen.queryByText('API keys')).toBeNull();
     expect(screen.queryByText('Plan')).toBeNull();
     expect(screen.queryByText('Status')).toBeNull();
+  });
+
+  it('keeps collapsed rail links accessible with labels and titles', () => {
+    mount({ collapsed: true });
+
+    const home = screen.getByLabelText('Home');
+    expect(home.getAttribute('title')).toBe('Home');
+    expect(screen.getByLabelText('Expand sidebar')).toBeTruthy();
+    expect(document.querySelector('.cl-sidebar-brand-mark')).toBeTruthy();
+  });
+
+  it('calls the collapse toggle from the rail control', () => {
+    const onToggleCollapse = vi.fn();
+    mount({ onToggleCollapse });
+
+    fireEvent.click(screen.getByLabelText('Collapse sidebar'));
+    expect(onToggleCollapse).toHaveBeenCalledTimes(1);
   });
 });

@@ -22,24 +22,23 @@ import { WORKSPACE_NAV_GROUPS, getSidebarNavItems } from './workspaceNavigation.
  * operator chrome.
  */
 
-// Per-item line icons (Feather/Lucide grammar). Functions so each render gets
-// a fresh vnode; stroke is currentColor so icons inherit the link color +
-// active-state teal automatically.
+// Solden-specific rail icons. They keep the same 24px line grammar, but the
+// shapes map to the actual workspace surfaces instead of generic app chrome.
 const ICONS = {
-  home: () => html`<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path d="M9 22V12h6v10" />`,
-  activity: () => html`<path d="M22 12h-4l-3 9L9 3l-3 9H2" />`,
-  alert: () => html`<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" />`,
-  file: () => html`<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" /><path d="M14 2v5h5" /><path d="M16 13H8" /><path d="M16 17H8" />`,
-  cart: () => html`<circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2 2h2l2.6 12.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H5.1" />`,
-  workflow: () => html`<rect width="8" height="8" x="3" y="3" rx="2" /><path d="M7 11v4a2 2 0 0 0 2 2h4" /><rect width="8" height="8" x="13" y="13" rx="2" />`,
-  users: () => html`<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />`,
-  chart: () => html`<path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" />`,
-  shield: () => html`<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><path d="m9 12 2 2 4-4" />`,
-  sliders: () => html`<path d="M21 4h-7" /><path d="M10 4H3" /><path d="M21 12h-9" /><path d="M8 12H3" /><path d="M21 20h-5" /><path d="M12 20H3" /><path d="M14 2v4" /><path d="M8 10v4" /><path d="M16 18v4" />`,
-  link: () => html`<path d="M9 17H7A5 5 0 0 1 7 7h2" /><path d="M15 7h2a5 5 0 1 1 0 10h-2" /><line x1="8" x2="16" y1="12" y2="12" />`,
-  key: () => html`<circle cx="7.5" cy="15.5" r="5.5" /><path d="m21 2-9.6 9.6" /><path d="m15.5 7.5 3 3L22 7l-3-3" />`,
-  card: () => html`<rect width="20" height="14" x="2" y="5" rx="2" /><path d="M2 10h20" />`,
-  gear: () => html`<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" />`,
+  home: () => html`<rect x="3" y="5" width="18" height="14" rx="3" /><path d="M7 9h4" /><path d="M7 13h2.5" /><path d="M14 14.5h3" /><circle cx="16.5" cy="9.5" r="1.5" fill="currentColor" stroke="none" />`,
+  activity: () => html`<path d="M4 6.5h10" /><path d="M4 12h6" /><path d="M4 17.5h8" /><path d="M15 17.5c2.2 0 4-1.8 4-4 0-1.6-.9-3-2.3-3.6" /><path d="m16 6 3.5 3.5L16 13" />`,
+  alert: () => html`<path d="M12 3.5 20.5 12 12 20.5 3.5 12 12 3.5Z" /><path d="M12 8.5v4.2" /><circle cx="12" cy="16" r=".8" fill="currentColor" stroke="none" />`,
+  file: () => html`<path d="M7 3.5h7l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20V5a1.5 1.5 0 0 1 1.5-1.5Z" /><path d="M14 3.5V8h4" /><path d="M9 12h6" /><path d="M9 15.5h4" /><circle cx="16.5" cy="16" r="1.4" fill="currentColor" stroke="none" />`,
+  cart: () => html`<path d="M5 8h14l-1.1 10.1a2 2 0 0 1-2 1.8H8.1a2 2 0 0 1-2-1.8L5 8Z" /><path d="M8.5 8a3.5 3.5 0 0 1 7 0" /><path d="M9 13h6" /><path d="M9 16h4" />`,
+  workflow: () => html`<circle cx="6" cy="7" r="2.5" /><circle cx="18" cy="7" r="2.5" /><circle cx="12" cy="18" r="2.5" /><path d="M8.4 8.3 11 11a3 3 0 0 1 .9 2.1v2.4" /><path d="M15.6 8.3 13 11a3 3 0 0 0-.9 2.1v2.4" />`,
+  users: () => html`<path d="M4 10.5 12 5l8 5.5" /><path d="M6 10v9h12v-9" /><path d="M9 19v-5h6v5" /><path d="M8.5 12h1" /><path d="M14.5 12h1" />`,
+  chart: () => html`<path d="M4 20V5" /><path d="M4 20h16" /><rect x="7" y="12" width="2.5" height="5" rx=".6" /><rect x="11" y="8" width="2.5" height="9" rx=".6" /><rect x="15" y="10" width="2.5" height="7" rx=".6" /><path d="m7.5 8.5 4-3 3 2 4-4" />`,
+  shield: () => html`<path d="M12 3.2c1.9 1.5 4.2 2.4 6.5 2.6v5.5c0 4.5-2.6 7.6-6.5 9.5-3.9-1.9-6.5-5-6.5-9.5V5.8c2.3-.2 4.6-1.1 6.5-2.6Z" /><path d="M9 12.3 11.1 14.5 15.5 10" />`,
+  sliders: () => html`<path d="M4 6h5" /><path d="M15 6h5" /><circle cx="12" cy="6" r="2" /><path d="M4 12h9" /><path d="M19 12h1" /><circle cx="16" cy="12" r="2" /><path d="M4 18h2" /><path d="M12 18h8" /><circle cx="9" cy="18" r="2" />`,
+  link: () => html`<path d="M7.5 8.5 5.7 6.7a3.3 3.3 0 0 1 4.6-4.7l2.4 2.4" /><path d="M16.5 15.5l1.8 1.8a3.3 3.3 0 0 1-4.6 4.7l-2.4-2.4" /><path d="m8.8 15.2 6.4-6.4" /><path d="M9.3 5.7 18.3 14.7" /><path d="M5.7 9.3 14.7 18.3" />`,
+  key: () => html`<circle cx="8" cy="15" r="4.5" /><path d="m11.5 11.5 8-8" /><path d="M17 6h3v3" /><path d="M14.5 8.5 17 11" />`,
+  card: () => html`<rect x="3" y="5.5" width="18" height="13" rx="2.5" /><path d="M3 10h18" /><path d="M7 14.5h4" /><path d="M15 14.5h2" />`,
+  gear: () => html`<path d="M12 3.5v3" /><path d="M12 17.5v3" /><path d="M4.6 7.8 7.2 9.3" /><path d="m16.8 14.7 2.6 1.5" /><path d="m4.6 16.2 2.6-1.5" /><path d="m16.8 9.3 2.6-1.5" /><circle cx="12" cy="12" r="4.2" /><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none" />`,
 };
 
 function safeCount(value) {
@@ -56,6 +55,13 @@ function formatBadge(value) {
 function badgeForItem(item, badges) {
   if (!item.badge) return '';
   return formatBadge(badges[item.badge]);
+}
+
+function collapsedLabelForItem(item, badge, badges) {
+  const details = [];
+  if (badge) details.push(`${badge} open`);
+  if (item.indicator === 'activity' && badges.activityLive) details.push('live');
+  return details.length ? `${item.label}: ${details.join(', ')}` : item.label;
 }
 
 function useSidebarBadges(bootstrap, orgId) {
@@ -113,7 +119,7 @@ function useSidebarBadges(bootstrap, orgId) {
   };
 }
 
-export function SidebarNav() {
+export function SidebarNav({ collapsed = false, onToggleCollapse = () => {} } = {}) {
   const [pathname] = useLocation();
   const bootstrap = useBootstrap();
   const orgId = useOrgId();
@@ -124,7 +130,26 @@ export function SidebarNav() {
   return html`
     <nav class="cl-sidebar-nav" aria-label="Primary">
       <div class="cl-sidebar-brand">
-        <${BrandMark} height=${32} tone="primary" />
+        <div class="cl-sidebar-brand-lockup">
+          <img class="cl-sidebar-brand-mark" src="/favicon.png" alt="" aria-hidden="true" />
+          <span class="cl-sidebar-brand-full">
+            <${BrandMark} height=${32} tone="primary" />
+          </span>
+        </div>
+        <button
+          class="cl-sidebar-collapse-toggle"
+          type="button"
+          onClick=${onToggleCollapse}
+          aria-label=${collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded=${collapsed ? 'false' : 'true'}
+          title=${collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            ${collapsed
+              ? html`<path d="m9 6 6 6-6 6" />`
+              : html`<path d="m15 6-6 6 6 6" />`}
+          </svg>
+        </button>
       </div>
       ${WORKSPACE_NAV_GROUPS.map(
         (group) => html`
@@ -139,10 +164,15 @@ export function SidebarNav() {
                     ? pathname === '/'
                     : pathname === item.path || pathname.startsWith(`${item.path}/`);
                 const badge = badgeForItem(item, badges);
+                const collapsedLabel = collapsed
+                  ? collapsedLabelForItem(item, badge, badges)
+                  : undefined;
                 return html`
                   <li key=${item.path}>
                     <${Link} href=${item.path}
-                      class=${`cl-sidebar-link ${active ? 'is-active' : ''}`}>
+                      class=${`cl-sidebar-link ${active ? 'is-active' : ''}`}
+                      aria-label=${collapsedLabel}
+                      title=${collapsedLabel}>
                       <svg class="cl-sidebar-icon" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="1.75"
                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
