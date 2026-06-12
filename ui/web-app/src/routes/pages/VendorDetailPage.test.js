@@ -159,4 +159,46 @@ describe('VendorDetailPage', () => {
       expect(container.textContent).not.toContain('po_missing_reference');
     });
   });
+
+  it('does not render a vendor master card when currency is the only available master field', async () => {
+    const api = vi.fn(async (path) => {
+      if (String(path).startsWith('/api/ap/items/vendors/Sparse%20Vendor')) {
+        return {
+          vendor_name: 'Sparse Vendor',
+          profile: { status: 'active' },
+          summary: {
+            invoice_count: 2,
+            open_count: 2,
+            issue_count: 2,
+            currency: 'EUR',
+            primary_email: 'billing@sparse.example',
+          },
+          issue_summary: { total: 2, field_review: 2 },
+          top_exception_codes: [{ exception_code: 'critical_field_low_confidence', count: 2 }],
+          recent_items: [{
+            id: 'AP-SPARSE-1',
+            invoice_number: 'SP-1',
+            amount: 10,
+            currency: 'EUR',
+            state: 'received',
+            exception_code: 'critical_field_low_confidence',
+            updated_at: '2026-06-03T12:00:00Z',
+          }],
+        };
+      }
+      return {};
+    });
+
+    render(h(VendorDetailPage, {
+      api,
+      orgId: 'org-test',
+      vendorName: 'Sparse Vendor',
+      navigate: () => {},
+      toast: () => {},
+    }));
+
+    await screen.findByText('Sparse Vendor');
+    expect(screen.queryByText('Vendor master')).toBeNull();
+    expect(screen.queryByText('ERP and profile fields')).toBeNull();
+  });
 });

@@ -596,19 +596,24 @@ function VendorMasterPanel({ erp, profile, summary, invoices }) {
   const senderDomains = joinLimited(profile.sender_domains);
   const aliases = joinLimited(profile.vendor_aliases);
   const currency = getVendorCurrency(summary, profile, invoices);
-  const fields = [
+  const masterFields = [
     ['ERP vendor ID', erp.vendor_id || profile.vendor_id || profile.erp_vendor_id],
     ['Tax ID', erp.tax_id || profile.tax_id],
     ['Registration no.', erp.registration_number || profile.registration_number],
     ['Jurisdiction', erp.jurisdiction || profile.jurisdiction],
     ['Payment terms', erp.payment_terms || profile.payment_terms || profile.terms],
-    ['Currency', currency],
     ['Address', erp.address || profile.address],
     ['Contact', erp.primary_contact_email || profile.primary_contact_email],
     ['Sender domains', senderDomains],
     ['Known aliases', aliases],
     ['Status reason', profile.status_reason],
   ].filter(([, v]) => v !== null && v !== undefined && v !== '');
+  const fields = [
+    ...masterFields,
+    ['Currency', currency],
+  ].filter(([, v]) => v !== null && v !== undefined && v !== '');
+
+  if (masterFields.length === 0) return null;
 
   return html`
     <section class="cl-record-panel">
@@ -616,20 +621,13 @@ function VendorMasterPanel({ erp, profile, summary, invoices }) {
         <h2>Vendor master</h2>
         <span class="cl-record-panel-eyebrow">ERP and profile fields</span>
       </header>
-      ${fields.length === 0 ? html`
-        <div class="cl-vendor-empty-state">
-          <strong>Vendor master sync pending</strong>
-          <p>Solden has AP activity for this vendor. ERP-side fields will appear after the next vendor master pull.</p>
-        </div>
-      ` : html`
-        <dl class="cl-record-bill-grid">
-          ${fields.map(([label, value]) => html`
-            <div class="cl-record-bill-cell" key=${label}>
-              <dt>${label}</dt>
-              <dd>${value}</dd>
-            </div>`)}
-        </dl>
-      `}
+      <dl class="cl-record-bill-grid">
+        ${fields.map(([label, value]) => html`
+          <div class="cl-record-bill-cell" key=${label}>
+            <dt>${label}</dt>
+            <dd>${value}</dd>
+          </div>`)}
+      </dl>
     </section>
   `;
 }
