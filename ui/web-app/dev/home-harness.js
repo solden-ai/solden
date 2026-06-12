@@ -560,6 +560,94 @@ const auditEvents = [
   },
 ];
 
+const approvalRules = [
+  {
+    id: 'rule-low-risk',
+    name: 'Low-risk invoices auto-approve',
+    description: 'Small matched invoices can move forward without human review.',
+    priority: 100,
+    workflow: 'ap',
+    entity_id: null,
+    conditions: {
+      all_of: [
+        { field: 'amount', op: 'lt', value: 500 },
+        { field: 'exception_count', op: 'eq', value: 0 },
+      ],
+    },
+    actions: [{ type: 'auto_approve' }],
+    status: 'active',
+    updated_at: isoAgo(1400),
+  },
+  {
+    id: 'rule-manager',
+    name: 'Manager approval above threshold',
+    description: 'Route mid-value AP records to the owning department manager.',
+    priority: 200,
+    workflow: 'ap',
+    entity_id: 'ent-uk',
+    conditions: { all_of: [{ field: 'amount', op: 'gte', value: 5000 }] },
+    actions: [{ type: 'route_to_role', role: 'department_manager' }],
+    status: 'active',
+    updated_at: isoAgo(940),
+  },
+  {
+    id: 'rule-dual',
+    name: 'Dual approval for high-value spend',
+    description: 'Large invoices require a second approver before ERP posting.',
+    priority: 300,
+    workflow: 'ap',
+    entity_id: null,
+    conditions: { all_of: [{ field: 'amount', op: 'gte', value: 50000 }] },
+    actions: [{ type: 'require_dual_approval' }],
+    status: 'active',
+    updated_at: isoAgo(240),
+  },
+  {
+    id: 'rule-field-review',
+    name: 'Hold low-confidence extraction',
+    description: 'When vendor or amount confidence drops below threshold, hold for finance review.',
+    priority: 400,
+    workflow: 'ap',
+    entity_id: null,
+    conditions: {
+      any_of: [
+        { field: 'vendor_confidence', op: 'lt', value: 0.8 },
+        { field: 'amount_confidence', op: 'lt', value: 0.85 },
+      ],
+    },
+    actions: [{ type: 'hold_for_finance_review' }],
+    status: 'paused',
+    updated_at: isoAgo(70),
+  },
+];
+
+const approvalRuleTemplates = [
+  {
+    id: 'tpl-small-auto',
+    name: 'Small matched work auto-approves',
+    description: 'Let low-risk records move after match and duplicate checks pass.',
+    priority: 100,
+    conditions: { all_of: [{ field: 'amount', op: 'lt', value: 500 }] },
+    actions: [{ type: 'auto_approve' }],
+  },
+  {
+    id: 'tpl-manager-route',
+    name: 'Route by department owner',
+    description: 'Send approval requests to the role responsible for the owning department.',
+    priority: 200,
+    conditions: { all_of: [{ field: 'amount', op: 'gte', value: 5000 }] },
+    actions: [{ type: 'route_to_role', role: 'department_manager' }],
+  },
+  {
+    id: 'tpl-dual-approval',
+    name: 'Dual approval threshold',
+    description: 'Require two approvers for high-value or high-risk records.',
+    priority: 300,
+    conditions: { all_of: [{ field: 'amount', op: 'gte', value: 50000 }] },
+    actions: [{ type: 'require_dual_approval' }],
+  },
+];
+
 const responses = {
   '/auth/me': {
     email: 'mo@soldenai.com',
@@ -802,6 +890,12 @@ const responses = {
     next_cursor: null,
     events: auditEvents,
   },
+  '/api/workspace/rules': {
+    rules: approvalRules,
+  },
+  '/api/workspace/rules/templates': {
+    templates: approvalRuleTemplates,
+  },
   '/health': { status: 'ok' },
 };
 
@@ -824,6 +918,47 @@ window.fetch = async (input) => {
         { id: 's2', summary: 'Booking approval route', link: { kind: 'record', ref: 'AP-1003' } },
       ],
     });
+  }
+  if (path === '/api/workspace/rules/test') {
+    return jsonResponse({
+      result: {
+        matched_rule_id: 'rule-manager',
+        matched_rule_name: 'Manager approval above threshold',
+        actions: [{ type: 'route_to_role', role: 'department_manager' }],
+        trace: approvalRules.map((rule) => ({
+          rule_id: rule.id,
+          rule_name: rule.name,
+          priority: rule.priority,
+          matched: rule.id === 'rule-manager',
+          skipped_reason: rule.id === 'rule-manager' ? null : 'conditions did not match',
+          all_of: rule.conditions?.all_of || [],
+        })),
+      },
+    });
+  }
+  if (path.startsWith('/api/workspace/rules/') && path.endsWith('/versions')) {
+    const ruleId = decodeURIComponent(path.split('/').slice(-2)[0] || '');
+    const rule = approvalRules.find((item) => item.id === ruleId);
+    return rule
+      ? jsonResponse({
+        versions: [
+          {
+            ...rule,
+            version_number: 2,
+            changed_at: rule.updated_at,
+            changed_by: 'mo@soldenai.com',
+            change_note: 'Adjusted threshold after finance review.',
+          },
+          {
+            ...rule,
+            version_number: 1,
+            changed_at: isoAgo(3200),
+            changed_by: 'system@solden.local',
+            change_note: 'Initial policy draft.',
+          },
+        ],
+      })
+      : jsonResponse({ detail: `No dev harness rule for ${ruleId}` }, 404);
   }
   if (path.startsWith('/api/workspace/audit/event/')) {
     const eventId = decodeURIComponent(path.split('/').pop() || '');

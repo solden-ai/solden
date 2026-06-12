@@ -75,7 +75,11 @@ describe('RulesPage', () => {
   it('frames approval rules as a workspace policy control surface', async () => {
     const { container } = renderRulesPage();
 
-    await screen.findByText('Set who receives approval requests before work posts to ERP. Solden applies these rules, records the outcome, and keeps decisions in the surfaces your team already uses.');
+    await screen.findByText('Control how work gets routed for approval before it moves forward. Solden evaluates the policy, records the decision, and keeps the proof attached to the work item.');
+    expect(screen.getByText('Live policy')).toBeTruthy();
+    expect(screen.getByText('1 active rule')).toBeTruthy();
+    expect(screen.getByText('Match record context')).toBeTruthy();
+    expect(screen.getByText('Keep the proof')).toBeTruthy();
     expect(screen.getByText('Policy inventory')).toBeTruthy();
     expect(screen.getByText('Routing order')).toBeTruthy();
     expect(screen.getByText('Policy guardrails')).toBeTruthy();

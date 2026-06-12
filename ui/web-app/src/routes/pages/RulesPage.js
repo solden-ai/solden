@@ -92,6 +92,7 @@ export default function RulesPage({ api, toast }) {
   }, []);
 
   const ruleStats = useMemo(() => getRuleStats(rules), [rules]);
+  const ruleInsights = useMemo(() => getRuleInsights(rules), [rules]);
   const activeFilterCount = [filterStatus !== 'all', filterWorkflow !== 'all', filterEntity.trim()].filter(Boolean).length;
 
   return html`
@@ -101,9 +102,9 @@ export default function RulesPage({ api, toast }) {
           <span class="cl-rules-eyebrow">Admin</span>
           <h1>Approval rules</h1>
           <p class="cl-rules-sub">
-            Set who receives approval requests before work posts to ERP. Solden
-            applies these rules, records the outcome, and keeps decisions in the
-            surfaces your team already uses.
+            Control how work gets routed for approval before it moves forward.
+            Solden evaluates the policy, records the decision, and keeps the
+            proof attached to the work item.
           </p>
         </div>
         <div class="cl-rules-header-actions">
@@ -126,8 +127,9 @@ export default function RulesPage({ api, toast }) {
         </div>
       </header>
 
-      <${RuleStatsStrip}
+      <${PolicyCommandPanel}
         stats=${ruleStats}
+        insights=${ruleInsights}
         templateCount=${templates.length}
       />
 
@@ -246,23 +248,54 @@ export default function RulesPage({ api, toast }) {
 
 // ─── Summary + sidecar panels ───────────────────────────────────────
 
-function RuleStatsStrip({ stats, templateCount }) {
-  const cells = [
-    { label: 'Total rules', value: stats.total, detail: stats.total ? 'Configured for this workspace' : 'No routing policy yet' },
-    { label: 'Active', value: stats.active, detail: stats.active ? 'Evaluating in priority order' : 'Nothing active' },
-    { label: 'Paused', value: stats.paused, detail: stats.paused ? 'Saved but not evaluating' : 'None paused' },
-    { label: 'Templates', value: templateCount, detail: 'Starter policies available' },
-  ];
+function PolicyCommandPanel({ stats, insights, templateCount }) {
+  const policySummary = stats.active
+    ? `Runs in priority order across ${insights.workflowCount} ${insights.workflowCount === 1 ? 'workflow' : 'workflows'} and ${insights.entityCount} ${insights.entityCount === 1 ? 'entity scope' : 'entity scopes'}.`
+    : 'Create or enable a rule before approval routing can run.';
 
   return html`
-    <section class="cl-rules-summary-grid" aria-label="Approval rule summary">
-      ${cells.map((cell) => html`
-        <div class="cl-rules-summary-card" key=${cell.label}>
-          <span>${cell.label}</span>
-          <strong>${Number(cell.value || 0).toLocaleString()}</strong>
-          <small>${cell.detail}</small>
+    <section class="cl-rules-command" aria-label="Approval policy status">
+      <div class="cl-rules-command-main">
+        <span class="cl-rules-eyebrow">Live policy</span>
+        <h2>${stats.active ? `${stats.active} active ${stats.active === 1 ? 'rule' : 'rules'}` : 'No active rules'}</h2>
+        <p>
+          ${policySummary} Unmatched work follows the default policy cascade.
+        </p>
+        <div class="cl-rules-command-flow" aria-label="Policy execution order">
+          <div>
+            <span>1</span>
+            <strong>Match record context</strong>
+            <small>amount, vendor, entity, workflow, or custom fields</small>
+          </div>
+          <div>
+            <span>2</span>
+            <strong>Route approval</strong>
+            <small>role, named user, dual approval, or auto-approve</small>
+          </div>
+          <div>
+            <span>3</span>
+            <strong>Keep the proof</strong>
+            <small>decision, policy version, and history stay on record</small>
+          </div>
         </div>
-      `)}
+      </div>
+      <div class="cl-rules-command-facts">
+        <div>
+          <span>Total rules</span>
+          <strong>${Number(stats.total || 0).toLocaleString()}</strong>
+          <small>${stats.paused ? `${stats.paused} paused` : 'All enabled rules are live'}</small>
+        </div>
+        <div>
+          <span>First match</span>
+          <strong>${insights.firstActive ? insights.firstActive.name : 'None'}</strong>
+          <small>${insights.firstActive ? `Priority ${Number(insights.firstActive.priority ?? 100)}` : 'No active routing rule'}</small>
+        </div>
+        <div>
+          <span>Starter templates</span>
+          <strong>${Number(templateCount || 0).toLocaleString()}</strong>
+          <small>Use as editable policy drafts</small>
+        </div>
+      </div>
     </section>
   `;
 }
@@ -352,58 +385,48 @@ function RuleList({ rules, loading, activeFilterCount, onNewRule, onEdit, onClon
 
   return html`
     <section class="cl-rules-list-card">
-      <header class="cl-rules-chart-head">
+      <header class="cl-rules-list-head">
         <div>
           <span class="cl-rules-eyebrow">Policy inventory</span>
           <h3>Routing order</h3>
         </div>
         <span class="cl-rules-chart-meta">${rules.length} shown</span>
       </header>
-      <div class="cl-rules-table-wrap">
-        <table class="cl-rules-table">
-          <thead>
-            <tr>
-              <th>Rule</th>
-              <th>Scope</th>
-              <th>Priority</th>
-              <th>Match</th>
-              <th>Outcome</th>
-              <th>Status</th>
-              <th>Updated</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rules.map((r) => html`
-              <tr key=${r.id}>
-                <td class="cl-rules-rule-cell">
-                  <strong>${r.name}</strong>
-                  ${r.description ? html`<div>${r.description}</div>` : null}
-                </td>
-                <td class="cl-rules-scope">${formatRuleScope(r)}</td>
-                <td class="cl-rules-num">${Number(r.priority ?? 100)}</td>
-                <td>${summarizeConditions(r.conditions)}</td>
-                <td>${summarizeActions(r.actions)}</td>
-                <td>
-                  <span class=${`cl-record-chip cl-record-chip-${statusTone(r.status)}`}>
-                    ${formatStatus(r.status)}
-                  </span>
-                </td>
-                <td class="cl-rules-updated">${r.updated_at ? fmtDateTime(r.updated_at) : 'Not saved yet'}</td>
-                <td>
-                  <div class="cl-rules-row-actions">
-                    <button class="btn-ghost btn-sm" onClick=${() => onEdit(r)}>Edit</button>
-                    <button class="btn-ghost btn-sm" onClick=${() => onClone(r)}>Clone</button>
-                    <button class="btn-ghost btn-sm" onClick=${() => onVersions(r)}>History</button>
-                    ${r.status !== 'archived' ? html`
-                      <button class="btn-ghost btn-sm" onClick=${() => onArchive(r)}>Archive</button>
-                    ` : null}
-                  </div>
-                </td>
-              </tr>
-            `)}
-          </tbody>
-        </table>
+      <div class="cl-rules-policy-list">
+        ${rules.map((r, index) => html`
+          <article class=${`cl-rules-policy-row${String(r.status || '').toLowerCase() === 'archived' ? ' is-archived' : ''}`} key=${r.id}>
+            <div class="cl-rules-priority-block" aria-label=${`Priority ${Number(r.priority ?? 100)}`}>
+              <span>${index + 1}</span>
+              <strong>P${Number(r.priority ?? 100)}</strong>
+            </div>
+            <div class="cl-rules-policy-main">
+              <div class="cl-rules-policy-title">
+                <strong>${r.name}</strong>
+                <span class=${`cl-record-chip cl-record-chip-${statusTone(r.status)}`}>
+                  ${formatStatus(r.status)}
+                </span>
+              </div>
+              ${r.description ? html`<p>${r.description}</p>` : null}
+              <div class="cl-rules-policy-meta">
+                <span>${formatRuleScope(r)}</span>
+                <span>${summarizeConditions(r.conditions)}</span>
+                <span>${r.updated_at ? `Updated ${fmtDateTime(r.updated_at)}` : 'Not saved yet'}</span>
+              </div>
+            </div>
+            <div class="cl-rules-policy-outcome">
+              <span>Outcome</span>
+              <strong>${summarizeActions(r.actions)}</strong>
+            </div>
+            <div class="cl-rules-row-actions">
+              <button class="btn-secondary btn-sm" onClick=${() => onEdit(r)}>Edit</button>
+              <button class="btn-ghost btn-sm" onClick=${() => onClone(r)}>Clone</button>
+              <button class="btn-ghost btn-sm" onClick=${() => onVersions(r)}>History</button>
+              ${r.status !== 'archived' ? html`
+                <button class="btn-ghost btn-sm" onClick=${() => onArchive(r)}>Archive</button>
+              ` : null}
+            </div>
+          </article>
+        `)}
       </div>
     </section>
   `;
@@ -888,6 +911,23 @@ function getRuleStats(rules = []) {
     else if (status === 'archived') acc.archived += 1;
     return acc;
   }, { total: 0, active: 0, paused: 0, archived: 0 });
+}
+
+function getRuleInsights(rules = []) {
+  const activeRules = rules
+    .filter((rule) => String(rule?.status || '').toLowerCase() === 'active')
+    .sort((a, b) => Number(a?.priority ?? 100) - Number(b?.priority ?? 100));
+  const workflows = new Set();
+  const entityScopes = new Set();
+  for (const rule of activeRules) {
+    workflows.add(String(rule.workflow || 'ap'));
+    entityScopes.add(rule.entity_id ? String(rule.entity_id) : 'all');
+  }
+  return {
+    firstActive: activeRules[0] || null,
+    workflowCount: workflows.size || 0,
+    entityCount: entityScopes.size || 0,
+  };
 }
 
 function statusTone(status) {
