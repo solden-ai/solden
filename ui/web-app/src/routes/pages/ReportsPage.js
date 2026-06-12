@@ -155,10 +155,13 @@ export default function ReportsPage({ api, orgId, toast }) {
   return html`
     <div class="cl-reports">
       <header class="cl-reports-header">
-        <h1>Reports</h1>
-        <p class="cl-reports-sub">
-          Operating reports for AP volume, cycle time, exceptions, vendor quality, and agent outcomes.
-        </p>
+        <div>
+          <span class="cl-reports-eyebrow">Data</span>
+          <h1>Reports</h1>
+          <p class="cl-reports-sub">
+            Operating reports for AP volume, cycle time, exceptions, vendor quality, and agent outcomes.
+          </p>
+        </div>
       </header>
 
       <nav class="cl-reports-tabs" role="tablist" aria-label="Report tabs">

@@ -24,10 +24,19 @@
 .cl-records-head {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 24px;
   flex-wrap: wrap;
-  padding: 8px 2px 2px;
+  padding: 22px 24px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  box-shadow: var(--cl-shadow);
+}
+
+.cl-records-head > div:first-child {
+  min-width: 0;
+  max-width: 700px;
 }
 
 .cl-records-eyebrow {
@@ -54,16 +63,16 @@
 
 .cl-records-title {
   font-family: var(--cl-font-display);
-  font-size: clamp(30px, 3vw, 38px);
-  line-height: 1.04;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-size: 24px;
+  line-height: 1.15;
+  font-weight: 650;
+  letter-spacing: -0.02em;
   color: var(--cl-navy);
   margin: 0 0 6px;
 }
 
 .cl-records-sub {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.45;
   color: var(--cl-ink-secondary);
   margin: 0;
@@ -75,6 +84,20 @@
   gap: 8px;
   flex-shrink: 0;
   flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+  .cl-records-head {
+    flex-direction: column;
+  }
+
+  .cl-records-head-actions {
+    width: 100%;
+  }
+
+  .cl-records-head-actions > * {
+    flex: 1 1 auto;
+  }
 }
 
 .cl-records-console {

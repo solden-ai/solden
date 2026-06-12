@@ -69,6 +69,7 @@
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
   border-radius: var(--cl-radius);
+  box-shadow: var(--cl-shadow);
   margin-bottom: 20px;
 }
 
@@ -117,9 +118,11 @@
 }
 
 .cl-settings-hero {
-  background: transparent;
-  border: 0;
-  padding: 0;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  box-shadow: var(--cl-shadow);
+  padding: 22px 24px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -519,6 +522,7 @@
   }
 
   .cl-settings-hero,
+  .cl-reports-header,
   .cl-settings-section-head {
     flex-direction: column;
   }
@@ -3818,6 +3822,29 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.cl-reports-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 24px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  box-shadow: var(--cl-shadow);
+}
+
+.cl-reports-eyebrow {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--cl-ink-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .cl-reports-header h1 {
@@ -7562,11 +7589,15 @@
 
 .cl-exceptions-head {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
   flex-wrap: wrap;
-  padding: 8px 2px 2px;
+  padding: 22px 24px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  box-shadow: var(--cl-shadow);
 }
 
 .cl-exceptions-eyebrow {
@@ -7593,10 +7624,10 @@
 
 .cl-exceptions-title {
   font-family: var(--cl-font-display);
-  font-size: clamp(30px, 3vw, 38px);
-  line-height: 1.04;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-size: 24px;
+  line-height: 1.15;
+  font-weight: 650;
+  letter-spacing: -0.02em;
   margin: 0 0 6px;
   color: var(--cl-navy);
 }
@@ -7604,7 +7635,7 @@
 .cl-exceptions-sub {
   margin: 0;
   color: var(--cl-ink-secondary);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.45;
   max-width: 720px;
 }
