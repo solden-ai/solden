@@ -232,56 +232,6 @@ function getSettingsSectionStatus(id, context = {}) {
   }
 }
 
-function getSettingsSummaryCards(context = {}) {
-  const {
-    approvalRules = [],
-    erp = {},
-    gmail = {},
-    invites = [],
-    org = {},
-    planName = 'Free',
-    slack = {},
-    teams = {},
-    usage = {},
-  } = context;
-  const connectedApprovals = !!(slack.connected || teams.connected);
-  const connectedSystems = [erp.connected, gmail.connected, connectedApprovals].filter(Boolean).length;
-  const pendingInvites = invites.filter((invite) => invite.status === 'pending').length;
-
-  return [
-    {
-      label: 'Workspace',
-      value: displayOrgName(org.name) || 'Untitled',
-      detail: org.domain || 'Domain not set',
-      tone: org.domain ? 'default' : 'warning',
-    },
-    {
-      label: 'Systems',
-      value: `${connectedSystems}/3`,
-      detail: 'ERP, intake, approvals',
-      tone: connectedSystems === 3 ? 'success' : 'warning',
-    },
-    {
-      label: 'Policy',
-      value: approvalRules.length ? `${approvalRules.length}` : '0',
-      detail: approvalRules.length === 1 ? 'legacy approval route' : 'legacy approval routes',
-      tone: approvalRules.length ? 'default' : 'warning',
-    },
-    {
-      label: 'Access',
-      value: Number(usage.users_count || 0).toLocaleString(),
-      detail: pendingInvites ? `${pendingInvites} pending invite${pendingInvites === 1 ? '' : 's'}` : 'active members',
-      tone: pendingInvites ? 'warning' : 'default',
-    },
-    {
-      label: 'Plan',
-      value: planName,
-      detail: 'subscription',
-      tone: 'default',
-    },
-  ];
-}
-
 function MatchingSection({ api, toast, canManage }) {
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -996,11 +946,6 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
       value: formatDisplayDate(sub.status === 'trialing' ? sub.trial_ends_at : sub.current_period_end),
     },
   ];
-  const billingUsagePreview = [
-    { label: 'Invoices', value: Number(usage.invoices_this_month || 0).toLocaleString() },
-    { label: 'AI credits', value: Number(usage.ai_credits_this_month || 0).toLocaleString() },
-    { label: 'Users', value: Number(usage.users_count || 0).toLocaleString() },
-  ];
   const sectionContext = {
     approvalRules,
     canManageCompany,
@@ -1018,11 +963,75 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
     usage,
   };
   const activeTab = tabForSection(activeSection);
-  const summaryCards = getSettingsSummaryCards(sectionContext);
   const connectedApprovals = !!(slack.connected || teams.connected);
   const connectedSystems = [erp.connected, gmail.connected, connectedApprovals].filter(Boolean).length;
   const allSystemsConnected = connectedSystems === 3;
   const activeSections = activeTab.sections.map((sectionId) => getSettingsSection(sectionId));
+  const [settingsSearch, setSettingsSearch] = useState('');
+  const pendingInvites = invites.filter((invite) => invite.status === 'pending').length;
+  const planId = String(sub.plan || planName || 'free').toLowerCase();
+  const planLimits = {
+    free: { seats: 1, invoices: 100, credits: 250 },
+    starter: { seats: 3, invoices: 500, credits: 1000 },
+    professional: { seats: 10, invoices: 2500, credits: 5000 },
+    enterprise: { seats: null, invoices: null, credits: null },
+  }[planId] || { seats: null, invoices: null, credits: null };
+  const activeSeatCount = Number(billingSummary?.active_seats ?? usage.users_count ?? 0);
+  const readOnlySeatCount = Number(billingSummary?.read_only_seats ?? 0);
+  const invoicesThisMonth = Number(billingSummary?.invoices_this_month ?? usage.invoices_this_month ?? 0);
+  const aiCreditsUsed = Number(billingSummary?.ai_credits_used ?? usage.ai_credits_this_month ?? 0);
+  const aiCreditsRemaining = Number(billingSummary?.ai_credits_remaining ?? 0);
+  const derivedCreditLimit = aiCreditsRemaining > 0 ? aiCreditsUsed + aiCreditsRemaining : planLimits.credits;
+  const usagePercent = (used, limit) => {
+    if (!limit || limit <= 0) return null;
+    return Math.min(100, Math.max(0, Math.round((Number(used || 0) / limit) * 100)));
+  };
+  const billingUsageRows = [
+    {
+      label: 'Seats',
+      detail: readOnlySeatCount
+        ? `${activeSeatCount} active + ${readOnlySeatCount} read-only`
+        : `${activeSeatCount} active`,
+      used: activeSeatCount + readOnlySeatCount,
+      limit: planLimits.seats,
+    },
+    {
+      label: 'Invoices',
+      detail: billingSummary
+        ? `${invoicesThisMonth.toLocaleString()} this month · ${billingSummary.invoice_volume_band || 'standard'} band`
+        : `${invoicesThisMonth.toLocaleString()} this month`,
+      used: invoicesThisMonth,
+      limit: planLimits.invoices,
+    },
+    {
+      label: 'Agent credits',
+      detail: derivedCreditLimit
+        ? `${aiCreditsUsed.toLocaleString()} used · ${Math.max(derivedCreditLimit - aiCreditsUsed, 0).toLocaleString()} remaining`
+        : `${aiCreditsUsed.toLocaleString()} used`,
+      used: aiCreditsUsed,
+      limit: derivedCreditLimit,
+    },
+  ];
+  const settingsSearchResults = useMemo(() => {
+    const query = settingsSearch.trim().toLowerCase();
+    if (!query) return [];
+    return SETTINGS_SECTIONS
+      .map((section) => ({
+        ...section,
+        status: getSettingsSectionStatus(section.id, sectionContext),
+      }))
+      .filter((section) => [
+        section.label,
+        section.summary,
+        section.group,
+        section.status,
+      ].join(' ').toLowerCase().includes(query))
+      .slice(0, 8);
+  }, [settingsSearch, sectionContext]);
+  const jumpToSearchResult = useCallback((sectionId) => {
+    selectSection(sectionId);
+    setSettingsSearch('');
+  }, [selectSection]);
 
   return html`
     <main class="cl-settings-page">
@@ -1043,33 +1052,69 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
         </div>
       </header>
 
-      <div class="cl-settings-overview-grid" aria-label="Settings summary">
-        ${summaryCards.map((card) => html`
-          <div class=${`cl-settings-overview-card cl-settings-overview-${card.tone || 'default'}`} key=${card.label}>
-            <span>${card.label}</span>
-            <strong>${card.value}</strong>
-            <small>${card.detail}</small>
-          </div>
-        `)}
+      <div class="cl-settings-statusline" aria-label="Settings summary">
+        <span class="cl-settings-status-item">
+          <span class=${`cl-settings-status-dot ${allSystemsConnected ? 'is-ok' : 'is-warn'}`}>●</span>
+          Systems <strong class=${allSystemsConnected ? 'cl-settings-status-ok' : 'cl-settings-status-warn'}>${connectedSystems}/3 connected</strong>
+        </span>
+        <span class="cl-settings-status-sep">·</span>
+        <span class="cl-settings-status-item">
+          Policy <strong>${approvalRules.length} approval ${approvalRules.length === 1 ? 'rule' : 'rules'}</strong>
+        </span>
+        <span class="cl-settings-status-sep">·</span>
+        <span class=${`cl-settings-status-item${pendingInvites ? ' is-warning' : ''}`}>
+          Access <strong>${Number(usage.users_count || 0).toLocaleString()} members${pendingInvites ? ` · ${pendingInvites} pending` : ''}</strong>
+        </span>
+        <span class="cl-settings-status-sep">·</span>
+        <span class="cl-settings-status-item">
+          Plan <strong>${planName}</strong>
+        </span>
       </div>
 
       <div class="cl-settings-layout" data-testid="settings-layout">
         <div class="cl-settings-tabbar">
-          <nav class="cl-settings-tabs" aria-label="Settings sections">
-            ${SETTINGS_TABS.map((tab) => {
-              const selected = activeTab.id === tab.id;
-              return html`
+          <div class="cl-settings-tabbar-head">
+            <nav class="cl-settings-tabs" aria-label="Settings sections">
+              ${SETTINGS_TABS.map((tab) => {
+                const selected = activeTab.id === tab.id;
+                return html`
+                  <button
+                    type="button"
+                    class=${`cl-settings-tab${selected ? ' is-active' : ''}`}
+                    aria-current=${selected ? 'page' : undefined}
+                    onClick=${() => selectSection(tab.sections[0])}
+                    key=${tab.id}>
+                    ${tab.label}
+                  </button>
+                `;
+              })}
+            </nav>
+            <label class="cl-settings-search">
+              <input
+                type="search"
+                value=${settingsSearch}
+                placeholder="Search settings..."
+                aria-label="Search settings"
+                onInput=${(e) => setSettingsSearch(e.target.value)} />
+            </label>
+          </div>
+          ${settingsSearch.trim() ? html`
+            <div class="cl-settings-search-results" role="listbox" aria-label="Matching settings">
+              ${settingsSearchResults.length ? settingsSearchResults.map((section) => html`
                 <button
                   type="button"
-                  class=${`cl-settings-tab${selected ? ' is-active' : ''}`}
-                  aria-current=${selected ? 'page' : undefined}
-                  onClick=${() => selectSection(tab.sections[0])}
-                  key=${tab.id}>
-                  ${tab.label}
+                  class="cl-settings-search-result"
+                  key=${section.id}
+                  onClick=${() => jumpToSearchResult(section.id)}>
+                  <span>
+                    <strong>${section.label}</strong>
+                    <small>${section.group} · ${section.summary}</small>
+                  </span>
+                  <em>${section.status}</em>
                 </button>
-              `;
-            })}
-          </nav>
+              `) : html`<div class="cl-settings-search-empty">No matching settings.</div>`}
+            </div>
+          ` : null}
           ${activeSections.length > 1 ? html`
             <div class="cl-settings-section-strip" aria-label="Active settings sections">
               ${activeSections.map((section) => html`
@@ -1598,39 +1643,45 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           </div>
         </div>
 
-        <!-- Current plan + usage against limits -->
-        <div class="settings-section-grid">
-          <div>
-            <div class="settings-summary-grid">
-              ${billingPreview.map((entry) => html`
-                <div class="settings-summary-card" key=${entry.label}>
-                  <strong>${entry.label}</strong>
-                  <span>${entry.value}</span>
+        <div class="cl-billing-overview">
+          <div class="cl-billing-plan-card">
+            <span>Current plan</span>
+            <strong>${planName}</strong>
+            <small>${sub.status || 'Active'} · ${String(sub.billing_cycle || 'monthly').toLowerCase() === 'yearly' ? 'annual billing' : 'monthly billing'}</small>
+            <dl>
+              ${billingPreview.slice(2).map((entry) => html`
+                <div key=${entry.label}>
+                  <dt>${entry.label}</dt>
+                  <dd>${entry.value}</dd>
                 </div>
               `)}
-            </div>
+            </dl>
           </div>
-          <div>
-            <div class="settings-summary-grid">
-              <div class="settings-summary-card">
-                <strong>Seats</strong>
-                <span>${billingSummary ? `${billingSummary.active_seats} active + ${billingSummary.read_only_seats} read-only` : `${Number(usage.users_count || 0)} users`}</span>
-              </div>
-              <div class="settings-summary-card">
-                <strong>Invoices</strong>
-                <span>${billingSummary ? `${billingSummary.invoices_this_month} (${billingSummary.invoice_volume_band})` : `${Number(usage.invoices_this_month || 0).toLocaleString()} this month`}${billingSummary?.invoice_overage_count > 0 ? ` · ${billingSummary.invoice_overage_count} overage` : ''}</span>
-              </div>
-              <div class="settings-summary-card">
-                <strong>Agent credits</strong>
-                <span>${billingSummary ? `${billingSummary.ai_credits_used} used · ${billingSummary.ai_credits_remaining} remaining` : `${Number(usage.ai_credits_this_month || 0).toLocaleString()} this month`}</span>
-              </div>
-              ${billingSummary ? html`
-                <div class="settings-summary-card">
-                  <strong>Estimated total</strong>
-                  <span style="font:600 14px/1 'Geist Mono',monospace;">$${billingSummary.estimated_total?.toLocaleString()}/mo</span>
+          <div class="cl-billing-usage-list" aria-label="Plan usage">
+            ${billingUsageRows.map((row) => {
+              const percent = usagePercent(row.used, row.limit);
+              return html`
+                <div class="cl-billing-usage-row" key=${row.label}>
+                  <div>
+                    <strong>${row.label}</strong>
+                    <span>${row.detail}</span>
+                  </div>
+                  <div class="cl-billing-usage-meter">
+                    <span>${row.limit ? `${Number(row.used || 0).toLocaleString()} / ${row.limit.toLocaleString()}` : Number(row.used || 0).toLocaleString()}</span>
+                    ${percent === null
+                      ? html`<div class="cl-billing-usage-unlimited">Contract limit</div>`
+                      : html`<div class="cl-billing-progress" aria-label=${`${row.label} usage ${percent}%`}>
+                          <i style=${`width:${percent}%`}></i>
+                        </div>`}
+                  </div>
                 </div>
-              ` : ''}
-            </div>
+              `;
+            })}
+            ${billingSummary?.invoice_overage_count > 0 ? html`
+              <div class="cl-billing-alert">
+                ${billingSummary.invoice_overage_count} invoice ${billingSummary.invoice_overage_count === 1 ? 'overage' : 'overages'} this month.
+              </div>
+            ` : null}
           </div>
         </div>
 
@@ -1640,26 +1691,29 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
              showed nothing, leaving "Current plan" invisible. Banner
              surfaces it instead. -->
         ${canManagePlan ? html`
-          <div style="margin-top:16px;border-top:1px solid var(--cl-border, #e2e8f0);padding-top:16px;">
+          <div class="cl-plan-change">
             ${(sub.plan || '').toLowerCase() === 'free' ? html`
-              <div style="background:var(--cl-teal-soft);border:1px solid #BBF7D0;color:#065F46;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px">
+              <div class="cl-billing-free-banner">
                 You're on the <strong>Free</strong> plan. Pick a tier below to upgrade.
               </div>
             ` : null}
-            <strong style="font-size:13px;">Change plan</strong>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px;">
+            <div class="cl-plan-change-head">
+              <strong>Change plan</strong>
+              <span>Upgrade when usage or ERP scope outgrows the current tier.</span>
+            </div>
+            <div class="cl-plan-grid">
               ${[
                 { id: 'starter', name: 'Starter', price: '$79/mo', annual: '$65/mo annual', desc: 'Up to 500 invoices/mo. One ERP, Slack integration, core AP and Vendor Onboarding. Go live in under 30 minutes.' },
                 { id: 'professional', name: 'Professional', price: '$149/mo', annual: '$125/mo annual', desc: 'Per seat plus invoice volume. Multi-entity, 3-way match, advanced reporting, API access, priority support.' },
                 { id: 'enterprise', name: 'Enterprise', price: '$299/mo', annual: '$249/mo annual', desc: 'NetSuite/SAP custom. Unlimited users, custom ERP integrations, SSO, data residency. Contract.' },
               ].map((tier) => html`
-                <div key=${tier.id} style="border:1px solid ${(sub.plan || '').toLowerCase() === tier.id ? 'var(--cl-teal-500)' : '#E2E8F0'};border-radius:8px;padding:12px;${(sub.plan || '').toLowerCase() === tier.id ? 'background:var(--cl-teal-soft);' : ''}">
-                  <strong style="font-size:14px;">${tier.name}</strong>
-                  <div style="font:600 16px/1.2 'Geist Mono',monospace;color:var(--cl-navy);margin:4px 0;">${tier.price}</div>
-                  <div style="font:400 11px/1 'DM Sans',sans-serif;color:#94A3B8;margin-bottom:4px;">${tier.annual}</div>
-                  <div class="muted" style="font-size:11px;margin-bottom:8px;">${tier.desc}</div>
+                <div key=${tier.id} class=${`cl-plan-card${(sub.plan || '').toLowerCase() === tier.id ? ' is-current' : ''}`}>
+                  <strong>${tier.name}</strong>
+                  <div class="cl-plan-price">${tier.price}</div>
+                  <div class="cl-plan-annual">${tier.annual}</div>
+                  <p>${tier.desc}</p>
                   ${(sub.plan || '').toLowerCase() === tier.id
-                    ? html`<span style="font-size:11px;color:var(--cl-teal-500);font-weight:600;">Current plan</span>`
+                    ? html`<span class="cl-plan-current">Current plan</span>`
                     : html`<button class="btn-secondary btn-sm" onClick=${() => {
                         api('/api/workspace/subscription/plan', {
                           method: 'PATCH',
