@@ -108,23 +108,22 @@
 /* ------------------------------------------------------------ */
 
 .cl-settings-page {
-  /* Left-aligned against the rail (2026-06-11): the shell's content
-     padding IS the gutter — no self-centering, no stacked padding.
-     The 880px cap holds the readable measure. */
-  max-width: 880px;
+  max-width: min(1240px, 100%);
   margin: 0;
-  padding: 4px 0 48px;
+  padding: 2px 0 56px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .cl-settings-hero {
-  /* Naked typographic header (ratified 2026-06-11) — no card, no actions. */
   background: transparent;
   border: 0;
   padding: 0;
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
 }
 
 .cl-settings-hero-sub {
@@ -166,10 +165,99 @@
 
 .cl-settings-hero-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
   flex-shrink: 0;
+}
+
+.cl-settings-system-pill {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--cl-border);
+  border-radius: 999px;
+  background: var(--cl-surface);
+  color: var(--cl-ink-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 13px;
+  white-space: nowrap;
+}
+
+.cl-settings-system-pill.is-ready {
+  border-color: color-mix(in srgb, var(--cl-teal-500) 35%, var(--cl-border));
+  color: var(--cl-teal-600);
+}
+
+.cl-settings-system-pill.is-attention {
+  border-color: color-mix(in srgb, var(--cl-warning) 35%, var(--cl-border));
+  color: var(--cl-warning);
+}
+
+.cl-settings-system-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.cl-settings-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cl-settings-overview-card {
+  min-width: 0;
+  min-height: 104px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(64, 50, 32, 0.04);
+}
+
+.cl-settings-overview-card span {
+  color: var(--cl-ink-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cl-settings-overview-card strong {
+  min-width: 0;
+  color: var(--cl-navy);
+  font-family: var(--cl-font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.cl-settings-overview-card small {
+  color: var(--cl-ink-secondary);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.cl-settings-overview-success {
+  border-color: color-mix(in srgb, var(--cl-teal-500) 30%, var(--cl-border));
+  background: linear-gradient(0deg, color-mix(in srgb, var(--cl-teal-soft) 45%, transparent), transparent), var(--cl-surface);
+}
+
+.cl-settings-overview-warning {
+  border-color: color-mix(in srgb, var(--cl-warning) 28%, var(--cl-border));
+  background: linear-gradient(0deg, color-mix(in srgb, var(--cl-warning-soft, #FEFCE8) 60%, transparent), transparent), var(--cl-surface);
 }
 
 .cl-settings-summary-grid {
@@ -238,7 +326,15 @@
 }
 
 .cl-settings-layout {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .cl-settings-nav {
@@ -336,7 +432,9 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 18px;
+  padding: 0;
+  background: transparent;
 }
 
 .cl-settings-section-head {
@@ -393,6 +491,10 @@
 }
 
 @media (max-width: 1120px) {
+  .cl-settings-overview-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .cl-settings-summary-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -428,6 +530,19 @@
   .cl-settings-summary-grid,
   .cl-settings-nav-list {
     grid-template-columns: 1fr;
+  }
+
+  .cl-settings-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cl-settings-overview-card {
+    min-height: 92px;
+    padding: 12px;
+  }
+
+  .cl-settings-overview-card strong {
+    font-size: 19px;
   }
 
   .cl-settings-nav-item {
@@ -4297,24 +4412,48 @@
   flex-wrap: wrap;
   gap: 12px;
   align-items: flex-end;
-  padding: 16px;
-  background: #FAFAF8;
+  padding: 14px;
+  background: var(--cl-bg);
   border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-sm);
+  border-radius: 10px;
   margin-bottom: 16px;
+}
+
+.cl-settings-content .cl-settings-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  align-items: end;
+}
+
+.cl-settings-content .cl-settings-row button[type="submit"],
+.cl-settings-content .cl-settings-row > button {
+  justify-self: start;
+}
+
+.cl-settings-row label {
+  min-width: 0;
 }
 
 .cl-settings-row input[type="text"],
 .cl-settings-row input[type="email"],
 .cl-settings-row input[type="number"],
+.cl-settings-row input[type="date"],
 .cl-settings-row select {
-  padding: 6px 10px;
+  min-height: 38px;
+  padding: 7px 10px;
   font-size: 13px;
   border: 1px solid var(--cl-border);
-  border-radius: var(--cl-radius-sm);
+  border-radius: 8px;
   background: var(--cl-surface);
   color: var(--cl-ink-primary);
   font-family: inherit;
+}
+
+.cl-settings-row input:focus,
+.cl-settings-row select:focus {
+  outline: 2px solid var(--cl-teal-500);
+  outline-offset: -1px;
+  border-color: transparent;
 }
 
 .cl-settings-reveal {
@@ -4334,7 +4473,8 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-  margin-top: 8px;
+  margin-top: 10px;
+  table-layout: fixed;
 }
 .cl-settings-table thead th {
   text-align: left;
@@ -4344,13 +4484,18 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--cl-ink-muted);
-  padding: 8px 12px;
+  padding: 9px 10px;
   border-bottom: 1px solid var(--cl-border);
 }
 .cl-settings-table tbody td {
-  padding: 10px 12px;
+  padding: 11px 10px;
   border-bottom: 1px solid var(--cl-border);
   color: var(--cl-ink-primary);
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.cl-settings-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--cl-teal-soft) 22%, transparent);
 }
 .cl-settings-table tbody tr:last-child td {
   border-bottom: none;
@@ -8073,24 +8218,42 @@
 }
 .cl-settings-status-link:hover { color: var(--cl-ink-primary); }
 
-/* De-box the section bodies (ratified grammar): inside settings content,
-   panels lose their card chrome — the page's hairlines carry structure. */
-.cl-settings-content .panel {
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0;
-  margin-bottom: 28px;
+/* Settings content is made of deliberate section cards. Each section owns
+   one group of admin controls; nested rows/tables carry the density. */
+.cl-settings-content > .panel,
+.cl-settings-content > .cl-settings-fields {
+  min-width: 0;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(64, 50, 32, 0.04);
+  padding: 22px 24px;
+  margin: 0;
 }
-.cl-settings-content .panel-head {
-  border-bottom: 0;
-  padding-bottom: 0;
-  margin-bottom: 12px;
+
+.cl-settings-content > .panel > .panel-head,
+.cl-settings-content > .panel .panel-head.compact {
+  border-bottom: 1px solid color-mix(in srgb, var(--cl-border) 65%, transparent);
+  padding: 0 0 14px;
+  margin: 0 0 14px;
 }
-.cl-settings-content .panel-head h3 {
+
+.cl-settings-content > .panel > .panel-head h3,
+.cl-settings-content > .panel .panel-head.compact h3 {
+  margin: 0;
   font-family: var(--cl-font-display);
-  font-size: 15px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--cl-ink-primary);
+}
+
+.cl-settings-content > .panel > .panel-head p,
+.cl-settings-content > .panel .panel-head.compact p {
+  margin-top: 4px;
+  max-width: 78ch;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 /* Field grammar for settings (ratified 2026-06-11): label-left /
@@ -8112,43 +8275,116 @@
   .cl-settings-field { grid-template-columns: 1fr; gap: 8px; }
 }
 
-/* Horizontal settings tabs (the ratified IA): slim bar, teal underline. */
+/* Horizontal settings tabs. The tabbar belongs to the settings surface,
+   not to the global workspace sidebar. */
+.cl-settings-tabbar {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(64, 50, 32, 0.04);
+}
+
 .cl-settings-tabs {
   display: flex;
-  gap: 2px;
-  border-bottom: 1px solid var(--cl-border);
-  margin-bottom: 4px;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+
+.cl-settings-tabs::-webkit-scrollbar,
+.cl-settings-section-strip::-webkit-scrollbar { display: none; }
+
 .cl-settings-tab {
   font: 500 13.5px var(--cl-font-body);
   color: var(--cl-ink-secondary);
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  padding: 9px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  margin: 0;
+  padding: 8px 12px;
   cursor: pointer;
+  white-space: nowrap;
 }
 .cl-settings-tab:hover { color: var(--cl-ink-primary); }
 .cl-settings-tab.is-active {
+  background: var(--cl-teal-soft);
+  border-color: color-mix(in srgb, var(--cl-teal-500) 28%, var(--cl-border));
   color: var(--cl-ink-primary);
   font-weight: 600;
-  border-bottom-color: var(--cl-teal-500);
 }
 
-/* Stacked groups within a tab: hairline-separated, generous rhythm. */
+.cl-settings-section-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0;
+}
+
+.cl-settings-section-chip {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--cl-border);
+  border-radius: 999px;
+  background: var(--cl-bg);
+  color: var(--cl-ink-secondary);
+  font-family: var(--cl-font-body);
+  font-size: 12.5px;
+  padding: 0 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cl-settings-section-chip span {
+  color: var(--cl-ink-primary);
+  font-weight: 600;
+}
+
+.cl-settings-section-chip strong {
+  color: var(--cl-ink-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cl-settings-section-chip:hover,
+.cl-settings-section-chip.is-active {
+  background: var(--cl-surface);
+  border-color: color-mix(in srgb, var(--cl-teal-500) 32%, var(--cl-border));
+}
+
+.cl-settings-section-chip.is-active strong {
+  color: var(--cl-teal-600);
+}
+
+/* Stacked groups within a tab. Cards provide the section boundary, so
+   sibling spacing stays clean without extra global hairlines. */
 .cl-settings-content > * + * {
-  border-top: 1px solid var(--cl-border);
-  margin-top: 8px;
-  padding-top: 28px;
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
 }
-.cl-settings-group-head { margin-bottom: 6px; }
+.cl-settings-group-head {
+  padding-bottom: 14px;
+  margin-bottom: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--cl-border) 65%, transparent);
+}
 .cl-settings-group-head h3 {
+  margin: 0;
   font-family: var(--cl-font-display);
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 700;
   letter-spacing: -0.01em;
+  color: var(--cl-ink-primary);
 }
-.cl-settings-group-head p { margin-top: 2px; font-size: 13px; }
+.cl-settings-group-head p { margin: 4px 0 0; font-size: 13px; }
 
 /* Toggle (mockup-exact) + locked states for invariant guardrails. */
 .cl-toggle {
@@ -8205,13 +8441,101 @@
   margin-top: 10px;
 }
 
+.cl-settings-loading {
+  padding: 18px 0 4px;
+  color: var(--cl-ink-secondary);
+  font-size: 13px;
+}
+
+.cl-settings-actionbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--cl-border) 65%, transparent);
+  flex-wrap: wrap;
+}
+
+.cl-match-mode-block {
+  padding: 2px 0 16px;
+}
+
+.cl-match-mode-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.cl-match-mode {
+  min-width: 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 13px;
+  border: 1px solid var(--cl-border);
+  border-radius: 10px;
+  background: var(--cl-bg);
+  cursor: pointer;
+}
+
+.cl-match-mode.is-selected {
+  background: var(--cl-teal-soft);
+  border-color: color-mix(in srgb, var(--cl-teal-500) 42%, var(--cl-border));
+}
+
+.cl-match-mode.is-disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.cl-match-mode input {
+  margin: 3px 0 0;
+  accent-color: var(--cl-teal-500);
+}
+
+.cl-match-mode-title {
+  color: var(--cl-ink-primary);
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.cl-match-mode-body {
+  margin-top: 4px;
+  color: var(--cl-ink-secondary);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1040px) {
+  .cl-match-mode-list {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Field-grammar conversion for ALL settings internals (2026-06-11) ──
    Inside settings content, the legacy stacked-label forms become the
    ratified label-left/control-right rows with hairlines. Scoped here so
    the global .field-row (used by other pages) is untouched. */
-.cl-settings-content .secondary-form-grid,
+.cl-settings-content .secondary-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px 16px;
+  align-items: start;
+}
+
 .cl-settings-content .settings-section-grid {
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.cl-settings-content .secondary-form-grid .field-row {
+  grid-column: 1 / -1;
 }
 .cl-settings-content .field-row {
   display: grid;
@@ -8225,6 +8549,7 @@
 .cl-settings-content .field-row:first-of-type { border-top: 0; }
 .cl-settings-content .field-row > label {
   grid-column: 1;
+  display: block;
   font-size: 13.5px;
   font-weight: 600;
   color: var(--cl-ink-primary);
@@ -8244,37 +8569,43 @@
   .cl-settings-content .field-row { grid-template-columns: 1fr; }
   .cl-settings-content .field-row > label { padding-top: 0; }
   .cl-settings-content .field-row > *:not(label) { grid-column: 1; }
+  .cl-settings-content .settings-section-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 
-/* Billing/usage summary inside settings: definition rows, not card-soup. */
+/* Internal summary groups: compact admin tiles, not loose half-width rows. */
 .cl-settings-content .settings-summary-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 0 0 14px;
 }
 .cl-settings-content .settings-summary-card {
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: 32px;
-  align-items: baseline;
-  padding: 12px 0;
-  border: 0;
-  border-top: 1px solid color-mix(in srgb, var(--cl-border) 55%, transparent);
-  border-radius: 0;
-  background: transparent;
+  min-height: 82px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 13px 14px;
+  border: 1px solid var(--cl-border);
+  border-radius: 10px;
+  background: var(--cl-bg);
   box-shadow: none;
 }
-.cl-settings-content .settings-summary-card:first-of-type { border-top: 0; }
 .cl-settings-content .settings-summary-card strong {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--cl-ink-primary);
-  text-transform: none;
-  letter-spacing: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cl-ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 .cl-settings-content .settings-summary-card span {
   font-family: var(--cl-font-mono);
-  font-size: 13px;
+  font-size: 13.5px;
+  line-height: 1.35;
   font-variant-numeric: tabular-nums;
   color: var(--cl-ink-primary);
+  overflow-wrap: anywhere;
 }

@@ -353,18 +353,18 @@ function MatchingSection({ api, toast, canManage }) {
   </div>`;
 
   if (loading) {
-    return html`<div>${head}<div class="muted" style="padding:16px 0">Loading…</div></div>`;
+    return html`<div class="cl-matching-section">${head}<div class="cl-settings-loading">Loading…</div></div>`;
   }
 
-  return html`<div>
+  return html`<div class="cl-matching-section">
     ${head}
-    <div style="padding:8px 0 16px">
-      <label class="muted" style="font-size:12px;letter-spacing:0.04em;text-transform:uppercase">Mode</label>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+    <div class="cl-match-mode-block">
+      <div class="cl-settings-field-label">Mode</div>
+      <div class="cl-match-mode-list">
         ${MATCH_MODES.map((m) => html`
           <label
             key=${m.key}
-            style=${`display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid ${draft.mode === m.key ? 'var(--cl-accent, #18BFB0)' : 'var(--cl-border, rgba(255,255,255,0.08))'};border-radius:10px;cursor:${canManage ? 'pointer' : 'default'};`}
+            class=${`cl-match-mode${draft.mode === m.key ? ' is-selected' : ''}${!canManage ? ' is-disabled' : ''}`}
           >
             <input
               type="radio"
@@ -373,11 +373,10 @@ function MatchingSection({ api, toast, canManage }) {
               checked=${draft.mode === m.key}
               disabled=${!canManage}
               onChange=${() => setDraft({ ...draft, mode: m.key })}
-              style="margin-top:3px"
             />
             <div>
-              <div style="font-weight:600;font-size:14px">${m.label}</div>
-              <div class="muted" style="font-size:12px;margin-top:2px">${m.body}</div>
+              <div class="cl-match-mode-title">${m.label}</div>
+              <div class="cl-match-mode-body">${m.body}</div>
             </div>
           </label>
         `)}
@@ -417,11 +416,11 @@ function MatchingSection({ api, toast, canManage }) {
       </div>
     </div>
 
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;gap:12px;flex-wrap:wrap">
-      <div class="muted" style="font-size:12px">
+    <div class="cl-settings-actionbar">
+      <div class="muted small">
         ${config ? html`Mode v${config.mode_version_number} · Tolerances v${config.tolerances_version_number}` : ''}
       </div>
-      <div style="display:flex;gap:8px">
+      <div class="row-actions">
         <button class="btn-outline btn-sm" onClick=${refresh} disabled=${saving}>Reload</button>
         <button
           class="btn-primary btn-sm"
@@ -1019,51 +1018,73 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
     usage,
   };
   const activeTab = tabForSection(activeSection);
+  const summaryCards = getSettingsSummaryCards(sectionContext);
+  const connectedApprovals = !!(slack.connected || teams.connected);
+  const connectedSystems = [erp.connected, gmail.connected, connectedApprovals].filter(Boolean).length;
+  const allSystemsConnected = connectedSystems === 3;
+  const activeSections = activeTab.sections.map((sectionId) => getSettingsSection(sectionId));
 
   return html`
     <main class="cl-settings-page">
       <header class="cl-settings-hero">
-        <span class="cl-settings-eyebrow">Admin</span>
-        <h1>Settings</h1>
-        <p class="cl-settings-hero-sub">
-          Workspace identity, policy controls, access, and operational guardrails.
-        </p>
+        <div class="cl-settings-hero-copy">
+          <span class="cl-settings-eyebrow">Admin</span>
+          <h1>Settings</h1>
+          <p class="cl-settings-hero-sub">
+            Workspace identity, policy controls, access, and operational guardrails.
+          </p>
+        </div>
+        <div class="cl-settings-hero-actions" aria-label="Settings status">
+          <span class=${`cl-settings-system-pill ${allSystemsConnected ? 'is-ready' : 'is-attention'}`}>
+            <span class="cl-settings-system-dot" aria-hidden="true"></span>
+            ${allSystemsConnected ? 'All systems connected' : `${connectedSystems} of 3 systems connected`}
+          </span>
+          <button type="button" class="btn btn-secondary" onClick=${goToConnections}>Open connections</button>
+        </div>
       </header>
 
-      <div class="cl-settings-statusline" aria-label="Settings summary">
-        ${(() => {
-          const connectedApprovals = !!(slack.connected || teams.connected);
-          const systems = [erp.connected, gmail.connected, connectedApprovals].filter(Boolean).length;
-          const allUp = systems === 3;
-          return html`
-            <span class=${`cl-settings-status-dot ${allUp ? 'is-ok' : 'is-warn'}`} aria-hidden="true">●</span>
-            <span class=${allUp ? 'cl-settings-status-ok' : 'cl-settings-status-warn'}>
-              ${allUp ? 'All systems connected' : `${systems} of 3 systems connected`}
-            </span>
-            <span class="cl-settings-status-sep" aria-hidden="true">·</span>
-            <span>${planName} plan</span>
-            <span class="cl-settings-status-sep" aria-hidden="true">·</span>
-            <button type="button" class="cl-settings-status-link" onClick=${goToConnections}>Open connections →</button>
-          `;
-        })()}
+      <div class="cl-settings-overview-grid" aria-label="Settings summary">
+        ${summaryCards.map((card) => html`
+          <div class=${`cl-settings-overview-card cl-settings-overview-${card.tone || 'default'}`} key=${card.label}>
+            <span>${card.label}</span>
+            <strong>${card.value}</strong>
+            <small>${card.detail}</small>
+          </div>
+        `)}
       </div>
 
       <div class="cl-settings-layout" data-testid="settings-layout">
-        <nav class="cl-settings-tabs" aria-label="Settings sections">
-          ${SETTINGS_TABS.map((tab) => {
-            const selected = activeTab.id === tab.id;
-            return html`
-              <button
-                type="button"
-                class=${`cl-settings-tab${selected ? ' is-active' : ''}`}
-                aria-current=${selected ? 'page' : undefined}
-                onClick=${() => selectSection(tab.sections[0])}
-                key=${tab.id}>
-                ${tab.label}
-              </button>
-            `;
-          })}
-        </nav>
+        <div class="cl-settings-tabbar">
+          <nav class="cl-settings-tabs" aria-label="Settings sections">
+            ${SETTINGS_TABS.map((tab) => {
+              const selected = activeTab.id === tab.id;
+              return html`
+                <button
+                  type="button"
+                  class=${`cl-settings-tab${selected ? ' is-active' : ''}`}
+                  aria-current=${selected ? 'page' : undefined}
+                  onClick=${() => selectSection(tab.sections[0])}
+                  key=${tab.id}>
+                  ${tab.label}
+                </button>
+              `;
+            })}
+          </nav>
+          ${activeSections.length > 1 ? html`
+            <div class="cl-settings-section-strip" aria-label="Active settings sections">
+              ${activeSections.map((section) => html`
+                <button
+                  type="button"
+                  class=${`cl-settings-section-chip${activeSection === section.id ? ' is-active' : ''}`}
+                  onClick=${() => selectSection(section.id)}
+                  key=${section.id}>
+                  <span>${section.label}</span>
+                  <strong>${getSettingsSectionStatus(section.id, sectionContext)}</strong>
+                </button>
+              `)}
+            </div>
+          ` : null}
+        </div>
 
         <section class="cl-settings-content">
 
