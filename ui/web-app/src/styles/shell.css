@@ -467,15 +467,24 @@
 /* Auth shell: focused warm panel, aligned with Solden's workspace system. */
 
 .cl-auth-shell {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: 48px 16px;
+  padding: 96px 16px 40px;
   background:
     radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--cl-teal-soft) 44%, transparent) 0, transparent 360px),
     linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0, transparent 260px),
     var(--cl-bg);
+}
+
+.cl-auth-topbar {
+  position: absolute;
+  top: 36px;
+  left: max(32px, calc((100vw - 960px) / 2));
+  display: flex;
+  align-items: center;
 }
 
 .cl-auth-card {
@@ -504,6 +513,11 @@
   text-align: center;
   letter-spacing: -0.02em;
   color: var(--cl-ink-primary);
+}
+
+.cl-auth-login-card .cl-auth-title {
+  margin-bottom: 22px;
+  text-align: left;
 }
 
 .cl-auth-sub {

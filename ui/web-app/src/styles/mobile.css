@@ -188,7 +188,12 @@
   .cl-auth-shell {
     padding: 16px 12px;
     align-items: flex-start;
-    padding-top: 48px;
+    padding-top: 88px;
+  }
+
+  .cl-auth-topbar {
+    top: 24px;
+    left: 24px;
   }
 
   .cl-auth-card {
