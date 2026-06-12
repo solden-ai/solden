@@ -30,8 +30,12 @@ export function EntitySwitcher() {
   if (loading) {
     return html`
       <div class="cl-entity-switcher">
-        <button class="cl-entity-trigger is-loading" type="button" disabled aria-busy="true">
-          <span class="cl-entity-label">Entity</span>
+        <button
+          class="cl-entity-trigger is-loading"
+          type="button"
+          disabled
+          aria-busy="true"
+          aria-label="Entity All entities">
           <span class="cl-entity-name">All entities</span>
           <span class="cl-entity-chevron" aria-hidden="true">▾</span>
         </button>
@@ -49,8 +53,8 @@ export function EntitySwitcher() {
         type="button"
         onClick=${() => setOpen((v) => !v)}
         aria-haspopup="menu"
-        aria-expanded=${open}>
-        <span class="cl-entity-label">Entity</span>
+        aria-expanded=${open}
+        aria-label=${`Entity ${activeName}`}>
         <span class="cl-entity-name">${activeName}</span>
         <span class="cl-entity-chevron" aria-hidden="true">▾</span>
       </button>

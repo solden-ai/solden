@@ -371,9 +371,8 @@
 .cl-topbar-org {
   display: flex;
   align-items: center;
-  gap: 10px;
   min-height: 36px;
-  padding: 5px 9px;
+  padding: 3px 2px;
   border: 1px solid transparent;
   border-radius: 10px;
   font-size: 12px;
@@ -383,7 +382,10 @@
 .cl-topbar-org-stack {
   display: flex;
   flex-direction: column;
-  line-height: 1.2;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+  line-height: 1.08;
 }
 
 .cl-topbar-org-label {
@@ -397,30 +399,26 @@
 .cl-topbar-org-name {
   color: var(--cl-ink-primary);
   font-weight: 700;
-  font-size: 13px;
-}
-
-.cl-topbar-role {
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 8px;
-  background: var(--cl-bg);
-  border: 1px solid var(--cl-border);
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--cl-ink-secondary);
+  font-size: 14px;
   white-space: nowrap;
 }
 
-/* Owner/admin get a softer mint accent so it's clear at a glance who
-   has destructive/configure access. Non-elevated roles stay neutral. */
+.cl-topbar-role {
+  display: block;
+  height: auto;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--cl-ink-muted);
+  white-space: nowrap;
+}
+
 .cl-topbar-role-owner,
 .cl-topbar-role-admin {
-  background: var(--cl-mint-soft);
-  border-color: rgba(24, 191, 176, 0.4);
-  color: var(--cl-mint-strong);
+  color: var(--cl-ink-muted);
 }
 
 .cl-topbar-org-chevron {

@@ -11,12 +11,8 @@ import { displayOrgName } from '../utils/formatters.js';
  * Topbar — org context (left) + user menu (right).
  *
  * Org context (workstream D scope, single-tenant-per-user model):
- *   - Renders the active org name and the current user's role pill.
- *   - The chevron affordance is intentional: it signals where a future
- *     multi-org switcher will live, but does nothing today because
- *     users belong to exactly one org. When `user_organizations`
- *     ships, swap the chevron for a click-target dropdown without
- *     touching the Topbar's layout.
+ *   - Renders the active org name with the current user's workspace
+ *     role as quiet metadata. Entity scope is handled by EntitySwitcher.
  *
  * User menu:
  *   - Email row (read-only)
@@ -99,15 +95,13 @@ export function Topbar() {
         <div
           class="cl-topbar-org"
           title="Active workspace"
-          aria-label=${`Active workspace: ${orgName}`}>
+          aria-label=${`Active workspace: ${orgName}${roleLabel ? `, ${roleLabel}` : ''}`}>
           <div class="cl-topbar-org-stack">
-            <span class="cl-topbar-org-label">Workspace</span>
             <span class="cl-topbar-org-name">${orgName}</span>
+            ${roleLabel
+              ? html`<span class=${`cl-topbar-role cl-topbar-role-${rawRole}`}>${roleLabel}</span>`
+              : null}
           </div>
-          ${roleLabel
-            ? html`<span class=${`cl-topbar-role cl-topbar-role-${rawRole}`}>${roleLabel}</span>`
-            : null}
-          <span class="cl-topbar-org-chevron" aria-hidden="true">▾</span>
         </div>
         <${EntitySwitcher} />
       </div>
