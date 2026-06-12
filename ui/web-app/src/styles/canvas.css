@@ -13,7 +13,10 @@
  */
 
 .cl-app-content > * {
-  max-width: 1320px;
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .cl-app-content {
@@ -38,12 +41,40 @@
 .cl-app-content .activity,
 .cl-app-content .reconciliation,
 .cl-app-content .connections,
+.cl-app-content .cl-activity-page,
+.cl-app-content .cl-connections-page,
+.cl-app-content .cl-connections-shell,
+.cl-app-content .cl-exceptions-page,
+.cl-app-content .cl-home,
+.cl-app-content .cl-onb-shell,
+.cl-app-content .cl-record-detail,
+.cl-app-content .cl-records,
+.cl-app-content .cl-reports,
+.cl-app-content .cl-rules,
+.cl-app-content .cl-settings-page,
+.cl-app-content .cl-status,
+.cl-app-content .cl-vendor-detail,
+.cl-app-content .cl-vendors-page,
+.cl-app-content .secondary-shell,
+.cl-app-content .billing-shell,
 .cl-app-content .settings,
 .cl-app-content .templates,
 .cl-app-content .health {
   width: 100%;
   max-width: none;
+  margin-left: 0;
+  margin-right: 0;
   padding: 0;
+}
+
+.cl-app-content .cl-record-detail,
+.cl-app-content .cl-reports,
+.cl-app-content .cl-rules {
+  padding: 0 0 48px;
+}
+
+.cl-app-content .cl-onb-shell {
+  padding: 4px 0 64px;
 }
 
 /* Tables in lifted pages get to breathe */
