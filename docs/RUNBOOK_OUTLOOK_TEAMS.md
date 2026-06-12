@@ -251,7 +251,7 @@ This sends notification-only cards (Approve / Reject buttons render but don't po
 
 ## What's already shipped (code-side, no further work needed)
 
-- **Backend `_outlook_status_for_org()`** ([workspace_shell.py](../solden/api/workspace_shell.py)) — emits the same shape as the gmail helper so the workspace SPA can treat Gmail and Outlook symmetrically. Returns `disabled_in_v1` when the flag is off.
+- **Backend `_outlook_status_for_org()`** ([workspace_shell.py](../solden/api/workspace_shell.py)) — emits the same shape as the Gmail helper so the workspace SPA can treat Gmail and Outlook symmetrically. Returns `disabled` only when the deployment kill switch is explicitly off.
 - **Outlook included in bootstrap integrations list** — the SPA `bootstrap.integrations` array now has Gmail + Outlook + Slack + Teams + ERP, in that order.
 - **`POST /api/workspace/integrations/outlook/connect/start`** + **`/disconnect`** — workspace-shell wrappers for the canonical `/outlook/connect/start` route, so the SPA can talk to one `/api/workspace/integrations/<provider>/*` API surface across every channel.
 - **Workspace SPA Connections page** — Outlook section with Connect / Disconnect / status row. Teams section now has two install paths (bot via download package, webhook fallback), with clear copy on the trade-off.

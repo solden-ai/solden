@@ -2342,15 +2342,15 @@ class InvoiceWorkflowService(InvoiceValidationMixin, InvoicePostingMixin):
     ) -> Dict[str, Any]:
         """Best-effort Teams delivery for approval/budget decisions.
 
-        §12 / §6.8 — skipped when Teams is disabled in V1. Returning a
-        structured "skipped" status (not raising) means the Slack
+        The Teams flag is a deployment kill switch. Returning a
+        structured "skipped" status (not raising) means the rest of the
         approval path runs uninterrupted and the invoice workflow's
         error handling doesn't treat the absence of a Teams card as a
-        failure.
+        failure in deployments where Teams is intentionally disabled.
         """
         from solden.core.feature_flags import is_teams_enabled
         if not is_teams_enabled():
-            return {"status": "skipped", "reason": "teams_disabled_in_v1"}
+            return {"status": "skipped", "reason": "teams_surface_disabled"}
 
         client = self.teams_client
         if client is None:

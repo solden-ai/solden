@@ -822,17 +822,16 @@ def _outlook_status_for_org(organization_id: str, user: TokenData) -> Dict[str, 
     Mirrors ``_gmail_status_for_org`` shape so the Connections page can
     treat Gmail + Outlook symmetrically — they're peer intake channels.
 
-    When ``FEATURE_OUTLOOK_ENABLED`` is off, returns a terminal
-    "disabled_in_v1" payload so the SPA can show a "post-launch" label
-    instead of a Connect button that would 404 on click. Mirrors the
-    teams helper below.
+    ``FEATURE_OUTLOOK_ENABLED`` is a deployment kill switch. When it is
+    explicitly off, return a terminal disabled payload so the SPA does
+    not show a Connect button that would 404 on click.
     """
     from solden.core.feature_flags import is_outlook_enabled
     if not is_outlook_enabled():
         return {
             "name": "outlook",
             "connected": False,
-            "status": "disabled_in_v1",
+            "status": "disabled",
             "mode": "oauth",
             "email": None,
             "durable": False,
@@ -842,11 +841,7 @@ def _outlook_status_for_org(organization_id: str, user: TokenData) -> Dict[str, 
             "watch_status": "disabled",
             "watch_expires_soon": False,
             "invoices_processed": 0,
-            "reason": (
-                "FEATURE_OUTLOOK_ENABLED is off. Flip the env var on "
-                "api/worker/beat once MICROSOFT_CLIENT_ID + SECRET are "
-                "configured to enable the Outlook intake channel."
-            ),
+            "reason": "FEATURE_OUTLOOK_ENABLED=false disables the Outlook release surface.",
         }
 
     db = get_db()
@@ -916,22 +911,22 @@ def _outlook_status_for_org(organization_id: str, user: TokenData) -> Dict[str, 
 
 
 def _teams_status_for_org(organization_id: str) -> Dict[str, Any]:
-    # §12 / §6.8 — when Teams is disabled in V1, the bootstrap
-    # response reports a terminal "disabled_in_v1" status so the
-    # extension's integrations UI shows a clear "post-launch" label
-    # instead of a "Connect Teams" CTA that would 404 when clicked.
+    # FEATURE_TEAMS_ENABLED is a deployment kill switch. When it is
+    # explicitly off, the bootstrap response reports a terminal disabled
+    # status so the workspace does not show a Connect Teams CTA that
+    # would 404 when clicked.
     from solden.core.feature_flags import is_teams_enabled
     if not is_teams_enabled():
         return {
             "name": "teams",
             "connected": False,
-            "status": "disabled_in_v1",
+            "status": "disabled",
             "mode": "per_org",
             "webhook_configured": False,
             "webhook_url": "",
             "managed_by": "none",
             "last_sync_at": None,
-            "reason": "DESIGN_THESIS §12 — Teams ships post-launch; Slack is the V1 approval surface.",
+            "reason": "FEATURE_TEAMS_ENABLED=false disables the Teams release surface.",
         }
 
     db = get_db()
@@ -990,9 +985,8 @@ def _build_health(
         })
     if not integrations["slack"]["connected"]:
         required_actions.append({"code": "connect_slack", "message": "Connect Slack workspace"})
-    # §12 / §6.8 — don't nag admins to connect Teams when it's scoped
-    # out of V1. Slack is the V1 approval surface and suffices on its
-    # own; Teams onboarding reappears when the post-launch flag flips.
+    # Do not nag admins to connect Teams when the deployment kill switch
+    # is explicitly off.
     from solden.core.feature_flags import is_teams_enabled
     if is_teams_enabled() and not integrations["teams"]["connected"]:
         required_actions.append({"code": "connect_teams", "message": "Connect Microsoft Teams webhook"})
@@ -1636,9 +1630,9 @@ def start_outlook_connect(
     one ``/api/workspace/integrations/<provider>/connect/start`` API
     surface across every intake channel.
 
-    Behind ``FEATURE_OUTLOOK_ENABLED``; returns 404 when off so the
-    UI's Connect CTA can fall back to the "post-launch" copy that
-    ``_outlook_status_for_org`` already emits.
+    Behind the ``FEATURE_OUTLOOK_ENABLED`` kill switch; returns 404
+    when explicitly off so the UI can avoid offering a dead connect
+    flow.
     """
     from solden.core.feature_flags import is_outlook_enabled, outlook_disabled_payload
     if not is_outlook_enabled():
@@ -1946,9 +1940,9 @@ def download_teams_manifest_package(
     missing so the admin sees a useful error instead of an opaque zip
     with placeholder text.
 
-    Gated behind ``FEATURE_TEAMS_ENABLED`` for the same reason every
-    Teams route is — until Microsoft-side registrations land, the
-    download would produce a manifest the customer can't use.
+    Gated behind the ``FEATURE_TEAMS_ENABLED`` kill switch for the same
+    reason every Teams route is — when the deployment disables Teams,
+    the package should not be downloadable.
     """
     from solden.core.feature_flags import is_teams_enabled, teams_disabled_payload
     if not is_teams_enabled():
@@ -2049,9 +2043,8 @@ def set_teams_webhook(
     request: TeamsWebhookRequest,
     user: TokenData = Depends(get_current_user),
 ):
-    # §12 / §6.8 — Teams is scoped post-V1. Admins cannot wire a Teams
-    # webhook in a V1 deployment regardless of role, so the admin UI
-    # can't accidentally connect a surface we don't ship yet.
+    # The Teams kill switch blocks webhook setup regardless of role, so
+    # the admin UI cannot accidentally connect a disabled surface.
     from solden.core.feature_flags import is_teams_enabled, teams_disabled_payload
     if not is_teams_enabled():
         raise HTTPException(status_code=404, detail=teams_disabled_payload())
@@ -2957,6 +2950,35 @@ def get_ops_connector_readiness(
         "generated_at": _now_iso(),
         "connector_readiness": report,
     }
+
+
+@router.get("/surface-readiness")
+def get_surface_readiness(
+    organization_id: Optional[str] = Query(default=None),
+    user: TokenData = Depends(get_current_user),
+):
+    """Return the canonical maturity contract for connected work surfaces.
+
+    This is deliberately broader than connector health. It tells the
+    workspace whether a surface is native-embedded, API-memory-only,
+    sandbox-pending, or feature-gated so the product never implies all
+    ERP/chat/inbox surfaces are equally mature.
+    """
+    org_id = _resolve_org_id(user, organization_id)
+    integrations = [
+        _gmail_status_for_org(org_id, user),
+        _outlook_status_for_org(org_id, user),
+        _slack_status_for_org(org_id),
+        _teams_status_for_org(org_id),
+        _erp_status_for_org(org_id),
+    ]
+    from solden.services.surface_readiness import build_surface_readiness
+
+    return build_surface_readiness(
+        org_id,
+        db=get_db(),
+        integration_statuses=integrations,
+    )
 
 
 @router.get("/ops/learning-calibration")

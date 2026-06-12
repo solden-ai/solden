@@ -23,16 +23,13 @@ async def run_deferred_startup(app: Any) -> None:
         logger.warning("Gmail autopilot not started: %s", exc)
 
     try:
-        # §12 #6 — Outlook is not shipped in V1. The autopilot loop
-        # stays in the tree as post-launch scaffolding; flag gates
-        # whether it actually starts. Without this gate any deployment
-        # that sets MICROSOFT_CLIENT_ID would silently bring Outlook
-        # live, which breaks the V1 positioning the thesis is explicit
-        # about.
+        # Outlook ships as a Microsoft 365 intake surface. The flag is
+        # retained as a deployment kill switch for tenants where Graph
+        # setup is intentionally disabled.
         from solden.core.feature_flags import is_outlook_enabled
 
         if not is_outlook_enabled():
-            logger.info("Outlook autopilot skipped — §12 #6 V1 boundary (FEATURE_OUTLOOK_ENABLED not set)")
+            logger.info("Outlook autopilot skipped — FEATURE_OUTLOOK_ENABLED=false")
         else:
             from solden.services.outlook_autopilot import start_outlook_autopilot
 

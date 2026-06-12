@@ -9,7 +9,14 @@ from solden.core.launch_controls import get_ga_readiness, get_rollback_controls
 from solden.services.erp_connector_strategy import get_erp_connector_strategy
 
 
-GA_CONNECTOR_SCOPE: tuple[str, ...] = ("netsuite", "quickbooks", "xero", "sap")
+GA_CONNECTOR_SCOPE: tuple[str, ...] = (
+    "netsuite",
+    "quickbooks",
+    "xero",
+    "sap",
+    "sage_intacct",
+    "sage_accounting",
+)
 
 
 def _normalized_scope(raw_scope: Optional[Iterable[str]]) -> List[str]:

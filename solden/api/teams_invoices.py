@@ -1,11 +1,8 @@
 """Teams interactive handlers for AP invoice approvals.
 
-§12 / §6.8 — Teams is not shipped in V1. All routes in this module
-are gated behind ``FEATURE_TEAMS_ENABLED``; without it, every endpoint
-returns 404 with a reason code pointing at the V1 boundary. Slack is
-the V1 approval surface; Teams lights up post-launch. The handlers
-stay intact because the adaptive-card contracts are worth preserving
-— this is a deployment boundary, not a rewrite.
+Teams is a current release approval surface. Routes stay behind the
+``FEATURE_TEAMS_ENABLED`` kill switch so a deployment can turn Teams
+off without removing the adaptive-card implementation.
 """
 from __future__ import annotations
 
@@ -26,9 +23,9 @@ from solden.core.feature_flags import is_teams_enabled, teams_disabled_payload
 
 def _require_teams_enabled() -> None:
     """Dependency applied to every Teams route — 404s the whole
-    surface when the V1 flag is off. Runs before any handler body so
-    no Teams interactive callback can be processed in a V1
-    deployment.
+    surface when the deployment kill switch is off. Runs before any
+    handler body so no Teams interactive callback can be processed
+    from a disabled deployment.
     """
     if not is_teams_enabled():
         raise HTTPException(status_code=404, detail=teams_disabled_payload())

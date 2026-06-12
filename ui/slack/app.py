@@ -38,6 +38,24 @@ SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN", "")
 SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET", "")
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8010")
 DEFAULT_ORG_ID = os.getenv("DEFAULT_ORGANIZATION_ID", "default")
+APP_BASE_URL = os.getenv("APP_BASE_URL", "https://workspace.soldenai.com").rstrip("/")
+
+ERP_SETUP_OPTIONS = {
+    "quickbooks": {"label": "QuickBooks Online", "method": "OAuth"},
+    "xero": {"label": "Xero", "method": "OAuth"},
+    "sage_accounting": {"label": "Sage Accounting", "method": "OAuth"},
+    "netsuite": {"label": "NetSuite", "method": "Token-Based Auth"},
+    "sap": {"label": "SAP", "method": "API credentials"},
+    "sage_intacct": {"label": "Sage Intacct", "method": "XML gateway credentials"},
+}
+ERP_SETUP_ALIASES = {
+    "sage-accounting": "sage_accounting",
+    "sagebusinesscloud": "sage_accounting",
+    "sage-business-cloud": "sage_accounting",
+    "sage-business-cloud-accounting": "sage_accounting",
+    "sageintacct": "sage_intacct",
+    "sage-intacct": "sage_intacct",
+}
 
 
 # ==================== BACKEND API CLIENT ====================
@@ -379,7 +397,7 @@ async def handle_command(action: str, args: str, user_id: str, channel_id: str) 
 *Setup & Config:*
 - `/solden setup` - Onboarding checklist and integration status
 - `/solden config channel #channel` - Set the approval notification channel
-- `/solden setup erp [quickbooks|xero|netsuite]` - Connect your ERP
+- `/solden setup erp [quickbooks|xero|sage_accounting|netsuite|sap|sage_intacct]` - Connect your ERP
 - `/solden invite user@email.com [admin|member]` - Invite a team member
 
 *Daily Use:*
@@ -728,7 +746,10 @@ async def handle_setup(user_id: str) -> str:
 *Quick Setup:*
 {"• `/solden setup erp quickbooks` — Connect QuickBooks" if not active_erps else ""}
 {"• `/solden setup erp xero` — Connect Xero" if not active_erps else ""}
+{"• `/solden setup erp sage_accounting` — Connect Sage Accounting" if not active_erps else ""}
 {"• `/solden setup erp netsuite` — Connect NetSuite" if not active_erps else ""}
+{"• `/solden setup erp sap` — Connect SAP" if not active_erps else ""}
+{"• `/solden setup erp sage_intacct` — Connect Sage Intacct" if not active_erps else ""}
 • `/solden config channel #channel` — Set approval channel
 • `/solden invite user@email.com admin` — Invite a team member"""
 
@@ -773,49 +794,76 @@ async def handle_config_channel(channel_arg: str, user_id: str) -> str:
 
 async def handle_setup_erp(erp_type: str, user_id: str) -> str:
     """Start ERP connection flow from Slack."""
+    supported = ", ".join(f"`{key}`" for key in ERP_SETUP_OPTIONS)
     if not erp_type:
-        return """*Connect your ERP:*
-• `/solden setup erp quickbooks` — QuickBooks Online (OAuth)
-• `/solden setup erp xero` — Xero (OAuth)
-• `/solden setup erp netsuite` — NetSuite (Token-Based Auth)"""
+        rows = [
+            f"• `/solden setup erp {key}` — {meta['label']} ({meta['method']})"
+            for key, meta in ERP_SETUP_OPTIONS.items()
+        ]
+        return "*Connect your ERP:*\n" + "\n".join(rows)
 
-    erp_type = erp_type.lower().strip()
-    if erp_type not in ("quickbooks", "xero", "netsuite"):
-        return f"Unknown ERP type: `{erp_type}`. Supported: `quickbooks`, `xero`, `netsuite`."
+    erp_type = ERP_SETUP_ALIASES.get(erp_type.lower().strip(), erp_type.lower().strip())
+    if erp_type not in ERP_SETUP_OPTIONS:
+        return f"Unknown ERP type: `{erp_type}`. Supported: {supported}."
 
-    if erp_type == "netsuite":
-        return """*NetSuite Setup*
+    workspace_link = f"{APP_BASE_URL}/connections"
 
-NetSuite uses Token-Based Authentication. You'll need:
+    if erp_type in {"netsuite", "sap", "sage_intacct"}:
+        label = ERP_SETUP_OPTIONS[erp_type]["label"]
+        setup_notes = {
+            "netsuite": """NetSuite uses Token-Based Authentication. You'll need:
 1. Account ID (e.g., `1234567` or `1234567_SB1`)
 2. Consumer Key
 3. Consumer Secret
 4. Token ID
 5. Token Secret
 
-*How to get these:*
 In NetSuite: Setup > Company > Enable Features > SuiteCloud > Token-Based Authentication.
-Then create an Integration record and generate a Token.
+Then create an Integration record and generate a Token.""",
+            "sap": """SAP uses an integration account with API access to the OData base URL.
+You'll need:
+1. Base URL
+2. Username
+3. Password
 
-Once you have the credentials, an admin can enter them at:
-`/api/workspace/integrations/erp/connect/start` with `erp_type: netsuite`"""
+Use least-privilege access for supplier invoices, vendor master, PO/GR context, and posting.""",
+            "sage_intacct": """Sage Intacct uses web-services credentials.
+You'll need:
+1. Sender ID
+2. Sender password
+3. Company ID
+4. User ID
+5. User password
+6. Optional location ID
 
-    # OAuth ERPs (QuickBooks, Xero)
+Use a least-privilege web-services user with vendor, AP bill, GL account, and payment-status read/write access.""",
+        }
+        return f"""*{label} Setup*
+
+{setup_notes[erp_type]}
+
+An admin should finish this secure credential setup in Solden:
+{workspace_link}"""
+
+    # OAuth ERPs (QuickBooks, Xero, Sage Accounting).
     try:
         from solden.api.erp_connections import (
-            _oauth_states,
+            _save_oauth_state,
             QUICKBOOKS_CLIENT_ID, QUICKBOOKS_REDIRECT_URI, QUICKBOOKS_AUTH_URL,
             XERO_CLIENT_ID, XERO_REDIRECT_URI, XERO_AUTH_URL,
+            SAGE_ACCOUNTING_CLIENT_ID, SAGE_ACCOUNTING_REDIRECT_URI,
+            SAGE_ACCOUNTING_AUTH_URL, SAGE_ACCOUNTING_SCOPES,
         )
         from urllib.parse import urlencode as _urlencode
         import secrets as _secrets
 
         state = _secrets.token_urlsafe(32)
-        _oauth_states[state] = {
+        _save_oauth_state(state, {
             "organization_id": DEFAULT_ORG_ID,
             "return_url": "slack",
+            "erp_type": erp_type,
             "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        }
+        })
 
         if erp_type == "quickbooks":
             if not QUICKBOOKS_CLIENT_ID:
@@ -842,6 +890,19 @@ Once you have the credentials, an admin can enter them at:
             }
             auth_url = f"{XERO_AUTH_URL}?{_urlencode(params)}"
             return f"*Connect Xero*\n\nClick the link below to authorize Solden:\n{auth_url}"
+
+        if erp_type == "sage_accounting":
+            if not SAGE_ACCOUNTING_CLIENT_ID:
+                return "Sage Accounting is not configured on this server. Set `SAGE_ACCOUNTING_CLIENT_ID` and related env vars."
+            params = {
+                "client_id": SAGE_ACCOUNTING_CLIENT_ID,
+                "redirect_uri": SAGE_ACCOUNTING_REDIRECT_URI,
+                "response_type": "code",
+                "scope": SAGE_ACCOUNTING_SCOPES,
+                "state": state,
+            }
+            auth_url = f"{SAGE_ACCOUNTING_AUTH_URL}?{_urlencode(params)}"
+            return f"*Connect Sage Accounting*\n\nClick the link below to authorize Solden:\n{auth_url}"
 
     except ImportError:
         return f"ERP connection module not available. Ensure `solden.api.erp_connections` is installed."

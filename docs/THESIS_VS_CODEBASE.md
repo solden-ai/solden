@@ -103,7 +103,7 @@ This part is external-facing. Every claim on the Problem + Solution slides is ma
 
 - [slack_invoices.py](../solden/api/slack_invoices.py) — interactive handler routes through `_dispatch_runtime_intent` to the runtime intent bus. Three primary intents: `approve_invoice` (L328), `reject_invoice` (L415), `needs_info` (L400).
 - Escalation + digest + override-window notifications in [services/slack_notifications.py](../solden/services/slack_notifications.py) and [services/slack_digest.py](../solden/services/slack_digest.py).
-- Teams is flag-gated at default-off via [is_teams_enabled()](../solden/core/feature_flags.py#L58). That's thesis-compliant for V1 (Slack is V1, Teams V1.x) and the deck explicitly shows only Slack.
+- Teams is a current release approval surface alongside Slack. [is_teams_enabled()](../solden/core/feature_flags.py#L48) is now a deployment kill switch, not a future-release gate.
 
 **Safe to pitch.**
 
@@ -192,7 +192,7 @@ Internal-facing. What's shippable today, what's shippable with caveats, what isn
 | Area | Caveat | Impact |
 |---|---|---|
 | Vendor onboarding v1.1 | KYC / open-banking / portal adapters are stubs — see [coordination_engine.py:207-222](../solden/core/coordination_engine.py#L207-L222) (`_handle_onboarding_adapter_pending`). The planning flow executes end-to-end but writes "adapter pending" neutral audit entries in place of real provider calls. | **Vendor onboarding pipeline renders and flows, but KYC decisions are not yet provider-verified.** The deck's "live AP" claim is unaffected; don't pitch vendor onboarding as shipped-live yet. |
-| Teams adapter | Gated default-off, service + API exist but not wired in V1. | Thesis-compliant. Deck already shows Slack only. Keep it out of live feature list. |
+| Teams adapter | Current release surface with service + API wired behind a kill switch. | Include Teams in the live approval-surface story alongside Slack. |
 | Vendor activation SLA & open-banking | Tests exist (`test_vendor_activation_sla`, `test_vendor_domain_lookalike`), but the open-banking verifier at [onboarding/bank_verifier.py](../solden/services/onboarding/bank_verifier.py) is an adapter surface — check provider keys before staging drill. | Gate live vendor onboarding on the open-banking provider integration being signed off. |
 | Celery vs FastAPI background | `services/celery_tasks.py` exists; Agent Spec §11 calls for a Celery fleet behind Redis Streams. Verify which is the prod runtime before quoting SLAs. | Performance claims in Agent Spec §11 (50-invoice scenario) depend on this. Don't quote 2-minute SLAs externally until the prod worker model is confirmed. |
 | Redis rate limiting | Memory notes this as an outstanding operational blocker. | Rate-limit protection for multi-tenant spike safety. Low customer-visible risk at pilot scale, but list as a beta-blocker. |
@@ -205,7 +205,7 @@ Internal-facing. What's shippable today, what's shippable with caveats, what isn
 | Vendor KYC real providers | Thesis §10 + Agent Spec §10 (onboarding lifecycle) | Flow wired, adapter stubs. Provider selection + wiring is the gating work. |
 | Payment Execution (Q4 roadmap) | Thesis §12-month sequence | Not started. Roadmap item, not V1. |
 | Multi-entity workspace (Q2 roadmap) | Thesis §12-month sequence | Config surface exists; workspace hierarchy UI not built. Roadmap. |
-| Outlook | Explicitly out of V1 | Not built — consistent with thesis boundary. |
+| Outlook | Current release intake surface | Built as the Microsoft 365 peer to Gmail and exposed through workspace connection setup. |
 
 ---
 
@@ -231,11 +231,11 @@ Three items. First two are deck-copy calls; third is a code call.
 
 **Recommendation:** Option 2. Keeps the user-visible behavior, removes the audit/policy divergence, and can be done without changing the deck copy. ~30 minutes of work.
 
-## Gap 2 — Deck doesn't mention "V1 is Slack-only (Teams V1.x)"
+## Gap 2 — Deck must not imply Slack-only approvals
 
-The deck's Solution slide says "Slack" for decisions. That's honest. No edit needed for the slide itself — but if a prospect asks "do you support Teams?" the honest answer is "Teams is feature-flagged off for V1, shipping in V1.x."
+The deck's Solution slide says "Slack" for decisions. That is now incomplete. The honest answer is that Solden supports Slack and Microsoft Teams as approval surfaces; Teams can be disabled per deployment with `FEATURE_TEAMS_ENABLED=false`.
 
-Have that answer ready. Don't get caught pitching Teams as live.
+Update the deck / website language anywhere it implies Slack-only approvals.
 
 ## Gap 3 — Deck doesn't distinguish vendor onboarding states
 

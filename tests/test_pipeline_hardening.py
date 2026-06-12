@@ -83,10 +83,10 @@ class TestSlackCallbackRetry:
 class TestTeamsCallbackRetry:
     """Teams card update retry on failure.
 
-    §12 / §6.8 — Teams is disabled in V1. These tests exercise the
-    post-V1 retry behaviour where the flag is on; each method opts in
-    via monkeypatch. The disabled-flag-returns-True short-circuit is
-    covered separately in test_v1_boundary_flags.py.
+    Teams is a release approval surface. These tests exercise retry
+    behaviour with the surface explicitly enabled for isolation. The
+    kill-switch short-circuit is covered separately in
+    test_v1_boundary_flags.py.
     """
 
     def test_teams_failure_enqueues(self, db, monkeypatch):

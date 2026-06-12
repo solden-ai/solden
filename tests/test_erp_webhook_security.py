@@ -406,7 +406,7 @@ class TestOutlookWebhookFailClosed:
     def test_unset_secret_rejects_notifications(self, monkeypatch):
         # Clear any inherited OUTLOOK_WEBHOOK_SECRET from the test env.
         monkeypatch.delenv("OUTLOOK_WEBHOOK_SECRET", raising=False)
-        # The Outlook router is V1-gated; opt in so we can exercise
+        # Keep the Outlook release surface enabled so we can exercise
         # the webhook handler's security behavior.
         monkeypatch.setenv("FEATURE_OUTLOOK_ENABLED", "true")
 

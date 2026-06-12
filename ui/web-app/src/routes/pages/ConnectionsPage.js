@@ -35,7 +35,7 @@ function normalizeConnectionStatus(status, connected = false) {
   const token = String(status || '').trim().toLowerCase();
   if (connected || token === 'connected') return 'connected';
   if (['reconnect_required', 'reauthorization_required', 'degraded', 'error'].includes(token)) return 'attention';
-  if (token === 'disabled_in_v1') return 'disabled';
+  if (token === 'disabled') return 'disabled';
   return 'disconnected';
 }
 
@@ -135,6 +135,121 @@ function ReadinessCard({ label, value, detail, tone = 'neutral' }) {
   `;
 }
 
+function surfaceStatusLabel(status) {
+  const token = String(status || '').trim().toLowerCase();
+  if (token === 'connected') return 'Connected';
+  if (token === 'ready') return 'Ready';
+  if (token === 'feature_gated') return 'Feature-gated';
+  if (token === 'not_connected') return 'Not connected';
+  if (token === 'disconnected') return 'Not connected';
+  return token ? token.replace(/_/g, ' ') : 'Available';
+}
+
+function surfaceStatusTone(status, maturity) {
+  const token = String(status || '').trim().toLowerCase();
+  const stage = String(maturity || '').trim().toLowerCase();
+  if (token === 'connected' || token === 'ready') return 'success';
+  if (token === 'feature_gated' || stage === 'sandbox_pending' || stage === 'beta') return 'warning';
+  if (token === 'not_connected' || token === 'disconnected') return 'muted';
+  return 'neutral';
+}
+
+function groupSurfaces(surfaces, family) {
+  return (surfaces || []).filter((row) => String(row.family || '') === family);
+}
+
+function SurfaceMaturityPanel({ api, orgId }) {
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    if (!api || !orgId) return;
+    let cancelled = false;
+    async function load() {
+      setErr('');
+      try {
+        const resp = await api(`/api/workspace/surface-readiness?organization_id=${encodeURIComponent(orgId)}`);
+        if (!cancelled) setData(resp || null);
+      } catch (exc) {
+        if (!cancelled) setErr(String(exc?.message || exc));
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [api, orgId]);
+
+  const surfaces = Array.isArray(data?.surfaces) ? data.surfaces : [];
+  const erpSurfaces = groupSurfaces(surfaces, 'erp');
+  const operatingSurfaces = surfaces.filter((row) => row.family !== 'erp');
+  const summary = data?.summary || {};
+
+  return html`
+    <div class="panel cl-surface-maturity-panel">
+      <div class="panel-head compact">
+        <div class="cl-connection-panel-copy">
+          <h3>Surface maturity</h3>
+          <p>One contract for what is native embedded, API-memory-only, sandbox-pending, or feature-gated.</p>
+        </div>
+        ${data ? html`
+          <span class="secondary-chip">
+            ${summary.connected || 0}/${summary.total || surfaces.length} active
+          </span>
+        ` : null}
+      </div>
+      ${err ? html`<div class="form-error">${err}</div>` : null}
+      ${!err && !data ? html`<div class="secondary-empty cl-connection-empty">Loading surface maturity…</div>` : null}
+      ${data && html`
+        <div class="cl-surface-maturity-sections">
+          <${SurfaceMaturityTable}
+            title="ERP surfaces"
+            rows=${erpSurfaces}
+          />
+          <${SurfaceMaturityTable}
+            title="Inbox, chat, and workspace"
+            rows=${operatingSurfaces}
+          />
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function SurfaceMaturityTable({ title, rows = [] }) {
+  return html`
+    <section class="cl-surface-maturity-section">
+      <div class="cl-surface-maturity-title">
+        <strong>${title}</strong>
+        <span>${rows.length} surface${rows.length === 1 ? '' : 's'}</span>
+      </div>
+      <div class="cl-surface-maturity-table">
+        ${rows.map((row) => {
+          const tone = surfaceStatusTone(row.connection_status, row.maturity);
+          return html`
+            <div class="cl-surface-maturity-row" key=${row.key}>
+              <div class="cl-surface-maturity-name">
+                <strong>${row.label}</strong>
+                <span>${row.role}</span>
+              </div>
+              <div>
+                <span class="cl-surface-maturity-label">Memory</span>
+                <strong>${row.memory_surface}</strong>
+              </div>
+              <div>
+                <span class="cl-surface-maturity-label">Actions</span>
+                <span>${row.decision_actions}</span>
+              </div>
+              <div class="cl-surface-maturity-stage">
+                <span class=${`cl-surface-chip cl-surface-chip-${tone}`}>${row.maturity_label}</span>
+                <small>${surfaceStatusLabel(row.connection_status)}</small>
+              </div>
+            </div>
+          `;
+        })}
+      </div>
+    </section>
+  `;
+}
+
 export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefresh, oauthBridge, navigate }) {
   const gmail = integrationByName(bootstrap, 'gmail');
   const outlook = integrationByName(bootstrap, 'outlook');
@@ -143,13 +258,11 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
   const teams = integrationByName(bootstrap, 'teams');
   const gmailReconnectRequired = Boolean(gmail.requires_reconnect);
   const outlookReconnectRequired = Boolean(outlook.requires_reconnect);
-  // The Outlook + Teams surfaces are gated behind backend feature
-  // flags. When off, the bootstrap status payload reports
-  // ``disabled_in_v1`` and the SPA shows a "post-launch" pill instead
-  // of a Connect CTA that would 404. Mirrors the pattern for any
-  // other gated surface.
-  const outlookEnabled = String(outlook.status || '').toLowerCase() !== 'disabled_in_v1';
-  const teamsEnabled = String(teams.status || '').toLowerCase() !== 'disabled_in_v1';
+  // The Outlook + Teams surfaces ship with the product. Backend flags
+  // are kill switches only; when explicitly off, the bootstrap status
+  // reports disabled and the SPA avoids rendering a dead Connect CTA.
+  const outlookEnabled = String(outlook.status || '').toLowerCase() !== 'disabled';
+  const teamsEnabled = String(teams.status || '').toLowerCase() !== 'disabled';
   // Capability comes directly from the authenticated bootstrap response
   // (workspace_shell._workspace_capabilities).  The previous code probed
   // /api/workspace/team/invites with silent:true to infer admin status
@@ -393,6 +506,8 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
           oauthBridge=${oauthBridge}
           canManageConnections=${canEditConnections}
         />
+
+        <${SurfaceMaturityPanel} api=${api} orgId=${orgId} />
 
         <${FieldMappingPanel}
           api=${api}

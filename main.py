@@ -748,6 +748,7 @@ STRICT_PROFILE_ALLOWED_WORKSPACE_PATHS = {
     "/api/workspace/ops/connector-readiness",
     "/api/workspace/ops/learning-calibration",
     "/api/workspace/ops/learning-calibration/recompute",
+    "/api/workspace/surface-readiness",
     "/api/workspace/org/settings",
     "/api/workspace/policies/ap",
     "/api/workspace/rollback-controls",

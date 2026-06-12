@@ -113,9 +113,8 @@ def test_extension_pipeline_normalizes_exception_taxonomy(client, db):
 
 
 def test_worklist_derives_budget_exception_and_teams_interactive(monkeypatch, client, db):
-    # §12 / §6.8 — Teams is disabled in V1 by default. This test
-    # exercises the Teams-interactive derivation path (post-V1
-    # behaviour), so opt into the flag explicitly.
+    # Teams is a release approval surface. Enable explicitly here so
+    # the test remains isolated from any suite-level kill-switch env.
     monkeypatch.setenv("FEATURE_TEAMS_ENABLED", "true")
 
     from datetime import datetime, timezone

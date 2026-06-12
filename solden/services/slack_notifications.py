@@ -473,9 +473,10 @@ async def _retry_slack_response_url(payload: dict) -> bool:
 
 async def _retry_teams_card_update(payload: dict) -> bool:
     """Retry a failed Teams card update."""
-    # §12 / §6.8 — Teams disabled in V1. Any enqueued retry rows from
-    # pre-flag deployments simply succeed-as-skipped so the retry
-    # worker drains the queue cleanly.
+    # Teams is a release approval surface, but deployments can still
+    # disable it with FEATURE_TEAMS_ENABLED=false. In that case, any
+    # enqueued retry rows succeed-as-skipped so the retry worker drains
+    # the queue cleanly.
     from solden.core.feature_flags import is_teams_enabled
     if not is_teams_enabled():
         return True

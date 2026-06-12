@@ -12,7 +12,7 @@ function makeBootstrap() {
       { name: 'outlook', status: 'disconnected', connected: false },
       { name: 'erp', status: 'connected', connected: true, connections: [{ erp_type: 'netsuite' }] },
       { name: 'slack', status: 'connected', connected: true, approval_channel: '#approvals' },
-      { name: 'teams', status: 'disabled_in_v1', connected: false },
+      { name: 'teams', status: 'disconnected', connected: false },
     ],
   };
 }
@@ -33,6 +33,46 @@ function renderConnectionsPage({ webhooks = makeWebhooks() } = {}) {
         computed_at: '2026-06-04T10:00:00Z',
         integrations: [],
         webhooks: { delivered: 0, retrying: 0, failed: 0 },
+      };
+    }
+    if (route.startsWith('/api/workspace/surface-readiness')) {
+      return {
+        summary: { connected: 5, total: 11 },
+        surfaces: [
+          {
+            key: 'netsuite',
+            label: 'NetSuite',
+            family: 'erp',
+            role: 'ERP native + API connector',
+            memory_surface: 'SuiteApp panel',
+            maturity: 'native_panel_ready',
+            maturity_label: 'Native panel ready',
+            decision_actions: 'Approve, reject, request info from vendor bill context',
+            connection_status: 'connected',
+          },
+          {
+            key: 'quickbooks',
+            label: 'QuickBooks',
+            family: 'erp',
+            role: 'API connector',
+            memory_surface: 'Provider-neutral ERP memory API',
+            maturity: 'api_memory_ready',
+            maturity_label: 'API memory ready',
+            decision_actions: 'Resolve ERP reference to Solden memory',
+            connection_status: 'not_connected',
+          },
+          {
+            key: 'slack',
+            label: 'Slack',
+            family: 'approval',
+            role: 'Chat decision surface',
+            memory_surface: 'Approval cards and reply sync',
+            maturity: 'production_ready',
+            maturity_label: 'Production-ready',
+            decision_actions: 'Approve, reject, request info',
+            connection_status: 'connected',
+          },
+        ],
       };
     }
     if (route === '/api/workspace/webhooks') {
@@ -62,6 +102,10 @@ describe('ConnectionsPage', () => {
 
     await screen.findByText('Connections');
     expect(screen.getByText('Connected surfaces')).toBeTruthy();
+    expect(screen.getByText('Surface maturity')).toBeTruthy();
+    expect(screen.getByText('Native panel ready')).toBeTruthy();
+    expect(screen.getByText('API memory ready')).toBeTruthy();
+    expect(screen.getByText('Provider-neutral ERP memory API')).toBeTruthy();
     expect(screen.getByText('Connection health')).toBeTruthy();
     expect(screen.getByText('Setup order')).toBeTruthy();
     expect(screen.getByText('Inbox')).toBeTruthy();

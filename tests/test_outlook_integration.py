@@ -259,9 +259,9 @@ class TestOutlookAutopilot:
 class TestOutlookRoutes:
     @pytest.fixture()
     def client(self, db, outlook_env, monkeypatch):
-        # §12 #6 — Outlook is disabled in V1 by default. These route
-        # tests exercise the post-V1 behaviour where the flag is on,
-        # so enable it explicitly for the duration of this class.
+        # Outlook is a release intake surface. Enable explicitly for
+        # this class so the tests remain isolated from any suite-level
+        # kill-switch env.
         monkeypatch.setenv("FEATURE_OUTLOOK_ENABLED", "true")
 
         from main import app

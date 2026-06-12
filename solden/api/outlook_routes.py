@@ -1,10 +1,8 @@
 """Outlook / Microsoft 365 OAuth and webhook routes.
 
-§12 #6 — Outlook is not shipped in V1. All routes in this module are
-gated behind the ``FEATURE_OUTLOOK_ENABLED`` flag; without it, every
-endpoint returns 404 with a reason code pointing at the V1 boundary.
-The code stays intact for the post-V1 moment when Outlook support
-becomes an intentional product decision.
+Outlook is a current release intake surface. Routes stay behind the
+``FEATURE_OUTLOOK_ENABLED`` kill switch so a deployment can turn the
+Microsoft surface off without removing the implementation.
 """
 from __future__ import annotations
 
@@ -23,9 +21,9 @@ logger = logging.getLogger(__name__)
 
 def _require_outlook_enabled() -> None:
     """Dependency applied to every Outlook route — 404s the whole
-    surface when the V1 flag is off. Runs before any handler body so
-    no OAuth, token exchange, or webhook subscription can fire from a
-    V1 deployment.
+    surface when the deployment kill switch is off. Runs before any
+    handler body so no OAuth, token exchange, or webhook subscription
+    can fire from a disabled deployment.
     """
     if not is_outlook_enabled():
         raise HTTPException(status_code=404, detail=outlook_disabled_payload())
