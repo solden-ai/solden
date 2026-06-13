@@ -4,13 +4,12 @@ import { html } from '../utils/htm.js';
 import { api, ApiError } from '../api/client.js';
 import { logout, refreshSession, useSession } from './useSession.js';
 import { GoogleMark, MicrosoftMark } from './OAuthIcons.js';
-import { displayOrgName } from '../utils/formatters.js';
 import { AuthShell } from './AuthLayout.js';
 
 function InviteAuthFrame({ children }) {
   return html`
     <${AuthShell}>
-      <div class="cl-auth-card cl-auth-login-card cl-auth-invite-card">
+      <div class="cl-auth-card cl-auth-login-card">
         ${children}
       </div>
     <//>
@@ -127,10 +126,6 @@ export function InviteAcceptPage() {
   const sessionEmail = (session?.email || '').toLowerCase().trim();
   const sameUser = isAuthenticated && sessionEmail && sessionEmail === inviteEmail;
   const wrongUser = isAuthenticated && sessionEmail && sessionEmail !== inviteEmail;
-  // Display the org name with a leading capital so "Join solden" reads
-  // as "Join Solden" in sentence context. The helper handles
-  // empty/short cases uniformly with the rest of the SPA.
-  const orgLabel = displayOrgName(preview.organization_name) || 'your team';
 
   // ── Signed in as the invited email. Accept + continue. ─────────
   const acceptAsCurrentUser = async () => {
@@ -155,10 +150,10 @@ export function InviteAcceptPage() {
   if (sameUser) {
     return html`
       <${InviteAuthFrame}>
-        <h1 class="cl-auth-title">Welcome to ${orgLabel}</h1>
+        <h1 class="cl-auth-title">Accept your invite</h1>
         <p class="cl-auth-sub">
           You're already signed in as <strong>${inviteEmail}</strong>.
-          Accept the invite to bind this account to the workspace.
+          Accept the invite to continue to your workspace.
         </p>
         ${error ? html`<div class="cl-auth-error">${error}</div>` : null}
         <button
@@ -253,10 +248,10 @@ export function InviteAcceptPage() {
 
   return html`
     <${InviteAuthFrame}>
-        <h1 class="cl-auth-title">Join ${orgLabel}</h1>
+        <h1 class="cl-auth-title">Create your account</h1>
         <p class="cl-auth-sub">
-          You've been invited as <strong>${inviteEmail}</strong>. Pick
-          how you want to sign in — Google, Microsoft, or set a password.
+          Use the invite sent to <strong>${inviteEmail}</strong> to access
+          your workspace.
         </p>
 
         ${error ? html`<div class="cl-auth-error">${error}</div>` : null}
