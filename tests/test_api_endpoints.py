@@ -142,6 +142,119 @@ class TestAuthEndpoints:
         })
         assert response.status_code == 401
 
+    def test_activation_accept_creates_first_owner(self, monkeypatch):
+        monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
+        from solden.core.auth import WORKSPACE_ROLE_OWNER
+        from solden.core.database import get_db
+
+        db = get_db()
+        org_id = "org-activation-owner"
+        db.ensure_organization(
+            organization_id=org_id,
+            organization_name="Activation Owner Co",
+            domain="activation-owner.test",
+        )
+        invite = db.create_team_invite(
+            organization_id=org_id,
+            email="founder@activation-owner.test",
+            role=WORKSPACE_ROLE_OWNER,
+            created_by="system:test",
+            expires_at=(datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+        )
+
+        preview = client.get("/auth/activations/preview", params={"token": invite["token"]})
+        assert preview.status_code == 200
+        assert preview.json()["organization_name"] == "Activation Owner Co"
+        assert preview.json()["role"] == "owner"
+
+        response = client.post(
+            "/auth/activations/accept",
+            json={
+                "token": invite["token"],
+                "password": "StrongActivationPassword123!",
+                "name": "First Owner",
+            },
+        )
+        assert response.status_code == 200
+        user = db.get_user_by_email("founder@activation-owner.test")
+        assert user["workspace_role"] == WORKSPACE_ROLE_OWNER
+        assert user["organization_id"] == org_id
+        assert user["name"] == "First Owner"
+        assert db.get_team_invite(invite["id"])["status"] == "accepted"
+
+    def test_owner_activation_tokens_do_not_work_on_team_invite_route(self):
+        from solden.core.auth import WORKSPACE_ROLE_OWNER
+        from solden.core.database import get_db
+
+        db = get_db()
+        org_id = "org-activation-route-split"
+        db.ensure_organization(
+            organization_id=org_id,
+            organization_name="Route Split Co",
+            domain="route-split.test",
+        )
+        invite = db.create_team_invite(
+            organization_id=org_id,
+            email="founder@route-split.test",
+            role=WORKSPACE_ROLE_OWNER,
+            created_by="system:test",
+            expires_at=(datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+        )
+
+        preview = client.get("/auth/invites/preview", params={"token": invite["token"]})
+        assert preview.status_code == 400
+        assert preview.json()["detail"] == "activation_link_required"
+
+        accept = client.post(
+            "/auth/invites/accept",
+            json={"token": invite["token"], "password": "StrongActivationPassword123!"},
+        )
+        assert accept.status_code == 400
+        assert accept.json()["detail"] == "activation_link_required"
+
+    def test_activation_blocks_second_owner_for_existing_workspace(self, monkeypatch):
+        monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
+        from solden.core.auth import WORKSPACE_ROLE_OWNER
+        from solden.core.database import get_db
+
+        db = get_db()
+        org_id = "org-activation-owner-conflict"
+        db.ensure_organization(
+            organization_id=org_id,
+            organization_name="Owner Conflict Co",
+            domain="owner-conflict.test",
+        )
+        db.create_user(
+            email="owner@owner-conflict.test",
+            name="Current Owner",
+            organization_id=org_id,
+            role=WORKSPACE_ROLE_OWNER,
+            password_hash="test-hash",
+            is_active=True,
+        )
+        invite = db.create_team_invite(
+            organization_id=org_id,
+            email="new-owner@owner-conflict.test",
+            role=WORKSPACE_ROLE_OWNER,
+            created_by="system:test",
+            expires_at=(datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+        )
+
+        preview = client.get("/auth/activations/preview", params={"token": invite["token"]})
+        assert preview.status_code == 200
+        assert preview.json()["status"] == "owner_exists"
+
+        response = client.post(
+            "/auth/activations/accept",
+            json={
+                "token": invite["token"],
+                "password": "StrongActivationPassword123!",
+                "name": "New Owner",
+            },
+        )
+        assert response.status_code == 409
+        assert response.json()["detail"] == "activation_owner_exists"
+
     def test_refresh_endpoint_removed(self):
         """Solden no longer mints its own refresh token; the Gmail
         extension silently re-runs Google's token flow when the access

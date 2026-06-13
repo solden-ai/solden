@@ -172,7 +172,8 @@ export function LoginPage() {
 
         <p class="cl-auth-fineprint">
           Don't have an account yet? <a href="https://soldenai.com/contact.html">Request a demo</a>.
-          If your team admin sent you an invite link, open it directly.
+          New customer workspaces start from a Solden activation link.
+          Team members should open the invite sent by their admin.
         </p>
       </div>
     <//>

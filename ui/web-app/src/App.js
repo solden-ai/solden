@@ -6,6 +6,7 @@ import { ToastProvider } from './shell/Toast.js';
 import { AuthGate } from './auth/AuthGate.js';
 import { LoginPage } from './auth/LoginPage.js';
 import { InviteAcceptPage } from './auth/InviteAcceptPage.js';
+import { ActivationAcceptPage } from './auth/ActivationAcceptPage.js';
 import { OnboardingGate } from './shell/OnboardingGate.js';
 import { EntityProvider } from './shell/EntityContext.js';
 import { OnboardingPage } from './routes/pages/OnboardingPage.js';
@@ -48,6 +49,8 @@ export function App() {
     <${Router}>
       <${Switch}>
         <${Route} path="/login"><${LoginPage} /><//>
+        <${Route} path="/activate"><${ActivationAcceptPage} /><//>
+        <${Route} path="/signup/activate"><${ActivationAcceptPage} /><//>
         <${Route} path="/signup/accept"><${InviteAcceptPage} /><//>
         <${Route} path="/privacy"><${PrivacyPage} /><//>
         <${Route} path="/terms"><${TermsPage} /><//>

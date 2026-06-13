@@ -785,6 +785,8 @@ STRICT_PROFILE_ALLOWED_AUTH_PATHS = {
     "/auth/google/start",
     "/auth/microsoft/start",
     "/auth/microsoft/callback",
+    "/auth/activations/accept",
+    "/auth/activations/preview",
     "/auth/invites/accept",
     "/auth/invites/preview",
     "/auth/login",
@@ -1267,6 +1269,7 @@ class WorkspaceSessionCSRFMiddleware(BaseHTTPMiddleware):
         "/auth/google/exchange",
         "/auth/microsoft/start",
         "/auth/microsoft/callback",
+        "/auth/activations/accept",
         "/auth/invites/accept",
     }
 

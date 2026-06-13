@@ -127,8 +127,129 @@ class InviteAcceptRequest(BaseModel):
     name: Optional[str] = None
 
 
+class ActivationAcceptRequest(BaseModel):
+    token: str
+    password: Optional[str] = None
+    name: Optional[str] = None
+
+
 class GoogleAuthCodeExchangeRequest(BaseModel):
     auth_code: str = Field(..., min_length=12, max_length=512)
+
+
+def _invite_is_owner_activation(invite: Optional[Dict[str, Any]]) -> bool:
+    if not invite:
+        return False
+    from solden.core.auth import ROLE_OWNER, normalize_user_role
+
+    return normalize_user_role(invite.get("role")) == ROLE_OWNER
+
+
+def _load_owner_activation_invite(token: str) -> Dict[str, Any]:
+    db = get_db()
+    invite = db.get_team_invite_by_token(token)
+    if not invite or not _invite_is_owner_activation(invite):
+        raise HTTPException(status_code=404, detail="activation_not_found")
+    return invite
+
+
+def _organization_name(db, organization_id: str) -> Optional[str]:
+    try:
+        org = db.get_organization(organization_id) or {}
+        return str(org.get("name") or "").strip() or None
+    except Exception:
+        return None
+
+
+def _ensure_invite_not_expired(invite: Dict[str, Any], *, detail_prefix: str) -> None:
+    expires_at = invite.get("expires_at")
+    if not expires_at:
+        return
+    expires = datetime.fromisoformat(str(expires_at).replace("Z", "+00:00"))
+    if datetime.now(timezone.utc) > expires:
+        raise HTTPException(status_code=400, detail=f"{detail_prefix}_expired")
+
+
+def _active_owner_rows(db, organization_id: str) -> list:
+    from solden.core.auth import WORKSPACE_ROLE_OWNER, normalize_workspace_role
+
+    owners = []
+    for row in db.get_users(organization_id, include_inactive=False) or []:
+        workspace_role = (
+            normalize_workspace_role(row.get("workspace_role"))
+            or normalize_workspace_role(row.get("role"))
+        )
+        if workspace_role == WORKSPACE_ROLE_OWNER:
+            owners.append(row)
+    return owners
+
+
+def _assert_activation_can_claim_owner(
+    db,
+    *,
+    organization_id: str,
+    email: str,
+) -> None:
+    conflicting_owners = [
+        row
+        for row in _active_owner_rows(db, organization_id)
+        if str(row.get("email") or "").strip().lower() != email
+    ]
+    if conflicting_owners:
+        raise HTTPException(status_code=409, detail="activation_owner_exists")
+
+
+def _assert_activation_user_not_bound_elsewhere(user: Optional[User], organization_id: str) -> None:
+    if user is None:
+        return
+    current_org = str(getattr(user, "organization_id", "") or "").strip()
+    if current_org and current_org not in {organization_id, "_unprovisioned"}:
+        raise HTTPException(status_code=409, detail="activation_user_already_bound")
+
+
+def _validate_activation_invite(
+    db,
+    invite: Dict[str, Any],
+    *,
+    require_pending: bool,
+) -> tuple[str, str]:
+    if require_pending and invite.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="activation_not_pending")
+    if invite.get("status") == "pending":
+        _ensure_invite_not_expired(invite, detail_prefix="activation")
+
+    email = str(invite.get("email") or "").lower().strip()
+    organization_id = str(invite.get("organization_id") or "").strip()
+    if not email:
+        raise HTTPException(status_code=400, detail="activation_missing_email")
+    if not organization_id or organization_id in ("default", "_unprovisioned"):
+        raise HTTPException(status_code=400, detail="activation_missing_organization_id")
+
+    _assert_activation_can_claim_owner(
+        db,
+        organization_id=organization_id,
+        email=email,
+    )
+    return email, organization_id
+
+
+def _append_activation_audit(db, *, user: User, organization_id: str, source: str) -> None:
+    try:
+        db.append_audit_event({
+            "event_type": "workspace_owner_activated",
+            "actor_type": "user",
+            "actor_id": user.id,
+            "organization_id": organization_id,
+            "box_id": organization_id,
+            "box_type": "workspace",
+            "source": source,
+            "payload_json": {
+                "owner_email": user.email,
+                "activation_source": source,
+            },
+        })
+    except Exception:
+        pass
 
 
 def _oauth_secret() -> str:
@@ -822,13 +943,15 @@ async def google_web_auth_callback(
     if invite and invite.get("status") != "pending":
         invite = None
 
-    from solden.core.auth import normalize_user_role, ROLE_AP_CLERK
+    from solden.core.auth import normalize_user_role, ROLE_AP_CLERK, ROLE_OWNER
     if invite:
         if str(invite.get("email")).lower().strip() != email:
             raise HTTPException(status_code=403, detail="invite_email_mismatch")
         org_id = str(invite.get("organization_id"))
         # Phase 2.3: normalize to canonical thesis role.
         role = normalize_user_role(invite.get("role")) or ROLE_AP_CLERK
+        if role == ROLE_OWNER:
+            _validate_activation_invite(db, invite, require_pending=True)
     else:
         # Resolve org from email domain — never trust caller-supplied org_id
         email_domain = email.split("@")[1].lower() if "@" in email else ""
@@ -855,6 +978,8 @@ async def google_web_auth_callback(
     if user is None:
         user = create_user_from_google(email=email, google_id=google_id, organization_id=org_id)
     else:
+        if invite and role == ROLE_OWNER:
+            _assert_activation_user_not_bound_elsewhere(user, org_id)
         db.update_user(user.id, google_id=google_id, is_active=True)
         # Do not reassign existing users to a different org
         user = get_user_by_email(email)
@@ -865,6 +990,13 @@ async def google_web_auth_callback(
         db.update_user(user.id, role=role, organization_id=org_id)
         db.accept_team_invite(str(invite.get("id")), accepted_by=user.id)
         user = get_user_by_email(email) or user
+        if role == ROLE_OWNER:
+            _append_activation_audit(
+                db,
+                user=user,
+                organization_id=org_id,
+                source="google_oauth_activation",
+            )
 
     jwt_token = create_access_token(
         user_id=user.id,
@@ -1053,6 +1185,7 @@ async def microsoft_web_auth_callback(
         get_user_by_email,
         normalize_user_role,
         ROLE_AP_CLERK,
+        ROLE_OWNER,
     )
 
     db = get_db()
@@ -1066,6 +1199,8 @@ async def microsoft_web_auth_callback(
             raise HTTPException(status_code=403, detail="invite_email_mismatch")
         org_id = str(invite.get("organization_id"))
         role = normalize_user_role(invite.get("role")) or ROLE_AP_CLERK
+        if role == ROLE_OWNER:
+            _validate_activation_invite(db, invite, require_pending=True)
     else:
         email_domain = email.split("@")[1].lower() if "@" in email else ""
         org = db.get_organization_by_domain(email_domain) if email_domain else None
@@ -1094,6 +1229,8 @@ async def microsoft_web_auth_callback(
             name=name,
         )
     else:
+        if invite and role == ROLE_OWNER:
+            _assert_activation_user_not_bound_elsewhere(user, org_id)
         db.update_user(user.id, is_active=True)
         user = get_user_by_email(email)
 
@@ -1104,6 +1241,13 @@ async def microsoft_web_auth_callback(
         db.update_user(user.id, role=role, organization_id=org_id)
         db.accept_team_invite(str(invite.get("id")), accepted_by=user.id)
         user = get_user_by_email(email) or user
+        if role == ROLE_OWNER:
+            _append_activation_audit(
+                db,
+                user=user,
+                organization_id=org_id,
+                source="microsoft_oauth_activation",
+            )
 
     jwt_token = create_access_token(
         user_id=user.id,
@@ -1247,6 +1391,110 @@ async def google_oauth_popup_complete():
     return HTMLResponse(content=html)
 
 
+@router.get("/activations/preview")
+async def preview_activation(token: str = Query(..., min_length=1)) -> Dict[str, Any]:
+    """Non-sensitive metadata for a first-admin workspace activation link."""
+    db = get_db()
+    invite = _load_owner_activation_invite(token)
+
+    email = str(invite.get("email") or "").lower().strip()
+    organization_id = str(invite.get("organization_id") or "").strip()
+    status = str(invite.get("status") or "pending").strip().lower()
+
+    if status == "pending":
+        expires_at = invite.get("expires_at")
+        if expires_at:
+            try:
+                expires = datetime.fromisoformat(str(expires_at).replace("Z", "+00:00"))
+                if datetime.now(timezone.utc) > expires:
+                    status = "expired"
+            except Exception:
+                pass
+        if organization_id and organization_id not in ("default", "_unprovisioned"):
+            conflicts = [
+                row
+                for row in _active_owner_rows(db, organization_id)
+                if str(row.get("email") or "").strip().lower() != email
+            ]
+            if conflicts:
+                status = "owner_exists"
+
+    return {
+        "email": email,
+        "role": "owner",
+        "status": status,
+        "organization_name": _organization_name(db, organization_id) if organization_id else None,
+    }
+
+
+@router.post("/activations/accept")
+async def accept_activation(
+    request: ActivationAcceptRequest,
+    response: Response,
+    http_request: Request,
+):
+    """Activate the first owner account for a provisioned customer workspace."""
+    from solden.core.auth import ROLE_OWNER, get_user_by_email, hash_password
+
+    db = get_db()
+    invite = _load_owner_activation_invite(request.token)
+    if invite.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="activation_not_pending")
+
+    email, organization_id = _validate_activation_invite(
+        db,
+        invite,
+        require_pending=True,
+    )
+
+    user = get_user_by_email(email)
+    _assert_activation_user_not_bound_elsewhere(user, organization_id)
+
+    if user is None:
+        if not request.password:
+            raise HTTPException(status_code=400, detail="password_required_for_activation")
+        user = create_user(
+            email=email,
+            password=request.password,
+            name=(request.name or email.split("@")[0].replace(".", " ").title()),
+            organization_id=organization_id,
+            role=ROLE_OWNER,
+        )
+    else:
+        update_payload: Dict[str, Any] = {
+            "organization_id": organization_id,
+            "role": ROLE_OWNER,
+            "is_active": True,
+        }
+        if request.name:
+            update_payload["name"] = request.name
+        if request.password:
+            update_payload["password_hash"] = hash_password(request.password)
+        db.update_user(user.id, **update_payload)
+        user = get_user_by_email(email)
+
+    if user is None:
+        raise HTTPException(status_code=500, detail="activation_accept_failed")
+
+    db.accept_team_invite(str(invite.get("id")), accepted_by=user.id)
+    _append_activation_audit(
+        db,
+        user=user,
+        organization_id=organization_id,
+        source="password_activation",
+    )
+
+    access = create_access_token(user.id, user.email, user.organization_id, user.role)
+    _set_workspace_session_cookies(response, access, http_request)
+    return {
+        "success": True,
+        "user": user,
+        "access_token": SESSION_TOKEN_PLACEHOLDER,
+        "refresh_token": SESSION_TOKEN_PLACEHOLDER,
+        "token_type": "bearer",
+    }
+
+
 @router.get("/invites/preview")
 async def preview_invite(token: str = Query(..., min_length=1)) -> Dict[str, Any]:
     """Non-sensitive metadata for an invite token.
@@ -1270,6 +1518,8 @@ async def preview_invite(token: str = Query(..., min_length=1)) -> Dict[str, Any
     invite = db.get_team_invite_by_token(token)
     if not invite:
         raise HTTPException(status_code=404, detail="invite_not_found")
+    if _invite_is_owner_activation(invite):
+        raise HTTPException(status_code=400, detail="activation_link_required")
 
     organization_name: Optional[str] = None
     org_id = str(invite.get("organization_id") or "").strip()
@@ -1304,6 +1554,8 @@ async def accept_invite(
     invite = db.get_team_invite_by_token(request.token)
     if not invite:
         raise HTTPException(status_code=404, detail="invite_not_found")
+    if _invite_is_owner_activation(invite):
+        raise HTTPException(status_code=400, detail="activation_link_required")
     if invite.get("status") != "pending":
         raise HTTPException(status_code=400, detail="invite_not_pending")
 
