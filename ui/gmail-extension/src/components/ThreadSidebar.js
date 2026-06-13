@@ -628,7 +628,7 @@ function humanizeWaitingType(type) {
     erp_unavailable: 'ERP to come back online',
     erp_recheck: 'ERP reconnection',
     payment_confirmation: 'payment confirmation',
-    vendor_response: 'vendor response',
+    vendor_response: 'external response',
   };
   return map[t] || t.replace(/_/g, ' ');
 }

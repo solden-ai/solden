@@ -163,8 +163,8 @@ export function getDefaultNextMoveLabel(state, item = null, actorRole = 'operato
   if (normalized === 'needs_approval') return 'Approval pending';
   if (normalized === 'needs_info') {
     const followupNextAction = String(item?.followup_next_action || '').trim().toLowerCase();
-    if (followupNextAction === 'await_vendor_response') return 'Waiting for vendor reply';
-    if (followupNextAction === 'manual_vendor_escalation') return 'Escalate vendor follow-up';
+    if (followupNextAction === 'await_vendor_response') return 'Waiting for external response';
+    if (followupNextAction === 'manual_vendor_escalation') return 'Escalate missing context';
     return 'Prepare info request';
   }
   if ((normalized === 'approved' || normalized === 'ready_to_post') && !hasErpPostingConnection(item)) {
@@ -286,9 +286,9 @@ export function getWorkStateNotice(state, documentType = 'invoice', item = null)
   if (normalized === 'needs_info') {
     const question = String(item?.needs_info_question || '').trim();
     if (question) {
-      return `Reach out to the vendor: ${question}`;
+      return `Resolve missing context: ${question}`;
     }
-    return 'Vendor needs to clarify something before this invoice can move forward.';
+    return 'Required context is missing before this invoice can move forward.';
   }
   if (normalized === 'needs_approval') {
     const approvalFollowup = item?.approval_followup && typeof item.approval_followup === 'object'

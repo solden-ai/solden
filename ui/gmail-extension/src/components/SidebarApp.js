@@ -143,9 +143,9 @@ function humanizeActionFailure(reason) {
     organization_mismatch: 'This invoice belongs to a different workspace.',
     assignee_required: 'Choose the approver who should own this approval request.',
     state_not_waiting_for_approval: 'This invoice is no longer waiting on approval.',
-    waiting_for_sla_window: 'Follow-up already sent. Wait for the vendor response before nudging again.',
-    followup_attempt_limit_reached: 'Vendor did not reply to automatic follow-ups. Escalate manually.',
-    state_not_needs_info: 'This invoice is no longer waiting on vendor information.',
+    waiting_for_sla_window: 'An info request is already open. Wait for the response before nudging again.',
+    followup_attempt_limit_reached: 'External context is still missing. Escalate manually.',
+    state_not_needs_info: 'This invoice is no longer waiting on missing information.',
     segregation_of_duties_violation: 'You cannot approve this invoice because you submitted or processed it. Another team member must approve.',
     not_authorized_approver: 'You are not a designated approver for this invoice. Only named approvers in the routing rule can approve.',
   };
@@ -295,9 +295,9 @@ function getBlockers(item, state, budgetContext, documentType = 'invoice') {
   if (state === 'needs_info') {
     const disputeStatus = item?.dispute_status;
     const disputeLabel = disputeStatus === 'vendor_contacted'
-      ? 'Waiting on vendor response'
+      ? 'Waiting on external response'
       : disputeStatus === 'escalated'
-      ? 'Dispute escalated — vendor unresponsive'
+      ? 'Dispute escalated — external response missing'
       : isInvoiceDocument ? 'Missing invoice details' : 'Missing document details';
     add(
       'needs_info',

@@ -112,13 +112,13 @@ test('work-surface primary action map matches the current Gmail execution doctri
     getWorkStateNotice('needs_info', 'invoice', {
       followup_next_action: 'await_vendor_response',
     }),
-    'Waiting on vendor reply. Solden will send reminders automatically.',
+    'Waiting on external response. Solden will keep the record paused until context arrives.',
   );
   assert.equal(
     getWorkStateNotice('needs_info', 'invoice', {
       followup_next_action: 'manual_vendor_escalation',
     }),
-    'Vendor did not reply. Manual escalation needed.',
+    'External context is still missing. Manual escalation needed.',
   );
   assert.equal(
     getWorkStateNotice('approved', 'invoice', {

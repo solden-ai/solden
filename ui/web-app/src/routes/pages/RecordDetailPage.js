@@ -4,7 +4,7 @@
  * The workspace is the coordination-layer control center, not a
  * workflow desktop. Routine approve / reject / post / snooze decisions
  * belong to Slack and Teams approval cards (where the approver lives)
- * and to Gmail (where vendor follow-up lives). This page is for:
+ * and to Gmail / Outlook (where inbox context lives). This page is for:
  *
  *   1. Reading the agent's reasoning + audit trail (always available)
  *   2. Intervening when the agent has escalated the record to a human
@@ -352,7 +352,7 @@ function HandoffStrip({ links }) {
       <div class="cl-record-handoff-copy">
         <strong>Day-to-day decisions live in the render targets.</strong>
         <p class="cl-record-handoff-sub">
-          Approvals in Slack and Teams. Vendor follow-up in Gmail. Posting in your ERP.
+          Approvals in Slack and Teams. Inbox context in Gmail and Outlook. Posting in your ERP.
           Use this page when the agent escalates or you need to intervene.
         </p>
       </div>

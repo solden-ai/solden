@@ -44,8 +44,8 @@ SURFACE_CATALOG: tuple[SurfaceCapability, ...] = (
         memory_surface="Thread panel",
         maturity="production_ready",
         maturity_label="Production-ready",
-        decision_actions="Context capture, source linking, vendor follow-up, operator actions",
-        write_capability="Email thread and draft/link actions",
+        decision_actions="Context capture, source linking, missing-context review, operator actions",
+        write_capability="Email thread and source-link actions",
         notes="Primary inbox surface for AP intake and thread-level operational memory.",
     ),
     SurfaceCapability(

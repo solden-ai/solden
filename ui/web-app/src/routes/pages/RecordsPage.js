@@ -5,7 +5,7 @@
  * desktop. This page lets the operator search, filter, and open any
  * record. Decisions don't happen here:
  *   - Approvals → Slack / Teams approval cards
- *   - Vendor follow-up → Gmail
+ *   - Inbox context → Gmail / Outlook
  *   - Posting → the agent + ERP
  *   - Intervention on an escalated record → the record's detail page
  *
@@ -610,8 +610,8 @@ export default function RecordsPage({ api, bootstrap, toast, orgId, userEmail, n
           <h1 class="cl-records-title">Accounts Payable</h1>
           <p class="cl-records-sub">
             Search, filter, and inspect AP records. Approvals happen in Slack and Teams;
-            vendor follow-up in Gmail. Open a record to see the agent's reasoning, audit
-            trail, and intervention options.
+            inbox context lives in Gmail and Outlook; posting happens in your ERP. Open a
+            record to see the agent's reasoning, audit trail, and intervention options.
           </p>
         </div>
         <div class="cl-records-head-actions">

@@ -530,8 +530,8 @@ class AgentMemoryService:
         if status in {"needs_info"}:
             return {
                 "type": "await_vendor_info",
-                "label": "Wait for vendor response",
-                "owner": "vendor",
+                "label": "Wait for external response",
+                "owner": "external_source",
             }
         if status in {"error", "failed"} or event_type.endswith("_failed"):
             return {

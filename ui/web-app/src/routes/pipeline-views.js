@@ -28,7 +28,7 @@ export const PIPELINE_BUILTIN_SLICES = [
   { id: 'all_open', label: 'All open', description: 'Every invoice still moving through AP.' },
   { id: 'waiting_on_approval', label: 'Waiting on approval', description: 'Invoices routed to approvers and still waiting.' },
   { id: 'ready_to_post', label: 'Ready to post', description: 'Approved invoices ready for ERP posting.' },
-  { id: 'needs_info', label: 'Needs info', description: 'Invoices blocked on vendor or field follow-up.' },
+  { id: 'needs_info', label: 'Needs info', description: 'Invoices blocked on missing context or field review.' },
   { id: 'failed_post', label: 'Failed post', description: 'Invoices that need ERP recovery or connector setup before posting can continue.' },
   { id: 'blocked_exception', label: 'Review / exception', description: 'Invoices paused by entity, policy, budget, field, PO, or setup issues.' },
   { id: 'due_soon', label: 'Due soon', description: 'Open invoices due within the next 7 days.' },
@@ -95,7 +95,7 @@ export const PIPELINE_STARTER_VIEWS = [
   {
     id: 'missing_context',
     name: 'Missing context',
-    description: 'Invoices waiting on vendor, field, or document context.',
+    description: 'Invoices waiting on missing field, document, or external context.',
     snapshot: {
       activeSliceId: 'needs_info',
       viewMode: 'table',
@@ -124,9 +124,9 @@ function buildFallbackBlockerCopy(kind, type, source = {}) {
   }
   if (kind === 'info') {
     return {
-      chip_label: 'Waiting on vendor',
-      title: 'Waiting on vendor',
-      detail: getWorkStateNotice(normalizedState, 'invoice', source) || 'Vendor information is still missing.',
+      chip_label: 'Missing context',
+      title: 'Missing context',
+      detail: getWorkStateNotice(normalizedState, 'invoice', source) || 'Required information is still missing.',
     };
   }
   if (kind === 'erp') {

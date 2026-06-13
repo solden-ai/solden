@@ -163,7 +163,7 @@ class TestSnoozeEndpointIdempotency:
             f"/api/ap/items/{item['id']}/snooze",
             json={
                 "duration_minutes": 60,
-                "note": "Wait for vendor reply",
+                "note": "Wait for external response",
                 "idempotency_key": "snooze-key-1",
             },
         )
@@ -177,7 +177,7 @@ class TestSnoozeEndpointIdempotency:
             f"/api/ap/items/{item['id']}/snooze",
             json={
                 "duration_minutes": 60,
-                "note": "Wait for vendor reply",
+                "note": "Wait for external response",
                 "idempotency_key": "snooze-key-1",
             },
         )

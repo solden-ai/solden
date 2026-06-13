@@ -180,7 +180,7 @@ def test_normalize_operator_audit_event_maps_runtime_event_classes_to_plain_lang
     )
     # ``vendor_followup_draft_prepared`` event class was deleted with
     # the second-pass dormant-vendor-emails decision (memory:
-    # 2026-05-02). Solden no longer authors vendor follow-up emails or
+    # 2026-05-02). Solden no longer authors vendor emails or
     # drafts. The corresponding plain-language label mapping was
     # removed from ap_operator_audit; the assertion that exercised it
     # is dropped here. The remaining assertions still cover the

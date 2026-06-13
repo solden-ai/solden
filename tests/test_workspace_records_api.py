@@ -165,14 +165,14 @@ def test_workspace_records_can_include_operational_memory(client, db, org_id):
         owner={"label": "Controller", "email": "controller@acme.com"},
         dependency={
             "type": "information_request",
-            "owner": "Vendor",
-            "reason": "Vendor needs to send the missing PO",
+            "owner": "External source",
+            "reason": "Missing PO is required before approval can continue",
         },
         decision={"type": "request_info"},
-        rationale="Vendor needs to send the missing PO",
+        rationale="Missing PO is required before approval can continue",
         evidence={"gmail_message_id": "msg-memory-1"},
-        next_action="Wait for vendor response",
-        summary="Controller requested the missing PO from the vendor.",
+        next_action="Wait for external response",
+        summary="Controller requested missing PO context.",
         source_refs={"gmail_message_id": "msg-memory-1"},
         idempotency_key=f"memory-event:{item['id']}:request-info",
     )
@@ -185,14 +185,14 @@ def test_workspace_records_can_include_operational_memory(client, db, org_id):
     memory = body["items"][0]["memory"]
     assert memory["record_id"] == f"ap_item:{item['id']}"
     assert memory["context_summary"]["what_is_happening"] == (
-        "Controller requested the missing PO from the vendor."
+        "Controller requested missing PO context."
     )
-    assert memory["context_summary"]["why_it_is_happening"] == "Vendor needs to send the missing PO"
-    assert memory["context_summary"]["next_action"] == "Wait for vendor response"
+    assert memory["context_summary"]["why_it_is_happening"] == "Missing PO is required before approval can continue"
+    assert memory["context_summary"]["next_action"] == "Wait for external response"
     assert body["items"][0]["surface_memory"]["contract"] == "solden_memory_surface.v1"
-    assert body["items"][0]["surface_memory"]["owner"] == "Vendor"
+    assert body["items"][0]["surface_memory"]["owner"] == "External source"
     assert body["items"][0]["surface_memory"]["decision"] == (
-        "Controller requested the missing PO from the vendor."
+        "Controller requested missing PO context."
     )
     assert "gmail message id: msg-memory-1" in body["items"][0]["surface_memory"]["evidence"]
     assert body["items"][0]["decision_ledger"][0]["source_surface"] == "gmail"

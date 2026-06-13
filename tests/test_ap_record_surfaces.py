@@ -1406,11 +1406,11 @@ def test_gmail_sidebar_record_routes_are_available_in_strict_profile_and_mutate_
 
     task_comment_response = client.post(
         f"/api/ap/items/tasks/{task_id}/comments",
-        json={"comment": "Waiting on vendor callback."},
+        json={"comment": "Waiting on external callback."},
         headers=_auth_headers("org-test"),
     )
     assert task_comment_response.status_code == 200
-    assert task_comment_response.json()["task"]["comments"][0]["comment"] == "Waiting on vendor callback."
+    assert task_comment_response.json()["task"]["comments"][0]["comment"] == "Waiting on external callback."
 
     note_create_response = client.post(
         f"/api/ap/items/{item['id']}/notes",
@@ -1484,7 +1484,7 @@ def test_gmail_sidebar_record_routes_are_available_in_strict_profile_and_mutate_
         json={
             "draft_id": "draft-compose-1",
             "thread_id": "thread-compose-1",
-            "subject": "Vendor follow-up for INV-200",
+            "subject": "Missing context for INV-200",
             "recipients": ["vendor@northwind.example"],
             "body_preview": "Can you confirm the credit memo amount?",
             "note": "Drafted from Gmail compose.",

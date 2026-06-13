@@ -800,7 +800,7 @@ async def _check_overdue_tasks():
 # decision). The function dispatched chase emails on a 30-minute
 # preview-then-send delay; with ``_dispatch_chase_email`` deleted
 # from vendor_onboarding_lifecycle, this had no working dispatch
-# path. Operators now compose vendor follow-ups in their own Gmail.
+# path. Missing context is surfaced for operator review instead.
 
 
 async def _reap_expired_snoozes(org_ids) -> Dict[str, List[str]]:

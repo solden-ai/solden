@@ -163,8 +163,8 @@ export function getDefaultNextMoveLabel(state, item = null, actorRole = 'operato
   if (normalized === 'needs_approval') return 'Approval pending';
   if (normalized === 'needs_info') {
     const followupNextAction = String(item?.followup_next_action || '').trim().toLowerCase();
-    if (followupNextAction === 'await_vendor_response') return 'Waiting for vendor reply';
-    if (followupNextAction === 'manual_vendor_escalation') return 'Escalate vendor follow-up';
+    if (followupNextAction === 'await_vendor_response') return 'Waiting for external response';
+    if (followupNextAction === 'manual_vendor_escalation') return 'Escalate missing context';
     return 'Prepare info request';
   }
   if ((normalized === 'approved' || normalized === 'ready_to_post') && !hasErpPostingConnection(item)) {
@@ -187,7 +187,7 @@ export function getOperatorOverrideCopy(state, item = null, documentType = 'invo
   if (mode === 'agent_waiting') {
     return {
       title: 'Operator overrides',
-      detail: 'Solden sent a follow-up and is waiting for the vendor. Use these to intervene before the next reminder.',
+      detail: 'Solden is waiting for external context. Use these to intervene before the next reminder.',
     };
   }
   if (mode === 'agent_progressing') {
@@ -286,13 +286,13 @@ export function getWorkStateNotice(state, documentType = 'invoice', item = null)
   if (normalized === 'needs_info') {
     const followupNextAction = String(item?.followup_next_action || '').trim().toLowerCase();
     if (followupNextAction === 'await_vendor_response') {
-      return 'Waiting on vendor reply. Solden will send reminders automatically.';
+      return 'Waiting on external response. Solden will keep the record paused until context arrives.';
     }
     if (followupNextAction === 'manual_vendor_escalation') {
-      return 'Vendor did not reply. Manual escalation needed.';
+      return 'External context is still missing. Manual escalation needed.';
     }
     if (followupNextAction === 'nudge_vendor_followup') {
-      return 'The vendor has not replied yet. Send the next follow-up when you are ready.';
+      return 'External context is still missing. Decide the next operator step.';
     }
   }
   if (normalized === 'needs_approval') {

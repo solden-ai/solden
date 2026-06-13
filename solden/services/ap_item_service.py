@@ -2157,15 +2157,15 @@ def _build_upcoming_task(item: Dict[str, Any], now: datetime) -> Optional[Dict[s
         else:
             detail = "Approval is still outstanding and should be chased if it has gone quiet."
     elif state == "needs_info":
-        kind = "vendor_follow_up"
-        title = "Vendor follow-up"
+        kind = "missing_context"
+        title = "Missing context"
         recommended_slice = "needs_info"
         due_at = _parse_iso(item.get("updated_at")) or _parse_iso(item.get("created_at"))
         question = str(item.get("needs_info_question") or "").strip()
         detail = (
-            f"Vendor needs to clarify: {question}"
+            f"Required context: {question}"
             if question
-            else "Reach out to the vendor for the missing information."
+            else "Required information is missing before this item can continue."
         )
     elif state == "failed_post":
         kind = "erp_retry"

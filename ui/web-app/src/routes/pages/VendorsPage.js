@@ -1,5 +1,5 @@
 /**
- * Vendors Page — shared vendor directory for AP follow-up.
+ * Vendors Page — shared vendor directory for AP context.
  */
 import { h } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';

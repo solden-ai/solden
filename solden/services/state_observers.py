@@ -267,7 +267,7 @@ class AuditTrailObserver(StateObserver):
         "received": "Extraction and validation in progress.",
         "validated": "Routing to approval or auto-posting based on confidence.",
         "needs_approval": "Waiting for human approval via Slack or Gmail.",
-        "needs_info": "Vendor follow-up required before processing can continue.",
+        "needs_info": "Missing context required before processing can continue.",
         "approved": "Queued for ERP posting.",
         "ready_to_post": "Posting to ERP.",
         "posted_to_erp": "Override window open. Payment scheduled per terms.",

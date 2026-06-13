@@ -188,10 +188,10 @@ describe('getDecisionSummary', () => {
     assert.equal(result.detail, 'Waiting on approver decision');
   });
 
-  it('returns waiting on vendor when vendor follow-up is already in flight', () => {
+  it('returns waiting on external response when missing context is already in flight', () => {
     const result = getDecisionSummary({ state: 'needs_info', followup_next_action: 'await_vendor_response' }, {});
-    assert.equal(result.title, 'Waiting on vendor');
-    assert.equal(result.detail, 'Waiting on vendor reply');
+    assert.equal(result.title, 'Waiting on external response');
+    assert.equal(result.detail, 'Waiting on external response');
   });
 
   it('returns completed for posted items', () => {

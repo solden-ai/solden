@@ -63,22 +63,22 @@ describe('HomePage', () => {
               memory: {
                 execution_state: {
                   owner_label: 'Controller Ops',
-                  next_action: 'Wait for vendor response',
+                  next_action: 'Wait for external response',
                   dependencies: [
                     {
                       type: 'memory_dependency',
                       detail: {
                         owner: 'Vendor',
-                        reason: 'Vendor needs to send the missing PO',
+                        reason: 'Missing PO is required before approval can continue',
                       },
                     },
                   ],
                 },
                 context_summary: {
                   what_is_happening: 'Controller requested the missing PO from the vendor.',
-                  why_it_is_happening: 'Vendor needs to send the missing PO',
+                  why_it_is_happening: 'Missing PO is required before approval can continue',
                   who_owns_it: 'Controller Ops',
-                  next_action: 'Wait for vendor response',
+                  next_action: 'Wait for external response',
                   where_it_happened: ['gmail'],
                   latest_decision: {
                     decision_type: 'request_info',
@@ -165,7 +165,7 @@ describe('HomePage', () => {
     expect(screen.queryByLabelText('Workspace scopes')).toBeNull();
     expect(screen.getAllByText('Field review: Vendor, Amount').length).toBeGreaterThan(0);
     expect(screen.getByText('Controller Ops')).toBeTruthy();
-    expect(screen.getAllByText('Wait for vendor response').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Wait for external response').length).toBeGreaterThan(0);
     expect(screen.getByText('Evidence linked · Gmail')).toBeTruthy();
     expect(screen.getByText('Requested context')).toBeTruthy();
     expect(api.mock.calls.some(([path]) => (

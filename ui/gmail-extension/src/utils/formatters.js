@@ -624,7 +624,7 @@ function formatAgentNextActionLabel(value, item = {}, nextActionType = '', curre
     return 'Approval request sent, waiting for decision';
   }
   if (typeToken === 'await_vendor_info' || stateToken === 'needs_info') {
-    return 'Solden is waiting for vendor to respond';
+    return 'Missing context is waiting for review';
   }
   if (typeToken === 'operator_recovery') {
     return 'Review the blocking issue and take action';
@@ -693,7 +693,7 @@ function formatAgentResponsibility(owner = '', item = {}, nextActionType = '', c
   if (item?.requires_field_review || typeToken === 'human_field_review') return 'Needs your review';
   if (ownerToken === 'agent' || typeToken === 'monitor_completion') return 'Solden is handling this';
   if (ownerToken === 'approver' || typeToken === 'await_approval' || stateToken === 'needs_approval') return 'Waiting on approver';
-  if (ownerToken === 'vendor' || typeToken === 'await_vendor_info' || stateToken === 'needs_info') return 'Waiting on vendor';
+  if (ownerToken === 'vendor' || typeToken === 'await_vendor_info' || stateToken === 'needs_info') return 'Missing external context';
   if (ownerToken === 'operator' || typeToken === 'operator_recovery' || typeToken === 'manual_review') return 'Needs your review';
   return '';
 }
@@ -898,8 +898,8 @@ export function getIssueSummary(item) {
     ? item.approval_followup
     : {};
   if (state === 'needs_info') {
-    if (followupNextAction === 'await_vendor_response') return 'Waiting on vendor reply';
-    if (followupNextAction === 'manual_vendor_escalation') return 'Vendor follow-up needs escalation';
+    if (followupNextAction === 'await_vendor_response') return 'Waiting on external response';
+    if (followupNextAction === 'manual_vendor_escalation') return 'External context needs escalation';
     return 'Missing required invoice fields';
   }
   if (state === 'needs_approval' || state === 'pending_approval') {
@@ -974,7 +974,7 @@ export function getDecisionSummary(item, budgetContext) {
   if (budgetContext?.requiresDecision) return { title: 'Budget review required', detail: 'Choose override, budget adjustment, or rejection.', tone: 'warning' };
   if (state === 'needs_info') {
     return {
-      title: String(item?.followup_next_action || '').trim().toLowerCase() === 'await_vendor_response' ? 'Waiting on vendor' : 'Needs review',
+      title: String(item?.followup_next_action || '').trim().toLowerCase() === 'await_vendor_response' ? 'Waiting on external response' : 'Needs review',
       detail: getIssueSummary(item),
       tone: 'warning',
     };

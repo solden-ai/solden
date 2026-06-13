@@ -1506,12 +1506,12 @@ export default function SettingsPage({ bootstrap, api, toast, orgId, onRefresh, 
           <div>
             <label >First chase delay</label>
             <div class="field-value">24 hours</div>
-            <div class="muted" >Agent chases unresponsive vendors after 24h. Preview shown in Slack before sending.</div>
+            <div class="muted" >Solden reviews missing context after 24h and flags the record before escalation.</div>
           </div>
           <div>
             <label >Escalation window</label>
             <div class="field-value">72 hours</div>
-            <div class="muted" >Escalates to AP Manager after 72h with no vendor response.</div>
+            <div class="muted" >Escalates to AP Manager after 72h if required context is still missing.</div>
           </div>
           <div>
             <label >Bank verification</label>

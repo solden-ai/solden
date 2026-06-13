@@ -460,7 +460,7 @@ def test_memory_event_commit_captures_and_projects_ap_exception_memory():
         rationale="Approval threshold exceeded and Sarah is unavailable",
         evidence=[
             {"source": "slack", "ref": "thread-123", "description": "Finance escalation thread"},
-            {"source": "gmail", "ref": "msg-456", "description": "Vendor follow-up"},
+            {"source": "gmail", "ref": "msg-456", "description": "Source context"},
         ],
         confidence=0.93,
         human_confirmation_status="confirmed",
@@ -535,7 +535,7 @@ def test_runtime_intent_memory_event_captures_surface_action_context():
         input_payload={
             "ap_item_id": "AP-runtime-memory-1",
             "email_id": "gmail-thread-1",
-            "reason": "Vendor needs to send the missing PO",
+            "reason": "Missing PO is required before approval can continue",
             "source_channel": "teams",
             "source_channel_id": "conversation-1",
             "source_message_ref": "activity-1",
@@ -548,7 +548,7 @@ def test_runtime_intent_memory_event_captures_surface_action_context():
             "status": "needs_info",
             "ap_item_id": "AP-runtime-memory-1",
             "email_id": "gmail-thread-1",
-            "next_step": "wait_for_vendor_response",
+            "next_step": "wait_for_external_response",
             "audit_event_id": "audit-runtime-1",
             "result": {"status": "needs_info"},
         },
@@ -572,8 +572,8 @@ def test_runtime_intent_memory_event_captures_surface_action_context():
     )
 
     assert record["context_summary"]["who_owns_it"] == "controller@example.com"
-    assert record["context_summary"]["why_it_is_happening"] == "Vendor needs to send the missing PO"
-    assert record["context_summary"]["next_action"] == "wait for vendor response"
+    assert record["context_summary"]["why_it_is_happening"] == "Missing PO is required before approval can continue"
+    assert record["context_summary"]["next_action"] == "wait for external response"
     assert record["context_summary"]["where_it_happened"] == ["teams"]
     assert record["decision_ledger"][0]["decision_type"] == "request_info"
 

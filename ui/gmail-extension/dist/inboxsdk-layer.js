@@ -1,4 +1,4 @@
-/* clearledgr-source-fingerprint:40a9b5523c68127eda38f4a16084dd0a78fc400911cb3f8907093a201e48d217 */
+/* clearledgr-source-fingerprint:29aeb922e81d046780d7430bb264911b547408c9e9426501a027fbb40dd2a01f */
 (() => {
   var __create = Object.create;
   var __getProtoOf = Object.getPrototypeOf;
@@ -58635,7 +58635,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       return "Approval request sent, waiting for decision";
     }
     if (typeToken === "await_vendor_info" || stateToken === "needs_info") {
-      return "Solden is waiting for vendor to respond";
+      return "Missing context is waiting for review";
     }
     if (typeToken === "operator_recovery") {
       return "Review the blocking issue and take action";
@@ -58709,7 +58709,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     if (ownerToken === "approver" || typeToken === "await_approval" || stateToken === "needs_approval")
       return "Waiting on approver";
     if (ownerToken === "vendor" || typeToken === "await_vendor_info" || stateToken === "needs_info")
-      return "Waiting on vendor";
+      return "Missing external context";
     if (ownerToken === "operator" || typeToken === "operator_recovery" || typeToken === "manual_review")
       return "Needs your review";
     return "";
@@ -59452,13 +59452,13 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     if (normalized === "needs_info") {
       const followupNextAction = String(item?.followup_next_action || "").trim().toLowerCase();
       if (followupNextAction === "await_vendor_response") {
-        return "Waiting on vendor reply. Solden will send reminders automatically.";
+        return "Waiting on external response. Solden will keep the record paused until context arrives.";
       }
       if (followupNextAction === "manual_vendor_escalation") {
-        return "Vendor did not reply. Manual escalation needed.";
+        return "External context is still missing. Manual escalation needed.";
       }
       if (followupNextAction === "nudge_vendor_followup") {
-        return "The vendor has not replied yet. Send the next follow-up when you are ready.";
+        return "External context is still missing. Decide the next operator step.";
       }
     }
     if (normalized === "needs_approval") {
@@ -60074,7 +60074,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       erp_unavailable: "ERP to come back online",
       erp_recheck: "ERP reconnection",
       payment_confirmation: "payment confirmation",
-      vendor_response: "vendor response"
+      vendor_response: "external response"
     };
     return map[t5] || t5.replace(/_/g, " ");
   }

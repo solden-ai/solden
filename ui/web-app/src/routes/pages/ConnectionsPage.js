@@ -198,13 +198,13 @@ const CUSTOMER_SURFACE_COPY = {
   gmail: {
     description: 'Capture work and evidence from Gmail threads.',
     where: 'Gmail thread panel',
-    actions: 'Attach source emails, follow up with vendors, and keep context on the record.',
+    actions: 'Attach source emails, review missing context, and keep the record current.',
     readiness: 'Ready to use',
   },
   outlook: {
     description: 'Capture work and evidence from Outlook mail.',
     where: 'Outlook mail add-in',
-    actions: 'Attach source emails, follow up with vendors, and keep context on the record.',
+    actions: 'Attach source emails, review missing context, and keep the record current.',
     readiness: 'Ready to use',
   },
   slack: {

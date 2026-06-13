@@ -193,7 +193,7 @@ class ApprovalNudgeRequest(BaseModel):
 
 
 class VendorFollowupRequest(BaseModel):
-    """Request to prepare/refresh a vendor follow-up draft for needs_info items."""
+    """Request to prepare/refresh missing-context state for needs_info items."""
     email_id: str
     reason: Optional[str] = None
     force: bool = False
