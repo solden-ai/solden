@@ -957,18 +957,26 @@ def _build_health(
     settings = _load_org_settings(org)
     integrations = {
         "gmail": _gmail_status_for_org(organization_id, user),
+        "outlook": _outlook_status_for_org(organization_id, user),
         "slack": _slack_status_for_org(organization_id),
         "teams": _teams_status_for_org(organization_id),
         "erp": _erp_status_for_org(organization_id),
     }
     required_actions: List[Dict[str, str]] = []
 
-    if not integrations["gmail"]["connected"]:
-        required_actions.append({"code": "connect_gmail", "message": "Connect Gmail account"})
+    inbox_connected = bool(integrations["gmail"]["connected"] or integrations["outlook"]["connected"])
+    if not inbox_connected:
+        required_actions.append({"code": "connect_inbox", "message": "Connect Gmail or Outlook"})
     elif integrations["gmail"].get("requires_reconnect"):
         required_actions.append({
             "code": "reconnect_gmail",
             "message": "Reconnect Gmail to restore durable background monitoring.",
+            "severity": "warning",
+        })
+    elif integrations["outlook"].get("requires_reconnect"):
+        required_actions.append({
+            "code": "reconnect_outlook",
+            "message": "Reconnect Outlook to restore inbox intake.",
             "severity": "warning",
         })
     elif integrations["gmail"].get("watch_expires_soon"):
@@ -983,13 +991,11 @@ def _build_health(
             "message": "Gmail push-notification watch is not active — re-authenticate or renew the watch",
             "severity": "warning",
         })
-    if not integrations["slack"]["connected"]:
-        required_actions.append({"code": "connect_slack", "message": "Connect Slack workspace"})
-    # Do not nag admins to connect Teams when the deployment kill switch
-    # is explicitly off.
     from solden.core.feature_flags import is_teams_enabled
-    if is_teams_enabled() and not integrations["teams"]["connected"]:
-        required_actions.append({"code": "connect_teams", "message": "Connect Microsoft Teams webhook"})
+    approvals_connected = bool(integrations["slack"]["connected"] or integrations["teams"]["connected"])
+    if not approvals_connected:
+        message = "Connect Slack or Teams" if is_teams_enabled() else "Connect Slack workspace"
+        required_actions.append({"code": "connect_approvals", "message": message})
     if not integrations["erp"]["connected"]:
         required_actions.append({"code": "connect_erp", "message": "Connect ERP system"})
 
@@ -997,18 +1003,16 @@ def _build_health(
     if integrations["slack"]["connected"] and not (slack_channels or {}).get("invoices"):
         required_actions.append({"code": "set_slack_channel", "message": "Set Slack approval channel"})
 
-    # §15 Step 3 — Configure AP Policy. The three values the thesis
-    # names (auto-approve threshold, match tolerance, approval
-    # routing) must all be set before onboarding counts as complete.
-    # Without this check an admin who connects every integration but
-    # never opens Settings > Policy would see a "done" state while
-    # the agent was running with no autonomy thresholds configured.
+    # Configure the first work policy. AP is the first production work
+    # type, so the current readiness check still reads the AP policy
+    # store, but the setup action is presented as routing/policy rather
+    # than "AP is the whole product."
     if not _is_ap_policy_configured(organization_id):
         required_actions.append({
-            "code": "configure_ap_policy",
+            "code": "configure_work_policy",
             "message": (
-                "Set your AP policy — auto-approve threshold, match "
-                "tolerance, and approval routing. Settings > Policy."
+                "Set policy and routing — owner rules, approval thresholds, "
+                "match tolerance, and escalation behavior."
             ),
         })
     if integrations["slack"].get("requires_reauthorization"):
@@ -1332,12 +1336,11 @@ async def get_admin_bootstrap(
         _erp_status_for_org(org_id),
     ]
 
-    # §15: The Four Onboarding Steps — thesis-defined order.
-    # We derive completion from observable integration state rather than
-    # trusting the DB flag alone. Without this, the OnboardingFlow modal
-    # pops on every Gmail refresh forever — nothing in the product ever
-    # called complete_onboarding_step(), so the flag stayed False even
-    # after the user connected Gmail + ERP.
+    # Customer setup derives completion from observable integration state
+    # rather than trusting the DB flag alone. Setup is role-neutral:
+    # Controller, AP Manager, VP Finance, operations owner, CEO, or any
+    # department lead can complete it. AP is the first live work type,
+    # not the entire product.
     integrations_by_name = {
         str(i.get("name") or "").lower(): i
         for i in integrations
@@ -1350,7 +1353,7 @@ async def get_admin_bootstrap(
         return bool(info.get("connected")) or status in {"connected", "active", "ready"}
 
     # Intake channel: Gmail or Outlook satisfies the inbox-source side
-    # of onboarding. Either is sufficient for the AP pipeline to flow.
+    # of setup. Either is sufficient for work to enter Solden.
     gmail_connected = _is_connected("gmail")
     outlook_connected = _is_connected("outlook")
     inbox_connected = gmail_connected or outlook_connected
@@ -1360,33 +1363,28 @@ async def get_admin_bootstrap(
     slack_or_teams_connected = _is_connected("slack") or _is_connected("teams")
     has_ap_policy = bool((org_settings or {}).get("ap_policy") or (org_settings or {}).get("workflow_controls"))
 
-    # Hub-and-spoke onboarding (industry-standard ERP-first):
-    #   1. Connect ERP            (anchor — without this, no AP coordination)
-    #   2. Set AP policy          (auto-approve, match tolerance, GL map)
-    #   3. Connect Slack/Teams    (approval surface)
-    #   4. Install Gmail extension (optional intake channel — companion only;
-    #                               ERP-native customers can skip)
-    # Mirrors BILL.com / Ramp / Stampli onboarding sequence: integration
-    # first, then policy, then collaboration surface, then optional clients.
-    # The Gmail extension was step 1 in the previous Streak-aligned model;
-    # demoting to step 4 reflects the new hub-and-spoke positioning where
-    # Gmail is one of several intake channels, not the home.
+    # Setup order:
+    #   1. Connect inbox intake       (Gmail or Outlook)
+    #   2. Connect decision surface   (Slack or Teams)
+    #   3. Connect ERP context/posting destination
+    #   4. Set work policy and routing
+    # This keeps the activation path grounded in how Solden actually
+    # captures operational memory: where work enters, where decisions
+    # happen, where records post, and which policy the agent follows.
     derived_step = 0
-    if erp_connected:
+    if inbox_connected:
         derived_step = 1
-    if derived_step >= 1 and has_ap_policy:
+    if derived_step >= 1 and slack_or_teams_connected:
         derived_step = 2
-    if derived_step >= 2 and slack_or_teams_connected:
+    if derived_step >= 2 and erp_connected:
         derived_step = 3
-    if derived_step >= 3 and inbox_connected:
+    if derived_step >= 3 and has_ap_policy:
         derived_step = 4
 
     persisted_step = int(subscription.get("onboarding_step") or 0)
     persisted_completed = bool(subscription.get("onboarding_completed"))
     effective_step = max(persisted_step, derived_step)
-    # Onboarding can complete at step 3 — Gmail extension is optional. The
-    # explicit completed flag from the user dismissing the wizard also wins.
-    effective_completed = persisted_completed or derived_step >= 3
+    effective_completed = persisted_completed or derived_step >= 4
 
     onboarding = {
         "completed": effective_completed,
@@ -1394,31 +1392,31 @@ async def get_admin_bootstrap(
         "steps": [
             {
                 "id": 1,
-                "name": "Connect ERP",
-                "description": "OAuth connection to NetSuite, SAP S/4HANA, Xero, or QuickBooks. Read access to PO, GRN, and vendor master.",
+                "name": "Connect inbox intake",
+                "description": "Connect Gmail or Outlook so invoices and requests arriving by email can become live work records.",
                 "time_estimate": "5 minutes",
                 "required": True,
             },
             {
                 "id": 2,
-                "name": "Set AP policy",
-                "description": "Auto-approve threshold, match tolerance, and approval routing — built to your actual finance rules.",
+                "name": "Connect Slack or Teams",
+                "description": "Choose where human decisions happen. Approvals, exceptions, and replies sync back to the record.",
                 "time_estimate": "10 minutes",
                 "required": True,
             },
             {
                 "id": 3,
-                "name": "Connect Slack or Teams",
-                "description": "Choose your approval surface. Agent begins processing immediately after this step.",
+                "name": "Connect ERP",
+                "description": "Connect NetSuite, SAP, Sage Intacct, QuickBooks, Xero, or Sage Accounting for source context and posting.",
                 "time_estimate": "5 minutes",
                 "required": True,
             },
             {
                 "id": 4,
-                "name": "Connect intake channel",
-                "description": "Connect Gmail or Outlook so invoices arriving by email flow into Solden. Install the matching browser sidebar (Gmail extension / Outlook add-in) for per-thread context. ERP-native customers (SAP S/4HANA, NetSuite-only intake) can skip.",
-                "time_estimate": "2 minutes",
-                "required": False,
+                "name": "Set policy and routing",
+                "description": "Define who owns work, when Solden escalates, and which approval policy applies before records move forward.",
+                "time_estimate": "10 minutes",
+                "required": True,
             },
         ],
     }
@@ -2537,11 +2535,10 @@ def run_integration_health_gate(
     """Module 10 spec line 321: "Integration health checks: confirms
     each integration is correctly configured before allowing go-live."
 
-    Runs the test-transaction probe against the org's primary ERP
-    plus inspects Gmail / Slack / Teams connection state from the
-    bootstrap-side helpers. Returns a per-integration result so the
-    onboarding wizard can light up green per row and gate the
-    "complete onboarding" CTA.
+    Runs the test-transaction probe against the org's primary ERP plus
+    inspects Gmail / Outlook / Slack / Teams connection state from the
+    bootstrap-side helpers. Returns a per-surface result so the setup
+    page can light up green per row and gate the "complete setup" CTA.
     """
     _require_admin(user)
     org_id = _resolve_org_id(user, organization_id)
@@ -2566,24 +2563,27 @@ def run_integration_health_gate(
         "raw": erp_probe,
     })
 
-    # 2. Gmail — bootstrap status helper already classifies durable
-    #    vs reconnect-required. Reuse it.
+    # 2. Inbox intake — Gmail or Outlook satisfies the intake surface.
     gmail_status = _gmail_status_for_org(org_id, user)
+    outlook_status = _outlook_status_for_org(org_id, user)
+    gmail_ok = bool(gmail_status.get("connected") and not gmail_status.get("requires_reconnect"))
+    outlook_ok = bool(outlook_status.get("connected") and not outlook_status.get("requires_reconnect"))
     results["checks"].append({
-        "name": "gmail",
-        "label": "Gmail integration",
-        "status": "ok" if gmail_status.get("connected") and not gmail_status.get("requires_reconnect") else (
-            "fail" if gmail_status.get("connected") else "skip"
+        "name": "inbox",
+        "label": "Inbox intake (Gmail or Outlook)",
+        "status": "ok" if gmail_ok or outlook_ok else (
+            "fail" if gmail_status.get("connected") or outlook_status.get("connected") else "skip"
         ),
         "detail": (
-            "Reconnect required" if gmail_status.get("requires_reconnect")
-            else f"Connected as {gmail_status.get('email')}" if gmail_status.get("connected")
-            else "Not connected"
+            f"Gmail connected as {gmail_status.get('email')}" if gmail_ok
+            else f"Outlook connected as {outlook_status.get('email')}" if outlook_ok
+            else "Reconnect Gmail or Outlook" if gmail_status.get("requires_reconnect") or outlook_status.get("requires_reconnect")
+            else "Connect Gmail or Outlook"
         ),
     })
 
-    # 3. Approval surface — Slack OR Teams must be live (the spec
-    #    onboarding wizard treats these as a single "approvals" step).
+    # 3. Approval surface — Slack OR Teams must be live. The setup page
+    #    treats these as a single decision-surface step.
     slack = _slack_status_for_org(org_id)
     teams = _teams_status_for_org(org_id)
     approvals_ok = bool(
@@ -2601,13 +2601,15 @@ def run_integration_health_gate(
         ),
     })
 
-    # Aggregate verdict — fail if any required check failed.
-    required_failed = any(
-        c["status"] == "fail" and c["name"] in ("erp", "gmail", "approvals")
+    # Aggregate verdict — required checks must be green. Missing ERP or
+    # inbox should not read as production-ready just because the probe
+    # skipped.
+    required_unready = any(
+        c["status"] != "ok" and c["name"] in ("erp", "inbox", "approvals")
         for c in results["checks"]
     )
-    results["status"] = "fail" if required_failed else "ok"
-    results["ready_for_go_live"] = not required_failed
+    results["status"] = "fail" if required_unready else "ok"
+    results["ready_for_go_live"] = not required_unready
     return results
 
 

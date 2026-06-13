@@ -67,6 +67,8 @@ function defaultDisplayName(email) {
     .join(' ');
 }
 
+const ACTIVATION_NEXT_PATH = '/onboarding';
+
 export function ActivationAcceptPage() {
   const { session, isAuthenticated, isLoading } = useSession();
   const [, navigate] = useLocation();
@@ -158,7 +160,7 @@ export function ActivationAcceptPage() {
         retry: false,
       });
       await refreshSession();
-      navigate('/', { replace: true });
+      navigate(ACTIVATION_NEXT_PATH, { replace: true });
     } catch (err) {
       setError(activationErrorMessage(err));
       setSubmitting(false);
@@ -171,7 +173,7 @@ export function ActivationAcceptPage() {
         <h1 class="cl-auth-title">Activate your workspace</h1>
         <p class="cl-auth-sub">
           You're signed in as <strong>${activationEmail}</strong>.
-          Activate the owner account for <strong>${organizationName}</strong>.
+          Activate setup for <strong>${organizationName}</strong>.
         </p>
         ${error ? html`<div class="cl-auth-error">${error}</div>` : null}
         <button
@@ -236,7 +238,7 @@ export function ActivationAcceptPage() {
         retry: false,
       });
       await refreshSession();
-      navigate('/', { replace: true });
+      navigate(ACTIVATION_NEXT_PATH, { replace: true });
     } catch (err) {
       setError(activationErrorMessage(err));
     } finally {
@@ -244,7 +246,7 @@ export function ActivationAcceptPage() {
     }
   };
 
-  const redirectPath = '/?post_oauth=1';
+  const redirectPath = `${ACTIVATION_NEXT_PATH}?post_oauth=1`;
   const googleStart = `/auth/google/start?${new URLSearchParams({
     invite_token: token,
     redirect_path: redirectPath,
@@ -258,7 +260,7 @@ export function ActivationAcceptPage() {
     <${ActivationAuthFrame}>
       <h1 class="cl-auth-title">Activate your workspace</h1>
       <p class="cl-auth-sub">
-        Create the first owner account for <strong>${organizationName}</strong>.
+        Create your Solden access for <strong>${organizationName}</strong>.
         Use <strong>${activationEmail}</strong> to continue.
       </p>
 

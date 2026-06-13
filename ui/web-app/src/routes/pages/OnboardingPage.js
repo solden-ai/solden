@@ -6,33 +6,32 @@ import { useBootstrap, useBootstrapRefresh, useOrgId } from '../../shell/Bootstr
 import { useToast } from '../../shell/Toast.js';
 
 /**
- * Onboarding wizard for new orgs (workstream C).
+ * Workspace setup for the first customer-side admin in a new org.
  *
- * Industry-standard ERP-first flow modelled on BILL.com / Ramp /
- * Stampli onboarding sequences:
- *   1. Connect ERP            (anchor — without this, no AP coordination)
- *   2. Set AP policy          (auto-approve threshold, match tolerances)
- *   3. Connect Slack/Teams    (approval surface)
- *   4. Install Gmail extension (optional intake — companion only)
+ * The flow is role-neutral: Controller, AP Manager, VP Finance,
+ * operations owner, CEO, or any department lead can complete it. It
+ * does not assume a founder is signing up, and it does not treat AP as
+ * the whole product. AP is the first live work type; the setup path
+ * wires the surfaces that make Solden useful:
+ *   1. Connect inbox intake       (Gmail or Outlook)
+ *   2. Connect decision surface   (Slack or Teams)
+ *   3. Connect ERP context/posting destination
+ *   4. Set work policy and routing
  *
- * The wizard does NOT embed the OAuth flows itself — each step links
- * to the existing settings/connections page where the integration is
- * configured. After the user completes that flow elsewhere, they
- * return to /onboarding and the bootstrap refresh detects the
- * connected integration and advances `onboarding.step`. Decoupling
- * keeps each step's deep flow (e.g. NetSuite TBA token entry) in
- * one place rather than duplicating it inside the wizard.
+ * The wizard does NOT embed OAuth or ERP credential flows itself. Each
+ * step links to the existing configuration surface, then bootstrap
+ * refresh detects the connected integration or saved policy. Decoupling
+ * keeps each deep flow in one place rather than duplicating it here.
  *
  * Steps surface:
- *   - Status pill: ✓ done / → next / ○ pending / ↶ skipped
+ *   - Status pill: ✓ done / → next / ○ pending
  *   - "Set up" button → routes to /connections, /settings, etc.
  *   - "Mark done" button → POST /api/workspace/onboarding/step (admin
  *     can self-attest if integration state isn't auto-detected)
- *   - "Skip" on optional steps
  *
  * Exit conditions:
- *   - All required steps (1, 2, 3) complete → onboarding.completed=true
- *     → AuthGate stops redirecting here, user lands on / (PlanPage).
+ *   - All required steps (1-4) complete → onboarding.completed=true
+ *     → AuthGate stops redirecting here, user lands on the workspace.
  *   - Admin clicks "Finish later" → marks current step persisted and
  *     drops the user at / for free exploration. Wizard remains in
  *     primary nav until completed.
@@ -67,32 +66,23 @@ export function OnboardingPage() {
     return false;
   };
 
-  const stepStatus = (id) => {
-    // Two completion signals: (a) the structural one — actual ERP /
-    // Slack / Teams / Gmail connection is live, or AP policy exists;
-    // (b) the operator pressed "Mark done manually", which advances
-    // onboarding.step server-side. Either signal flips the step to
-    // 'done' so the badge clears immediately on manual ack.
-    if (id === 1) {
-      const ok = isConnected('erp', 'netsuite', 'sap', 'xero', 'quickbooks');
-      if (ok || onboarding.step >= 1) return 'done';
-      return 'next';
-    }
-    if (id === 2) {
-      const settings = bootstrap?.organization?.settings || {};
-      const has = !!(settings.ap_policy || settings.workflow_controls);
-      if (has || onboarding.step >= 2) return 'done';
-      return onboarding.step >= 1 ? 'next' : 'pending';
-    }
+  const stepComplete = (id) => {
+    if (onboarding.step >= id) return true;
+    if (id === 1) return isConnected('gmail', 'outlook');
+    if (id === 2) return isConnected('slack', 'teams');
     if (id === 3) {
-      const ok = isConnected('slack', 'teams');
-      if (ok || onboarding.step >= 3) return 'done';
-      return onboarding.step >= 2 ? 'next' : 'pending';
+      return isConnected('erp', 'netsuite', 'sap', 'sage_intacct', 'sage_accounting', 'xero', 'quickbooks');
     }
     if (id === 4) {
-      if (isConnected('gmail') || onboarding.step >= 4) return 'done';
-      return onboarding.step >= 3 ? 'optional' : 'pending';
+      const settings = bootstrap?.organization?.settings || {};
+      return !!(settings.ap_policy || settings.workflow_controls);
     }
+    return false;
+  };
+
+  const stepStatus = (id) => {
+    if (stepComplete(id)) return 'done';
+    if (id === 1 || stepComplete(id - 1)) return 'next';
     return 'pending';
   };
 
@@ -117,7 +107,7 @@ export function OnboardingPage() {
   const finishLater = () => navigate('/');
 
   // Module 10 spec line 321 — pre-go-live integration health gate.
-  // Runs the test-tx probe + Gmail / approval status checks and
+  // Runs the test-tx probe + inbox / approval status checks and
   // returns a per-check result. Surfaced as a banner above the
   // step list so the leader sees blockers before clicking
   // "Finish setup".
@@ -143,21 +133,20 @@ export function OnboardingPage() {
 
   const STEP_DESTINATIONS = {
     1: '/connections',
-    2: '/settings',
+    2: '/connections',
     3: '/connections',
-    // Step 4 (Gmail extension) opens an external link instead — Chrome
-    // Web Store. Handled inline below.
+    4: '/rules',
   };
 
   return html`
     <div class="cl-onb-shell">
       <header class="cl-onb-header">
         <div class="cl-onb-eyebrow">Workspace setup</div>
-        <h1 class="cl-onb-title">${completed ? 'Setup complete.' : "Let's get Solden ready."}</h1>
+        <h1 class="cl-onb-title">${completed ? 'Setup complete.' : 'Finish workspace setup.'}</h1>
         <p class="cl-onb-sub">
           ${completed
-            ? 'Every required integration is connected. You can revisit any step from this page; nothing here is destructive.'
-            : 'Four steps; the last one is optional. Each step links to the page where you actually configure the integration — come back here when you\'re done.'}
+            ? 'Required surfaces and policies are ready. You can revisit any step from this page; nothing here is destructive.'
+            : 'Connect the surfaces where work enters, decisions happen, and records are posted. Then set the policy Solden should follow.'}
         </p>
         ${steps.length > 0 ? (() => {
           const doneCount = steps.filter((step) => stepStatus(step.id) === 'done').length;
@@ -181,8 +170,8 @@ export function OnboardingPage() {
             <div>
               <strong>Pre-go-live health check</strong>
               <p class="muted">
-                Runs an actual test transaction against your ERP plus checks Gmail and the approval channel.
-                Catches expired tokens or misconfigured connections before bills start flowing.
+                Runs an actual test transaction against your ERP and checks inbox plus approval surfaces.
+                Catches expired tokens or misconfigured connections before work starts flowing.
               </p>
             </div>
             <button class="btn btn-secondary" onClick=${runHealthGate} disabled=${probingHealth}>
@@ -216,7 +205,7 @@ export function OnboardingPage() {
             <li class=${`cl-onb-step cl-onb-step-${status}`} key=${step.id}>
               <div class="cl-onb-step-rail">
                 <span class=${`cl-onb-step-pip cl-onb-step-pip-${status}`} aria-hidden="true">
-                  ${status === 'done' ? '✓' : (status === 'next' ? '→' : (status === 'optional' ? '·' : '○'))}
+                  ${status === 'done' ? '✓' : (status === 'next' ? '→' : '○')}
                 </span>
               </div>
               <div class="cl-onb-step-body">
@@ -226,32 +215,20 @@ export function OnboardingPage() {
                     ${step.required === false ? html`<span class="cl-onb-step-tag">optional</span>` : null}
                   </h2>
                   <span class=${`cl-onb-step-status cl-onb-step-status-${status}`}>
-                    ${status === 'done' ? 'Connected'
+                    ${status === 'done' ? 'Ready'
                       : status === 'next' ? 'Up next'
-                      : status === 'optional' ? 'Optional'
                       : 'Pending'}
                   </span>
                 </div>
                 <p class="cl-onb-step-desc">${step.description}</p>
                 <div class="cl-onb-step-actions">
-                  ${step.id === 4
-                    ? html`
-                        <a
-                          class="btn btn-primary"
-                          href="https://chrome.google.com/webstore/category/extensions"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >Open Chrome Web Store ↗</a>
-                      `
-                    : html`
-                        <button
-                          class="btn btn-primary"
-                          disabled=${busy}
-                          onClick=${() => navigate(destination)}>
-                          ${status === 'done' ? 'Re-configure' : 'Set up'}
-                        </button>
-                      `}
-                  ${status !== 'done' && step.id !== 4
+                  <button
+                    class="btn btn-primary"
+                    disabled=${busy}
+                    onClick=${() => navigate(destination)}>
+                    ${status === 'done' ? 'Review setup' : 'Set up'}
+                  </button>
+                  ${status !== 'done'
                     ? html`
                         <button
                           class="btn btn-ghost"
@@ -285,7 +262,7 @@ export function OnboardingPage() {
                 Finish later
               </button>
               <span class="cl-onb-footer-hint">
-                Required steps (1–3) must be complete before bills auto-route.
+                Required steps must be complete before Solden auto-routes live work.
               </span>
             `}
       </footer>
