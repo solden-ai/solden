@@ -5,6 +5,17 @@ import { api, ApiError } from '../api/client.js';
 import { logout, refreshSession, useSession } from './useSession.js';
 import { GoogleMark, MicrosoftMark } from './OAuthIcons.js';
 import { displayOrgName } from '../utils/formatters.js';
+import { AuthShell } from './AuthLayout.js';
+
+function InviteAuthFrame({ children }) {
+  return html`
+    <${AuthShell}>
+      <div class="cl-auth-card cl-auth-login-card cl-auth-invite-card">
+        ${children}
+      </div>
+    <//>
+  `;
+}
 
 /**
  * /signup/accept?token=<invite-token>
@@ -71,39 +82,32 @@ export function InviteAcceptPage() {
 
   if (!token) {
     return html`
-      <main class="cl-auth-shell">
-        <div class="cl-auth-card">
-          <div class="cl-auth-brand">
-            <img src="/favicon.png?v=7" alt="Solden" height="36" width="36"
-                 style="display:block;width:36px;height:36px" />
-          </div>
-          <h1 class="cl-auth-title">Invite link incomplete</h1>
-          <p class="cl-auth-sub">
-            The invite token is missing from this URL. Open the link
-            from your invite email exactly as it was sent, or ask
-            your admin to send a new one.
-          </p>
-        </div>
-      </main>
+      <${InviteAuthFrame}>
+        <h1 class="cl-auth-title">Invite link incomplete</h1>
+        <p class="cl-auth-sub">
+          The invite token is missing from this URL. Open the link
+          from your invite email exactly as it was sent, or ask
+          your admin to send a new one.
+        </p>
+      <//>
     `;
   }
 
   if (isLoading || preview === undefined) {
-    return html`<div class="cl-auth-loading">Loading…</div>`;
+    return html`
+      <${InviteAuthFrame}>
+        <h1 class="cl-auth-title">Checking your invite</h1>
+        <p class="cl-auth-sub">Confirming this invite before we show account options.</p>
+      <//>
+    `;
   }
 
   if (preview === null) {
     return html`
-      <main class="cl-auth-shell">
-        <div class="cl-auth-card">
-          <div class="cl-auth-brand">
-            <img src="/favicon.png?v=7" alt="Solden" height="36" width="36"
-                 style="display:block;width:36px;height:36px" />
-          </div>
-          <h1 class="cl-auth-title">Invite unavailable</h1>
-          <p class="cl-auth-sub">${previewError}</p>
-        </div>
-      </main>
+      <${InviteAuthFrame}>
+        <h1 class="cl-auth-title">Invite unavailable</h1>
+        <p class="cl-auth-sub">${previewError}</p>
+      <//>
     `;
   }
 
@@ -112,16 +116,10 @@ export function InviteAcceptPage() {
       ? 'This invite was already accepted. Sign in normally to reach your workspace.'
       : 'This invite is no longer active. Ask your admin to send a fresh one.';
     return html`
-      <main class="cl-auth-shell">
-        <div class="cl-auth-card">
-          <div class="cl-auth-brand">
-            <img src="/favicon.png?v=7" alt="Solden" height="36" width="36"
-                 style="display:block;width:36px;height:36px" />
-          </div>
-          <h1 class="cl-auth-title">Invite ${preview.status}</h1>
-          <p class="cl-auth-sub">${message}</p>
-        </div>
-      </main>
+      <${InviteAuthFrame}>
+        <h1 class="cl-auth-title">Invite ${preview.status}</h1>
+        <p class="cl-auth-sub">${message}</p>
+      <//>
     `;
   }
 
@@ -156,26 +154,20 @@ export function InviteAcceptPage() {
 
   if (sameUser) {
     return html`
-      <main class="cl-auth-shell">
-        <div class="cl-auth-card">
-          <div class="cl-auth-brand">
-            <img src="/favicon.png?v=7" alt="Solden" height="36" width="36"
-                 style="display:block;width:36px;height:36px" />
-          </div>
-          <h1 class="cl-auth-title">Welcome to ${orgLabel}</h1>
-          <p class="cl-auth-sub">
-            You're already signed in as <strong>${inviteEmail}</strong>.
-            Accept the invite to bind this account to the workspace.
-          </p>
-          ${error ? html`<div class="cl-auth-error">${error}</div>` : null}
-          <button
-            class="cl-auth-btn cl-auth-btn-primary"
-            onClick=${acceptAsCurrentUser}
-            disabled=${submitting}>
-            ${submitting ? 'Accepting…' : 'Accept invite'}
-          </button>
-        </div>
-      </main>
+      <${InviteAuthFrame}>
+        <h1 class="cl-auth-title">Welcome to ${orgLabel}</h1>
+        <p class="cl-auth-sub">
+          You're already signed in as <strong>${inviteEmail}</strong>.
+          Accept the invite to bind this account to the workspace.
+        </p>
+        ${error ? html`<div class="cl-auth-error">${error}</div>` : null}
+        <button
+          class="cl-auth-btn cl-auth-btn-primary"
+          onClick=${acceptAsCurrentUser}
+          disabled=${submitting}>
+          ${submitting ? 'Accepting…' : 'Accept invite'}
+        </button>
+      <//>
     `;
   }
 
@@ -192,26 +184,20 @@ export function InviteAcceptPage() {
       } catch { /* old browsers — no-op */ }
     };
     return html`
-      <main class="cl-auth-shell">
-        <div class="cl-auth-card">
-          <div class="cl-auth-brand">
-            <img src="/favicon.png?v=7" alt="Solden" height="36" width="36"
-                 style="display:block;width:36px;height:36px" />
-          </div>
-          <h1 class="cl-auth-title">This invite is for someone else</h1>
-          <p class="cl-auth-sub">
-            The invite was sent to <strong>${inviteEmail}</strong>, but
-            you're signed in as <strong>${sessionEmail}</strong>. Sign
-            out first, then re-open the invite link and sign in with
-            ${inviteEmail}.
-          </p>
-          <button
-            class="cl-auth-btn cl-auth-btn-primary"
-            onClick=${signOutAndStay}>
-            Sign out
-          </button>
-        </div>
-      </main>
+      <${InviteAuthFrame}>
+        <h1 class="cl-auth-title">This invite is for someone else</h1>
+        <p class="cl-auth-sub">
+          The invite was sent to <strong>${inviteEmail}</strong>, but
+          you're signed in as <strong>${sessionEmail}</strong>. Sign
+          out first, then re-open the invite link and sign in with
+          ${inviteEmail}.
+        </p>
+        <button
+          class="cl-auth-btn cl-auth-btn-primary"
+          onClick=${signOutAndStay}>
+          Sign out
+        </button>
+      <//>
     `;
   }
 
@@ -266,12 +252,7 @@ export function InviteAcceptPage() {
   const microsoftStart = `/auth/microsoft/start?invite_token=${encodeURIComponent(token)}`;
 
   return html`
-    <main class="cl-auth-shell">
-      <div class="cl-auth-card">
-        <div class="cl-auth-brand">
-          <img src="/favicon.png?v=7" alt="Solden" height="36" width="36"
-               style="display:block;width:36px;height:36px" />
-        </div>
+    <${InviteAuthFrame}>
         <h1 class="cl-auth-title">Join ${orgLabel}</h1>
         <p class="cl-auth-sub">
           You've been invited as <strong>${inviteEmail}</strong>. Pick
@@ -281,7 +262,7 @@ export function InviteAcceptPage() {
         ${error ? html`<div class="cl-auth-error">${error}</div>` : null}
 
         <a
-          class="cl-auth-btn cl-auth-btn-primary"
+          class="cl-auth-btn cl-auth-btn-secondary"
           href=${googleStart}>
           <${GoogleMark} />
           <span>Continue with Google</span>
@@ -340,7 +321,6 @@ export function InviteAcceptPage() {
           Use 12+ characters. We hash with bcrypt; we never see your
           password in the clear.
         </p>
-      </div>
-    </main>
+    <//>
   `;
 }
