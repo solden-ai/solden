@@ -166,7 +166,7 @@ describe('SidebarApp', () => {
     // Shell: branded header + ThreadSidebar surface with the item's
     // vendor name visible.
     assert.match(getTextContent(view.container), /Solden/);
-    assert.match(getTextContent(view.container), /AP Workflow/);
+    assert.match(getTextContent(view.container), /AP Record/);
     assert.ok(await waitForText(/Memory Summary/));
     assert.ok(await waitForText(/Owner/));
     assert.ok(await waitForText(/Decision/));

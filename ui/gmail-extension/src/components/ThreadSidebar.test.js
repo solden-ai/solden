@@ -247,11 +247,11 @@ describe('needs_info action-bar notice', () => {
     assert.match(source, /state === 'needs_info' && stateNotice/);
     assert.match(source, /getWorkStateNotice\(state, 'invoice', item\)/);
     assert.match(source, /Waiting on: \$\{question\}/);
-    assert.match(source, /Solden follows up automatically/);
-    assert.match(source, /Solden is on it/);
+    assert.match(source, /This record is paused until the missing context is added/);
+    assert.match(source, /Waiting for context/);
     // It renders inside the actions bar, above the Snooze button.
     const bar = source.substring(source.indexOf('<div class="cl-ts-actions-bar">'));
-    const noticeIdx = bar.indexOf('Solden is on it');
+    const noticeIdx = bar.indexOf('Waiting for context');
     const snoozeIdx = bar.indexOf('cl-ts-snooze-btn');
     assert.ok(noticeIdx > 0 && snoozeIdx > noticeIdx,
       'notice must render above the Snooze button in the actions bar');

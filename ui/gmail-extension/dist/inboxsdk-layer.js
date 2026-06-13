@@ -1,4 +1,4 @@
-/* clearledgr-source-fingerprint:29aeb922e81d046780d7430bb264911b547408c9e9426501a027fbb40dd2a01f */
+/* clearledgr-source-fingerprint:daaf0356650a6bd8f0e8da62a251b7fc10ef11616af3eee23f70195fd4889b2d */
 (() => {
   var __create = Object.create;
   var __getProtoOf = Object.getPrototypeOf;
@@ -59915,13 +59915,25 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     if (!status)
       return m3`<span class="cl-ts-match-icon na">—</span>`;
     const s3 = String(status).toLowerCase();
-    if (s3 === "passed" || s3 === "match" || s3 === "matched" || s3 === "verified")
+    if (s3 === "passed" || s3 === "match" || s3 === "matched" || s3 === "verified" || s3 === "captured")
       return m3`<span class="cl-ts-match-icon pass">✓</span>`;
     if (s3 === "exception" || s3 === "warning" || s3 === "partial")
       return m3`<span class="cl-ts-match-icon warn">⚠</span>`;
     if (s3 === "failed" || s3 === "mismatch" || s3 === "missing")
       return m3`<span class="cl-ts-match-icon fail">✗</span>`;
     return m3`<span class="cl-ts-match-icon na">—</span>`;
+  }
+  function invoiceMatchDetail(item, matchStatus) {
+    const explicit = item.invoice_match_status || item.invoice_status || item.extraction_status;
+    if (explicit)
+      return humanizeEventType(explicit, { fallback: "Captured" });
+    const hasInvoice = item.invoice_number || item.reference || item.amount != null;
+    if (hasInvoice)
+      return "Captured";
+    const s3 = String(matchStatus || "").toLowerCase();
+    if (["no_po", "missing_po", "po_missing", "po_required"].includes(s3))
+      return "Captured";
+    return humanizeEventType(matchStatus, { fallback: "—" });
   }
   function riskBadge(score) {
     if (score == null)
@@ -60374,7 +60386,8 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     const matchStatus = item.match_status || item.three_way_match_status;
     const poStatus = item.po_match_status || (item.po_number ? "matched" : "missing");
     const grnStatus = item.grn_match_status || "na";
-    const invoiceStatus = matchStatus || "na";
+    const invoiceStatus = item.invoice_match_status || item.invoice_status || item.extraction_status || (item.invoice_number || item.reference || item.amount != null ? "captured" : "na");
+    const invoiceDetail = invoiceMatchDetail(item, matchStatus);
     const score = item.match_score;
     const deltaPct = item.match_amount_delta_pct;
     const tolPct = item.match_tolerance_pct;
@@ -60412,7 +60425,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       <div class="cl-ts-match-row">
         ${matchIcon(invoiceStatus)}
         <span class="cl-ts-match-label">Invoice</span>
-        <span class="cl-ts-match-detail">${String(matchStatus || "—").replace(/_/g, " ")}</span>
+        <span class="cl-ts-match-detail">${invoiceDetail}</span>
       </div>
       ${toleranceLabel ? m3`
         <span class="cl-ts-match-tolerance ${toleranceTone}">${toleranceLabel}</span>
@@ -60845,7 +60858,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
       }
       if (!stateNotice) {
         const question = String(item.needs_info_question || "").trim();
-        stateNotice = question ? `Waiting on: ${question}` : "Waiting on the requested info. Solden follows up automatically and the record moves the moment it arrives.";
+        stateNotice = question ? `Waiting on: ${question}` : "This record is paused until the missing context is added. Add it in this thread or open the workspace record.";
       }
     }
     return m3`
@@ -60906,7 +60919,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
         ` : ""}
         ${state === "needs_info" && stateNotice ? m3`
           <div class="cl-ts-awaiting-approval" role="status">
-            <div class="cl-ts-awaiting-approval-title">Solden is on it</div>
+            <div class="cl-ts-awaiting-approval-title">Waiting for context</div>
             <div class="cl-ts-awaiting-approval-sub">${stateNotice}</div>
           </div>
         ` : ""}
@@ -61798,7 +61811,7 @@ Reason (required — logged to the audit trail):`);
         <div class="cl-title">
           ${logoUrl && html4`<img class="cl-logo" src=${logoUrl} alt="Solden" onError=${(e3) => e3.target.remove()} />`}
           <span class="cl-title-product">Solden</span>
-          <span class="cl-title-context">AP Workflow</span>
+          <span class="cl-title-context">AP Record</span>
         </div>
         <div class="cl-header-right">
           ${hasQueueNavigation ? html4`

@@ -458,13 +458,23 @@ function formatCountdown(targetIso, nowMs) {
 function matchIcon(status) {
   if (!status) return html`<span class="cl-ts-match-icon na">—</span>`;
   const s = String(status).toLowerCase();
-  if (s === 'passed' || s === 'match' || s === 'matched' || s === 'verified')
+  if (s === 'passed' || s === 'match' || s === 'matched' || s === 'verified' || s === 'captured')
     return html`<span class="cl-ts-match-icon pass">✓</span>`;
   if (s === 'exception' || s === 'warning' || s === 'partial')
     return html`<span class="cl-ts-match-icon warn">⚠</span>`;
   if (s === 'failed' || s === 'mismatch' || s === 'missing')
     return html`<span class="cl-ts-match-icon fail">✗</span>`;
   return html`<span class="cl-ts-match-icon na">—</span>`;
+}
+
+function invoiceMatchDetail(item, matchStatus) {
+  const explicit = item.invoice_match_status || item.invoice_status || item.extraction_status;
+  if (explicit) return humanizeEventType(explicit, { fallback: 'Captured' });
+  const hasInvoice = item.invoice_number || item.reference || item.amount != null;
+  if (hasInvoice) return 'Captured';
+  const s = String(matchStatus || '').toLowerCase();
+  if (['no_po', 'missing_po', 'po_missing', 'po_required'].includes(s)) return 'Captured';
+  return humanizeEventType(matchStatus, { fallback: '—' });
 }
 
 function riskBadge(score) {
@@ -946,7 +956,8 @@ function MatchSection({ item }) {
   const matchStatus = item.match_status || item.three_way_match_status;
   const poStatus = item.po_match_status || (item.po_number ? 'matched' : 'missing');
   const grnStatus = item.grn_match_status || 'na';
-  const invoiceStatus = matchStatus || 'na';
+  const invoiceStatus = item.invoice_match_status || item.invoice_status || item.extraction_status || (item.invoice_number || item.reference || item.amount != null ? 'captured' : 'na');
+  const invoiceDetail = invoiceMatchDetail(item, matchStatus);
 
   // §8.1: summarize the match with a tolerance indicator when we have it
   const score = item.match_score;
@@ -984,7 +995,7 @@ function MatchSection({ item }) {
       <div class="cl-ts-match-row">
         ${matchIcon(invoiceStatus)}
         <span class="cl-ts-match-label">Invoice</span>
-        <span class="cl-ts-match-detail">${String(matchStatus || '—').replace(/_/g, ' ')}</span>
+        <span class="cl-ts-match-detail">${invoiceDetail}</span>
       </div>
       ${toleranceLabel ? html`
         <span class="cl-ts-match-tolerance ${toleranceTone}">${toleranceLabel}</span>
@@ -1487,7 +1498,7 @@ export function ThreadSidebar({
       const question = String(item.needs_info_question || '').trim();
       stateNotice = question
         ? `Waiting on: ${question}`
-        : 'Waiting on the requested info. Solden follows up automatically and the record moves the moment it arrives.';
+        : 'This record is paused until the missing context is added. Add it in this thread or open the workspace record.';
     }
   }
 
@@ -1549,7 +1560,7 @@ export function ThreadSidebar({
         ` : ''}
         ${state === 'needs_info' && stateNotice ? html`
           <div class="cl-ts-awaiting-approval" role="status">
-            <div class="cl-ts-awaiting-approval-title">Solden is on it</div>
+            <div class="cl-ts-awaiting-approval-title">Waiting for context</div>
             <div class="cl-ts-awaiting-approval-sub">${stateNotice}</div>
           </div>
         ` : ''}

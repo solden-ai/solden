@@ -2337,7 +2337,7 @@ export default function SidebarApp({ queueManager }) {
         <div class="cl-title">
           ${logoUrl && html`<img class="cl-logo" src=${logoUrl} alt="Solden" onError=${(e) => e.target.remove()} />`}
           <span class="cl-title-product">Solden</span>
-          <span class="cl-title-context">AP Workflow</span>
+          <span class="cl-title-context">AP Record</span>
         </div>
         <div class="cl-header-right">
           ${hasQueueNavigation

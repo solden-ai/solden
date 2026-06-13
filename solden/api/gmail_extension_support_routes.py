@@ -428,16 +428,16 @@ async def sidebar_query_suggestions(
     if has_vendor_siblings:
         suggestions.append(f"What else is open from {vendor}?")
     else:
-        suggestions.append(f"What's {vendor}'s payment history?")
+        suggestions.append(f"What vendor context matters for {vendor}?")
 
     # Decision help
     overdue = _days_overdue(focus.get("due_date"))
     if overdue and overdue > 0:
         suggestions.append("What happens if I don't pay this?")
     elif blockers:
-        suggestions.append("What do I need to do next?")
+        suggestions.append("What do I need to check next?")
     else:
-        suggestions.append("Can the agent handle this automatically?")
+        suggestions.append("What happens next?")
 
     return {"suggestions": suggestions[:4]}
 
