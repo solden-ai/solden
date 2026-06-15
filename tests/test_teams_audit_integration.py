@@ -41,6 +41,7 @@ from solden.services.agent_command_dispatch import (
     build_channel_runtime,
     dispatch_runtime_intent,
 )
+from solden.services.memory_invariants import memory_event_invariant_violations
 
 
 # ---------------------------------------------------------------------
@@ -115,18 +116,21 @@ def _state_transition_audits(db, ap_item_id: str) -> List[Dict[str, Any]]:
 
 
 def _payload_decision_context(audit_row: Dict[str, Any]) -> Dict[str, Any]:
+    parsed = _payload_json(audit_row)
+    decision_context = parsed.get("decision_context")
+    return decision_context if isinstance(decision_context, dict) else {}
+
+
+def _payload_json(audit_row: Dict[str, Any]) -> Dict[str, Any]:
     raw = audit_row.get("payload_json")
     if isinstance(raw, str):
         try:
-            parsed = json.loads(raw)
+            return json.loads(raw)
         except ValueError:
             return {}
     elif isinstance(raw, dict):
-        parsed = raw
-    else:
-        return {}
-    decision_context = parsed.get("decision_context")
-    return decision_context if isinstance(decision_context, dict) else {}
+        return raw
+    return {}
 
 
 # ---------------------------------------------------------------------
@@ -195,6 +199,7 @@ async def test_teams_approve_dispatch_lands_ui_surface_teams(postgres_test_db):
     # The most recent teams-driven transition should carry the auto-
     # built snapshot fields derived from the AP item's metadata.
     teams_audit = teams_transitions[0]
+    assert memory_event_invariant_violations(_payload_json(teams_audit)) == []
     decision_context = _payload_decision_context(teams_audit)
     assert decision_context.get("ui_surface") == "teams"
     # actor + decision_reason were passed through the Teams dispatch.

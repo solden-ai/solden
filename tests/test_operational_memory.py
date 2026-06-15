@@ -9,6 +9,12 @@ from solden.services.operational_memory import (
 )
 from solden.services.memory_events import commit_memory_event
 from solden.services.memory_events import commit_runtime_memory_event
+from solden.services.memory_surface import (
+    adaptive_card_memory_facts,
+    build_surface_memory_snapshot,
+    memory_fact_pairs,
+    render_slack_memory_summary,
+)
 from solden.services.operational_memory_capture import (
     capture_operational_memory_event,
     link_observed_event_to_work_item,
@@ -512,6 +518,97 @@ def test_memory_event_commit_captures_and_projects_ap_exception_memory():
     assert record["decision_ledger"][0]["decision_type"] == "escalate_to_delegate"
     assert record["decision_ledger"][0]["human_confirmation_status"] == "confirmed"
     assert record["proof"]["memory_evidence"][0]["ref"] == "thread-123"
+
+
+def test_surface_memory_projection_exposes_one_contract_for_embedded_surfaces(monkeypatch):
+    monkeypatch.setenv("APP_BASE_URL", "https://workspace.soldenai.com")
+    db = _MemoryDB([])
+
+    commit_memory_event(
+        db,
+        box_type="ap_item",
+        box_id="AP-surface-contract-1",
+        organization_id="org-memory",
+        event_type="blocker_confirmed",
+        source="slack",
+        actor_type="user",
+        actor_id="finance@example.com",
+        previous_state="needs_approval",
+        resulting_state="blocked",
+        owner={"label": "CFO delegate", "email": "delegate@example.com"},
+        dependency={
+            "type": "approval",
+            "owner": "CFO delegate",
+            "reason": "Sarah is unavailable and the amount exceeds the approval threshold",
+        },
+        decision={"type": "escalate_to_delegate"},
+        rationale="Approval threshold exceeded and Sarah is unavailable",
+        evidence={"source": "slack", "ref": "thread-123"},
+        confidence=0.93,
+        human_confirmation_status="confirmed",
+        next_action="Escalate to the CFO delegate.",
+        summary="Finance escalated invoice approval to the CFO delegate.",
+        source_refs={"slack_thread_ts": "thread-123"},
+        idempotency_key="memory-event:AP-surface-contract-1:blocker",
+        occurred_at="2026-06-05T17:15:00Z",
+    )
+
+    item = {
+        "id": "AP-surface-contract-1",
+        "organization_id": "org-memory",
+        "state": "blocked",
+        "invoice_number": "INV-SURFACE-1",
+    }
+    record = build_operational_memory_record(
+        item=item,
+        timeline=[],
+        exceptions=[],
+        outcome=None,
+        db=db,
+        box_type="ap_item",
+        box_id="AP-surface-contract-1",
+    )
+
+    snapshot = build_surface_memory_snapshot(
+        record,
+        item=item,
+        surface="gmail",
+        full_memory_url="https://workspace.soldenai.com/records/AP-surface-contract-1",
+    )
+
+    assert snapshot["contract"] == "solden_memory_surface.v1"
+    assert snapshot["work_item"] == "INV-SURFACE-1"
+    assert snapshot["status"] == "Finance escalated invoice approval to the CFO delegate."
+    assert snapshot["owner"] == "CFO delegate"
+    assert snapshot["waiting_on"] == "CFO delegate"
+    assert snapshot["why"] == "Sarah is unavailable and the amount exceeds the approval threshold"
+    assert snapshot["decision"] == "Finance escalated invoice approval to the CFO delegate."
+    assert snapshot["evidence"] == "slack thread ts: thread-123"
+    assert snapshot["next"] == "Escalate to the CFO delegate."
+    assert snapshot["where"] == "slack"
+    assert snapshot["changed"] == "needs approval -> blocked"
+    assert snapshot["full_memory_url"].endswith("/records/AP-surface-contract-1")
+
+    labels = {field["label"] for field in snapshot["fields"]}
+    assert {
+        "Status",
+        "Owner",
+        "Waiting on",
+        "Why",
+        "Decision",
+        "Evidence",
+        "Next",
+        "Where",
+        "Changed",
+    } <= labels
+
+    fact_labels = [label for label, _value in memory_fact_pairs(record, item=item)]
+    adaptive_labels = [fact["title"] for fact in adaptive_card_memory_facts(record, item=item)]
+    slack_summary = render_slack_memory_summary(record, item=item)
+    assert fact_labels[:3] == ["Status", "Owner", "Waiting on"]
+    assert adaptive_labels[:3] == ["Status", "Owner", "Waiting on"]
+    assert "*Why:* Sarah is unavailable" in slack_summary
+    assert "*Full memory:* <https://workspace.soldenai.com/records/AP-surface-contract-1|Open in Solden>" in slack_summary
 
 
 def test_runtime_intent_memory_event_captures_surface_action_context():

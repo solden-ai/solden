@@ -9,6 +9,7 @@ store/registry in isolation; THIS file covers the ENGINE path.
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from solden.core import box_registry  # noqa: E402
 from solden.core import database as db_module  # noqa: E402
 from solden.core.coordination_engine import CoordinationEngine  # noqa: E402
 from solden.core.plan import Action, Plan  # noqa: E402
+from solden.services.memory_invariants import memory_event_invariant_violations  # noqa: E402
 
 ORG = "orgGenBM"
 
@@ -70,6 +72,13 @@ def _audit_rows(db, organization_id, box_type=None):
         return [dict(r) for r in cur.fetchall()]
 
 
+def _payload_json(row):
+    raw = row.get("payload_json")
+    if isinstance(raw, str):
+        return json.loads(raw)
+    return raw if isinstance(raw, dict) else {}
+
+
 def test_create_box_dispatches_to_bank_match(db):
     parent = _parent_ap(db)
     match = _bank_match(db, parent["id"])
@@ -90,6 +99,9 @@ def test_update_box_advances_bank_match_state(db):
     )
     loaded = box_registry.get_box("bank_match", match["id"], db)
     assert loaded["state"] == "accepted"
+    rows = _audit_rows(db, ORG, box_type="bank_match")
+    accepted = next(r for r in rows if r["event_type"] == "bank_match_accepted")
+    assert memory_event_invariant_violations(_payload_json(accepted)) == []
 
 
 def test_box_lifecycle_primitives_generic_for_bank_match(db):

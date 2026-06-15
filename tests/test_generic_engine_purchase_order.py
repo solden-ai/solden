@@ -9,6 +9,7 @@ CoordinationEngine with zero AP-specific code on the path.
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from solden.core import box_registry  # noqa: E402
 from solden.core import database as db_module  # noqa: E402
 from solden.core.coordination_engine import CoordinationEngine  # noqa: E402
 from solden.core.plan import Action, Plan  # noqa: E402
+from solden.services.memory_invariants import memory_event_invariant_violations  # noqa: E402
 
 ORG = "orgGenPO"
 
@@ -62,6 +64,13 @@ def _audit_rows(db, organization_id, box_type=None):
         return [dict(r) for r in cur.fetchall()]
 
 
+def _payload_json(row):
+    raw = row.get("payload_json")
+    if isinstance(raw, str):
+        return json.loads(raw)
+    return raw if isinstance(raw, dict) else {}
+
+
 def test_create_box_dispatches_to_purchase_order(db):
     po = _po(db)
     assert po["state"] == "draft"          # status aliased to state
@@ -79,6 +88,9 @@ def test_update_box_advances_po_state(db):
     loaded = box_registry.get_box("purchase_order", "PO-gen-2", db)
     assert loaded["state"] == "approved"
     assert loaded["approved_by"] == "cfo"   # approval metadata stamped on ->approved
+    rows = _audit_rows(db, ORG, box_type="purchase_order")
+    approved = next(r for r in rows if r["event_type"] == "purchase_order_approved")
+    assert memory_event_invariant_violations(_payload_json(approved)) == []
 
 
 def test_box_lifecycle_primitives_generic_for_po(db):

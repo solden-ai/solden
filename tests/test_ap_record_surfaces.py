@@ -22,6 +22,7 @@ from solden.core import database as db_module  # noqa: E402
 from solden.core.auth import create_access_token  # noqa: E402
 from solden.services.ap_item_service import build_worklist_item  # noqa: E402
 from solden.services.correction_learning import CorrectionLearningService  # noqa: E402
+from solden.services.memory_invariants import memory_event_invariant_violations  # noqa: E402
 
 
 def _item_payload(
@@ -643,7 +644,11 @@ def test_field_review_resolution_endpoint_updates_canonical_record_and_clears_bl
     assert metadata["confidence_blockers"] == []
 
     audit_events = db.list_ap_audit_events(item["id"])
-    assert any(event["event_type"] == "field_correction" for event in audit_events)
+    field_correction = next(
+        event for event in audit_events
+        if event["event_type"] == "field_correction"
+    )
+    assert memory_event_invariant_violations(field_correction["payload_json"]) == []
 
     snapshot = CorrectionLearningService("org-test").get_extraction_review_calibration_snapshot(
         vendor_name="Acme",

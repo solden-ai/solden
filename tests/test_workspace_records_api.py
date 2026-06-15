@@ -12,6 +12,7 @@ from solden.api import workspace_records as workspace_module
 from solden.core import database as db_module
 from solden.core.auth import TokenData
 from solden.services.memory_events import commit_memory_event
+from solden.services.memory_invariants import memory_event_invariant_violations
 
 
 @pytest.fixture()
@@ -196,3 +197,43 @@ def test_workspace_records_can_include_operational_memory(client, db, org_id):
     )
     assert "gmail message id: msg-memory-1" in body["items"][0]["surface_memory"]["evidence"]
     assert body["items"][0]["decision_ledger"][0]["source_surface"] == "gmail"
+
+
+def test_workspace_memory_capture_endpoint_commits_confirmed_context(client, db, org_id):
+    item = _seed_item(
+        db,
+        organization_id=org_id,
+        vendor_name="Capture Systems",
+        state="needs_info",
+        amount=900,
+    )
+
+    resp = client.post(
+        "/api/workspace/memory-events/capture",
+        json={
+            "box_type": "ap_item",
+            "box_id": item["id"],
+            "source": "workspace",
+            "event_type": "decision_recorded",
+            "summary": "Controller held the invoice for missing PO evidence.",
+            "decision": {"type": "hold_for_missing_po"},
+            "rationale": "The vendor requires a purchase order before ERP follow-up.",
+            "evidence": {"workspace_record_id": item["id"]},
+            "confidence": 0.98,
+            "human_confirmation_status": "confirmed",
+            "next_action": "Attach the PO or mark PO not required.",
+            "auto_commit": True,
+        },
+    )
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "committed"
+    assert body["event"]["event_type"] == "memory_event:decision_recorded"
+
+    events = db.list_box_audit_events("ap_item", item["id"])
+    captured = next(
+        event for event in events
+        if event.get("event_type") == "memory_event:decision_recorded"
+    )
+    assert memory_event_invariant_violations(captured["payload_json"]) == []

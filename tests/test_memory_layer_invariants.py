@@ -7,6 +7,7 @@ import pytest
 from solden.services.audit_memory import ensure_memory_payload_for_audit_event
 from solden.services.memory_events import commit_memory_event
 from solden.services.memory_invariants import (
+    PRIMARY_MEMORY_EXECUTION_COVERAGE,
     PRIMARY_MEMORY_COVERAGE_SURFACES,
     MemoryInvariantError,
     assert_memory_event_payload,
@@ -14,6 +15,7 @@ from solden.services.memory_invariants import (
     audit_event_requires_operational_memory,
     memory_event_invariant_violations,
     missing_coverage_tokens,
+    missing_execution_coverage_tokens,
 )
 
 
@@ -280,3 +282,20 @@ def test_primary_memory_sources_remain_wired():
 
         missing = missing_coverage_tokens(surface=surface, source_text=source_text)
         assert missing == [], f"{surface.name} is missing memory wiring tokens: {missing}"
+
+
+def test_primary_memory_paths_have_regression_coverage():
+    repo_root = Path(__file__).resolve().parents[1]
+
+    for coverage in PRIMARY_MEMORY_EXECUTION_COVERAGE:
+        source_path = repo_root / coverage.source_path
+        test_path = repo_root / coverage.test_path
+        assert source_path.exists(), f"{coverage.name} missing source file: {coverage.source_path}"
+        assert test_path.exists(), f"{coverage.name} missing test file: {coverage.test_path}"
+
+        missing = missing_execution_coverage_tokens(
+            coverage=coverage,
+            source_text=source_path.read_text(encoding="utf-8"),
+            test_text=test_path.read_text(encoding="utf-8"),
+        )
+        assert missing == [], f"{coverage.name} is missing executable memory coverage: {missing}"

@@ -26,6 +26,7 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
 from solden.core import database as db_module  # noqa: E402
+from solden.services.memory_invariants import memory_event_invariant_violations  # noqa: E402
 
 
 @pytest.fixture()
@@ -320,6 +321,8 @@ class TestOutcomes:
         events = db.list_box_audit_events(box_type="ap_item", box_id="AP-OUT-3")
         types = [e["event_type"] for e in events]
         assert "box_outcome_recorded" in types
+        outcome_event = next(e for e in events if e["event_type"] == "box_outcome_recorded")
+        assert memory_event_invariant_violations(outcome_event["payload_json"]) == []
 
     def test_list_outcomes_by_type(self, db):
         _seed_ap_box(db, "AP-LIST-1", state="ready_to_post")
