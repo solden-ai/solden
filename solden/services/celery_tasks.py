@@ -839,6 +839,26 @@ def run_monitoring_checks_all_orgs() -> dict:
     return {"orgs_checked": checked, "errors": errors}
 
 
+@app.task(name="solden.services.celery_tasks.run_ap_learning_loop_evals_all_orgs")
+def run_ap_learning_loop_evals_all_orgs() -> dict:
+    """Persist scheduled AP learning-loop evals for pilot workspaces."""
+    from solden.services.ap_learning_loop import run_scheduled_ap_learning_loop_evals
+
+    try:
+        result = run_scheduled_ap_learning_loop_evals()
+    except Exception as exc:
+        logger.exception("[run_ap_learning_loop_evals_all_orgs] batch failed: %s", exc)
+        return {"status": "error", "error": str(exc), "processed": 0, "errors": 1}
+
+    logger.info(
+        "[run_ap_learning_loop_evals_all_orgs] processed=%d skipped=%d errors=%d",
+        int(result.get("processed") or 0),
+        int(result.get("skipped") or 0),
+        int(result.get("errors") or 0),
+    )
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Module 7 v1 Pass 3 — audit-event SIEM webhook fan-out
 #

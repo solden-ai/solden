@@ -192,6 +192,13 @@ app.config_from_object(
                 "task": "solden.services.celery_tasks.deliver_due_report_subscriptions",
                 "schedule": _crontab(minute=15),
             },
+            # AP learning loop private evals. Runs after the overnight
+            # vendor/PO sync windows so pilot scorecards have fresh AP
+            # records, memory events, evidence linkage, and outcome traces.
+            "run-ap-learning-loop-evals": {
+                "task": "solden.services.celery_tasks.run_ap_learning_loop_evals_all_orgs",
+                "schedule": _crontab(minute=30, hour=4),
+            },
         },
     }
 )

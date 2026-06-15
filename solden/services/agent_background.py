@@ -712,6 +712,12 @@ async def _run_loop():
                 for org_id in org_ids:
                     await _deliver_scheduled_reports(org_id)
 
+            # Daily AP learning-loop evals. Celery Beat is the production
+            # scheduler; this keeps local/all-in-one deployments from going
+            # blind when the worker topology is not running.
+            if tick % 4 == 0 and now.hour == 4:
+                await _run_ap_learning_loop_evals(org_ids)
+
         except asyncio.CancelledError:
             logger.info("Agent background loop cancelled")
             return
@@ -1218,6 +1224,28 @@ async def _run_task_scheduler_checks(org_id: str):
             )
     except Exception as exc:
         logger.error("Task scheduler checks failed for org=%s: %s", org_id, exc)
+
+
+async def _run_ap_learning_loop_evals(org_ids: List[str]) -> Dict[str, Any]:
+    """Persist AP private outcome eval snapshots for active pilot orgs."""
+    try:
+        from solden.services.ap_learning_loop import run_scheduled_ap_learning_loop_evals
+
+        result = await asyncio.to_thread(
+            run_scheduled_ap_learning_loop_evals,
+            organization_ids=org_ids,
+        )
+        if result.get("processed") or result.get("errors"):
+            logger.info(
+                "[background] AP learning-loop evals processed=%d skipped=%d errors=%d",
+                int(result.get("processed") or 0),
+                int(result.get("skipped") or 0),
+                int(result.get("errors") or 0),
+            )
+        return result
+    except Exception as exc:
+        logger.warning("[background] AP learning-loop eval sweep failed: %s", exc)
+        return {"status": "error", "error": str(exc)}
 
 
 async def _run_erp_reconciliation(org_id: str):

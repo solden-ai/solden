@@ -5,11 +5,13 @@ from solden.services.agent_memory import AgentMemoryService
 from solden.services.ap_learning_loop import (
     PRIVATE_OUTCOME_EVAL_TYPE,
     APLearningLoopService,
+    run_scheduled_ap_learning_loop_evals,
 )
 from solden.services.memory_events import commit_memory_event
 
 
 ORG_ID = "org-learning-loop"
+EMPTY_ORG_ID = "org-learning-empty"
 
 
 def _db(tmp_path, monkeypatch):
@@ -198,4 +200,108 @@ def test_ap_learning_loop_flags_missing_learning_signal(tmp_path, monkeypatch):
         in snapshot["company_learning"]["recommended_actions"][0]
         or "Route every AP agent decision through AgentMemoryService"
         in snapshot["company_learning"]["recommended_actions"][1]
+    )
+
+
+def test_scheduled_ap_learning_loop_persists_non_empty_orgs_only(
+    tmp_path, monkeypatch
+):
+    db = _db(tmp_path, monkeypatch)
+    db.ensure_organization(EMPTY_ORG_ID, organization_name="Empty Pilot")
+    item = _seed_item(
+        db,
+        item_id="AP-SCHEDULED-1",
+        vendor="Google Cloud EMEA Limited",
+        state="needs_info",
+    )
+    _capture_field_review_memory(
+        db,
+        item_id=item["id"],
+        vendor=item["vendor_name"],
+        actor_type="agent",
+    )
+
+    result = run_scheduled_ap_learning_loop_evals(
+        organization_ids=[ORG_ID, EMPTY_ORG_ID],
+        db=db,
+        limit=100,
+        window_days=30,
+    )
+
+    assert result["status"] == "ok"
+    assert result["processed"] == 1
+    assert result["skipped"] == 1
+    assert result["errors"] == 0
+    assert result["per_org"] == [
+        {
+            "organization_id": ORG_ID,
+            "status": "persisted",
+            "total_items": 1,
+            "release_gate": "needs_work",
+            "snapshot_type": PRIVATE_OUTCOME_EVAL_TYPE,
+        },
+        {
+            "organization_id": EMPTY_ORG_ID,
+            "status": "skipped_no_ap_items",
+            "total_items": 0,
+        },
+    ]
+
+    persisted = AgentMemoryService(ORG_ID, db=db).latest_eval_snapshot(
+        skill_id="ap_v1",
+        scope="organization",
+        snapshot_type=PRIVATE_OUTCOME_EVAL_TYPE,
+    )
+    assert persisted["payload"]["summary"]["total_items"] == 1
+    empty_snapshot = AgentMemoryService(EMPTY_ORG_ID, db=db).latest_eval_snapshot(
+        skill_id="ap_v1",
+        scope="organization",
+        snapshot_type=PRIVATE_OUTCOME_EVAL_TYPE,
+    )
+    assert empty_snapshot == {}
+
+
+def test_scheduled_ap_learning_loop_env_orgs_override_passed_orgs(
+    tmp_path, monkeypatch
+):
+    db = _db(tmp_path, monkeypatch)
+    db.ensure_organization(EMPTY_ORG_ID, organization_name="Empty Pilot")
+    item = _seed_item(
+        db,
+        item_id="AP-SCHEDULED-ENV-1",
+        vendor="Google Cloud EMEA Limited",
+        state="needs_info",
+    )
+    _capture_field_review_memory(
+        db,
+        item_id=item["id"],
+        vendor=item["vendor_name"],
+        actor_type="agent",
+    )
+    monkeypatch.setenv("SOLDEN_AP_LEARNING_LOOP_ORG_IDS", EMPTY_ORG_ID)
+
+    result = run_scheduled_ap_learning_loop_evals(
+        organization_ids=[ORG_ID],
+        db=db,
+        limit=100,
+        window_days=30,
+    )
+
+    assert result["processed"] == 0
+    assert result["skipped"] == 1
+    assert result["per_org"][0]["organization_id"] == EMPTY_ORG_ID
+    assert AgentMemoryService(ORG_ID, db=db).latest_eval_snapshot(
+        skill_id="ap_v1",
+        scope="organization",
+        snapshot_type=PRIVATE_OUTCOME_EVAL_TYPE,
+    ) == {}
+
+
+def test_celery_beat_schedules_ap_learning_loop_eval():
+    from solden.services.celery_app import app
+
+    schedule = app.conf.beat_schedule["run-ap-learning-loop-evals"]
+
+    assert schedule["task"] == (
+        "solden.services.celery_tasks.run_ap_learning_loop_evals_all_orgs"
     )

@@ -8,19 +8,22 @@ can be scored against.
 from __future__ import annotations
 
 import json
+import os
 import re
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from solden.core.database import SoldenDB, get_db
-from solden.core.org_utils import assert_org_id
+from solden.core.org_utils import assert_org_id, coerce_org_id
 from solden.services.agent_memory import AgentMemoryService
 from solden.services.operational_memory import build_box_operational_memory_record
 
 
 LEARNING_LOOP_CONTRACT = "solden_ap_learning_loop.v1"
 PRIVATE_OUTCOME_EVAL_TYPE = "ap_private_outcome_eval"
+DEFAULT_SCHEDULED_EVAL_WINDOW_DAYS = 30
+DEFAULT_SCHEDULED_EVAL_LIMIT = 1000
 
 _TERMINAL_STATES = {
     "closed",
@@ -73,6 +76,60 @@ def _slug(value: Any) -> str:
 
 def _ratio(numerator: int, denominator: int) -> float:
     return round(numerator / max(1, denominator), 4)
+
+
+def _env_int(name: str, default: int, *, minimum: int, maximum: int) -> int:
+    try:
+        value = int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, min(value, maximum))
+
+
+def _scheduled_org_ids_from_env() -> List[str]:
+    raw = (
+        os.getenv("SOLDEN_AP_LEARNING_LOOP_ORG_IDS")
+        or os.getenv("AP_LEARNING_LOOP_ORG_IDS")
+        or ""
+    )
+    org_ids: List[str] = []
+    seen = set()
+    for part in raw.split(","):
+        org_id = coerce_org_id(part)
+        if not org_id or org_id in seen:
+            continue
+        seen.add(org_id)
+        org_ids.append(org_id)
+    return org_ids
+
+
+def _discover_scheduled_org_ids(db: SoldenDB) -> List[str]:
+    org_ids: List[str] = []
+    if hasattr(db, "list_organizations_with_ap_items"):
+        try:
+            org_ids.extend(db.list_organizations_with_ap_items() or [])
+        except Exception:
+            pass
+    if not org_ids and hasattr(db, "list_organizations"):
+        try:
+            for row in db.list_organizations(limit=500) or []:
+                if not isinstance(row, dict):
+                    continue
+                if row.get("is_active") is False or row.get("deleted_at"):
+                    continue
+                org_ids.append(row.get("id") or row.get("organization_id"))
+        except Exception:
+            pass
+
+    normalized: List[str] = []
+    seen = set()
+    for org_id in org_ids:
+        token = coerce_org_id(org_id)
+        if not token or token in seen:
+            continue
+        seen.add(token)
+        normalized.append(token)
+    return normalized
 
 
 def _has_value(value: Any) -> bool:
@@ -559,3 +616,124 @@ class APLearningLoopService:
             "status": "pass" if all(checks.values()) else "needs_work",
             "checks": checks,
         }
+
+
+def run_scheduled_ap_learning_loop_evals(
+    *,
+    organization_ids: Optional[Iterable[str]] = None,
+    db: Optional[SoldenDB] = None,
+    limit: Optional[int] = None,
+    window_days: Optional[int] = None,
+    now: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    """Run and persist AP private-outcome evals for pilot workspaces.
+
+    The scheduled path is intentionally conservative: it scopes to configured
+    pilot orgs when ``SOLDEN_AP_LEARNING_LOOP_ORG_IDS`` is set, falls back to
+    orgs with AP items, and skips empty orgs so the memory store does not fill
+    with zero-signal snapshots.
+    """
+    runtime_db = db or get_db()
+    if hasattr(runtime_db, "initialize"):
+        runtime_db.initialize()
+
+    resolved_limit = int(
+        limit
+        if limit is not None
+        else _env_int(
+            "AP_LEARNING_LOOP_EVAL_LIMIT",
+            DEFAULT_SCHEDULED_EVAL_LIMIT,
+            minimum=1,
+            maximum=5000,
+        )
+    )
+    resolved_window_days = int(
+        window_days
+        if window_days is not None
+        else _env_int(
+            "AP_LEARNING_LOOP_WINDOW_DAYS",
+            DEFAULT_SCHEDULED_EVAL_WINDOW_DAYS,
+            minimum=1,
+            maximum=365,
+        )
+    )
+    now_dt = now or datetime.now(timezone.utc)
+    if now_dt.tzinfo is None:
+        now_dt = now_dt.replace(tzinfo=timezone.utc)
+    now_dt = now_dt.astimezone(timezone.utc)
+    from_ts = (now_dt - timedelta(days=resolved_window_days)).isoformat()
+    to_ts = now_dt.isoformat()
+
+    configured_org_ids = _scheduled_org_ids_from_env()
+    if configured_org_ids:
+        candidate_org_ids = configured_org_ids
+    elif organization_ids is None:
+        candidate_org_ids = _discover_scheduled_org_ids(runtime_db)
+    else:
+        candidate_org_ids = list(organization_ids)
+
+    org_ids: List[str] = []
+    seen = set()
+    for org_id in candidate_org_ids:
+        token = coerce_org_id(org_id)
+        if not token or token in seen:
+            continue
+        seen.add(token)
+        org_ids.append(token)
+
+    summary: Dict[str, Any] = {
+        "status": "ok",
+        "orgs_discovered": len(org_ids),
+        "processed": 0,
+        "skipped": 0,
+        "errors": 0,
+        "window_days": resolved_window_days,
+        "limit": resolved_limit,
+        "from": from_ts,
+        "to": to_ts,
+        "per_org": [],
+    }
+
+    for org_id in org_ids:
+        try:
+            service = APLearningLoopService(org_id, db=runtime_db)
+            snapshot = service.evaluate_private_outcomes(
+                limit=resolved_limit,
+                persist=False,
+                from_ts=from_ts,
+                to_ts=to_ts,
+            )
+            total_items = int(snapshot.get("summary", {}).get("total_items") or 0)
+            if total_items <= 0:
+                summary["skipped"] += 1
+                summary["per_org"].append(
+                    {
+                        "organization_id": org_id,
+                        "status": "skipped_no_ap_items",
+                        "total_items": 0,
+                    }
+                )
+                continue
+            service.persist_snapshot(snapshot)
+            summary["processed"] += 1
+            summary["per_org"].append(
+                {
+                    "organization_id": org_id,
+                    "status": "persisted",
+                    "total_items": total_items,
+                    "release_gate": snapshot.get("release_gate", {}).get("status"),
+                    "snapshot_type": PRIVATE_OUTCOME_EVAL_TYPE,
+                }
+            )
+        except Exception as exc:
+            summary["errors"] += 1
+            summary["status"] = "partial_error"
+            summary["per_org"].append(
+                {
+                    "organization_id": org_id,
+                    "status": "error",
+                    "error": str(exc),
+                }
+            )
+
+    return summary

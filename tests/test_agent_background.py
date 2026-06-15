@@ -81,3 +81,26 @@ def test_record_payment_memory_event_writes_memory_promoting_audit():
     assert payload["actor_type"] == "agent"
     assert payload["organization_id"] == "org-pay"
     assert payload["evidence"]["payment_reference"] == "REF-9"
+
+
+def test_run_ap_learning_loop_evals_delegates_to_scheduled_runner(monkeypatch):
+    from solden.services import ap_learning_loop as learning_loop_module
+
+    calls = []
+
+    def _fake_runner(*, organization_ids):
+        calls.append(list(organization_ids))
+        return {"status": "ok", "processed": 2, "skipped": 0, "errors": 0}
+
+    monkeypatch.setattr(
+        learning_loop_module,
+        "run_scheduled_ap_learning_loop_evals",
+        _fake_runner,
+    )
+
+    result = asyncio.run(
+        agent_background_module._run_ap_learning_loop_evals(["org-a", "org-b"])
+    )
+
+    assert calls == [["org-a", "org-b"]]
+    assert result["processed"] == 2
