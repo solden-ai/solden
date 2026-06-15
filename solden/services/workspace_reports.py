@@ -368,6 +368,91 @@ _HUMAN_ATTENTION_STATES = (
 )
 
 
+def _agent_performance_learning_loop(
+    organization_id: str,
+    *,
+    db: Any,
+    params: ReportParams,
+) -> Dict[str, Any]:
+    """Read-only AP learning-loop snapshot for the report surface."""
+    try:
+        from solden.services.ap_learning_loop import APLearningLoopService
+
+        snapshot = APLearningLoopService(
+            organization_id, db=db
+        ).evaluate_private_outcomes(
+            limit=1000,
+            persist=False,
+            from_ts=params.from_ts,
+            to_ts=params.to_ts,
+            entity_id=params.entity_id,
+        )
+    except Exception as exc:
+        logger.warning(
+            "[reports.agent_performance.learning_loop] unavailable for org=%s: %s",
+            organization_id,
+            exc,
+        )
+        return {"status": "unavailable", "reason": "learning_loop_unavailable"}
+
+    company_learning = snapshot.get("company_learning")
+    company_learning = company_learning if isinstance(company_learning, dict) else {}
+    recurring_blockers = company_learning.get("recurring_blockers")
+    recurring_blockers = recurring_blockers if isinstance(recurring_blockers, list) else []
+    recommended_actions = company_learning.get("recommended_actions")
+    recommended_actions = recommended_actions if isinstance(recommended_actions, list) else []
+    surface_mix = company_learning.get("surface_mix")
+    surface_mix = surface_mix if isinstance(surface_mix, list) else []
+    summary = snapshot.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+
+    return {
+        "status": "available",
+        "contract": snapshot.get("contract"),
+        "scope": snapshot.get("scope"),
+        "generated_at": snapshot.get("generated_at"),
+        "summary": summary,
+        "release_gate": snapshot.get("release_gate") or {},
+        "recurring_blockers": recurring_blockers[:5],
+        "recommended_actions": recommended_actions[:5],
+        "surface_mix": surface_mix[:8],
+    }
+
+
+def _with_learning_loop_summary(
+    summary: Dict[str, Any],
+    learning_loop: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Mirror the headline learning-loop rates into agent summary metrics."""
+    if learning_loop.get("status") != "available":
+        return summary
+
+    loop_summary = learning_loop.get("summary")
+    loop_summary = loop_summary if isinstance(loop_summary, dict) else {}
+    release_gate = learning_loop.get("release_gate")
+    release_gate = release_gate if isinstance(release_gate, dict) else {}
+    blockers = learning_loop.get("recurring_blockers")
+    blockers = blockers if isinstance(blockers, list) else []
+
+    enriched = dict(summary)
+    enriched.update({
+        "memory_completeness_score": loop_summary.get("average_memory_completeness_score"),
+        "memory_event_coverage_rate": loop_summary.get("memory_event_coverage_rate"),
+        "agent_trace_rate": loop_summary.get("agent_trace_rate"),
+        "evidence_link_rate": loop_summary.get("evidence_link_rate"),
+        "outcome_traceability_rate": loop_summary.get("outcome_traceability_rate"),
+        "learning_loop_release_gate": release_gate.get("status"),
+    })
+    if blockers and isinstance(blockers[0], dict):
+        top = blockers[0]
+        enriched["top_learning_blocker"] = top.get("label") or top.get("key")
+        enriched["top_learning_blocker_count"] = int(top.get("count") or 0)
+    else:
+        enriched["top_learning_blocker"] = None
+        enriched["top_learning_blocker_count"] = 0
+    return enriched
+
+
 def generate_agent_performance_report(
     organization_id: str,
     *,
@@ -478,12 +563,20 @@ def generate_agent_performance_report(
             "exception_rate": 0.0, "avg_confidence": None,
         }
 
+    learning_loop = _agent_performance_learning_loop(
+        organization_id,
+        db=db,
+        params=params,
+    )
+    summary = _with_learning_loop_summary(summary, learning_loop)
+
     return {
         "report_type": "agent_performance",
         "params": params.to_dict(),
         "summary": summary,
         "series": series,
         "breakdown": [],
+        "learning_loop": learning_loop,
         "generated_at": _now_iso(),
     }
 

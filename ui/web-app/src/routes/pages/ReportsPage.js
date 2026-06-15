@@ -308,11 +308,89 @@ function ReportContent({ report, data }) {
   return html`
     <section class="cl-reports-body">
       <${SummaryStrip} report=${report} summary=${summary} />
+      ${report.id === 'agent_performance' ? html`
+        <${LearningLoopPanel} learningLoop=${data.learning_loop} />
+      ` : null}
       ${series.length > 0 ? html`
         <${TimeSeriesChart} report=${report} series=${series} />
       ` : null}
       ${breakdown.length > 0 ? html`
         <${BreakdownTable} report=${report} breakdown=${breakdown} />
+      ` : null}
+    </section>
+  `;
+}
+
+
+// ─── Learning loop panel ───────────────────────────────────────────
+
+function LearningLoopPanel({ learningLoop }) {
+  if (!learningLoop || learningLoop.status !== 'available') return null;
+
+  const summary = learningLoop.summary || {};
+  const gate = learningLoop.release_gate || {};
+  const blockers = Array.isArray(learningLoop.recurring_blockers)
+    ? learningLoop.recurring_blockers
+    : [];
+  const topBlocker = blockers[0] || null;
+
+  const metrics = [
+    {
+      label: 'Memory events',
+      value: pct(summary.memory_event_coverage_rate),
+      tone: rateColor(summary.memory_event_coverage_rate, true),
+    },
+    {
+      label: 'Evidence linked',
+      value: pct(summary.evidence_link_rate),
+      tone: rateColor(summary.evidence_link_rate, true),
+    },
+    {
+      label: 'Agent traces',
+      value: pct(summary.agent_trace_rate),
+      tone: rateColor(summary.agent_trace_rate, true),
+    },
+    {
+      label: 'Outcomes recorded',
+      value: pct(summary.outcome_traceability_rate),
+      tone: rateColor(summary.outcome_traceability_rate, true),
+    },
+    {
+      label: 'Memory completeness',
+      value: pct(summary.average_memory_completeness_score),
+      tone: rateColor(summary.average_memory_completeness_score, true),
+    },
+  ];
+
+  return html`
+    <section class="cl-reports-learning-card">
+      <header class="cl-reports-learning-head">
+        <div>
+          <h3>Learning loop</h3>
+          <p>Whether AP work carries enough memory, evidence, and outcomes for Solden to improve safely.</p>
+        </div>
+        <span class=${`cl-reports-learning-gate ${gate.status === 'pass' ? 'is-pass' : 'is-watch'}`}>
+          ${gate.status === 'pass' ? 'Ready' : 'Needs work'}
+        </span>
+      </header>
+
+      <div class="cl-reports-learning-grid">
+        ${metrics.map((metric) => html`
+          <div class="cl-reports-learning-metric" key=${metric.label}>
+            <span>${metric.label}</span>
+            <strong class=${metric.tone ? `cl-reports-summary-${metric.tone}` : ''}>
+              ${metric.value}
+            </strong>
+          </div>
+        `)}
+      </div>
+
+      ${topBlocker ? html`
+        <div class="cl-reports-learning-blocker">
+          <span>Top recurring blocker</span>
+          <strong>${formatExceptionText(topBlocker.label || topBlocker.key)}</strong>
+          <small>${formatInteger(topBlocker.count || 0)} record${Number(topBlocker.count || 0) === 1 ? '' : 's'}</small>
+        </div>
       ` : null}
     </section>
   `;

@@ -19,6 +19,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any, Dict
 
 import pytest
 from fastapi import FastAPI
@@ -31,6 +32,9 @@ if str(ROOT) not in sys.path:
 from solden.api import workspace_reports as report_routes  # noqa: E402
 from solden.core import database as db_module  # noqa: E402
 from solden.core.auth import get_current_user  # noqa: E402
+from solden.services.agent_memory import AgentMemoryService  # noqa: E402
+from solden.services.ap_learning_loop import PRIVATE_OUTCOME_EVAL_TYPE  # noqa: E402
+from solden.services.memory_events import commit_memory_event  # noqa: E402
 from solden.services import workspace_reports as report_svc  # noqa: E402
 
 
@@ -125,6 +129,38 @@ def _make_item(
 
 def _ago(days: int) -> datetime:
     return datetime.now(timezone.utc) - timedelta(days=days)
+
+
+def _capture_report_memory(db, *, item: Dict[str, Any], org: str = "orgA"):
+    item_id = item["id"]
+    vendor = item.get("vendor_name") or "Vendor X"
+    commit_memory_event(
+        db,
+        box_type="ap_item",
+        box_id=item_id,
+        organization_id=org,
+        event_type="field_review_required",
+        source="gmail",
+        actor_type="agent",
+        actor_id="ap-agent@solden.local",
+        resulting_state="needs_info",
+        owner={"label": "AP operator", "email": "ap@example.com"},
+        dependency={
+            "type": "field_review",
+            "owner": "AP operator",
+            "reason": "Vendor and amount confidence need confirmation",
+        },
+        decision={"type": "hold_for_field_review"},
+        rationale="Vendor and amount confidence need confirmation",
+        evidence={
+            "gmail_message_id": f"msg-{item_id}",
+            "attachment_content_hash": f"sha256:{item_id}",
+            "vendor_name": vendor,
+        },
+        next_action="Confirm the vendor and amount",
+        summary="Review vendor and amount before this invoice moves forward.",
+        source_refs={"gmail_message_id": f"msg-{item_id}"},
+    )
 
 
 # ─── Tests: Volume report ───────────────────────────────────────────
@@ -240,6 +276,52 @@ class TestAgentPerformance:
         assert out["summary"]["auto_resolution_rate"] == 0.0
         assert out["summary"]["exception_rate"] == 0.0
         assert out["summary"]["avg_confidence"] is None
+
+    def test_agent_performance_surfaces_learning_loop_without_persisting(self, db):
+        in_window = _make_item(
+            db,
+            item_id="ap-learn-report",
+            vendor="Google Cloud EMEA Limited",
+            state="needs_info",
+            exception_code="critical_field_low_confidence",
+            created_at=_ago(5),
+        )
+        old_item = _make_item(
+            db,
+            item_id="ap-learn-old",
+            vendor="Acme Supplies",
+            state="needs_info",
+            exception_code="po_required_missing",
+            created_at=_ago(45),
+        )
+        _capture_report_memory(db, item=in_window)
+        _capture_report_memory(db, item=old_item)
+
+        out = report_svc.generate_agent_performance_report(
+            "orgA",
+            from_ts=_ago(10).isoformat(),
+            to_ts=(datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
+        )
+
+        assert out["summary"]["sample_size"] == 1
+        assert out["learning_loop"]["status"] == "available"
+        assert out["learning_loop"]["summary"]["total_items"] == 1
+        assert out["summary"]["memory_completeness_score"] == 1.0
+        assert out["summary"]["memory_event_coverage_rate"] == 1.0
+        assert out["summary"]["agent_trace_rate"] == 1.0
+        assert out["summary"]["evidence_link_rate"] == 1.0
+        assert out["summary"]["outcome_traceability_rate"] == 0.0
+        assert out["summary"]["learning_loop_release_gate"] == "needs_work"
+        assert out["summary"]["top_learning_blocker"] == "critical_field_low_confidence"
+        assert out["summary"]["top_learning_blocker_count"] == 1
+        assert out["learning_loop"]["recurring_blockers"][0]["key"] == (
+            "critical_field_low_confidence"
+        )
+        assert AgentMemoryService("orgA", db=db).latest_eval_snapshot(
+            skill_id="ap_v1",
+            scope="organization",
+            snapshot_type=PRIVATE_OUTCOME_EVAL_TYPE,
+        ) == {}
 
 
 # ─── Tests: Cycle Time ──────────────────────────────────────────────

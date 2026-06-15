@@ -51,6 +51,21 @@ def _safe_json_dict(value: Any) -> Dict[str, Any]:
     return {}
 
 
+def _parse_iso(value: Any) -> Optional[datetime]:
+    text = _text(value)
+    if not text:
+        return None
+    try:
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        parsed = datetime.fromisoformat(text)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+    except (TypeError, ValueError):
+        return None
+
+
 def _slug(value: Any) -> str:
     token = re.sub(r"[^a-z0-9]+", "_", _text(value).lower()).strip("_")
     return token or "unknown"
@@ -171,11 +186,33 @@ class APLearningLoopService:
             self.organization_id, db=self.db
         )
 
-    def _list_ap_items(self, *, limit: int) -> List[Dict[str, Any]]:
+    def _list_ap_items(
+        self,
+        *,
+        limit: int,
+        from_ts: Optional[str] = None,
+        to_ts: Optional[str] = None,
+        entity_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         if not hasattr(self.db, "list_ap_items"):
             return []
         rows = self.db.list_ap_items(self.organization_id, limit=max(1, int(limit)))
-        return [dict(row) for row in rows or [] if isinstance(row, dict)]
+        parsed_from = _parse_iso(from_ts)
+        parsed_to = _parse_iso(to_ts)
+        filtered: List[Dict[str, Any]] = []
+        for row in rows or []:
+            if not isinstance(row, dict):
+                continue
+            item = dict(row)
+            if entity_id and _text(item.get("entity_id")) != _text(entity_id):
+                continue
+            created_at = _parse_iso(item.get("created_at"))
+            if parsed_from and created_at and created_at < parsed_from:
+                continue
+            if parsed_to and created_at and created_at >= parsed_to:
+                continue
+            filtered.append(item)
+        return filtered
 
     def _list_outcomes(self, *, limit: int) -> Dict[str, Dict[str, Any]]:
         if not hasattr(self.db, "list_outcomes_by_type"):
@@ -234,9 +271,17 @@ class APLearningLoopService:
         *,
         limit: int = 1000,
         persist: bool = True,
+        from_ts: Optional[str] = None,
+        to_ts: Optional[str] = None,
+        entity_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Evaluate the AP wedge against customer-private outcome traces."""
-        items = self._list_ap_items(limit=limit)
+        items = self._list_ap_items(
+            limit=limit,
+            from_ts=from_ts,
+            to_ts=to_ts,
+            entity_id=entity_id,
+        )
         outcomes_by_id = self._list_outcomes(limit=limit)
 
         eval_cases: List[Dict[str, Any]] = []
@@ -374,6 +419,12 @@ class APLearningLoopService:
             "organization_id": self.organization_id,
             "generated_at": _now_iso(),
             "scope": "ap_source_to_pay",
+            "params": {
+                "from": from_ts,
+                "to": to_ts,
+                "entity_id": entity_id,
+                "limit": int(limit),
+            },
             "summary": summary,
             "company_learning": company_learning,
             "private_eval_cases": eval_cases,

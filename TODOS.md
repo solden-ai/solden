@@ -138,6 +138,7 @@ The AP wedge now has a backend private-eval snapshot over real AP items, memory 
 Progress:
 - 2026-06-15: Added `APLearningLoopService.evaluate_private_outcomes()`, persisted `ap_private_outcome_eval` org snapshots through `AgentMemoryService`, and recorded recurring company-level AP blocker patterns.
 - 2026-06-15: Added tests proving traceable AP outcomes produce org-level learning snapshots and that missing memory/agent/evidence signals are flagged instead of scored as healthy.
+- 2026-06-15: Exposed read-only AP learning-loop metrics inside the workspace Agent outcomes report: memory coverage, evidence linkage, agent traces, outcome traceability, memory completeness, release gate, and recurring blocker.
 
 Done when:
 - The AP learning-loop eval runs on a schedule for pilot workspaces.
@@ -220,6 +221,7 @@ The product promise needs a measurable pilot scorecard: not just whether work is
 
 Progress:
 - 2026-06-15: Added backend AP private outcome eval metrics for memory completeness, memory-event coverage, agent-trace coverage, evidence linkage, terminal outcome traceability, and recurring company-level blockers.
+- 2026-06-15: Surfaced the AP learning-loop metrics in workspace reporting without adding a sixth report type.
 
 Done when:
 - The workspace reports intake volume, blocked work, owner latency, approval completion, ERP posting success, duplicate prevention, manual touch count, and memory completeness.

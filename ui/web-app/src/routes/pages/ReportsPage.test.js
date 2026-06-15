@@ -30,6 +30,47 @@ const exceptionPayload = {
   breakdown: [{ exception_code: 'po_required_missing', count: 5, share: 0.714 }],
 };
 
+const agentPerformancePayload = {
+  summary: {
+    sample_size: 3,
+    auto_resolution_rate: 0.3333,
+    exception_rate: 0.6667,
+    avg_confidence: 0.86,
+    memory_completeness_score: 0.92,
+    memory_event_coverage_rate: 1,
+    agent_trace_rate: 0.667,
+    evidence_link_rate: 1,
+    outcome_traceability_rate: 0.5,
+    learning_loop_release_gate: 'needs_work',
+    top_learning_blocker: 'critical_field_low_confidence',
+    top_learning_blocker_count: 2,
+  },
+  series: [
+    {
+      bucket: '2026-05-04',
+      total_items: 3,
+      auto_resolution_rate: 0.3333,
+      exception_rate: 0.6667,
+      avg_confidence: 0.86,
+    },
+  ],
+  breakdown: [],
+  learning_loop: {
+    status: 'available',
+    release_gate: { status: 'needs_work' },
+    summary: {
+      memory_event_coverage_rate: 1,
+      evidence_link_rate: 1,
+      agent_trace_rate: 0.667,
+      outcome_traceability_rate: 0.5,
+      average_memory_completeness_score: 0.92,
+    },
+    recurring_blockers: [
+      { key: 'critical_field_low_confidence', label: 'critical_field_low_confidence', count: 2 },
+    ],
+  },
+};
+
 function renderReports(apiOverrides = {}) {
   const api = vi.fn(async (path, opts = {}) => {
     const method = (opts.method || 'GET').toUpperCase();
@@ -43,6 +84,9 @@ function renderReports(apiOverrides = {}) {
     }
     if (route.startsWith('/api/workspace/reports/exception-breakdown')) {
       return apiOverrides.exceptionBreakdown || exceptionPayload;
+    }
+    if (route.startsWith('/api/workspace/reports/agent-performance')) {
+      return apiOverrides.agentPerformance || agentPerformancePayload;
     }
     if (route.startsWith('/api/workspace/reports/volume')) {
       return apiOverrides.volume || volumePayload;
@@ -180,5 +224,22 @@ describe('ReportsPage', () => {
         },
       });
     });
+  });
+
+  it('renders AP learning-loop metrics in the agent outcomes report', async () => {
+    renderReports();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Agent outcomes' }));
+
+    await screen.findByText('Learning loop');
+    expect(screen.getByText('Whether AP work carries enough memory, evidence, and outcomes for Solden to improve safely.')).toBeTruthy();
+    expect(screen.getByText('Memory events')).toBeTruthy();
+    expect(screen.getByText('Evidence linked')).toBeTruthy();
+    expect(screen.getByText('Agent traces')).toBeTruthy();
+    expect(screen.getByText('Outcomes recorded')).toBeTruthy();
+    expect(screen.getByText('Memory completeness')).toBeTruthy();
+    expect(screen.getByText('Top recurring blocker')).toBeTruthy();
+    expect(screen.getByText('Critical Field Low Confidence')).toBeTruthy();
+    expect(screen.getByText('2 records')).toBeTruthy();
   });
 });
