@@ -125,6 +125,25 @@ Done when:
 - Gmail, Slack, Teams, and workspace Q&A use the same core Ask Solden service or a documented adapter with the same citation and insufficiency contract.
 - Tests prove that answers cite real memory/evidence sources and decline when context is insufficient.
 
+### AP private outcome evals and company learning loop
+
+Evidence:
+- `solden/services/ap_learning_loop.py`
+- `solden/services/agent_memory.py`
+- `tests/test_ap_learning_loop.py`
+
+Gap:
+The AP wedge now has a backend private-eval snapshot over real AP items, memory events, agent traces, and Box outcomes. It also records org-level `company_ap_blocker` patterns. The next gap is to schedule this against pilot data, expose the result in workspace reporting, and use the recurring patterns to tune agent behavior.
+
+Progress:
+- 2026-06-15: Added `APLearningLoopService.evaluate_private_outcomes()`, persisted `ap_private_outcome_eval` org snapshots through `AgentMemoryService`, and recorded recurring company-level AP blocker patterns.
+- 2026-06-15: Added tests proving traceable AP outcomes produce org-level learning snapshots and that missing memory/agent/evidence signals are flagged instead of scored as healthy.
+
+Done when:
+- The AP learning-loop eval runs on a schedule for pilot workspaces.
+- Workspace reports show memory event coverage, evidence linkage, agent trace coverage, terminal outcome traceability, and recurring company-level blockers.
+- Agent policy changes can cite the private-eval snapshot or recurring pattern that justified the change.
+
 ### Semantic dimension and entity graph completion
 
 Evidence:
@@ -194,9 +213,13 @@ Done when:
 Evidence:
 - `docs/WEDGE_QUALITY_SCORECARD.md`
 - AP metrics and workspace reporting code
+- `solden/services/ap_learning_loop.py`
 
 Gap:
 The product promise needs a measurable pilot scorecard: not just whether work is visible, but whether Solden reduces manual chasing and keeps operational context alive.
+
+Progress:
+- 2026-06-15: Added backend AP private outcome eval metrics for memory completeness, memory-event coverage, agent-trace coverage, evidence linkage, terminal outcome traceability, and recurring company-level blockers.
 
 Done when:
 - The workspace reports intake volume, blocked work, owner latency, approval completion, ERP posting success, duplicate prevention, manual touch count, and memory completeness.
