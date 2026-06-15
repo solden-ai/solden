@@ -62,7 +62,10 @@ def resolve_audit_entity_scope(
     # Per-(user, entity) roles
     try:
         if hasattr(db, "list_user_entity_roles"):
-            rows = db.list_user_entity_roles(user_id) or []
+            rows = db.list_user_entity_roles(
+                user_id,
+                organization_id=str(getattr(user, "organization_id", "") or ""),
+            ) or []
             for row in rows:
                 eid = row.get("entity_id") if isinstance(row, dict) else None
                 if eid:

@@ -75,13 +75,6 @@ class PaymentStore:
         self.initialize()
         now = datetime.now(timezone.utc).isoformat()
 
-        # Idempotency: check for existing active payment for this AP item
-        ap_item_id = payload.get("ap_item_id")
-        if ap_item_id:
-            existing = self._find_active_payment_for_item(ap_item_id)
-            if existing:
-                return existing
-
         payment_id = payload.get("id") or f"PAY-{uuid.uuid4().hex[:12]}"
         _pay_org_id = str(payload.get("organization_id") or "").strip()
         if not _pay_org_id:
@@ -93,6 +86,21 @@ class PaymentStore:
                 "create_payment requires a non-empty organization_id; "
                 f"payload (payment_id={payment_id}) had no org"
             )
+        existing_id = self.get_payment(payment_id)
+        if existing_id and str(existing_id.get("organization_id") or "") != _pay_org_id:
+            raise ValueError(
+                f"payment {payment_id!r} belongs to a different organization"
+            )
+
+        # Idempotency: check for existing active payment for this AP item
+        # inside the same tenant.
+        ap_item_id = payload.get("ap_item_id")
+        if ap_item_id:
+            existing = self._find_active_payment_for_item(
+                ap_item_id, organization_id=_pay_org_id
+            )
+            if existing:
+                return existing
 
         sql = """
             INSERT INTO payments
@@ -142,17 +150,29 @@ class PaymentStore:
             "updated_at": now,
         }
 
-    def _find_active_payment_for_item(self, ap_item_id: str) -> Optional[Dict[str, Any]]:
+    def _find_active_payment_for_item(
+        self, ap_item_id: str, organization_id: str = ""
+    ) -> Optional[Dict[str, Any]]:
         """Find an existing non-terminal payment for this AP item."""
         terminal_statuses = ("completed", "closed_by_credit", "failed", "reversed")
+        org = str(organization_id or "").strip()
+        clauses = ["ap_item_id = %s"]
+        params: list[Any] = [ap_item_id]
+        if org:
+            clauses.append("organization_id = %s")
+            params.append(org)
+        clauses.append(
+            "status NOT IN (" + ",".join("%s" for _ in terminal_statuses) + ")"
+        )
+        params.extend(terminal_statuses)
         sql = (
-            "SELECT * FROM payments WHERE ap_item_id = %s AND status NOT IN ("
-            + ",".join("%s" for _ in terminal_statuses)
-            + ") ORDER BY created_at DESC LIMIT 1"
+            "SELECT * FROM payments WHERE "
+            + " AND ".join(clauses)
+            + " ORDER BY created_at DESC LIMIT 1"
         )
         try:
             with self.connect() as conn:
-                cur = conn.execute(sql, (ap_item_id, *terminal_statuses))
+                cur = conn.execute(sql, params)
                 row = cur.fetchone()
             if row:
                 return dict(row) if hasattr(row, "keys") else self._payment_row_to_dict(row, cur.description)
@@ -160,25 +180,45 @@ class PaymentStore:
             pass
         return None
 
-    def get_payment(self, payment_id: str) -> Optional[Dict[str, Any]]:
+    def get_payment(
+        self, payment_id: str, organization_id: str = ""
+    ) -> Optional[Dict[str, Any]]:
         """Fetch a single payment record by ID."""
         self.initialize()
-        sql = "SELECT * FROM payments WHERE id = %s"
+        org = str(organization_id or "").strip()
+        if org:
+            sql = "SELECT * FROM payments WHERE id = %s AND organization_id = %s"
+            params = (payment_id, org)
+        else:
+            sql = "SELECT * FROM payments WHERE id = %s"
+            params = (payment_id,)
         with self.connect() as conn:
-            cur = conn.execute(sql, (payment_id,))
+            cur = conn.execute(sql, params)
             row = cur.fetchone()
         if not row:
             return None
         return dict(row) if hasattr(row, "keys") else self._payment_row_to_dict(row, cur.description)
 
-    def get_payment_by_ap_item(self, ap_item_id: str) -> Optional[Dict[str, Any]]:
+    def get_payment_by_ap_item(
+        self, ap_item_id: str, organization_id: str = ""
+    ) -> Optional[Dict[str, Any]]:
         """Fetch the payment record linked to an AP item."""
         self.initialize()
-        sql = (
-            "SELECT * FROM payments WHERE ap_item_id = %s ORDER BY created_at DESC LIMIT 1"
-        )
+        org = str(organization_id or "").strip()
+        if org:
+            sql = (
+                "SELECT * FROM payments WHERE ap_item_id = %s AND organization_id = %s "
+                "ORDER BY created_at DESC LIMIT 1"
+            )
+            params = (ap_item_id, org)
+        else:
+            sql = (
+                "SELECT * FROM payments WHERE ap_item_id = %s "
+                "ORDER BY created_at DESC LIMIT 1"
+            )
+            params = (ap_item_id,)
         with self.connect() as conn:
-            cur = conn.execute(sql, (ap_item_id,))
+            cur = conn.execute(sql, params)
             row = cur.fetchone()
         if not row:
             return None
@@ -193,12 +233,13 @@ class PaymentStore:
     def update_payment(self, payment_id: str, **kwargs: Any) -> Optional[Dict[str, Any]]:
         """Update a payment record.  Only whitelisted columns are accepted."""
         self.initialize()
+        organization_id = str(kwargs.pop("organization_id", "") or "").strip()
         actor_type = str(kwargs.pop("_actor_type", "system") or "system")
         actor_id = str(kwargs.pop("_actor_id", "payment_store") or "payment_store")
         audit_source = str(kwargs.pop("_source", "payment_store") or "payment_store")
         decision_reason = kwargs.pop("_decision_reason", None)
         correlation_id = kwargs.pop("_correlation_id", None)
-        previous = self.get_payment(payment_id)
+        previous = self.get_payment(payment_id, organization_id=organization_id)
         if not previous:
             return None
 
@@ -215,7 +256,7 @@ class PaymentStore:
         with self.connect() as conn:
             conn.execute(sql, values)
             conn.commit()
-        updated = self.get_payment(payment_id)
+        updated = self.get_payment(payment_id, organization_id=organization_id)
         previous_status = str(previous.get("status") or "").strip()
         updated_status = str((updated or {}).get("status") or "").strip()
         if (

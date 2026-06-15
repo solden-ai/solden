@@ -274,6 +274,73 @@ class TestOverrideWindowStore:
         assert row["slack_channel"] == "C123"
         assert row["slack_message_ts"] == "1234567.890"
 
+    def test_create_requires_organization_id(self, tmp_db):
+        with pytest.raises(ValueError, match="organization_id"):
+            tmp_db.create_override_window(
+                ap_item_id="AP-no-org",
+                organization_id=" ",
+                erp_reference="bill-no-org",
+                erp_type="xero",
+                expires_at=_now_iso(15),
+            )
+
+    def test_window_reads_and_mutators_can_be_org_scoped(self, tmp_db):
+        created = tmp_db.create_override_window(
+            ap_item_id="AP-scope",
+            organization_id="org_scope_a",
+            erp_reference="bill-scope",
+            erp_type="xero",
+            expires_at=_now_iso(15),
+        )
+
+        assert tmp_db.get_override_window(
+            created["id"], organization_id="org_scope_a"
+        ) is not None
+        assert tmp_db.get_override_window(
+            created["id"], organization_id="org_scope_b"
+        ) is None
+        assert tmp_db.get_override_window_by_ap_item_id(
+            "AP-scope", organization_id="org_scope_b"
+        ) is None
+        assert tmp_db.update_override_window_slack_refs(
+            created["id"],
+            slack_channel="C-wrong",
+            slack_message_ts="wrong.1",
+            organization_id="org_scope_b",
+        ) is False
+        assert tmp_db.mark_override_window_expired(
+            created["id"], organization_id="org_scope_b"
+        ) is False
+        assert tmp_db.mark_override_window_failed(
+            created["id"],
+            "wrong_org",
+            organization_id="org_scope_b",
+        ) is False
+        assert tmp_db.mark_override_window_reversed(
+            created["id"],
+            reversed_by="wrong@example.com",
+            reversal_reason="wrong_org",
+            organization_id="org_scope_b",
+        ) is False
+
+        assert tmp_db.update_override_window_slack_refs(
+            created["id"],
+            slack_channel="C-owner",
+            slack_message_ts="owner.1",
+            organization_id="org_scope_a",
+        ) is True
+        assert tmp_db.mark_override_window_reversed(
+            created["id"],
+            reversed_by="owner@example.com",
+            reversal_reason="owner_org",
+            organization_id="org_scope_a",
+        ) is True
+        row = tmp_db.get_override_window(
+            created["id"], organization_id="org_scope_a"
+        )
+        assert row["state"] == "reversed"
+        assert row["slack_channel"] == "C-owner"
+
 
 # ===========================================================================
 # OverrideWindowService — duration config + lifecycle

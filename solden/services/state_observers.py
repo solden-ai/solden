@@ -521,6 +521,7 @@ class OverrideWindowObserver(StateObserver):
                     window["id"],
                     slack_channel=slack_refs.get("channel"),
                     slack_message_ts=slack_refs.get("message_ts"),
+                    organization_id=event.organization_id,
                 )
         except Exception as exc:
             logger.warning(

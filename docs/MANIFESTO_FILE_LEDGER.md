@@ -42,22 +42,24 @@ this ledger is the complete coverage record.
 ## WAVE 1 (2026-05-23) — core + core/stores + integrations + services-subdirs + cli/models/workflows/di/misc (156 files)
 
 ### FIX BACKLOG from Wave 1 (prioritized)
-- **HIGH — purchase_order_store.py**: docstring claims "never a cross-tenant leak" but ~8 methods (get_purchase_order/update_purchase_order_state/set_po_erp_id/amend/record_po_receipt/get_goods_receipt/get_three_way_match[_by_invoice]) are id-keyed, no org filter; `finance_skills/procurement_skill.py` reads po_id from payload uncompensated. AP-peer Box type w/ vendor master + amounts. Fix: org-scope the store + thread org through procurement_skill.
-- **MED — approval_chain_store.py**: db_get_approval_chain/update_chain_step/update_chain_status/reassign_pending_step_approvers keyed by chain_id only (carry vendor/amount/approvers). Org-scope.
-- **MED — entity_store.py**: get/update/delete_entity by entity_id, no org (ERP-conn/GL-map). Org-scope.
-- **MED — user_entity_roles_store.py**: get/delete/list_user_entity_role no org filter (approval-gate path; user_id limits reach). Org-scope.
+- [x] **RESOLVED 2026-06-14 — purchase_order_store.py**: id-keyed PO/GR/match reads and PO mutators now accept `organization_id`; PO/GR/match upserts refuse cross-org id collisions; procurement skill, PO API, Slack/Teams callbacks, PO service, and ERP intake dedupe pass org where they have it. Covered by `tests/test_services_tenant_isolation.py`, `tests/test_procurement_skill.py`, `tests/test_procurement_chat.py`, `tests/test_purchase_order_routes.py`, and `tests/test_channel_approval_contract.py`.
+- [x] **RESOLVED 2026-06-15 — approval_chain_store.py**: chain reads, invoice lookup, step/status updates, pending-step reassignment, and pending-chain listing accept org scope; chain id collisions across orgs are refused; invoice posting, approval delegation, and AP intent reassignment pass org. Covered by `tests/test_services_tenant_isolation.py`, `tests/test_ap_store_approval_followup.py`, and `tests/test_finance_agent_runtime.py`.
+- [x] **RESOLVED 2026-06-15 — payment_store.py**: payment id/AP-item reads and status updates accept org scope; create-time idempotency is tenant-local; explicit payment-id reuse across orgs is refused; workspace payment updates and payment polling pass org. Covered by `tests/test_payment_tracking.py`, `tests/test_payment_memory_events.py`, and `tests/test_payment_status_polling.py`.
+- [x] **RESOLVED 2026-06-15 — override_window_store.py**: window/AP-item reads and state transitions accept org scope; creation rejects missing org; override-window service, Slack undo, AP reverse API, state observer, worklist payload, and reverse-intent precheck pass org where available. Covered by `tests/test_override_window.py` and `tests/test_override_window_durability.py`.
+- [x] **RESOLVED 2026-06-14 — entity_store.py**: get/update/delete/effective-config accept org filters; workspace and ERP callers pass org. Covered by `tests/test_services_tenant_isolation.py` and `tests/test_multi_entity.py`.
+- [x] **RESOLVED 2026-06-14 — user_entity_roles_store.py**: get/list/delete/replace accept org filters; upserts reject cross-org assignment collisions; workspace, role resolver, audit scope, and offboarding pass org. Covered by `tests/test_services_tenant_isolation.py`, `tests/test_modules_5_6_carry_overs.py`, and `tests/test_user_offboarding.py`.
 - **MED — DEAD workflows/ap_workflow.py + workflows/__init__**: executable layer 0 callers, docstring claims wired orchestration. Delete or demote.
 - **MED — DEAD solden/models/ duplicates**: invoices/transactions/exceptions/ingestion/requests + __init__ aggregate, 0 importers (live types are services/invoice_models.py + core/models.py). Delete (keep base/erp/patterns).
 - **MED — DEAD integrations/oauth.py + api/erp_oauth.py**: only caller unmounted; in-memory token store superseded by DB flow. Delete.
 - **MED — integrations/__init__.py**: lying docstring (payment gateways Stripe/Paystack/Flutterwave + Plaid don't exist) — contradicts "never moves money." Rewrite.
-- LOW (compensated/defense-in-depth id-keyed stores): payment_store, override_window_store, bank_match_store, generic_box_store, ap_runtime_store, bank_statement_store — org-scope for consistency.
+- LOW (compensated/defense-in-depth id-keyed stores): bank_match_store, generic_box_store, ap_runtime_store, bank_statement_store — org-scope for consistency.
 - LOW (docstring/brand): event_queue tier names; vendor_onboarding_states chase-loop; money.py SQLite storage; database.py db_path="clearledgr.db" default; services/erp/sap.py park_* "Parked" no-write (unreachable); annotation_targets/sap_z_field field-name doc≠code; onboarding env-var brand docstrings.
 
 ### core/ (46) — all ALIGNED/MECHANICAL except:
 DRIFT(LOW): money.py (SQLite storage docstring), database.py (stale db_path default), event_queue.py (tier names), vendor_onboarding_states.py (chase-loop docstring). All other 42 core/*.py: ALIGNED or MECHANICAL (verdicts captured in session log). Notably ALIGNED: auth.py, org_config.py (from_dict fix), fraud_controls.py, workflow_spec.py, database.py (hash-chain trigger), org_utils.py, ap_item_resolution.py, prompt_guard.py, erp_webhook_verify.py.
 
 ### core/stores/ (32 this wave) — ALIGNED except the tenant-gap DRIFTs above
-HIGH purchase_order_store; MED approval_chain_store, entity_store, user_entity_roles_store; LOW payment_store, override_window_store, bank_match_store, generic_box_store, bank_statement_store, ap_runtime_store. Exemplary/ALIGNED: custom_roles_store, dispute_store, webhook_store, learning_store, vendor_store, integration_store, workflow_spec_store, fx_rate_store, policy_store, rules_store, sanctions_store, payment_confirmations_store, onboarding_token_store, metrics_store, pipeline_store, escalation_policy_store, report_subscription_store, auth_store, bank_details(util). core/hooks/* + core/effects/*: ALIGNED (WASM sandbox fail-closed, no-eval AST allowlist, SSRF guard).
+LOW bank_match_store, generic_box_store, bank_statement_store, ap_runtime_store. RESOLVED: purchase_order_store, approval_chain_store, payment_store, override_window_store, entity_store, user_entity_roles_store (org-scoped id-keyed reads/mutators + cross-org upsert guards added 2026-06-14/15). Exemplary/ALIGNED: custom_roles_store, dispute_store, webhook_store, learning_store, vendor_store, integration_store, workflow_spec_store, fx_rate_store, policy_store, rules_store, sanctions_store, payment_confirmations_store, onboarding_token_store, metrics_store, pipeline_store, escalation_policy_store, report_subscription_store, auth_store, bank_details(util). core/hooks/* + core/effects/*: ALIGNED (WASM sandbox fail-closed, no-eval AST allowlist, SSRF guard).
 
 ### integrations/ (18) + services/erp,match_engines,onboarding,finance_skills,annotation_targets (28)
 ALIGNED except: integrations/__init__ (lying docstring), integrations/oauth.py (DEAD), services/erp/sap.py (park_* no-write, unreachable LOW), annotation_targets/sap_z_field (field-name doc drift LOW). finance_skills all ALIGNED (deterministic precheck+autonomy gate+audit; procurement issue=commitment not payment). onboarding KYC is LIVE via sanctions (honest); bank_verifier/kyc_policy dormant. No money/vendor-text/raw-LLM in this tree.
@@ -83,21 +85,26 @@ backlog below. With this, every directory + every file in solden/ has a verdict.
 ## CONSOLIDATED FIX BACKLOG (waves 1+2+3) — prioritized, to work through
 
 ### HIGH (real cross-tenant / security / lying-surface)
-1. `core/stores/purchase_order_store.py` — false "never a cross-tenant leak" docstring + ~8 id-keyed methods; `finance_skills/procurement_skill.py` reads po_id from payload uncompensated (AP-peer Box, vendor master + amounts). Org-scope store + thread org through skill.
-2. `api/pipelines.py` + `pipeline_store.py` — `box_links` has NO organization_id column; create_box_link/get_box_links unscoped → cross-tenant link read/write. Add org column + scope + handler check.
-3. `api/org_config.py` — whole `/config` router DROPPED in strict-profile prod (not allowlisted); carries GL maps/thresholds/payment-gateway secrets. Allowlist OR delete (overlaps /settings + /api/workspace/org/settings).
-4. `services/shadow_mode.py` — non-functional: constructs APDecisionService(organization_id/db/model_override) but ctor is (api_key=None) → guaranteed TypeError swallowed; also contradicts deterministic-decision invariant. Delete or rebuild.
-5. `services/gl_correction.py` — DEAD (0 prod callers) + read methods serve empty in-memory dict (never hydrates from db.get_gl_corrections). Delete or wire.
-6. `services/auth.py` — DEAD verify_api_key/get_api_key_optional (0 importers) with a dev-mode bypass footgun. Delete.
+1. `api/org_config.py` — intentionally kept out of strict-profile prod; carries GL maps/thresholds/payment-gateway secrets. Do not allowlist until write routes are admin-gated or migrated behind `/settings` / `/api/workspace/org/settings`.
+
+Resolved 2026-06-14:
+- `core/stores/purchase_order_store.py` — org-scoped id-keyed PO/GR/match reads, PO mutators, and cross-org upsert guards added; tenant-aware callers pass org.
+- `core/stores/approval_chain_store.py` — org-scoped chain reads, invoice lookup, step/status updates, reassignment, and pending-chain listing added; tenant-aware callers pass org.
+- `core/stores/payment_store.py` — org-scoped payment id/AP-item reads, status updates, tenant-local idempotency, and cross-org id collision guard added; tenant-aware callers pass org.
+- `core/stores/override_window_store.py` — org-scoped window/AP-item reads and state transitions added; create path rejects missing org; tenant-aware callers pass org.
+- `api/pipelines.py` + `pipeline_store.py` — `box_links.organization_id` migration/store/API/test coverage exists.
+- `services/shadow_mode.py` — removed from tracked code.
+- `services/gl_correction.py` — DB-backed, org-scoped, live via Gmail/AP item/finance runtime actions.
+- `services/auth.py` — removed from tracked code.
 
 ### MED (defense-in-depth tenant gaps / governance / dead / allowlist)
-- Store org-scoping (id-keyed, mostly API-compensated): `approval_chain_store`, `entity_store`, `user_entity_roles_store`, `payment_store`, `override_window_store`, `bank_match_store`, `generic_box_store`, `bank_statement_store`, `ap_runtime_store`, `pattern_store` (latter is cross-tenant-by-design + dead).
+- Store org-scoping (id-keyed, mostly API-compensated): `bank_match_store`, `generic_box_store`, `bank_statement_store`, `ap_runtime_store`.
 - `services/monitoring.py:472` — `_check_gmail_watch_expiration` reads all orgs' mailbox state (cross-tenant in the per-org health payload).
 - `services/task_scheduler.py` — run_all_checks scans all tenants' tasks, posts to one global #finance channel. Per-org loop.
 - `services/email_tasks.py` — service mutators org-unscoped (API-guard-compensated; non-API callers bypass).
 - `api/workspace_shell.py` — ~5 mounted routes dropped in strict-profile prod (/payments*, /vendor-intelligence/*, /implementation/complete-step, /ap/items/originals/{hash}). Allowlist.
-- `api/workspace_rules.py` — approval-rule mutations lack admin gate + no audit_events.
-- `api/sample_data.py` — docstring claims admin gate; handlers have none (org-scoped, so MED).
+- `api/workspace_rules.py` — RESOLVED 2026-06-14: writes require workspace admin; by-id checks verify org.
+- `api/sample_data.py` — RESOLVED 2026-06-14: load/clear require workspace admin; reads stay member-accessible and org-scoped.
 - `api/erp.py` — DEAD `/erp/sap` router (unmounted) over a non-org-scoped singleton; would be cross-tenant if mounted. Delete (+ api/__init__ erp_router shim, + integrations/oauth.py + api/erp_oauth.py).
 - DEAD: `workflows/ap_workflow.py` + `workflows/__init__`; `solden/models/{invoices,transactions,exceptions,ingestion,requests,__init__}`; `services/rowset_branch.py` (unwired Sprint-5-B scaffolding).
 - `services/webhook_delivery.py` — duplicate X-Solden-* header keys + false "legacy X-Clearledgr-*" comment (legacy receivers get no sig).

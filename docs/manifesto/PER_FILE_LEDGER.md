@@ -37,8 +37,8 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/api/ap_item_detail.py` — DRIFT:stale 'mint-green' brand + 'Sonnet path' LLM-vendor tell in docstrings
 - `solden/api/ap_items.py` — MECHANICAL: router composition (read + action sub-routers)
 - `solden/api/ap_items_action_routes.py` — ALIGNED: mutators require_ops_user, _session_org, _require_item enforce caller-org
-- `solden/api/ap_items_read_routes.py` — DRIFT:/consolidated calls undefined verify_org_access (NameError 500); /audit/export not allowlisted (prod 404)
-- `solden/api/ap_policies.py` — DRIFT:PUT policy mutates AP business policy but guards only get_current_user (member-writable)
+- `solden/api/ap_items_read_routes.py` — ALIGNED: /consolidated imports verify_org_access and requires FC; /audit/export allowlisted (verified 2026-06-14)
+- `solden/api/ap_policies.py` — ALIGNED: AP policy writes require_workspace_admin; reads remain member-scoped (verified 2026-06-14)
 - `solden/api/api_keys.py` — ALIGNED: ops scoped to user.organization_id, show-once secret; allowlisted
 - `solden/api/audit_chain.py` — ALIGNED: read-only, org from session no-default 403; allowlisted
 - `solden/api/auth.py` — ALIGNED: OAuth/login/invite; org from invite/domain, state HMAC+TTL, mutations admin-gated
@@ -52,12 +52,12 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/api/dashboard.py` — ALIGNED: read/SSE authed, org strictly from session; allowlisted
 - `solden/api/deps.py` — ALIGNED: org-isolation helpers; soft_org_guard/verify_org_access enforce token-vs-claimed
 - `solden/api/dispute_reopen.py` — ALIGNED: reopen/read authed, org from session, by-id verifies org; correction bill within boundary
-- `solden/api/dual_approval.py` — DRIFT:PUT /policy/dual-approval sets second-signature threshold but member-writable (no admin guard)
-- `solden/api/erp_connection_ops.py` — DRIFT:/rotate-credentials + /test are credential governance but member-writable (no admin guard)
-- `solden/api/erp_connections.py` — DRIFT:connect/disconnect/gl-map mutations member-writable; defines unused _ADMIN_ROLES
+- `solden/api/dual_approval.py` — ALIGNED: second-signature policy writes require_workspace_admin; action/read routes stay authenticated (verified 2026-06-14)
+- `solden/api/erp_connection_ops.py` — ALIGNED: connection test/credential rotation require_workspace_admin (verified 2026-06-14)
+- `solden/api/erp_connections.py` — ALIGNED: connect/disconnect/admin ERP mutations require_workspace_admin; status reads are member-scoped (verified 2026-06-14)
 - `solden/api/erp_oauth.py` — ALIGNED: org from session not URL/body, OAuth state bound to (org,user); allowlisted
 - `solden/api/erp_webhooks.py` — ALIGNED: HMAC-as-auth, per-tenant secret constant-time, cross-tenant guards, fail-closed
-- `solden/api/escalation_policies.py` — DRIFT:full CRUD over governance escalation policies member-writable (no admin guard)
+- `solden/api/escalation_policies.py` — ALIGNED: escalation policy create/update/delete require_workspace_admin; reads remain authenticated (verified 2026-06-14)
 - `solden/api/fraud_controls.py` — ALIGNED: mutating PUT requires CFO + cross-tenant guard; allowlisted
 - `solden/api/fx_rates.py` — ALIGNED: authed, org from session, delete org-scoped; allowlisted
 - `solden/api/gdpr.py` — ALIGNED: allowlisted, authed, by-id verifies org (404 no leak)
@@ -71,17 +71,17 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/api/leads.py` — ALIGNED: intentionally public marketing endpoint, allowlisted, parameterized SQL
 - `solden/api/match_config.py` — ALIGNED: PUT requires admin, GET member-read, org from session; allowlisted
 - `solden/api/multi_invoice_split.py` — ALIGNED: stateless PDF utility, both POSTs authed; allowlisted
-- `solden/api/netsuite_panel.py` — DRIFT:POST approve/reject/request-info paths not allowlisted (prod 404)
+- `solden/api/netsuite_panel.py` — ALIGNED: panel actions are JWT-gated and strict-profile allowlisted via dynamic pattern (verified 2026-06-14)
 - `solden/api/notification_preferences.py` — ALIGNED: per-user data keyed by JWT, self-scoped PATCH; allowlisted
-- `solden/api/ops.py` — DRIFT:/api/ops/box-health mounted but not allowlisted (prod 404); retry/skip cross-tenant fixed
-- `solden/api/org_config.py` — DRIFT:governance PUT/PATCH lack admin gate, member-writable (router disabled in strict prod)
+- `solden/api/ops.py` — ALIGNED: /api/ops/box-health allowlisted; retry/skip cross-tenant fixed (verified 2026-06-14)
+- `solden/api/org_config.py` — DORMANT: router remains disabled in strict prod; do not re-enable before admin-gating writes
 - `solden/api/outbox_ops.py` — ALIGNED: writes require ops/admin, by-id verifies org; allowlisted
 - `solden/api/outlook_routes.py` — ALIGNED: flag-gated, allowlisted, fail-closed webhook constant-time, self-scoped OAuth
 - `solden/api/paddle_billing.py` — ALIGNED: billing mutations require admin; webhook HMAC-verified fail-closed
 - `solden/api/payment_confirmations.py` — DRIFT:remittance-config docstring claims active vendor auto-send (sender deleted; zero vendor email)
 - `solden/api/peppol.py` — ALIGNED: authed, import writes AP item from session org, credit-note verifies org, no vendor email
-- `solden/api/pipelines.py` — DRIFT:delete_saved_view keyed by id only, NO org filter — cross-tenant deletion
-- `solden/api/policies.py` — DRIFT:POST create-version/rollback of governance policies member-writable (no admin gate)
+- `solden/api/pipelines.py` — ALIGNED: delete_saved_view is org-scoped in API and store; default views protected (verified 2026-06-14)
+- `solden/api/policies.py` — ALIGNED: governance create-version/rollback require_workspace_admin; reads remain authenticated (verified 2026-06-14)
 - `solden/api/projections_ops.py` — ALIGNED: reads require_org, rebuild require ops/admin + verify_org_access; allowlisted
 - `solden/api/purchase_order_routes.py` — ALIGNED: 8 actions allowlisted via pattern, org from session, by-id 404
 - `solden/api/reclassification_je.py` — ALIGNED: pattern-allowlisted, authed, org-scoped, ERP does the post
@@ -112,7 +112,7 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/api/vendor_match.py` — ALIGNED: authed, org from session, matcher scoped by org; per-id allowlisted
 - `solden/api/vendor_onboarding.py` — DEAD:dormant-VO (deliberate): router not mounted per 2026-04-30 deferral
 - `solden/api/vendor_portal.py` — DEAD:dormant-VO (deliberate): public magic-link portal not mounted; bank Fernet-encrypted
-- `solden/api/vendor_status.py` — DRIFT:verify-registration POST not admin-gated + auto-creates vendor stub (siblings are gated)
+- `solden/api/vendor_status.py` — ALIGNED: verify-registration requires admin before registry/profile stamping (verified 2026-06-14)
 - `solden/api/workflow_routes.py` — ALIGNED: org from session 403-if-missing, by-id verifies org+box_type, pinned spec
 - `solden/api/workflow_spec_routes.py` — ALIGNED: writes require_workspace_admin, reads member, validation before persist
 - `solden/api/workspace_reports.py` — ALIGNED: every report org-scoped, read-only, fixed five-report set
@@ -200,7 +200,7 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/core/stores/__init__.py` — MECHANICAL: pure re-export of store mixins
 - `solden/core/stores/ap_runtime_store.py` — ALIGNED: legacy AP-runtime helpers, reads org-scoped
 - `solden/core/stores/ap_store.py` — ALIGNED: state machine + atomic transition audit; bank details encrypted
-- `solden/core/stores/approval_chain_store.py` — ALIGNED: chain/step CRUD org-scoped
+- `solden/core/stores/approval_chain_store.py` — ALIGNED: chain reads, invoice lookup, step/status updates, pending-step reassignment, and pending-chain listing accept org scope; cross-org chain id collisions are refused and tenant-aware callers pass org
 - `solden/core/stores/auth_store.py` — ALIGNED: secrets encrypted; GDPR purge excludes audit; fails closed
 - `solden/core/stores/bank_details.py` — ALIGNED: encryption/masking/IBAN mod97; no plaintext leak
 - `solden/core/stores/bank_match_store.py` — ALIGNED: AP-subordinate BoxType, transition validation + audit
@@ -208,7 +208,7 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/core/stores/box_lifecycle_store.py` — ALIGNED: Exceptions+Outcomes, idempotent, audit-mirrored
 - `solden/core/stores/custom_roles_store.py` — ALIGNED: org-scoped, fails closed cross-tenant, role quota
 - `solden/core/stores/dispute_store.py` — ALIGNED: org-scoped; vendor_email is tracking, not outbound
-- `solden/core/stores/entity_store.py` — ALIGNED: entity CRUD org-scoped
+- `solden/core/stores/entity_store.py` — ALIGNED: entity CRUD accepts org-scoped id reads/mutators; workspace and ERP callers pass org
 - `solden/core/stores/escalation_policy_store.py` — ALIGNED: org-scoped CRUD, idempotent worker query
 - `solden/core/stores/fx_rate_store.py` — ALIGNED: org-scoped rate CRUD+lookup, ISO validation
 - `solden/core/stores/generic_box_store.py` — ALIGNED: declarative-Box CRUD, transition validation, audit+exception mirror
@@ -216,18 +216,18 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/core/stores/learning_store.py` — ALIGNED: every method org-scoped (org in PK)
 - `solden/core/stores/metrics_store.py` — ALIGNED: read-only aggregation, org-scoped
 - `solden/core/stores/onboarding_token_store.py` — ALIGNED: hashed magic-link tokens, constant-time compare (dormant-VO)
-- `solden/core/stores/override_window_store.py` — ALIGNED: human-reversal escape hatch, state guards
+- `solden/core/stores/override_window_store.py` — ALIGNED: human-reversal escape hatch; window/AP-item reads and state transitions accept org scope; create path rejects missing org; tenant-aware callers pass org
 - `solden/core/stores/payment_confirmations_store.py` — ALIGNED: org-scoped ledger, idempotent compound key
 - `solden/core/stores/payment_request_store.py` — ALIGNED: org-scoped (fail-closed), update whitelist
-- `solden/core/stores/payment_store.py` — ALIGNED: tracking-only, org-scoped, append-only events
+- `solden/core/stores/payment_store.py` — ALIGNED: tracking-only; id/AP-item reads and updates accept org scope; create-time idempotency is tenant-local; cross-org id collisions are refused; append-only events
 - `solden/core/stores/pipeline_store.py` — ALIGNED: org-scoped CRUD, source_table+filter whitelists
 - `solden/core/stores/policy_store.py` — ALIGNED: AP-policy versions org-scoped, audit per upsert
-- `solden/core/stores/purchase_order_store.py` — ALIGNED: PO/GR/match CRUD; caller-enforced org documented
+- `solden/core/stores/purchase_order_store.py` — ALIGNED: PO/GR/match CRUD; id-keyed reads/mutators accept optional org filter, upserts refuse cross-org id collisions, and tenant-aware callers pass org
 - `solden/core/stores/recon_store.py` — ALIGNED: reads/writes org-scoped (fail-closed)
 - `solden/core/stores/report_subscription_store.py` — ALIGNED: writes org-scoped, cadence whitelist, auto-pause
 - `solden/core/stores/rules_store.py` — ALIGNED: rule CRUD org-scoped, immutable version ledger + revert
 - `solden/core/stores/sanctions_store.py` — ALIGNED: org-scoped screen ledger; review-update caller-enforced
-- `solden/core/stores/user_entity_roles_store.py` — ALIGNED: per-(user,entity) CRUD, writes carry org, transactional replace
+- `solden/core/stores/user_entity_roles_store.py` — ALIGNED: per-(user,entity) CRUD accepts org-scoped reads/deletes/replaces; writes carry org and reject cross-org key collisions
 - `solden/core/stores/vendor_store.py` — DRIFT:stale remittance auto-send schema comment (L68-73; sender removed 2026-05-02)
 - `solden/core/stores/webhook_store.py` — ALIGNED: CRUD org-scoped (fail-closed), protects HMAC secret
 - `solden/core/stores/workflow_spec_store.py` — ALIGNED: per-tenant versioned spec CRUD, one-active-per-type, quota
@@ -425,8 +425,8 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/services/single_pass_processor.py` — ALIGNED: LLM reads unstructured intake only; routing explicitly out of scope, fail-to-None
 - `solden/services/slack_api.py` — ALIGNED: per-org token+channel via resolve_slack_runtime, shared fallback default-off, fail-closed
 - `solden/services/slack_cards.py` — ALIGNED: undo/reversal cards resolve org channel; reversible override window, operator decides
-- `solden/services/slack_digest.py` — DRIFT:send_digest reads runtime['channel']/['token'] but resolver returns approval_channel/bot_token -> every digest send fails (wired via coordination_engine)
-- `solden/services/slack_notifications.py` — DRIFT:send_vendor_response/escalation_notification are dead orphans referencing the deleted vendor-followup feature (zero callers)
+- `solden/services/slack_digest.py` — ALIGNED: conditional digest uses approval_channel/bot_token from resolve_slack_runtime
+- `solden/services/slack_notifications.py` — ALIGNED: Slack delivery/retry helpers plus AP/payment/vendor-activation notifications; deleted vendor-followup route is not mounted
 - `solden/services/sod_check.py` — ALIGNED: deterministic SoD gate, org-scoped audit query, per-tenant mode
 - `solden/services/specialist_agent.py` — ALIGNED: error-boundary wrapper around skills, per-specialist actor_id audit, stateless
 - `solden/services/specialist_circuit_breaker.py` — MECHANICAL: in-process three-state breaker; process-local by design
@@ -470,7 +470,7 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/services/worker_runtime.py` — MECHANICAL: process-role entrypoint wiring startup + signal shutdown
 - `solden/services/workspace_fx.py` — ALIGNED: org-stored-rate FX conversion, Decimal math, None on no-rate, never raises
 - `solden/services/workspace_reports.py` — ALIGNED: five org-scoped read-only reports, parameterized SQL, FX-aware, empty-but-valid on failure
-- `solden/services/workspace_semaphore.py` — DRIFT:stale 'clearledgr:semaphore:' Redis key namespace (backend-untouched brand; soft)
+- `solden/services/workspace_semaphore.py` — MECHANICAL: retains `clearledgr:semaphore:` Redis key namespace as an internal compatibility key
 
 ## solden/services/annotation_targets  (7)
 - `solden/services/annotation_targets/__init__.py` — MECHANICAL: imports the five concrete targets so they self-register
@@ -478,7 +478,7 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/services/annotation_targets/customer_webhook.py` — ALIGNED: HMAC-signed fan-out to org subscriptions; is_active=1 matches INTEGER schema; raises for retry
 - `solden/services/annotation_targets/gmail_label.py` — ALIGNED: skips ERP-native/non-Gmail, applies finance labels, org-scoped via AP-item
 - `solden/services/annotation_targets/netsuite_custom_field.py` — ALIGNED: SuiteTalk PATCH custbody_clearledgr_state; doc matches code; 4xx surfaced
-- `solden/services/annotation_targets/sap_z_field.py` — DRIFT:docstring says Z_CLEARLEDGR_STATE but code default is YY1_CLEARLEDGR_STATE (doc-vs-code)
+- `solden/services/annotation_targets/sap_z_field.py` — ALIGNED: docstring and code default both use YY1_CLEARLEDGR_STATE
 - `solden/services/annotation_targets/slack_card_update.py` — ALIGNED: chat.update existing card, skips no-op/no-thread, permanent errors surfaced
 
 ## solden/services/erp  (3)
@@ -486,14 +486,13 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - `solden/services/erp/contracts.py` — ALIGNED: provider-agnostic adapter Protocols + router-backed delegates
 - `solden/services/erp/sap.py` — ALIGNED: honest dry-run; non-dry-run park fails closed (FEATURE_SAP_LIVE_WRITE off)
 
-## solden/services/finance_skills  (9)
+## solden/services/finance_skills  (8)
 - `solden/services/finance_skills/__init__.py` — MECHANICAL: re-exports skill classes (recon+procurement intentionally not exported here)
 - `solden/services/finance_skills/ap_intent_contracts.py` — MECHANICAL: per-intent audit-contract + operator-copy tables + pure lookups
 - `solden/services/finance_skills/ap_intent_handlers.py` — ALIGNED: 20 bounded handlers, deterministic prechecks, money/ERP only via workflow/override-window, audited, org-asserted
 - `solden/services/finance_skills/ap_skill.py` — ALIGNED: AP skill behind runtime, bounded intents, deterministic prechecks (confirmed via handlers)
 - `solden/services/finance_skills/base.py` — MECHANICAL: FinanceSkill ABC + preview_contract/execute_contract wrappers
 - `solden/services/finance_skills/procurement_skill.py` — ALIGNED: PO intents via box_registry; _fetch_po org-checks agent path; refuses autonomy above dual-approval
-- `solden/services/finance_skills/recon_skill.py` — DRIFT:contract-mismatch — registered but overrides preview/execute with SkillRequest sigs + SYNC execute; runtime execute_contract awaits execute(runtime,intent,payload) -> breaks at dispatch
 - `solden/services/finance_skills/vendor_compliance_skill.py` — ALIGNED: read-only org-scoped vendor compliance snapshot, matches base contract, bounds-clamped
 - `solden/services/finance_skills/workflow_health_skill.py` — ALIGNED: read-only org-scoped AP queue health, matches base contract, bounds-clamped
 
@@ -824,42 +823,42 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 ## ui/gmail-extension  (6)
 - `ui/gmail-extension/background.js` — ALIGNED: service worker, retry + route handling (internal clearledgr storage keys, pre-rebrand)
 - `ui/gmail-extension/config.js` — ALIGNED: BACKEND_URL/WORKSPACE_URL point to soldenai.com
-- `ui/gmail-extension/content-script.js` — DRIFT: host-pin guard checks stale api.clearledgr.com vs config api.soldenai.com (self-heal never fires)
-- `ui/gmail-extension/queue-manager.js` — DRIFT: host-pin guard checks stale api.clearledgr.com vs config api.soldenai.com
+- `ui/gmail-extension/content-script.js` — ALIGNED: no stale backend host pin in active content script (verified 2026-06-14)
+- `ui/gmail-extension/queue-manager.js` — ALIGNED: backend URL normalizer derives from CONFIG; api.clearledgr.com remains a compatibility host for cached configs only
 - `ui/gmail-extension/route-capture.js` — MECHANICAL: sessionStorage capture for pending routes
 - `ui/gmail-extension/vitest.config.js` — MECHANICAL: test config, Preact JSX factory
 
 ## ui/gmail-extension/build  (6)
-- `ui/gmail-extension/build/background.js` — MECHANICAL: checked-in build artifact (generated from src/, candidate for .gitignore)
-- `ui/gmail-extension/build/config 2.js` — DEAD: macOS duplicate-copy cruft (" 2.js"), should be removed/gitignored
-- `ui/gmail-extension/build/config.js` — MECHANICAL: checked-in build artifact (generated from src/, candidate for .gitignore)
-- `ui/gmail-extension/build/content-script.js` — MECHANICAL: checked-in build artifact (generated from src/, candidate for .gitignore)
-- `ui/gmail-extension/build/queue-manager.js` — MECHANICAL: checked-in build artifact (generated from src/, candidate for .gitignore)
-- `ui/gmail-extension/build/route-capture.js` — MECHANICAL: checked-in build artifact (generated from src/, candidate for .gitignore)
+- `ui/gmail-extension/build/background.js` — MECHANICAL: ignored local build artifact (generated from src/, not tracked)
+- `ui/gmail-extension/build/config 2.js` — DEAD: ignored local macOS duplicate-copy cruft (" 2.js"), not tracked
+- `ui/gmail-extension/build/config.js` — MECHANICAL: ignored local build artifact (generated from src/, not tracked)
+- `ui/gmail-extension/build/content-script.js` — MECHANICAL: ignored local build artifact (generated from src/, not tracked)
+- `ui/gmail-extension/build/queue-manager.js` — MECHANICAL: ignored local build artifact (generated from src/, not tracked)
+- `ui/gmail-extension/build/route-capture.js` — MECHANICAL: ignored local build artifact (generated from src/, not tracked)
 
 ## ui/gmail-extension/build/clients  (14)
-- `ui/gmail-extension/build/clients/BaseClient 2.js` — DEAD: macOS duplicate-copy cruft (" 2.js"), should be removed/gitignored
-- `ui/gmail-extension/build/clients/BaseClient.js` — MECHANICAL: checked-in build artifact (generated from src/, candidate for .gitignore)
-- `ui/gmail-extension/build/clients/CategorizationClient 2.js` — DEAD: macOS duplicate-copy cruft (" 2.js"), should be removed/gitignored
-- `ui/gmail-extension/build/clients/CategorizationClient.js` — MECHANICAL: checked-in build artifact (generated from src/, candidate for .gitignore)
-- `ui/gmail-extension/build/clients/ClassificationClient 2.js` — DEAD: macOS duplicate-copy cruft (" 2.js"), should be removed/gitignored
-- `ui/gmail-extension/build/clients/ClassificationClient.js` — MECHANICAL: checked-in build artifact (generated from src/, candidate for .gitignore)
-- `ui/gmail-extension/build/clients/ExceptionClient 2.js` — DEAD: macOS duplicate-copy cruft (" 2.js"), should be removed/gitignored
-- `ui/gmail-extension/build/clients/ExceptionClient.js` — MECHANICAL: checked-in build artifact (generated from src/, candidate for .gitignore)
-- `ui/gmail-extension/build/clients/ExtractionClient 2.js` — DEAD: macOS duplicate-copy cruft (" 2.js"), should be removed/gitignored
-- `ui/gmail-extension/build/clients/ExtractionClient.js` — MECHANICAL: checked-in build artifact (generated from src/, candidate for .gitignore)
-- `ui/gmail-extension/build/clients/MatchingClient 2.js` — DEAD: macOS duplicate-copy cruft (" 2.js"), should be removed/gitignored
-- `ui/gmail-extension/build/clients/MatchingClient.js` — MECHANICAL: checked-in build artifact (generated from src/, candidate for .gitignore)
-- `ui/gmail-extension/build/clients/emailParsing 2.js` — DEAD: macOS duplicate-copy cruft (" 2.js"), should be removed/gitignored
-- `ui/gmail-extension/build/clients/emailParsing.js` — MECHANICAL: checked-in build artifact (generated from src/, candidate for .gitignore)
+- `ui/gmail-extension/build/clients/BaseClient 2.js` — DEAD: ignored local macOS duplicate-copy cruft (" 2.js"), not tracked
+- `ui/gmail-extension/build/clients/BaseClient.js` — MECHANICAL: ignored local build artifact (generated from src/, not tracked)
+- `ui/gmail-extension/build/clients/CategorizationClient 2.js` — DEAD: ignored local macOS duplicate-copy cruft (" 2.js"), not tracked
+- `ui/gmail-extension/build/clients/CategorizationClient.js` — MECHANICAL: ignored local build artifact (generated from src/, not tracked)
+- `ui/gmail-extension/build/clients/ClassificationClient 2.js` — DEAD: ignored local macOS duplicate-copy cruft (" 2.js"), not tracked
+- `ui/gmail-extension/build/clients/ClassificationClient.js` — MECHANICAL: ignored local build artifact (generated from src/, not tracked)
+- `ui/gmail-extension/build/clients/ExceptionClient 2.js` — DEAD: ignored local macOS duplicate-copy cruft (" 2.js"), not tracked
+- `ui/gmail-extension/build/clients/ExceptionClient.js` — MECHANICAL: ignored local build artifact (generated from src/, not tracked)
+- `ui/gmail-extension/build/clients/ExtractionClient 2.js` — DEAD: ignored local macOS duplicate-copy cruft (" 2.js"), not tracked
+- `ui/gmail-extension/build/clients/ExtractionClient.js` — MECHANICAL: ignored local build artifact (generated from src/, not tracked)
+- `ui/gmail-extension/build/clients/MatchingClient 2.js` — DEAD: ignored local macOS duplicate-copy cruft (" 2.js"), not tracked
+- `ui/gmail-extension/build/clients/MatchingClient.js` — MECHANICAL: ignored local build artifact (generated from src/, not tracked)
+- `ui/gmail-extension/build/clients/emailParsing 2.js` — DEAD: ignored local macOS duplicate-copy cruft (" 2.js"), not tracked
+- `ui/gmail-extension/build/clients/emailParsing.js` — MECHANICAL: ignored local build artifact (generated from src/, not tracked)
 
 ## ui/gmail-extension/build/engines  (2)
-- `ui/gmail-extension/build/engines/DiscoveryEngine 2.js` — DEAD: macOS duplicate-copy cruft (" 2.js"), should be removed/gitignored
-- `ui/gmail-extension/build/engines/DiscoveryEngine.js` — MECHANICAL: checked-in build artifact (generated from src/, candidate for .gitignore)
+- `ui/gmail-extension/build/engines/DiscoveryEngine 2.js` — DEAD: ignored local macOS duplicate-copy cruft (" 2.js"), not tracked
+- `ui/gmail-extension/build/engines/DiscoveryEngine.js` — MECHANICAL: ignored local build artifact (generated from src/, not tracked)
 
 ## ui/gmail-extension/build/workflows  (2)
-- `ui/gmail-extension/build/workflows/registry 2.js` — DEAD: macOS duplicate-copy cruft (" 2.js"), should be removed/gitignored
-- `ui/gmail-extension/build/workflows/registry.js` — MECHANICAL: built workflow registry stub
+- `ui/gmail-extension/build/workflows/registry 2.js` — DEAD: ignored local macOS duplicate-copy cruft (" 2.js"), not tracked
+- `ui/gmail-extension/build/workflows/registry.js` — MECHANICAL: ignored local built workflow registry stub
 
 ## ui/gmail-extension/clients  (7)
 - `ui/gmail-extension/clients/BaseClient.js` — MECHANICAL: abstract base client
@@ -876,7 +875,7 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 ## ui/gmail-extension/src/components  (9)
 - `ui/gmail-extension/src/components/ActionDialog.js` — MECHANICAL: reason-sheet modal UI
 - `ui/gmail-extension/src/components/ActionDialog.test.js` — MECHANICAL: test
-- `ui/gmail-extension/src/components/BudgetPausedBanner.js` — DRIFT: "Claude" vendor name in comment + hardcoded USD cost display
+- `ui/gmail-extension/src/components/BudgetPausedBanner.js` — ALIGNED: no LLM-vendor name; USD label is provider-cost currency from /llm-budget/status
 - `ui/gmail-extension/src/components/InviteVendorModal.js` — DEAD: posts /api/vendors/{name}/onboarding/invite (vendor onboarding parked dormant)
 - `ui/gmail-extension/src/components/OnboardingFlow.js` — ALIGNED: onboarding steps wired to bootstrap/integrations/policies, £ example
 - `ui/gmail-extension/src/components/SidebarApp.js` — ALIGNED: AP-first sidebar, real /api/ap/items + approval routes
@@ -887,7 +886,7 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 ## ui/gmail-extension/src  (4)
 - `ui/gmail-extension/src/inboxsdk-layer.js` — DRIFT: legacy clearledgr/* route-ids + __clearledgr_* storage keys (internal, pre-rebrand)
 - `ui/gmail-extension/src/settings-tab.js` — DRIFT: legacy clearledgr-settings-tab id + clearledgr_onboarding_dismissed key (internal)
-- `ui/gmail-extension/src/styles.js` — DRIFT: legacy mint #00D67E accent + navy #0A1628 + stale "mint green" DESIGN.md comment (extension not rebrand-swept)
+- `ui/gmail-extension/src/styles.js` — ALIGNED: Gmail surface uses current teal accent; legacy mint/#0A1628 hits removed (verified 2026-06-14)
 - `ui/gmail-extension/src/thesis-compliance.test.js` — ALIGNED: enforces Gmail thread-sidebar no-approve-action doctrine
 
 ## ui/gmail-extension/src/routes  (3)
@@ -901,7 +900,7 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 ## ui/gmail-extension/src/utils  (13)
 - `ui/gmail-extension/src/utils/capabilities.js` — ALIGNED: role-based capability checks, safe fallbacks
 - `ui/gmail-extension/src/utils/document-types.js` — ALIGNED: doc-type aliases + labels + guidance
-- `ui/gmail-extension/src/utils/formatters.js` — DRIFT: legacy mint #00D67E state colors (not teal/success token)
+- `ui/gmail-extension/src/utils/formatters.js` — ALIGNED: state colors use semantic success/warning/error and separate brand teal (verified 2026-06-14)
 - `ui/gmail-extension/src/utils/formatters.test.js` — ALIGNED: formatAmount tests cover EUR/GBP without USD bias
 - `ui/gmail-extension/src/utils/inbox-route.js` — DRIFT: legacy clearledgr/ route IDs (internal navigation, pre-rebrand)
 - `ui/gmail-extension/src/utils/perf-budget.js` — MECHANICAL: perf SLA tracking
@@ -1021,7 +1020,7 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 ## ui/web-app/src/utils  (10)
 - `ui/web-app/src/utils/capabilities.js` — ALIGNED: workspace_role (v89) + legacy fallback resolver
 - `ui/web-app/src/utils/document-types.js` — ALIGNED: doc-type normalization, AP-framed labels, operational guidance
-- `ui/web-app/src/utils/formatters.js` — DRIFT: STATE_COLORS hardcodes legacy mint #00D67E (not --success/teal token)
+- `ui/web-app/src/utils/formatters.js` — ALIGNED: canonical workspace money/date helpers; no legacy STATE_COLORS/mint map remains
 - `ui/web-app/src/utils/htm.js` — MECHANICAL: htm wrapper bound to h
 - `ui/web-app/src/utils/perf-budget.js` — MECHANICAL: perf budgets + telemetry beacon
 - `ui/web-app/src/utils/record-route.js` — ALIGNED: /records/:id routing, localStorage persistence
@@ -1039,26 +1038,26 @@ ui/ = matches the API contract + DESIGN.md; dead components; brand drift.
 - [ ] DRIFT `solden/integrations/oauth.py` — `_erp_connections` in-memory dict; `get_erp_connection_record`/`ensure_valid_token` read only the dict (lost on restart / second worker) though `save_erp_connection` also persists to DB. Live via api/erp_oauth.py. Same class as the removed onboarding in-memory dict.
 - [ ] DRIFT `solden/services/match_engines/bank_reconciliation.py` — `find_candidates` filters the date window on `created_at` (import time), not the business `posted_at` used in scoring; can silently drop matchable rows.
 - [ ] DRIFT `solden/cli/health.py` — docstring promises an M19 source-scan check the code never performs (doc-only).
-- [ ] DEAD `solden/models/patterns.py` + `solden/services/pattern_store.py` — orphaned cluster (pattern_store reachable only via a lazy export shim, zero real callers, no tests).
+- [x] REMOVED 2026-06-14 `solden/models/patterns.py` + `solden/services/pattern_store.py` — orphaned cluster removed from tracked code.
 - [ ] FOLLOWUP `solden/integrations/erp_xero.py` — skipped by the Wave-1 subagent; still PENDING, re-review next wave.
 
 ### Wave 2 (2026-05-25) — core (52) + api (90) + erp_xero
 HIGH (real bug / security):
-- [ ] DRIFT `solden/api/pipelines.py` — `delete_saved_view` keyed by view_id only, NO org filter in handler or SQL → an ops user can delete another tenant's saved view. CROSS-TENANT WRITE.
-- [ ] DRIFT `solden/api/ap_items_read_routes.py` — `/consolidated` calls undefined `verify_org_access` → NameError 500 for any caller past the FC check.
+- [x] RESOLVED 2026-06-14 `solden/api/pipelines.py` — `delete_saved_view` is org-scoped in handler and SQL; `tests/test_saved_view_tenant_isolation.py` covers cross-tenant delete refusal.
+- [x] RESOLVED 2026-06-14 `solden/api/ap_items_read_routes.py` — `/consolidated` imports `verify_org_access`, requires FC, and is covered by `tests/test_consolidated_pipeline_guard.py`.
 HIGH/systemic (member-writable governance — same class as the workspace_rules/sample_data fixes):
-- [ ] DRIFT `solden/api/ap_policies.py` — PUT AP business policy guarded only by get_current_user (no admin gate).
-- [ ] DRIFT `solden/api/dual_approval.py` — PUT /policy/dual-approval (second-signature threshold) member-writable.
-- [ ] DRIFT `solden/api/escalation_policies.py` — full CRUD member-writable.
-- [ ] DRIFT `solden/api/erp_connections.py` — connect/disconnect/gl-map member-writable (defines unused _ADMIN_ROLES).
-- [ ] DRIFT `solden/api/erp_connection_ops.py` — rotate-credentials/test member-writable.
-- [ ] DRIFT `solden/api/policies.py` — create-version/rollback of governance policies member-writable.
-- [ ] DRIFT `solden/api/vendor_status.py` — verify-registration POST not admin-gated + auto-creates vendor stub.
-- [ ] DRIFT `solden/api/org_config.py` — governance PUT/PATCH lack admin gate (LOWER: router disabled in strict prod).
+- [x] RESOLVED 2026-06-14 `solden/api/ap_policies.py` — AP business policy writes require `require_workspace_admin`.
+- [x] RESOLVED 2026-06-14 `solden/api/dual_approval.py` — `/policy/dual-approval` writes require `require_workspace_admin`.
+- [x] RESOLVED 2026-06-14 `solden/api/escalation_policies.py` — create/update/delete require `require_workspace_admin`; reads stay authenticated.
+- [x] RESOLVED 2026-06-14 `solden/api/erp_connections.py` — connect/disconnect/admin ERP mutations require `require_workspace_admin`; reads stay authenticated.
+- [x] RESOLVED 2026-06-14 `solden/api/erp_connection_ops.py` — rotate/test credential operations require `require_workspace_admin`.
+- [x] RESOLVED 2026-06-14 `solden/api/policies.py` — create-version/rollback require `require_workspace_admin`.
+- [x] RESOLVED 2026-06-14 `solden/api/vendor_status.py` — verify-registration calls `_require_admin` before registry/profile stamping.
+- [ ] DORMANT `solden/api/org_config.py` — governance PUT/PATCH still require admin gating before re-enable; router is disabled in strict production and guarded by tests.
 MED (strict-profile prod-404 — the match-config failure mode):
-- [ ] DRIFT `solden/api/ap_items_read_routes.py` — `/api/ap/items/audit/export` not allowlisted (two-segment path misses the single-segment pattern).
-- [ ] DRIFT `solden/api/netsuite_panel.py` — POST approve/reject/request-info action paths not allowlisted.
-- [ ] DRIFT `solden/api/ops.py` — `/api/ops/box-health` mounted but not allowlisted.
+- [x] RESOLVED 2026-06-14 `solden/api/ap_items_read_routes.py` — `/api/ap/items/audit/export` is allowlisted.
+- [x] RESOLVED 2026-06-14 `solden/api/netsuite_panel.py` — approve/reject/request-info action paths are allowlisted by dynamic pattern.
+- [x] RESOLVED 2026-06-14 `solden/api/ops.py` — `/api/ops/box-health` is allowlisted.
 LOW (brand/doc/dead):
 - [ ] DRIFT `solden/api/ap_item_detail.py` — stale "mint-green" brand + "Sonnet path" LLM-vendor tell in docstrings.
 - [ ] DRIFT `solden/api/gmail_webhooks.py` — OAuth success page stale Streak-era cream/green serif theme.
@@ -1088,16 +1087,16 @@ STILL OPEN:
 
 ### Wave 3b (2026-05-25) — services ad/ae/af (110 files); solden/ COMPLETE (454/454)
 REAL broken-live-path bugs:
-- [ ] DRIFT `solden/services/slack_digest.py` — send_digest reads runtime['channel']/['token'] but resolve_slack_runtime returns approval_channel/bot_token → every digest send fails (wired via coordination_engine send_slack_digest).
-- [ ] DRIFT `solden/services/trust_arc.py` — _send_slack_message calls _post_slack_blocks(org_id, text, ...) but signature is (blocks, text, ..., organization_id) → wrong arg order, trust-arc milestones misfire (wired via agent_background.run_trust_arc_tick).
-- [ ] DRIFT `solden/services/scheduled_reports.py` — _deliver_to_sheets calls SheetsAPIClient.extract_spreadsheet_id (a module-level fn, not a method) → AttributeError swallowed by broad except; sheets delivery silently broken.
-- [ ] DRIFT `solden/services/finance_skills/recon_skill.py` — registered but overrides preview/execute with SkillRequest signatures + a SYNC execute; runtime execute_contract awaits execute(runtime,intent,payload) → recon intents break at dispatch.
+- [x] `solden/services/slack_digest.py` — verified 2026-06-14: send_digest reads approval_channel/bot_token.
+- [x] `solden/services/trust_arc.py` — verified 2026-06-14: _send_slack_message calls _post_slack_blocks(blocks, text, organization_id=org_id).
+- [x] `solden/services/scheduled_reports.py` — verified 2026-06-14: _deliver_to_sheets imports the module-level extract_spreadsheet_id.
+- [x] `solden/services/finance_skills/recon_skill.py` — verified 2026-06-14: removed from tracked code; recon remains AP-subordinate, not a registered runtime skill.
 LOWER:
-- [ ] DRIFT `solden/services/slack_notifications.py` — send_vendor_response/escalation_notification are dead orphans (deleted vendor-followup feature; zero callers).
-- [ ] DRIFT `solden/services/vendor_enrichment.py` — audit actor_type='agent' for a deterministic registry fetch (mislabel).
-- [ ] DRIFT `solden/services/workspace_semaphore.py` — 'clearledgr:semaphore:' Redis key (backend brand untouched; soft).
-- [ ] DRIFT `solden/services/annotation_targets/sap_z_field.py` — docstring Z_CLEARLEDGR_STATE vs code default YY1_CLEARLEDGR_STATE.
-- [ ] DEAD `solden/services/pattern_store.py` — orphaned (lazy shim only, no callers/tests, no org column).
+- [x] `solden/services/slack_notifications.py` — verified 2026-06-14: deleted vendor-followup functions are gone; stale route allowlist/test inventory removed.
+- [x] `solden/services/vendor_enrichment.py` — verified 2026-06-14: deterministic registry persistence uses actor_type='system'.
+- [x] `solden/services/workspace_semaphore.py` — verified 2026-06-14: `clearledgr:semaphore:` is kept as an internal compatibility key, not user-facing drift.
+- [x] `solden/services/annotation_targets/sap_z_field.py` — verified 2026-06-14: docstring matches YY1_CLEARLEDGR_STATE default.
+- [x] `solden/services/pattern_store.py` — verified 2026-06-14: removed from tracked code.
 - [ ] NOTE: teams_notifications uses TEAMS_APP_SECRET vs teams_api TEAMS_APP_PASSWORD (cross-file cred inconsistency).
 DEAD:dormant-VO (deliberate, deferred 2026-04-30): vendor_bootstrap, vendor_csv_import, vendor_erp_push, vendor_onboarding_exceptions, vendor_onboarding_lifecycle, onboarding/{__init__,bank_verifier,complyadvantage_provider,kyc_policy,kyc_provider}.
 
@@ -1112,13 +1111,13 @@ TESTS — one real finding, rest are dormant-VO by design or false positives (ve
 
 UI — themes: (a) gmail-extension never got the 2026-05-02 rebrand sweep; (b) checked-in build/ artifacts + macOS dupes; (c) minor currency/vendor-name copy.
 REAL functional:
-- [ ] DRIFT `ui/gmail-extension/content-script.js` + `queue-manager.js` — self-heal host guard pins stale `api.clearledgr.com`; config.js now `api.soldenai.com` → guard never fires (stale ephemeral cached backend never replaced). FIX: derive canonical host from CONFIG.BACKEND_URL (or confirm live backend domain).
-- [ ] DRIFT `ui/web-app/src/utils/formatters.js` — STATE_COLORS hardcodes legacy mint `#00D67E` for approved/posted/closed (rebranded SPA should use `--success`/teal token). Contained, clean fix.
-- [ ] DRIFT `ui/gmail-extension/src/components/BudgetPausedBanner.js` — "Claude" vendor name in comment + hardcoded USD cost display. (no-vendor-names rule.)
+- [x] RESOLVED 2026-06-14 `ui/gmail-extension/content-script.js` + `queue-manager.js` — active content script has no stale host pin; queue-manager derives the configured host from CONFIG and keeps `api.clearledgr.com` only as a compatibility host for cached configs.
+- [x] RESOLVED 2026-06-14 `ui/web-app/src/utils/formatters.js` — no `STATE_COLORS` or legacy mint remains; workspace state color now lives in CSS/tokenized components.
+- [x] RESOLVED 2026-06-14 `ui/gmail-extension/src/components/BudgetPausedBanner.js` — no LLM-vendor name remains; USD is intentionally the provider-cost currency from `/llm-budget/status`.
 - [ ] DEAD? `ui/gmail-extension/src/components/InviteVendorModal.js` — posts /api/vendors/{name}/onboarding/invite (VO parked dormant). VERIFY if still mounted.
 NEEDS-MO-DECISION (scope/intent):
-- [ ] gmail-extension full rebrand sweep: `src/styles.js` (mint #00D67E accent, navy #0A1628 vs DESIGN #0A1F44, stale "mint green" DESIGN.md comment) + `src/utils/formatters.js` mint state colors. Larger re-skin.
+- [x] RESOLVED 2026-06-14 gmail-extension palette sweep: `src/styles.js` uses current teal accent and `src/utils/formatters.js` uses semantic state colors with brand teal kept separate.
 - [ ] Internal clearledgr identifiers (likely leave — backend brand intentionally untouched; risky to rename live storage/route keys): inboxsdk-layer, settings-tab, inbox-route, record-route, vendor-route, background.js (clearledgr/* route ids + __clearledgr_* localStorage keys).
-- [ ] Repo hygiene: `ui/gmail-extension/build/*` checked-in build artifacts (13) + 10 macOS " 2.js" duplicate-copy files → .gitignore + remove.
+- [x] RESOLVED 2026-06-14 Repo hygiene: `ui/gmail-extension/build/*` and `ui/gmail-extension/node_modules/*` are ignored and untracked (`git ls-files` count is 0).
 - [ ] `ui/web-app/src/auth/LegalPages.js` — "Railway-managed infrastructure" names infra vendor in user-facing legal copy. Genericize or move to a proper sub-processor list.
 - [ ] Currency (minor): PlanPage USD pricing, ExtractionClient en-US locale, emailParsing EUR/USD inconsistency.

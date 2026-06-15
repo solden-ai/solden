@@ -32,7 +32,7 @@ const API_BASE = (() => {
 
 Office.onReady((info) => {
   if (info.host === Office.HostType.Outlook) {
-    render(html`<${App}/>`, document.getElementById('clearledgr-root'));
+    render(html`<${App}/>`, document.getElementById('solden-root'));
   }
 });
 

@@ -2,7 +2,7 @@
 
 Solden is operational memory for back-office work in progress. Your ERP remembers what happened; Solden remembers what's happening.
 
-Finance is the entry point, and AP v1 is the first production workflow domain: Gmail-first intake, Slack/Teams approvals, ERP write-back, and full audit traceability.
+Finance is the entry point, and AP v1 is the first production workflow domain: Gmail and Outlook intake, Slack/Teams approvals, workspace control, ERP memory/action surfaces, ERP write-back, and full audit traceability.
 AP is the current wedge, not the full product boundary.
 
 ## Canonical Doctrine
@@ -20,17 +20,18 @@ Use these documents as source of truth:
 
 If any document conflicts with [PLAN.md](PLAN.md), `PLAN.md` wins.
 
-## Current Status (2026-03-22)
+## Current Status (2026-06-14)
 
-AP v1 is already implemented as a real product surface in this codebase. The shipped code includes:
+AP v1 is implemented as a real pilot-stage product surface in this codebase. The shipped code includes:
 
-- Gmail-first AP intake with a backend autopilot loop, Gmail-native thread/work surfaces, and routed setup/ops pages.
+- Gmail and Outlook intake surfaces backed by the same AP record and operational-memory contract.
 - Deterministic invoice validation, policy/confidence gates, approval routing, and audit/event recording.
 - Slack and Teams approval handlers with authenticated callbacks, duplicate-safe handling, and workflow dispatch.
-- ERP execution across NetSuite, QuickBooks, Xero, and SAP, including API-primary posting paths and standard follow-on credit/settlement operations behind readiness gates.
-- Workspace and ops control surfaces for health, KPIs, rollback controls, connector readiness, and GA-readiness evidence metadata.
+- ERP execution and embedded/context surfaces across NetSuite, SAP, Sage Intacct, QuickBooks, Xero, and Sage Accounting, including provider-neutral memory/action APIs where native embedding is not available.
+- Workspace control surfaces for setup, connections, records, activity, exceptions, Accounts Payable, vendors, reports, audit, approval rules, settings, and release-surface readiness.
+- First-owner activation links for new customer workspaces, then team invite acceptance for additional users.
 
-The main remaining gap to launch is not core product implementation. It is live-environment proof and operating discipline: staging/sandbox verification, deployment/config freeze, post-launch monitoring ownership, and continued product polish.
+The main remaining gap to launch is live-environment proof and operating discipline: staging/sandbox verification, deployment/config freeze, post-launch monitoring ownership, and continued product polish. Do not describe the product as perfect until that proof is complete.
 
 Use this README plus [docs/GA_LAUNCH_READINESS_TRACKER.md](docs/GA_LAUNCH_READINESS_TRACKER.md) for current product and launch posture. Treat [TODOS.md](TODOS.md) as deferred work only, not as an implementation-completeness ledger.
 For Railway deployment, use [docs/RAILWAY_DEPLOYMENT.md](docs/RAILWAY_DEPLOYMENT.md).
@@ -42,15 +43,15 @@ For pilot hardening and wedge-truth evaluation, use [docs/WEDGE_QUALITY_SCORECAR
 1. One Solden operational-memory system for back-office work in progress.
 2. Finance is the entry point; AP is the first production workflow domain, not the terminal product scope.
 3. `Pipeline` is the AP control plane and default landing route for queue work.
-4. Gmail is the first inbox adapter and the primary current-record surface in the current wedge, not the entire product.
-5. Gmail default pinned navigation stays intentionally small: `Pipeline`, `Home`.
+4. Gmail and Outlook are inbox adapters. Gmail is the most mature current-record surface; Outlook follows the same AP memory contract.
+5. Workspace is the control center for setup, recovery, audit, and admin. It is not a substitute for the embedded surfaces where daily decisions happen.
 6. Slack and Teams are approval/decision surfaces.
 7. ERP is the system of record for posted transactions; Solden is the system of record for work in progress.
 8. Human-in-the-loop is intentional for risky actions.
 9. Policy, audit, idempotency, and durability are mandatory.
-10. Current AP connector scope is NetSuite, QuickBooks, Xero, and SAP, each enabled by readiness gates.
+10. Current AP connector scope is NetSuite, SAP, Sage Intacct, QuickBooks, Xero, and Sage Accounting, each enabled by readiness gates or marked with its maturity state.
 11. Durable orchestration is Celery (`task_acks_late`) + Redis Streams with consumer-group reclaim (§11.2), the `agent_retry_jobs` durable retry queue, and Postgres-persisted `pending_plan` with CAS-guarded resume — event-sourced crash recovery. Temporal was never deployed and has been removed from the codebase.
-12. Outlook intake is explicitly de-scoped for AP v1 GA (Gmail is the only inbox surface in production scope).
+12. New customers do not self-serve sign up. Solden issues a first-owner activation link after a commercial/admin handoff; that owner completes workspace setup, then invites teammates.
 13. Initial rollout is Europe and Africa first (before any broader regional expansion).
 14. Operator-facing timestamps are standardized to `Europe/London`; backend storage/audit timestamps remain UTC.
 
@@ -68,9 +69,9 @@ Use [docs/OPERATIONAL_MEMORY_OBJECT.md](docs/OPERATIONAL_MEMORY_OBJECT.md) for t
 5. On approval and eligibility, Solden posts to ERP.
 6. End-to-end audit events are recorded and surfaced.
 
-## Gmail Operator Surface
+## Inbox Operator Surfaces
 
-For AP v1, Gmail is the primary current-record surface and `Pipeline` is the queue control plane. The Gmail/AP wedge is built as Streak for finance ops:
+For AP v1, Gmail is the most mature current-record surface and `Pipeline` is the queue control plane. Outlook uses the same selected-record memory contract through the Outlook add-in. The Gmail/AP wedge is built as Streak for finance ops:
 
 1. `Solden AP` thread panel is the daily execution workspace.
    - Focused invoice identity strip (vendor, amount, due date, invoice number, PO status).
@@ -78,7 +79,7 @@ For AP v1, Gmail is the primary current-record surface and `Pipeline` is the que
    - One state-driven primary CTA with small secondary actions.
    - Evidence checklist + collapsed audit disclosure.
    - Audit copy is backend-owned via `/api/ap/items/{ap_item_id}/audit` `operator_*` fields (UI renders backend operator wording, not local reason-code phrase maps).
-2. Gmail-native page routes handle setup, pipeline views, monitoring, policy management, team access, and plan/health pages.
+2. Gmail routed pages handle AP queue views and Gmail-specific setup. The workspace shell owns the broader control-plane experience for all surfaces.
    - The core Gmail work path is `Pipeline`, `Home`, `Review`, and `Upcoming`.
    - Default pinned nav stays intentionally sparse at `Pipeline` and `Home`; `Review` / `Upcoming` remain part of the core work path without bloating the default left nav.
    - `Pipeline` is the default AP queue/process surface and control plane, with AP-first slices, finance-native filters/sorts, and direct thread-to-pipeline / pipeline-to-thread reopening.
@@ -86,7 +87,7 @@ For AP v1, Gmail is the primary current-record surface and `Pipeline` is the que
    - Saved pipeline views are persisted per authenticated user and organization; `Home` surfaces saved views and finance-native starter views before secondary admin tools.
    - `Health` and comparable admin pages are role-gated secondary pages.
    - These pages are still inside Gmail and do not require a separate operating console for normal use.
-   - Ops/telemetry/batch/debug content remains out of the thread panel itself and is role-gated in Gmail-native routed pages.
+   - Ops/telemetry/batch/debug content remains out of the thread panel itself and is role-gated in routed admin pages.
 3. Gmail authorization is explicit and user-initiated from inline CTAs (`Connect Gmail` / `Connections`); the extension does not auto-launch Gmail OAuth on startup.
 
 Reason capture is inline and non-blocking (reason sheet); native browser `prompt/confirm` dialogs are not used in AP action flows.
@@ -100,13 +101,15 @@ UI hardening guardrails:
 
 ## Onboarding and Account Backbone
 
-Solden onboarding and account management still follows an admin-first model, but it remains Gmail-native:
+Solden onboarding and account management follows an admin-first model:
 
-1. Gmail routed pages own onboarding for Gmail, Slack/Teams, and ERP setup.
-2. Team roles/invites are managed through the same authenticated backend APIs (`/api/workspace/team/*` + `/auth/invites/*`).
-3. `Home` is a lightweight hub for quick access, recent activity, upcoming work, and secondary tools, not the center of daily AP operations.
-4. The thread panel stays execution-focused; setup/config flows live in Gmail-native pages rather than a separate dashboard.
-5. OAuth entry points for setup are launched from authenticated backend endpoints and surfaced inside the Gmail product shell.
+1. Solden creates a first-owner activation link for the customer workspace.
+2. The first owner accepts the activation, lands in workspace setup, and connects inbox intake, decision surface, ERP, and policy/routing.
+3. Gmail or Outlook can satisfy inbox intake; Slack or Teams can satisfy the decision surface.
+4. Team roles/invites are managed through the same authenticated backend APIs (`/api/workspace/team/*` + `/auth/invites/*`).
+5. `Home` is a lightweight hub for quick access, recent activity, upcoming work, and secondary tools, not the center of daily AP operations.
+6. Embedded panels stay execution-focused; setup/config flows live in workspace and role-gated routed pages.
+7. OAuth entry points for setup are launched from authenticated backend endpoints and surfaced inside the product shell.
 
 ## Runtime Shape (Agent + Skills)
 

@@ -126,6 +126,9 @@ class OverrideWindowStore:
         column is open for future tiers (payment_execution, etc.).
         """
         self.initialize()
+        org_id = str(organization_id or "").strip()
+        if not org_id:
+            raise ValueError("create_override_window requires organization_id")
         now = datetime.now(timezone.utc).isoformat()
         window_id = f"ovw_{uuid.uuid4().hex[:16]}"
         posted_ts = posted_at or now
@@ -142,7 +145,7 @@ class OverrideWindowStore:
         params = (
             window_id,
             ap_item_id,
-            organization_id,
+            org_id,
             erp_reference,
             erp_type,
             normalized_action,
@@ -159,7 +162,7 @@ class OverrideWindowStore:
         return {
             "id": window_id,
             "ap_item_id": ap_item_id,
-            "organization_id": organization_id,
+            "organization_id": org_id,
             "erp_reference": erp_reference,
             "erp_type": erp_type,
             "action_type": normalized_action,
@@ -181,32 +184,53 @@ class OverrideWindowStore:
     # Read
     # ------------------------------------------------------------------
 
-    def get_override_window(self, window_id: str) -> Optional[Dict[str, Any]]:
+    def get_override_window(
+        self, window_id: str, organization_id: str = ""
+    ) -> Optional[Dict[str, Any]]:
         """Fetch a window by its id."""
         self.initialize()
-        sql = "SELECT * FROM override_windows WHERE id = %s"
+        org = str(organization_id or "").strip()
+        if org:
+            sql = "SELECT * FROM override_windows WHERE id = %s AND organization_id = %s"
+            params = (window_id, org)
+        else:
+            sql = "SELECT * FROM override_windows WHERE id = %s"
+            params = (window_id,)
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (window_id,))
+            cur.execute(sql, params)
             row = cur.fetchone()
         return self._row_to_dict(row)
 
     def get_override_window_by_ap_item_id(
-        self, ap_item_id: str
+        self, ap_item_id: str, organization_id: str = ""
     ) -> Optional[Dict[str, Any]]:
         """Fetch the most recent window for an AP item."""
         self.initialize()
-        sql = (
-            """
-            SELECT * FROM override_windows
-            WHERE ap_item_id = %s
-            ORDER BY created_at DESC
-            LIMIT 1
-            """
-        )
+        org = str(organization_id or "").strip()
+        if org:
+            sql = (
+                """
+                SELECT * FROM override_windows
+                WHERE ap_item_id = %s AND organization_id = %s
+                ORDER BY created_at DESC
+                LIMIT 1
+                """
+            )
+            params = (ap_item_id, org)
+        else:
+            sql = (
+                """
+                SELECT * FROM override_windows
+                WHERE ap_item_id = %s
+                ORDER BY created_at DESC
+                LIMIT 1
+                """
+            )
+            params = (ap_item_id,)
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (ap_item_id,))
+            cur.execute(sql, params)
             row = cur.fetchone()
         return self._row_to_dict(row)
 
@@ -278,20 +302,25 @@ class OverrideWindowStore:
         *,
         slack_channel: Optional[str],
         slack_message_ts: Optional[str],
+        organization_id: str = "",
     ) -> bool:
         """Record where the Slack undo card was posted."""
         self.initialize()
         now = datetime.now(timezone.utc).isoformat()
-        sql = (
-            """
+        org = str(organization_id or "").strip()
+        where = "id = %s"
+        params: list[Any] = [slack_channel, slack_message_ts, now, window_id]
+        if org:
+            where += " AND organization_id = %s"
+            params.append(org)
+        sql = f"""
             UPDATE override_windows
             SET slack_channel = %s, slack_message_ts = %s, updated_at = %s
-            WHERE id = %s
-            """
-        )
+            WHERE {where}
+        """
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (slack_channel, slack_message_ts, now, window_id))
+            cur.execute(sql, params)
             changed = cur.rowcount
             conn.commit()
         return bool(changed)
@@ -303,12 +332,26 @@ class OverrideWindowStore:
         reversed_by: str,
         reversal_reason: str,
         reversal_ref: Optional[str] = None,
+        organization_id: str = "",
     ) -> bool:
         """Record a successful reversal on the window."""
         self.initialize()
         now = datetime.now(timezone.utc).isoformat()
+        org = str(organization_id or "").strip()
+        where = "id = %s AND state = 'pending'"
+        params: list[Any] = [
+            now,
+            reversed_by,
+            reversal_reason,
+            reversal_ref,
+            now,
+            window_id,
+        ]
+        if org:
+            where += " AND organization_id = %s"
+            params.append(org)
         sql = (
-            """
+            f"""
             UPDATE override_windows
             SET state = 'reversed',
                 reversed_at = %s,
@@ -316,53 +359,64 @@ class OverrideWindowStore:
                 reversal_reason = %s,
                 reversal_ref = %s,
                 updated_at = %s
-            WHERE id = %s AND state = 'pending'
+            WHERE {where}
             """
         )
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(
-                sql,
-                (now, reversed_by, reversal_reason, reversal_ref, now, window_id),
-            )
+            cur.execute(sql, params)
             changed = cur.rowcount
             conn.commit()
         return bool(changed)
 
-    def mark_override_window_expired(self, window_id: str) -> bool:
+    def mark_override_window_expired(
+        self, window_id: str, organization_id: str = ""
+    ) -> bool:
         """Mark a pending window as expired (used by the reaper)."""
         self.initialize()
         now = datetime.now(timezone.utc).isoformat()
+        org = str(organization_id or "").strip()
+        where = "id = %s AND state = 'pending'"
+        params: list[Any] = [now, window_id]
+        if org:
+            where += " AND organization_id = %s"
+            params.append(org)
         sql = (
-            """
+            f"""
             UPDATE override_windows
             SET state = 'expired', updated_at = %s
-            WHERE id = %s AND state = 'pending'
+            WHERE {where}
             """
         )
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (now, window_id))
+            cur.execute(sql, params)
             changed = cur.rowcount
             conn.commit()
         return bool(changed)
 
     def mark_override_window_failed(
-        self, window_id: str, failure_reason: str
+        self, window_id: str, failure_reason: str, organization_id: str = ""
     ) -> bool:
         """Mark a window as failed (reversal attempt errored at the ERP)."""
         self.initialize()
         now = datetime.now(timezone.utc).isoformat()
+        org = str(organization_id or "").strip()
+        where = "id = %s AND state = 'pending'"
+        params: list[Any] = [failure_reason, now, window_id]
+        if org:
+            where += " AND organization_id = %s"
+            params.append(org)
         sql = (
-            """
+            f"""
             UPDATE override_windows
             SET state = 'failed', failure_reason = %s, updated_at = %s
-            WHERE id = %s AND state = 'pending'
+            WHERE {where}
             """
         )
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (failure_reason, now, window_id))
+            cur.execute(sql, params)
             changed = cur.rowcount
             conn.commit()
         return bool(changed)

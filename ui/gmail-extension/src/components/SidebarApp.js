@@ -1948,7 +1948,7 @@ export default function SidebarApp({ queueManager }) {
   // Not polled — status only changes when (a) a call trips the cap,
   // (b) a CFO override clears the pause, or (c) the billing month
   // rolls over. First two auto-refresh; the third is cheap to miss
-  // for minutes since the next Claude call clears the pause anyway.
+  // for minutes since the next LLM call clears the pause anyway.
   useEffect(() => {
     let cancelled = false;
     (async () => {

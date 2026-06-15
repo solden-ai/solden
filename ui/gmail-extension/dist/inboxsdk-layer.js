@@ -1,4 +1,4 @@
-/* clearledgr-source-fingerprint:daaf0356650a6bd8f0e8da62a251b7fc10ef11616af3eee23f70195fd4889b2d */
+/* clearledgr-source-fingerprint:52fbd7a8b23ebe3ac27431b92ef5a80de96916bc5a170f3ac0d7e07206788217 */
 (() => {
   var __create = Object.create;
   var __getProtoOf = Object.getPrototypeOf;
@@ -59702,14 +59702,14 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 .cl-ts-qa-a li { margin: 2px 0; }
 .cl-ts-qa-a .cl-ts-ref {
   display: inline-block; padding: 0 5px;
-  background: rgba(0, 214, 126, 0.12); color: #059669;
+  background: rgba(24, 191, 176, 0.12); color: #0F766E;
   border-radius: 3px; font-weight: 600;
   cursor: pointer; text-decoration: none;
   font-variant-numeric: tabular-nums;
 }
-.cl-ts-qa-a .cl-ts-ref:hover { background: rgba(0, 214, 126, 0.22); }
+.cl-ts-qa-a .cl-ts-ref:hover { background: rgba(24, 191, 176, 0.22); }
 
-/* Streaming caret — blinks while Claude is still writing */
+/* Streaming caret — blinks while the agent is still writing */
 .cl-ts-qa-a .cl-ts-caret {
   display: inline-block; width: 7px; height: 13px; vertical-align: text-bottom;
   background: #18BFB0; margin-left: 2px; animation: cl-ts-blink 0.9s steps(2) infinite;
@@ -63454,3 +63454,5 @@ So do we.
 %chttps://soldenai.com
 `, "font-size:28px;font-weight:800;color:#18BFB0;line-height:1.2;", "font-size:18px;font-weight:600;color:#001137;line-height:1.3;", "font-size:14px;color:#6B7280;line-height:1.5;", "font-size:13px;color:#18BFB0;font-weight:600;");
 })();
+
+//# debugId=9B5CAB564B30FDA964756E2164756E21

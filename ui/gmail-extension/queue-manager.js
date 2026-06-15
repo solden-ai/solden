@@ -1527,7 +1527,7 @@ class SoldenQueueManager {
 
   // LLM runaway-spend guard: status + override.
   //
-  // Status tells the in-product banner whether Claude calls are
+  // Status tells the in-product banner whether LLM calls are
   // currently being refused for this workspace, the month-to-date
   // spend vs the monthly hard cap, and whether the caller has rank
   // high enough (CFO or OWNER) to lift the pause from inside Gmail.

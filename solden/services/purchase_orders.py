@@ -637,7 +637,9 @@ class PurchaseOrderService:
         return po
 
     def get_po(self, po_id: str) -> Optional[PurchaseOrder]:
-        return _po_from_dict(self._db.get_purchase_order(po_id))
+        return _po_from_dict(
+            self._db.get_purchase_order(po_id, organization_id=self.organization_id)
+        )
 
     def get_po_by_number(self, po_number: str) -> Optional[PurchaseOrder]:
         return _po_from_dict(
@@ -702,7 +704,11 @@ class PurchaseOrderService:
             **kwargs,
         )
         try:
-            existing_grs = len(self._db.list_goods_receipts_for_po(po_id))
+            existing_grs = len(
+                self._db.list_goods_receipts_for_po(
+                    po_id, organization_id=self.organization_id
+                )
+            )
         except Exception:
             existing_grs = 0
         gr.gr_number = (
@@ -724,7 +730,9 @@ class PurchaseOrderService:
         return gr
 
     def get_goods_receipts_for_po(self, po_id: str) -> List[GoodsReceipt]:
-        rows = self._db.list_goods_receipts_for_po(po_id)
+        rows = self._db.list_goods_receipts_for_po(
+            po_id, organization_id=self.organization_id
+        )
         return [_gr_from_dict(r) for r in rows if r]
 
     # ------------------------------------------------------------------
@@ -1085,7 +1093,9 @@ class PurchaseOrderService:
             po_id = str((po_row or {}).get("po_id") or "")
             if not po_id:
                 continue
-            for gr_row in self._db.list_goods_receipts_for_po(po_id):
+            for gr_row in self._db.list_goods_receipts_for_po(
+                po_id, organization_id=self.organization_id
+            ):
                 gr = _gr_from_dict(gr_row)
                 if gr and gr.status in (GRStatus.RECEIVED, GRStatus.PARTIAL):
                     candidate_grs.append(gr)
@@ -1198,7 +1208,9 @@ class PurchaseOrderService:
         return match
 
     def get_match(self, match_id: str) -> Optional[ThreeWayMatch]:
-        return _match_from_dict(self._db.get_three_way_match(match_id))
+        return _match_from_dict(
+            self._db.get_three_way_match(match_id, organization_id=self.organization_id)
+        )
 
     def get_match_exceptions(self) -> List[ThreeWayMatch]:
         rows = self._db.list_three_way_matches(

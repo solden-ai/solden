@@ -70,8 +70,12 @@ def _actor_id(user: Any) -> str:
 
 
 def _require_po(db: Any, po_id: str, organization_id: str) -> Dict[str, Any]:
-    item = db.get_purchase_order(po_id) if hasattr(db, "get_purchase_order") else None
-    if not item or str(item.get("organization_id") or "") != organization_id:
+    item = (
+        db.get_purchase_order(po_id, organization_id=organization_id)
+        if hasattr(db, "get_purchase_order")
+        else None
+    )
+    if not item:
         raise HTTPException(status_code=404, detail="purchase_order_not_found")
     return item
 
@@ -164,7 +168,11 @@ def _advance(po_id: str, action: str, body: DecisionRequest, user: Any) -> Dict[
     _require_po(db, po_id, organization_id)
     try:
         return db.update_purchase_order_state(
-            po_id, target, actor_id=actor_id, reason=body.reason.strip(),
+            po_id,
+            target,
+            actor_id=actor_id,
+            reason=body.reason.strip(),
+            organization_id=organization_id,
         )
     except IllegalPurchaseOrderTransitionError as exc:
         raise HTTPException(status_code=409, detail=str(exc))

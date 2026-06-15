@@ -244,14 +244,14 @@ const THREAD_SIDEBAR_CSS = `
 .cl-ts-qa-a li { margin: 2px 0; }
 .cl-ts-qa-a .cl-ts-ref {
   display: inline-block; padding: 0 5px;
-  background: rgba(0, 214, 126, 0.12); color: #059669;
+  background: rgba(24, 191, 176, 0.12); color: #0F766E;
   border-radius: 3px; font-weight: 600;
   cursor: pointer; text-decoration: none;
   font-variant-numeric: tabular-nums;
 }
-.cl-ts-qa-a .cl-ts-ref:hover { background: rgba(0, 214, 126, 0.22); }
+.cl-ts-qa-a .cl-ts-ref:hover { background: rgba(24, 191, 176, 0.22); }
 
-/* Streaming caret — blinks while Claude is still writing */
+/* Streaming caret — blinks while the agent is still writing */
 .cl-ts-qa-a .cl-ts-caret {
   display: inline-block; width: 7px; height: 13px; vertical-align: text-bottom;
   background: #18BFB0; margin-left: 2px; animation: cl-ts-blink 0.9s steps(2) infinite;
@@ -537,7 +537,7 @@ function humanizeEventType(raw, { fallback = '' } = {}) {
 // Handles only what the system prompt is told to use:
 //   **bold**, *italic*, `code`, and "- " bullets (one per line).
 // Also substitutes reference timestamps (HH:MM) with clickable chips.
-// Inline content is XSS-safe: we never set innerHTML from Claude's
+// Inline content is XSS-safe: we never set innerHTML from the agent's
 // output — every piece is returned as a Preact vnode or plain string.
 function renderInlineMarkdown(text, { references = [], onReferenceClick }) {
   if (!text) return '';

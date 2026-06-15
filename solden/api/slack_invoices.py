@@ -551,7 +551,10 @@ async def _handle_undo_post_action(
         }
 
     db = get_db()
-    window = db.get_override_window(window_id)
+    action_org_id = str(action.organization_id or "").strip()
+    window = db.get_override_window(
+        window_id, organization_id=action_org_id
+    ) if action_org_id else db.get_override_window(window_id)
     if not window:
         return {
             "response_type": "ephemeral",
@@ -586,7 +589,10 @@ async def _handle_undo_post_action(
 
     ap_item_id = window.get("ap_item_id")
     ap_item = db.get_ap_item(ap_item_id) if ap_item_id else {}
-    fresh_window = db.get_override_window(window_id) or window
+    fresh_window = (
+        db.get_override_window(window_id, organization_id=organization_id)
+        or window
+    )
 
     from solden.services import slack_cards
 
@@ -1059,8 +1065,12 @@ async def _process_interactive_payload(
                 po_id = ""
         if not po_id:
             po_id = _chase_action_id.replace("po_approve_", "").replace("po_reject_", "").strip()
-        po_row = db.get_purchase_order(po_id) if (po_id and hasattr(db, "get_purchase_order")) else None
-        if not po_row or str(po_row.get("organization_id") or "") != bound_org:
+        po_row = (
+            db.get_purchase_order(po_id, organization_id=bound_org)
+            if (po_id and hasattr(db, "get_purchase_order"))
+            else None
+        )
+        if not po_row:
             _audit_callback_event(
                 db, event_type="channel_action_invalid", source="slack",
                 organization_id=bound_org, idempotency_key=f"slack:po_tenant:{po_id}",

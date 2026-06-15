@@ -40,7 +40,6 @@ OPS_MUTATION_ROUTES = {
     ("POST", "/extension/reject-invoice"),
     ("POST", "/extension/budget-decision"),
     ("POST", "/extension/approval-nudge"),
-    ("POST", "/extension/vendor-followup"),
     ("POST", "/extension/route-low-risk-approval"),
     ("POST", "/extension/retry-recoverable-failure"),
     ("POST", "/extension/finance-summary-share"),

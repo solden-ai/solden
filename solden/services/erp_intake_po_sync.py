@@ -151,7 +151,12 @@ def _upsert_netsuite_item_receipt(
     existing_grs = []
     if hasattr(db, "list_goods_receipts_for_po"):
         try:
-            existing_grs = db.list_goods_receipts_for_po(po_id) or []
+            existing_grs = (
+                db.list_goods_receipts_for_po(
+                    po_id, organization_id=organization_id
+                )
+                or []
+            )
         except Exception:
             existing_grs = []
     if any(str((row or {}).get("gr_number") or "") == gr_number for row in existing_grs):
@@ -257,6 +262,7 @@ def upsert_sap_po(
         try:
             _upsert_sap_material_document(
                 service=service,
+                organization_id=organization_id,
                 po_id=po_id,
                 po_number=po_number,
                 material_doc_payload=md,
@@ -272,6 +278,7 @@ def upsert_sap_po(
 def _upsert_sap_material_document(
     *,
     service: PurchaseOrderService,
+    organization_id: str,
     po_id: str,
     po_number: str,
     material_doc_payload: Dict[str, Any],
@@ -286,7 +293,12 @@ def _upsert_sap_material_document(
     existing_grs = []
     if hasattr(db, "list_goods_receipts_for_po"):
         try:
-            existing_grs = db.list_goods_receipts_for_po(po_id) or []
+            existing_grs = (
+                db.list_goods_receipts_for_po(
+                    po_id, organization_id=organization_id
+                )
+                or []
+            )
         except Exception:
             existing_grs = []
     if any(str((row or {}).get("gr_number") or "") == gr_number for row in existing_grs):

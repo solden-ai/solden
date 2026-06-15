@@ -5065,8 +5065,8 @@ def create_entity(
     # implausible; the UI prevents the obvious self-parent case.
     parent_id = (request.parent_entity_id or "").strip() or None
     if parent_id:
-        parent = db.get_entity(parent_id)
-        if not parent or parent.get("organization_id") != org_id:
+        parent = db.get_entity(parent_id, organization_id=org_id)
+        if not parent:
             raise HTTPException(status_code=400, detail="parent_entity_not_found")
     entity = db.create_entity(
         organization_id=org_id,
@@ -5090,8 +5090,8 @@ def update_entity(
     org_id = _resolve_org_id(user, request.organization_id)
     db = get_db()
     # Verify entity belongs to this org
-    existing = db.get_entity(entity_id)
-    if not existing or existing.get("organization_id") != org_id:
+    existing = db.get_entity(entity_id, organization_id=org_id)
+    if not existing:
         raise HTTPException(status_code=404, detail="entity_not_found")
     updates: Dict[str, Any] = {}
     if request.name is not None:
@@ -5109,16 +5109,19 @@ def update_entity(
         if parent_id == entity_id:
             raise HTTPException(status_code=400, detail="parent_cannot_be_self")
         if parent_id:
-            parent = db.get_entity(parent_id)
-            if not parent or parent.get("organization_id") != org_id:
+            parent = db.get_entity(parent_id, organization_id=org_id)
+            if not parent:
                 raise HTTPException(status_code=400, detail="parent_entity_not_found")
         updates["parent_entity_id"] = parent_id
     if request.default_currency is not None:
         updates["default_currency"] = request.default_currency
     if not updates:
         raise HTTPException(status_code=400, detail="no_fields_to_update")
-    db.update_entity(entity_id, **updates)
-    return {"success": True, "entity": db.get_entity(entity_id)}
+    db.update_entity(entity_id, organization_id=org_id, **updates)
+    return {
+        "success": True,
+        "entity": db.get_entity(entity_id, organization_id=org_id),
+    }
 
 
 @router.delete("/entities/{entity_id}")
@@ -5129,10 +5132,10 @@ def deactivate_entity(
 ):
     org_id = _resolve_org_id(user, organization_id)
     db = get_db()
-    existing = db.get_entity(entity_id)
-    if not existing or existing.get("organization_id") != org_id:
+    existing = db.get_entity(entity_id, organization_id=org_id)
+    if not existing:
         raise HTTPException(status_code=404, detail="entity_not_found")
-    db.delete_entity(entity_id)
+    db.delete_entity(entity_id, organization_id=org_id)
     return {"success": True, "entity_id": entity_id, "deactivated": True}
 
 
@@ -5187,11 +5190,9 @@ def update_payment_status(
 
     org_id = _resolve_org_id(user, organization_id)
     db = get_db()
-    existing = db.get_payment(payment_id)
+    existing = db.get_payment(payment_id, organization_id=org_id)
     if not existing:
         raise HTTPException(status_code=404, detail="payment_not_found")
-    if existing.get("organization_id") != org_id:
-        raise HTTPException(status_code=403, detail="payment_org_mismatch")
 
     updates = {k: v for k, v in body.dict(exclude_unset=True).items() if v is not None}
     if "status" in updates and updates["status"] not in PAYMENT_STATUSES:
@@ -5210,6 +5211,7 @@ def update_payment_status(
     )
     updated = db.update_payment(
         payment_id,
+        organization_id=org_id,
         **updates,
         _actor_type="user",
         _actor_id=actor_id,
@@ -5899,11 +5901,7 @@ def list_entity_roles_for_user(
     """
     org_id = _resolve_org_id(user, organization_id)
     db = get_db()
-    rows = db.list_user_entity_roles(user_id)
-    # Filter out any rows that belong to a different tenant — there
-    # shouldn't be any (the writer scopes by org_id), but a stale
-    # row would otherwise leak across tenants.
-    rows = [r for r in rows if str(r.get("organization_id") or "") == org_id]
+    rows = db.list_user_entity_roles(user_id, organization_id=org_id)
     return {
         "user_id": user_id,
         "organization_id": org_id,
@@ -5954,7 +5952,7 @@ def replace_entity_roles_for_user(
             )
 
     # Capture before-state for audit diff.
-    before_rows = db.list_user_entity_roles(user_id)
+    before_rows = db.list_user_entity_roles(user_id, organization_id=org_id)
     before_map = {r["entity_id"]: r for r in before_rows}
 
     incoming_payload = [

@@ -247,12 +247,15 @@ class _FakeDB:
     def get_slack_thread(self, email_id):
         return self.slack_threads.get(str(email_id or ""))
 
-    def db_reassign_pending_step_approvers(self, chain_id, approvers, comments=""):
+    def db_reassign_pending_step_approvers(
+        self, chain_id, approvers, comments="", organization_id=""
+    ):
         self.reassigned_chains.append(
             {
                 "chain_id": chain_id,
                 "approvers": list(approvers or []),
                 "comments": comments,
+                "organization_id": organization_id,
             }
         )
         return True

@@ -305,7 +305,11 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         # (admin-gated ERP master import). Cap 483 -> 485.
         # 2026-06-10: Ask Solden — POST /api/workspace/ask (org-wide Q&A over
         # the earned memory) + GET /api/workspace/ask/suggestions. Cap 485 -> 487.
-        assert len(paths) <= 487
+        # 2026-06-13: customer setup + release-surface readiness added the
+        # first-owner activation split (/auth/activations/{preview,accept})
+        # and the workspace surface-readiness API used by Connections. Cap
+        # 487 -> 490.
+        assert len(paths) <= 490
         assert not any(path.startswith("/config/") for path in paths)
         assert "/erp/status/{organization_id}" not in paths
         assert "/erp/quickbooks/connect" not in paths
@@ -330,10 +334,15 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         assert "/api/workspace/dimensions/sync-erp" in paths
         assert "/api/workspace/ask" in paths
         assert "/api/workspace/ask/suggestions" in paths
+        assert "/api/workspace/surface-readiness" in paths
+        assert "/auth/activations/preview" in paths
+        assert "/auth/activations/accept" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/approve" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/reject" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}/request-info" in paths
+        assert "/extension/vendor-followup" not in paths
+        assert "/extension/draft-reply" not in paths
         assert "/marketplace/apps" not in paths
         # OAuth callbacks remain available for admin ERP install flows.
         assert "/erp/quickbooks/callback" in paths

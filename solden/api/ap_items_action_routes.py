@@ -1756,7 +1756,13 @@ async def reverse_ap_item_post(
     try:
         from solden.services import slack_cards
         fresh_item = db.get_ap_item(ap_item_id) or item
-        fresh_window = db.get_override_window((result or {}).get("window_id") or "") or {}
+        fresh_window = (
+            db.get_override_window(
+                (result or {}).get("window_id") or "",
+                organization_id=org_id_for_service,
+            )
+            or {}
+        )
         actor_label = (
             getattr(user, "email", None)
             or getattr(user, "user_id", None)

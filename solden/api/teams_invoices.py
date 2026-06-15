@@ -357,8 +357,12 @@ async def handle_teams_interactive(request: Request) -> Dict[str, Any]:
             return {"status": "disabled", "text": "Procurement chat approvals aren't enabled."}
         po_id = str(payload.get("po_id") or "").strip()
         po_decision = str(payload.get("decision") or "").strip().lower()
-        po_row = db.get_purchase_order(po_id) if (po_id and hasattr(db, "get_purchase_order")) else None
-        if not po_row or str(po_row.get("organization_id") or "") != organization_id_from_install:
+        po_row = (
+            db.get_purchase_order(po_id, organization_id=organization_id_from_install)
+            if (po_id and hasattr(db, "get_purchase_order"))
+            else None
+        )
+        if not po_row:
             _audit_callback_event(
                 db, event_type="channel_action_invalid",
                 organization_id=organization_id_from_install,

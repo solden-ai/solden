@@ -500,7 +500,7 @@ def get_erp_connection(
     # Try entity-specific connection first
     if entity_id:
         try:
-            entity = db.get_entity(entity_id)
+            entity = db.get_entity(entity_id, organization_id=organization_id)
             if entity and entity.get("erp_connection_id"):
                 entity_conn = db.get_erp_connection_by_id(entity["erp_connection_id"])
                 if entity_conn:
@@ -738,7 +738,7 @@ def _get_entity_gl_map(organization_id: str, entity_id: Optional[str]) -> Dict[s
         return {}
     try:
         db = _get_db()
-        entity = db.get_entity(entity_id)
+        entity = db.get_entity(entity_id, organization_id=organization_id)
         if not entity:
             return {}
         gl_mapping = entity.get("gl_mapping") or {}

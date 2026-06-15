@@ -6,7 +6,7 @@ This document defines the standard Solden must meet before it can honestly claim
 
 That wedge is narrow and specific:
 
-1. Gmail-native AP triage
+1. inbox-surface AP triage (Gmail first; Outlook on the same memory contract)
 2. multi-entity routing
 3. approval chasing
 4. Slack/Teams approval execution
@@ -20,7 +20,7 @@ This is not a broad AP-suite scorecard. It is the quality bar for the current bu
 
 Solden is only winning the wedge if the following statement is true in live customer use:
 
-`A finance manager can run AP from Gmail with less context switching, less approval chasing, and less ERP re-entry than with incumbent tools.`
+`A finance manager can run AP from the inbox and decision surfaces they already use, with less context switching, less approval chasing, and less ERP re-entry than with incumbent tools.`
 
 If this is not true, the wedge is not yet won.
 
@@ -47,7 +47,7 @@ Solden must remove tab and tool thrash, not just add another layer.
 
 Minimum standard:
 
-1. Finance manager starts in Gmail
+1. Finance manager starts in Gmail or Outlook
 2. Most invoices do not require opening a second work surface
 3. Approvers can act from Slack or Teams
 4. Pipeline is the queue/control plane, not a mandatory second inbox
@@ -105,7 +105,7 @@ Use this scorecard every week during pilot hardening.
 | Operator clarity | Failed or blocked items surface a precise next action | `>= 95%` | operator review of blocked items |
 | Silent failure rate | Mutating actions fail without explicit operator signal | `0%` | audit + incident review |
 | Duplicate action safety | Duplicate approvals/posts create duplicate side effects | `0%` | idempotency tests + audit review |
-| Context switching | Completed invoices require no manual bounce across Gmail, Slack, and ERP | `>= 70%` | workflow observation + operator logging |
+| Context switching | Completed invoices require no manual bounce across inbox, chat, and ERP | `>= 70%` | workflow observation + operator logging |
 | Manual touches | Human interventions per invoice trend downward | weekly decline | pilot ops review |
 
 These are wedge thresholds, not GA-for-everything thresholds.

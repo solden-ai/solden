@@ -1430,6 +1430,7 @@ async def _poll_payment_statuses(org_id: str) -> Dict[str, int]:
                     fail_reason = status.get("reason", "unknown")
                     db.update_payment(
                         payment["id"],
+                        organization_id=org_id,
                         status="failed",
                         notes=f"Payment failed in ERP: {fail_reason}",
                     )
@@ -1471,6 +1472,7 @@ async def _poll_payment_statuses(org_id: str) -> Dict[str, int]:
                 if status.get("paid") and closure_method and closure_method != "payment":
                     db.update_payment(
                         payment["id"],
+                        organization_id=org_id,
                         status="closed_by_credit",
                         notes=f"Closed by {closure_method}: {status.get('payment_reference', '')}",
                         completed_date=now_iso,
@@ -1539,6 +1541,7 @@ async def _poll_payment_statuses(org_id: str) -> Dict[str, int]:
                 if status.get("paid"):
                     db.update_payment(
                         payment["id"],
+                        organization_id=org_id,
                         status="completed",
                         payment_reference=status.get("payment_reference", ""),
                         payment_method=status.get("payment_method", ""),
@@ -1612,6 +1615,7 @@ async def _poll_payment_statuses(org_id: str) -> Dict[str, int]:
                 elif status.get("partial"):
                     db.update_payment(
                         payment["id"],
+                        organization_id=org_id,
                         status="partial",
                         paid_amount=status.get("payment_amount"),
                         notes=(
@@ -1688,6 +1692,7 @@ async def _poll_payment_statuses(org_id: str) -> Dict[str, int]:
                         # Payment was reversed/voided in ERP
                         db.update_payment(
                             payment["id"],
+                            organization_id=org_id,
                             status="reversed",
                             notes=f"Payment reversal detected in ERP on {now_iso}",
                         )
@@ -1754,6 +1759,7 @@ async def _poll_payment_statuses(org_id: str) -> Dict[str, int]:
                         overdue_checked += 1
                         db.update_payment(
                             payment["id"],
+                            organization_id=org_id,
                             status="overdue",
                             notes=f"Overdue by {days_overdue} days",
                             overdue_alerted=now_iso,

@@ -101,7 +101,9 @@ def resolve_role(
     """
     if entity_id and hasattr(db, "get_user_entity_role"):
         try:
-            row = db.get_user_entity_role(user_id, entity_id)
+            row = db.get_user_entity_role(
+                user_id, entity_id, organization_id=organization_id
+            )
         except Exception as exc:
             logger.warning(
                 "[resolve_role] DB error reading user_entity_roles "

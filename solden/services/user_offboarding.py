@@ -122,8 +122,12 @@ def offboard_user(
     # ─── 4) Clear per-entity role assignments ───────────────────
     if hasattr(db, "list_user_entity_roles") and hasattr(db, "delete_user_entity_role"):
         try:
-            for row in db.list_user_entity_roles(user_id):
-                if db.delete_user_entity_role(user_id, row["entity_id"]):
+            for row in db.list_user_entity_roles(
+                user_id, organization_id=organization_id
+            ):
+                if db.delete_user_entity_role(
+                    user_id, row["entity_id"], organization_id=organization_id
+                ):
                     out.entity_roles_cleared += 1
         except Exception as exc:
             out.errors.append(f"entity_roles_clear_failed:{exc}")

@@ -1769,7 +1769,10 @@ def build_worklist_item(
     try:
         ap_item_id_for_window = payload.get("id") or payload.get("ap_item_id")
         if ap_item_id_for_window and hasattr(db, "get_override_window_by_ap_item_id"):
-            window_row = db.get_override_window_by_ap_item_id(ap_item_id_for_window)
+            window_row = db.get_override_window_by_ap_item_id(
+                ap_item_id_for_window,
+                organization_id=payload.get("organization_id") or "",
+            )
             if isinstance(window_row, dict) and str(window_row.get("state") or "").lower() == "open":
                 payload["override_window"] = {
                     "window_id": window_row.get("id"),

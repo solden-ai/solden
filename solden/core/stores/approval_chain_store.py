@@ -65,6 +65,11 @@ class ApprovalChainStore:
     def db_create_approval_chain(self, chain: Any) -> None:
         """Persist a new ApprovalChain (and all its steps) to the DB."""
         self.initialize()
+        existing = self.db_get_approval_chain(chain.chain_id)
+        if existing and str(existing.get("organization_id") or "") != str(chain.organization_id):
+            raise ValueError(
+                f"approval_chain {chain.chain_id!r} belongs to a different organization"
+            )
         now = datetime.now(timezone.utc).isoformat()
         chain_sql = """
             INSERT INTO approval_chains
@@ -114,14 +119,22 @@ class ApprovalChainStore:
                 ))
             conn.commit()
 
-    def db_get_approval_chain(self, chain_id: str) -> Optional[Dict[str, Any]]:
+    def db_get_approval_chain(
+        self, chain_id: str, organization_id: str = ""
+    ) -> Optional[Dict[str, Any]]:
         """Retrieve a chain row + its step rows. Returns None if not found."""
         self.initialize()
-        chain_sql = "SELECT * FROM approval_chains WHERE id = %s"
+        org = str(organization_id or "").strip()
+        if org:
+            chain_sql = "SELECT * FROM approval_chains WHERE id = %s AND organization_id = %s"
+            chain_params = (chain_id, org)
+        else:
+            chain_sql = "SELECT * FROM approval_chains WHERE id = %s"
+            chain_params = (chain_id,)
         steps_sql = "SELECT * FROM approval_steps WHERE chain_id = %s ORDER BY step_index ASC"
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(chain_sql, (chain_id,))
+            cur.execute(chain_sql, chain_params)
             chain_row = cur.fetchone()
             if not chain_row:
                 return None
@@ -144,7 +157,7 @@ class ApprovalChainStore:
             row = cur.fetchone()
         if not row:
             return None
-        return self.db_get_approval_chain(row[0])
+        return self.db_get_approval_chain(row[0], organization_id=organization_id)
 
     def db_update_chain_step(
         self,
@@ -155,9 +168,12 @@ class ApprovalChainStore:
         approved_at: Optional[str] = None,
         comments: str = "",
         rejection_reason: Optional[str] = None,
+        organization_id: str = "",
     ) -> None:
         """Update a single step's status and outcome fields."""
         self.initialize()
+        if organization_id and not self.db_get_approval_chain(chain_id, organization_id):
+            raise ValueError(f"approval_chain {chain_id!r} not found")
         now = datetime.now(timezone.utc).isoformat()
         sql = """
             UPDATE approval_steps
@@ -176,12 +192,15 @@ class ApprovalChainStore:
         approvers: List[str],
         *,
         comments: str = "",
+        organization_id: str = "",
     ) -> bool:
         """Replace approvers on pending steps for the active approval chain."""
         self.initialize()
         normalized_approvers = [str(value).strip() for value in (approvers or []) if str(value).strip()]
         if not chain_id or not normalized_approvers:
             return False
+        if organization_id and not self.db_get_approval_chain(chain_id, organization_id):
+            raise ValueError(f"approval_chain {chain_id!r} not found")
 
         now = datetime.now(timezone.utc).isoformat()
         sql = """
@@ -209,9 +228,12 @@ class ApprovalChainStore:
         status: str,
         current_step: int,
         completed_at: Optional[str] = None,
+        organization_id: str = "",
     ) -> None:
         """Update chain-level status and current_step pointer."""
         self.initialize()
+        if organization_id and not self.db_get_approval_chain(chain_id, organization_id):
+            raise ValueError(f"approval_chain {chain_id!r} not found")
         sql = """
             UPDATE approval_chains SET status = %s, current_step = %s, completed_at = %s
             WHERE id = %s
@@ -221,12 +243,14 @@ class ApprovalChainStore:
             cur.execute(sql, (status, current_step, completed_at, chain_id))
             conn.commit()
 
-    def db_check_parallel_chain_complete(self, chain_id: str) -> Dict[str, Any]:
+    def db_check_parallel_chain_complete(
+        self, chain_id: str, organization_id: str = ""
+    ) -> Dict[str, Any]:
         """Check if all steps in a parallel approval chain are resolved.
 
         Returns {complete: bool, approved: bool, pending_count: int, approved_count: int, rejected: bool}
         """
-        chain = self.db_get_approval_chain(chain_id)
+        chain = self.db_get_approval_chain(chain_id, organization_id=organization_id)
         if not chain:
             return {"complete": False, "approved": False, "pending_count": 0, "approved_count": 0, "rejected": False}
 
@@ -265,7 +289,7 @@ class ApprovalChainStore:
 
         result = []
         for cid in chain_ids:
-            chain_data = self.db_get_approval_chain(cid)
+            chain_data = self.db_get_approval_chain(cid, organization_id=organization_id)
             if not chain_data:
                 continue
             # Check if user_id appears in any pending step's approvers list

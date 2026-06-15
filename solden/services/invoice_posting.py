@@ -606,9 +606,12 @@ class InvoicePostingMixin:
                             status="approved",
                             approved_by=approved_by,
                             approved_at=step_complete_at,
+                            organization_id=self.organization_id,
                         )
                         if hasattr(self.db, "db_check_parallel_chain_complete"):
-                            status_check = self.db.db_check_parallel_chain_complete(chain["id"])
+                            status_check = self.db.db_check_parallel_chain_complete(
+                                chain["id"], organization_id=self.organization_id
+                            )
                             if not status_check.get("complete"):
                                 # Still-pending step(s) on the same chain
                                 # — this approver's job is done, but the
@@ -784,6 +787,7 @@ class InvoicePostingMixin:
                         status="approved",
                         current_step=len(chain.get("steps") or []) or 0,
                         completed_at=now_iso,
+                        organization_id=self.organization_id,
                     )
             except Exception:
                 pass  # Non-fatal — chain status is informational at this point
@@ -1132,9 +1136,14 @@ class InvoicePostingMixin:
                     chain["id"], 0, status="rejected",
                     approved_by=rejected_by, approved_at=now_iso,
                     rejection_reason=reason,
+                    organization_id=self.organization_id,
                 )
                 self.db.db_update_chain_status(
-                    chain["id"], status="rejected", current_step=0, completed_at=now_iso,
+                    chain["id"],
+                    status="rejected",
+                    current_step=0,
+                    completed_at=now_iso,
+                    organization_id=self.organization_id,
                 )
         except Exception as exc:
             logger.error("Approval chain rejection update failed for %s: %s", ap_item_id, exc)

@@ -29,7 +29,7 @@ class UserEntityRolesStore:
     # ------------------------------------------------------------------
 
     def get_user_entity_role(
-        self, user_id: str, entity_id: str
+        self, user_id: str, entity_id: str, organization_id: str = ""
     ) -> Optional[Dict[str, Any]]:
         """Return the row for one (user, entity) pair, or None.
 
@@ -37,25 +37,44 @@ class UserEntityRolesStore:
         key (user_id, entity_id).
         """
         self.initialize()
+        org = str(organization_id or "").strip()
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(
-                "SELECT * FROM user_entity_roles WHERE user_id = %s AND entity_id = %s",
-                (user_id, entity_id),
-            )
+            if org:
+                cur.execute(
+                    "SELECT * FROM user_entity_roles "
+                    "WHERE user_id = %s AND entity_id = %s AND organization_id = %s",
+                    (user_id, entity_id, org),
+                )
+            else:
+                cur.execute(
+                    "SELECT * FROM user_entity_roles WHERE user_id = %s AND entity_id = %s",
+                    (user_id, entity_id),
+                )
             row = cur.fetchone()
         return self._row_to_dict(row)
 
-    def list_user_entity_roles(self, user_id: str) -> List[Dict[str, Any]]:
+    def list_user_entity_roles(
+        self, user_id: str, organization_id: str = ""
+    ) -> List[Dict[str, Any]]:
         """Every per-entity assignment for one user, entity-id ASC."""
         self.initialize()
+        org = str(organization_id or "").strip()
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(
-                "SELECT * FROM user_entity_roles "
-                "WHERE user_id = %s ORDER BY entity_id ASC",
-                (user_id,),
-            )
+            if org:
+                cur.execute(
+                    "SELECT * FROM user_entity_roles "
+                    "WHERE user_id = %s AND organization_id = %s "
+                    "ORDER BY entity_id ASC",
+                    (user_id, org),
+                )
+            else:
+                cur.execute(
+                    "SELECT * FROM user_entity_roles "
+                    "WHERE user_id = %s ORDER BY entity_id ASC",
+                    (user_id,),
+                )
             rows = cur.fetchall()
         return [d for d in (self._row_to_dict(r) for r in rows) if d]
 
@@ -100,10 +119,19 @@ class UserEntityRolesStore:
         catalog — this method just stores what it's told.
         """
         self.initialize()
+        clean_org = str(organization_id or "").strip()
+        if not clean_org:
+            raise ValueError("organization_id must not be empty")
 
         clean_role = (role or "").strip().lower()
         if not clean_role:
             raise ValueError("role must not be empty")
+
+        existing = self.get_user_entity_role(user_id, entity_id)
+        if existing and str(existing.get("organization_id") or "") != clean_org:
+            raise ValueError(
+                "user_entity_roles assignment belongs to a different organization"
+            )
 
         ceiling_normalized: Optional[Decimal]
         if approval_ceiling is None:
@@ -137,29 +165,41 @@ class UserEntityRolesStore:
             cur.execute(
                 sql,
                 (
-                    user_id, entity_id, organization_id, clean_role,
+                    user_id, entity_id, clean_org, clean_role,
                     ceiling_normalized, now, now,
                 ),
             )
             conn.commit()
-        row = self.get_user_entity_role(user_id, entity_id)
+        row = self.get_user_entity_role(
+            user_id, entity_id, organization_id=clean_org
+        )
         return row or {
             "user_id": user_id, "entity_id": entity_id,
-            "organization_id": organization_id, "role": clean_role,
+            "organization_id": clean_org, "role": clean_role,
             "approval_ceiling": ceiling_normalized,
             "created_at": now, "updated_at": now,
         }
 
-    def delete_user_entity_role(self, user_id: str, entity_id: str) -> bool:
+    def delete_user_entity_role(
+        self, user_id: str, entity_id: str, organization_id: str = ""
+    ) -> bool:
         """Remove a per-entity assignment. Returns True on actual delete."""
         self.initialize()
+        org = str(organization_id or "").strip()
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(
-                "DELETE FROM user_entity_roles "
-                "WHERE user_id = %s AND entity_id = %s",
-                (user_id, entity_id),
-            )
+            if org:
+                cur.execute(
+                    "DELETE FROM user_entity_roles "
+                    "WHERE user_id = %s AND entity_id = %s AND organization_id = %s",
+                    (user_id, entity_id, org),
+                )
+            else:
+                cur.execute(
+                    "DELETE FROM user_entity_roles "
+                    "WHERE user_id = %s AND entity_id = %s",
+                    (user_id, entity_id),
+                )
             conn.commit()
             return (cur.rowcount or 0) > 0
 
@@ -183,10 +223,24 @@ class UserEntityRolesStore:
         is never observed in a half-applied state.
         """
         self.initialize()
-        existing = self.list_user_entity_roles(user_id)
+        clean_org = str(organization_id or "").strip()
+        if not clean_org:
+            raise ValueError("organization_id must not be empty")
+        existing = self.list_user_entity_roles(
+            user_id, organization_id=clean_org
+        )
         existing_ids = {r["entity_id"] for r in existing}
         incoming_ids = {a.get("entity_id") for a in assignments if a.get("entity_id")}
         to_delete = existing_ids - incoming_ids
+        for entity_id in incoming_ids:
+            existing_row = self.get_user_entity_role(user_id, str(entity_id))
+            if (
+                existing_row
+                and str(existing_row.get("organization_id") or "") != clean_org
+            ):
+                raise ValueError(
+                    "user_entity_roles assignment belongs to a different organization"
+                )
 
         now = datetime.now(timezone.utc).isoformat()
         with self.connect() as conn:
@@ -218,18 +272,18 @@ class UserEntityRolesStore:
                     "              organization_id = EXCLUDED.organization_id, "
                     "              updated_at = EXCLUDED.updated_at",
                     (
-                        user_id, entity_id, organization_id, role,
+                        user_id, entity_id, clean_org, role,
                         ceiling, now, now,
                     ),
                 )
             for entity_id in to_delete:
                 cur.execute(
                     "DELETE FROM user_entity_roles "
-                    "WHERE user_id = %s AND entity_id = %s",
-                    (user_id, entity_id),
+                    "WHERE user_id = %s AND entity_id = %s AND organization_id = %s",
+                    (user_id, entity_id, clean_org),
                 )
             conn.commit()
-        return self.list_user_entity_roles(user_id)
+        return self.list_user_entity_roles(user_id, organization_id=clean_org)
 
     # ------------------------------------------------------------------
     # Helpers

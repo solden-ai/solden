@@ -90,15 +90,23 @@ class EntityStore:
                 now, now,
             ))
             conn.commit()
-        return self.get_entity(entity_id) or {"id": entity_id}
+        return self.get_entity(entity_id, organization_id=organization_id) or {"id": entity_id}
 
-    def get_entity(self, entity_id: str) -> Optional[Dict[str, Any]]:
+    def get_entity(
+        self, entity_id: str, organization_id: str = ""
+    ) -> Optional[Dict[str, Any]]:
         """Get a single entity by ID."""
         self.initialize()
-        sql = "SELECT * FROM entities WHERE id = %s"
+        org = str(organization_id or "").strip()
+        if org:
+            sql = "SELECT * FROM entities WHERE id = %s AND organization_id = %s"
+            params = (entity_id, org)
+        else:
+            sql = "SELECT * FROM entities WHERE id = %s"
+            params = (entity_id,)
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (entity_id,))
+            cur.execute(sql, params)
             row = cur.fetchone()
         if not row:
             return None
@@ -149,7 +157,9 @@ class EntityStore:
         "is_active", "updated_at",
     })
 
-    def update_entity(self, entity_id: str, **kwargs) -> bool:
+    def update_entity(
+        self, entity_id: str, organization_id: str = "", **kwargs
+    ) -> bool:
         """Update an entity. Only whitelisted columns are accepted."""
         self.initialize()
         # Accept gl_mapping / approval_rules as dicts and serialize
@@ -165,17 +175,24 @@ class EntityStore:
             return False
         safe["updated_at"] = datetime.now(timezone.utc).isoformat()
         set_clause = ", ".join(f"{col} = %s" for col in safe)
-        sql = f"UPDATE entities SET {set_clause} WHERE id = %s"
-        params = list(safe.values()) + [entity_id]
+        org = str(organization_id or "").strip()
+        if org:
+            sql = f"UPDATE entities SET {set_clause} WHERE id = %s AND organization_id = %s"
+            params = list(safe.values()) + [entity_id, org]
+        else:
+            sql = f"UPDATE entities SET {set_clause} WHERE id = %s"
+            params = list(safe.values()) + [entity_id]
         with self.connect() as conn:
             cur = conn.cursor()
             cur.execute(sql, params)
             conn.commit()
             return cur.rowcount > 0
 
-    def delete_entity(self, entity_id: str) -> bool:
+    def delete_entity(self, entity_id: str, organization_id: str = "") -> bool:
         """Soft-delete an entity (set is_active=0)."""
-        return self.update_entity(entity_id, is_active=0)
+        return self.update_entity(
+            entity_id, organization_id=organization_id, is_active=0
+        )
 
     # ------------------------------------------------------------------
     # §3 Multi-Entity: Parent/child organization hierarchy
@@ -250,14 +267,16 @@ class EntityStore:
                     return dict(parent_row)
         return None
 
-    def get_effective_agent_config(self, entity_id: str) -> Dict[str, Any]:
+    def get_effective_agent_config(
+        self, entity_id: str, organization_id: str = ""
+    ) -> Dict[str, Any]:
         """§3 Multi-entity: entity-specific agent config with org fallback.
 
         Reads entity.settings_json for override keys like autonomy_tier,
         override_window_minutes, auto_approve_threshold. Falls back to
         org-level settings for any key not overridden.
         """
-        entity = self.get_entity(entity_id)
+        entity = self.get_entity(entity_id, organization_id=organization_id)
         if not entity:
             return {}
         org_id = entity.get("organization_id")

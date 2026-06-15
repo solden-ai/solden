@@ -18,17 +18,11 @@ Schema lives in migrations v33 (see migrations.py). This mixin only
 provides the CRUD API the service needs.
 
 Design rules:
-  * Org-scoping is CALLER-ENFORCED, not store-enforced. The id-keyed
-    getters/mutators here (get_purchase_order, update_purchase_order_state,
-    set_po_erp_id, amend_purchase_order_box, record_po_receipt,
-    get_goods_receipt, get_three_way_match[_by_invoice]) take no org and do
-    NOT filter by it — this matches the box_registry generic-dispatch contract
-    (get_box(box_type, box_id, db) has no org at that layer). Every reachable
-    caller verifies org BEFORE acting: the PO API via _require_po, the
-    Slack/Teams callbacks via an org-match-or-404 check, and the agent path via
-    procurement_skill._fetch_po. (An earlier version of this docstring claimed
-    "never a cross-tenant leak" — false; the store does not enforce it. Do not
-    add a new caller that reads a PO by id without checking po.organization_id.)
+  * Org-scoping is available at the store boundary for every id-keyed
+    getter/mutator. ``organization_id`` is optional only to preserve the
+    generic box_registry dispatch contract and existing tests; reachable
+    tenant-aware callers should pass it so a mismatched id returns not-found
+    before any data is exposed or mutated.
   * Line items round-trip as Python lists — the mixin takes care of
     JSON encode/decode so the service never sees raw JSON strings.
   * Timestamps are ISO 8601 strings in UTC (matches the rest of the
@@ -141,6 +135,11 @@ class PurchaseOrderStore:
         if not po_id:
             raise ValueError("po_id is required")
         self.initialize()
+        existing = self.get_purchase_order(po_id)
+        if existing and str(existing.get("organization_id") or "") != org_id:
+            raise ValueError(
+                f"purchase_orders po_id {po_id!r} belongs to a different organization"
+            )
         now = _now_iso()
         params = (
             po_id,
@@ -204,16 +203,24 @@ class PurchaseOrderStore:
             cur = conn.cursor()
             cur.execute(sql, params)
             conn.commit()
-        return self.get_purchase_order(po_id) or {}
+        return self.get_purchase_order(po_id, organization_id=org_id) or {}
 
-    def get_purchase_order(self, po_id: str) -> Optional[Dict[str, Any]]:
+    def get_purchase_order(
+        self, po_id: str, organization_id: str = ""
+    ) -> Optional[Dict[str, Any]]:
         if not po_id:
             return None
         self.initialize()
-        sql = "SELECT * FROM purchase_orders WHERE po_id = %s"
+        org = str(organization_id or "").strip()
+        if org:
+            sql = "SELECT * FROM purchase_orders WHERE po_id = %s AND organization_id = %s"
+            params = (po_id, org)
+        else:
+            sql = "SELECT * FROM purchase_orders WHERE po_id = %s"
+            params = (po_id,)
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (po_id,))
+            cur.execute(sql, params)
             row = cur.fetchone()
         return self._po_row_to_dict(row)
 
@@ -343,6 +350,7 @@ class PurchaseOrderStore:
         *,
         actor_id: str,
         reason: str = "",
+        organization_id: str = "",
     ) -> Dict[str, Any]:
         """Advance a PO Box to a new state, validating the edge.
 
@@ -358,7 +366,7 @@ class PurchaseOrderStore:
                 "update_purchase_order_state requires a non-empty actor_id "
                 "for audit-trail integrity"
             )
-        existing = self.get_purchase_order(po_id)
+        existing = self.get_purchase_order(po_id, organization_id=organization_id)
         if not existing:
             raise ValueError(f"purchase_order {po_id!r} not found")
         current_state = str(existing.get("status") or "")
@@ -369,7 +377,9 @@ class PurchaseOrderStore:
         if target_state == POStatus.APPROVED.value:
             patch["approved_by"] = actor_id
             patch["approved_at"] = now
-        self._patch_purchase_order(po_id, patch)
+        self._patch_purchase_order(
+            po_id, patch, organization_id=organization_id or str(existing.get("organization_id") or "")
+        )
 
         if hasattr(self, "append_audit_event"):
             self.append_audit_event({
@@ -393,7 +403,9 @@ class PurchaseOrderStore:
             self, "record_box_outcome"
         ):
             try:
-                final = self.get_purchase_order(po_id) or existing
+                final = self.get_purchase_order(
+                    po_id, organization_id=organization_id or str(existing.get("organization_id") or "")
+                ) or existing
                 self.record_box_outcome(
                     box_id=po_id,
                     box_type="purchase_order",
@@ -413,10 +425,17 @@ class PurchaseOrderStore:
                     "[PurchaseOrderStore] outcome record failed for %s: %s",
                     po_id, outcome_exc,
                 )
-        return self.get_purchase_order(po_id)  # type: ignore[return-value]
+        return self.get_purchase_order(  # type: ignore[return-value]
+            po_id, organization_id=organization_id or str(existing.get("organization_id") or "")
+        )
 
     def set_po_erp_id(
-        self, po_id: str, erp_po_id: str, *, actor_id: str
+        self,
+        po_id: str,
+        erp_po_id: str,
+        *,
+        actor_id: str,
+        organization_id: str = "",
     ) -> Optional[Dict[str, Any]]:
         """Stamp the ERP-side PO id after issuance + emit an audit row.
 
@@ -425,11 +444,15 @@ class PurchaseOrderStore:
         this patches ``erp_po_id`` directly rather than going through the
         state machine.
         """
-        existing = self.get_purchase_order(po_id)
+        existing = self.get_purchase_order(po_id, organization_id=organization_id)
         if not existing:
             raise ValueError(f"purchase_order {po_id!r} not found")
         now = _now_iso()
-        self._patch_purchase_order(po_id, {"erp_po_id": erp_po_id, "updated_at": now})
+        self._patch_purchase_order(
+            po_id,
+            {"erp_po_id": erp_po_id, "updated_at": now},
+            organization_id=organization_id or str(existing.get("organization_id") or ""),
+        )
         if hasattr(self, "append_audit_event"):
             self.append_audit_event({
                 "box_id": po_id,
@@ -442,7 +465,9 @@ class PurchaseOrderStore:
                 "payload_json": {"erp_po_id": erp_po_id},
                 "idempotency_key": f"po-issued:{po_id}:{erp_po_id}",
             })
-        return self.get_purchase_order(po_id)
+        return self.get_purchase_order(
+            po_id, organization_id=organization_id or str(existing.get("organization_id") or "")
+        )
 
     _PO_AMENDABLE_FIELDS = frozenset({
         "vendor_name", "vendor_id", "po_number", "order_date", "expected_delivery",
@@ -451,7 +476,12 @@ class PurchaseOrderStore:
     })
 
     def amend_purchase_order_box(
-        self, po_id: str, fields: Dict[str, Any], *, actor_id: str
+        self,
+        po_id: str,
+        fields: Dict[str, Any],
+        *,
+        actor_id: str,
+        organization_id: str = "",
     ) -> Optional[Dict[str, Any]]:
         """Edit a DRAFT PO's master-data fields + emit an audit row.
 
@@ -460,7 +490,7 @@ class PurchaseOrderStore:
         the state machine. The caller (skill) gates this to ``draft`` —
         editing after submission would bypass approval.
         """
-        existing = self.get_purchase_order(po_id)
+        existing = self.get_purchase_order(po_id, organization_id=organization_id)
         if not existing:
             raise ValueError(f"purchase_order {po_id!r} not found")
         merged = dict(existing)
@@ -484,7 +514,9 @@ class PurchaseOrderStore:
                 "payload_json": {"changed_fields": sorted(changed.keys())},
                 "idempotency_key": f"po-amended:{po_id}:{_now_iso()}",
             })
-        return self.get_purchase_order(po_id)
+        return self.get_purchase_order(
+            po_id, organization_id=organization_id or str(existing.get("organization_id") or "")
+        )
 
     def record_po_receipt(
         self,
@@ -492,6 +524,7 @@ class PurchaseOrderStore:
         received_lines: Optional[List[Dict[str, Any]]] = None,
         *,
         actor_id: str,
+        organization_id: str = "",
     ) -> Dict[str, Any]:
         """Apply a goods receipt to a PO's lines and report fully-vs-partial.
 
@@ -502,7 +535,7 @@ class PurchaseOrderStore:
         box state — the caller transitions to partially/fully_received based
         on the returned flag.
         """
-        existing = self.get_purchase_order(po_id)
+        existing = self.get_purchase_order(po_id, organization_id=organization_id)
         if not existing:
             raise ValueError(f"purchase_order {po_id!r} not found")
         lines = list(existing.get("line_items") or [])
@@ -531,17 +564,30 @@ class PurchaseOrderStore:
         self.save_purchase_order(merged)
         return {"fully_received": fully_received, "line_items": lines}
 
-    def _patch_purchase_order(self, po_id: str, kwargs: Dict[str, Any]) -> None:
+    def _patch_purchase_order(
+        self, po_id: str, kwargs: Dict[str, Any], organization_id: str = ""
+    ) -> None:
         bad = set(kwargs.keys()) - _PURCHASE_ORDER_ALLOWED_COLUMNS
         if bad:
             raise ValueError(f"Disallowed columns for purchase_order update: {bad}")
         if not kwargs:
             return
         set_clause = ", ".join(f"{k} = %s" for k in kwargs.keys())
-        sql = f"UPDATE purchase_orders SET {set_clause} WHERE po_id = %s"
+        org = str(organization_id or "").strip()
+        if org:
+            sql = (
+                f"UPDATE purchase_orders SET {set_clause} "
+                "WHERE po_id = %s AND organization_id = %s"
+            )
+            params = (*kwargs.values(), po_id, org)
+        else:
+            sql = f"UPDATE purchase_orders SET {set_clause} WHERE po_id = %s"
+            params = (*kwargs.values(), po_id)
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (*kwargs.values(), po_id))
+            cur.execute(sql, params)
+            if org and cur.rowcount == 0:
+                raise ValueError(f"purchase_order {po_id!r} not found")
             conn.commit()
 
     # ------------------------------------------------------------------
@@ -556,6 +602,11 @@ class PurchaseOrderStore:
         if not gr_id:
             raise ValueError("gr_id is required")
         self.initialize()
+        existing = self.get_goods_receipt(gr_id)
+        if existing and str(existing.get("organization_id") or "") != org_id:
+            raise ValueError(
+                f"goods_receipts gr_id {gr_id!r} belongs to a different organization"
+            )
         now = _now_iso()
         params = (
             gr_id,
@@ -601,31 +652,51 @@ class PurchaseOrderStore:
             cur = conn.cursor()
             cur.execute(sql, params)
             conn.commit()
-        return self.get_goods_receipt(gr_id) or {}
+        return self.get_goods_receipt(gr_id, organization_id=org_id) or {}
 
-    def get_goods_receipt(self, gr_id: str) -> Optional[Dict[str, Any]]:
+    def get_goods_receipt(
+        self, gr_id: str, organization_id: str = ""
+    ) -> Optional[Dict[str, Any]]:
         if not gr_id:
             return None
         self.initialize()
-        sql = "SELECT * FROM goods_receipts WHERE gr_id = %s"
+        org = str(organization_id or "").strip()
+        if org:
+            sql = "SELECT * FROM goods_receipts WHERE gr_id = %s AND organization_id = %s"
+            params = (gr_id, org)
+        else:
+            sql = "SELECT * FROM goods_receipts WHERE gr_id = %s"
+            params = (gr_id,)
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (gr_id,))
+            cur.execute(sql, params)
             row = cur.fetchone()
         return self._gr_row_to_dict(row)
 
-    def list_goods_receipts_for_po(self, po_id: str) -> List[Dict[str, Any]]:
+    def list_goods_receipts_for_po(
+        self, po_id: str, organization_id: str = ""
+    ) -> List[Dict[str, Any]]:
         if not po_id:
             return []
         self.initialize()
-        sql = (
-            "SELECT * FROM goods_receipts "
-            "WHERE po_id = %s "
-            "ORDER BY created_at DESC"
-        )
+        org = str(organization_id or "").strip()
+        if org:
+            sql = (
+                "SELECT * FROM goods_receipts "
+                "WHERE po_id = %s AND organization_id = %s "
+                "ORDER BY created_at DESC"
+            )
+            params = (po_id, org)
+        else:
+            sql = (
+                "SELECT * FROM goods_receipts "
+                "WHERE po_id = %s "
+                "ORDER BY created_at DESC"
+            )
+            params = (po_id,)
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (po_id,))
+            cur.execute(sql, params)
             rows = cur.fetchall()
         return [self._gr_row_to_dict(r) for r in rows if r is not None]
 
@@ -642,6 +713,11 @@ class PurchaseOrderStore:
             match_id = uuid.uuid4().hex[:12]
             match["match_id"] = match_id
         self.initialize()
+        existing = self.get_three_way_match(match_id)
+        if existing and str(existing.get("organization_id") or "") != org_id:
+            raise ValueError(
+                f"three_way_matches match_id {match_id!r} belongs to a different organization"
+            )
         now = _now_iso()
         params = (
             match_id,
@@ -691,33 +767,51 @@ class PurchaseOrderStore:
             cur = conn.cursor()
             cur.execute(sql, params)
             conn.commit()
-        return self.get_three_way_match(match_id) or {}
+        return self.get_three_way_match(match_id, organization_id=org_id) or {}
 
-    def get_three_way_match(self, match_id: str) -> Optional[Dict[str, Any]]:
+    def get_three_way_match(
+        self, match_id: str, organization_id: str = ""
+    ) -> Optional[Dict[str, Any]]:
         if not match_id:
             return None
         self.initialize()
-        sql = "SELECT * FROM three_way_matches WHERE match_id = %s"
+        org = str(organization_id or "").strip()
+        if org:
+            sql = "SELECT * FROM three_way_matches WHERE match_id = %s AND organization_id = %s"
+            params = (match_id, org)
+        else:
+            sql = "SELECT * FROM three_way_matches WHERE match_id = %s"
+            params = (match_id,)
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (match_id,))
+            cur.execute(sql, params)
             row = cur.fetchone()
         return self._match_row_to_dict(row)
 
     def get_three_way_match_by_invoice(
-        self, invoice_id: str
+        self, invoice_id: str, organization_id: str = ""
     ) -> Optional[Dict[str, Any]]:
         if not invoice_id:
             return None
         self.initialize()
-        sql = (
-            "SELECT * FROM three_way_matches "
-            "WHERE invoice_id = %s "
-            "ORDER BY matched_at DESC LIMIT 1"
-        )
+        org = str(organization_id or "").strip()
+        if org:
+            sql = (
+                "SELECT * FROM three_way_matches "
+                "WHERE invoice_id = %s AND organization_id = %s "
+                "ORDER BY matched_at DESC LIMIT 1"
+            )
+            params = (invoice_id, org)
+        else:
+            sql = (
+                "SELECT * FROM three_way_matches "
+                "WHERE invoice_id = %s "
+                "ORDER BY matched_at DESC LIMIT 1"
+            )
+            params = (invoice_id,)
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(sql, (invoice_id,))
+            cur.execute(sql, params)
             row = cur.fetchone()
         return self._match_row_to_dict(row)
 

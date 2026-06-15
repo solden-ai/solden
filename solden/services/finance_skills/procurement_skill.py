@@ -125,7 +125,9 @@ class ProcurementFinanceSkill(FinanceSkill):
         """
         if not po_id:
             return None
-        po = runtime.db.get_purchase_order(po_id)
+        po = runtime.db.get_purchase_order(
+            po_id, organization_id=runtime.organization_id
+        )
         if not po or str(po.get("organization_id") or "") != str(runtime.organization_id):
             return None
         return po
@@ -295,7 +297,12 @@ class ProcurementFinanceSkill(FinanceSkill):
             )
             erp_po_id = result.get("erp_po_id")
             if result.get("status") == "success" and erp_po_id:
-                runtime.db.set_po_erp_id(context["po_id"], erp_po_id, actor_id=actor_id)
+                runtime.db.set_po_erp_id(
+                    context["po_id"],
+                    erp_po_id,
+                    actor_id=actor_id,
+                    organization_id=runtime.organization_id,
+                )
                 return {
                     "skill_id": self.skill_id,
                     "intent": normalized,
@@ -313,7 +320,10 @@ class ProcurementFinanceSkill(FinanceSkill):
 
         if normalized == "amend_purchase_order":
             box = runtime.db.amend_purchase_order_box(
-                context["po_id"], payload.get("fields") or {}, actor_id=actor_id,
+                context["po_id"],
+                payload.get("fields") or {},
+                actor_id=actor_id,
+                organization_id=runtime.organization_id,
             )
             return {
                 "skill_id": self.skill_id,
@@ -330,7 +340,10 @@ class ProcurementFinanceSkill(FinanceSkill):
             # => receive all. ``partial=True`` forces partial regardless
             # (back-compat / explicit partial delivery).
             recon = runtime.db.record_po_receipt(
-                context["po_id"], payload.get("received_lines"), actor_id=actor_id,
+                context["po_id"],
+                payload.get("received_lines"),
+                actor_id=actor_id,
+                organization_id=runtime.organization_id,
             )
             fully = recon.get("fully_received", True)
             if payload.get("partial") is True:
@@ -355,6 +368,7 @@ class ProcurementFinanceSkill(FinanceSkill):
             box = box_registry.update_box(
                 _BOX_TYPE, context["po_id"], runtime.db,
                 state=target_state, actor_id=actor_id,
+                organization_id=runtime.organization_id,
                 reason=str(payload.get("reason") or "goods received"),
             )
             return {
@@ -371,6 +385,7 @@ class ProcurementFinanceSkill(FinanceSkill):
             box = box_registry.update_box(
                 _BOX_TYPE, context["po_id"], runtime.db,
                 state=target, actor_id=actor_id,
+                organization_id=runtime.organization_id,
                 reason=str(payload.get("reason") or ""),
             )
         except IllegalPurchaseOrderTransitionError as exc:

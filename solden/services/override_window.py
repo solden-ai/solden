@@ -304,7 +304,9 @@ class OverrideWindowService:
           5. On failure: marks the window failed, leaves the AP item in
              ``posted_to_erp`` for human intervention
         """
-        window = self.db.get_override_window(window_id)
+        window = self.db.get_override_window(
+            window_id, organization_id=self.organization_id
+        )
         if not window:
             return ReversalOutcome(
                 status="not_found",
@@ -351,7 +353,9 @@ class OverrideWindowService:
         if self.is_window_expired(window):
             # The reaper should have already marked this as expired, but
             # we catch the race here and finalize it now.
-            self.db.mark_override_window_expired(window_id)
+            self.db.mark_override_window_expired(
+                window_id, organization_id=self.organization_id
+            )
             self._transition_to_closed_safely(ap_item_id)
             return ReversalOutcome(
                 status="expired",
@@ -382,7 +386,11 @@ class OverrideWindowService:
             logger.error(
                 "[OverrideWindow] reverse_bill raised unexpectedly: %s", exc,
             )
-            self.db.mark_override_window_failed(window_id, f"unexpected_error:{exc}")
+            self.db.mark_override_window_failed(
+                window_id,
+                f"unexpected_error:{exc}",
+                organization_id=self.organization_id,
+            )
             return ReversalOutcome(
                 status="failed",
                 window_id=window_id,
@@ -400,6 +408,7 @@ class OverrideWindowService:
                 reversal_reason=reason,
                 reversal_ref=(erp_result or {}).get("reversal_ref")
                 or (erp_result or {}).get("reference_id"),
+                organization_id=self.organization_id,
             )
             self._transition_ap_item_to_reversed(
                 ap_item_id=ap_item_id,
@@ -422,7 +431,11 @@ class OverrideWindowService:
             )
 
         if erp_status == "skipped":
-            self.db.mark_override_window_failed(window_id, "no_erp_connected")
+            self.db.mark_override_window_failed(
+                window_id,
+                "no_erp_connected",
+                organization_id=self.organization_id,
+            )
             return ReversalOutcome(
                 status="skipped",
                 window_id=window_id,
@@ -433,7 +446,11 @@ class OverrideWindowService:
 
         # Any other status is a hard failure at the ERP layer.
         failure_reason = (erp_result or {}).get("reason") or "erp_reversal_failed"
-        self.db.mark_override_window_failed(window_id, failure_reason)
+        self.db.mark_override_window_failed(
+            window_id,
+            failure_reason,
+            organization_id=self.organization_id,
+        )
         logger.warning(
             "[OverrideWindow] Reversal failed window=%s ap_item=%s erp_result=%s",
             window_id, ap_item_id, erp_result,
@@ -459,7 +476,9 @@ class OverrideWindowService:
         Returns True if the window was expired by this call, False if
         it was already in a terminal state.
         """
-        window = self.db.get_override_window(window_id)
+        window = self.db.get_override_window(
+            window_id, organization_id=self.organization_id
+        )
         if not window:
             return False
         if str(window.get("state") or "").lower() != "pending":
@@ -470,7 +489,9 @@ class OverrideWindowService:
         # race — in that case do NOT close the AP item or claim success
         # to the reaper (otherwise we'd overwrite the Reversed Slack card
         # with Expired and fire OVERRIDE_WINDOW_EXPIRED for a reversed item).
-        if not self.db.mark_override_window_expired(window_id):
+        if not self.db.mark_override_window_expired(
+            window_id, organization_id=self.organization_id
+        ):
             return False
         self._transition_to_closed_safely(window.get("ap_item_id"))
         logger.info(

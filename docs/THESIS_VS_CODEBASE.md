@@ -1,7 +1,7 @@
 # Thesis vs Codebase — Ship-readiness audit
 
 **Audit date:** 2026-04-21
-**Docs of truth:** `DESIGN_THESIS.md` · `AGENT_DESIGN_SPECIFICATION.md` · `CLEARLEDGR_OVERVIEW.md` · deck slides 2–3 (Problem + Solution)
+**Docs of truth:** `PLAN.md` · `README.md` · `docs/OPERATIONAL_MEMORY_OBJECT.md` · `docs/HOW_IT_WORKS.md`
 **Verdict:** Codebase faithfully implements the deck. Every load-bearing claim maps to a named primitive in a single logical home. Two real gaps to address before shipping the deck and one explicit thesis contradiction in the Gmail sidebar. Detail below.
 
 ---

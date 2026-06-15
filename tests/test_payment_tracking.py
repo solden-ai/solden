@@ -11,6 +11,8 @@ Validates:
 import os
 import tempfile
 
+import pytest
+
 
 
 # ---------------------------------------------------------------------------
@@ -155,6 +157,71 @@ def test_update_payment_rejects_disallowed_columns(tmp_path):
     result = db.update_payment(payment["id"], ap_item_id="EVIL", status="scheduled")
     assert result["status"] == "scheduled"
     assert result["ap_item_id"] == "AP-004"  # not overwritten
+
+
+def test_payment_id_reads_and_updates_can_be_org_scoped(tmp_path):
+    db = _fresh_db(tmp_path)
+    payment = db.create_payment({
+        "id": "PAY-scope-1",
+        "ap_item_id": "AP-scope-1",
+        "organization_id": "org-scope-a",
+        "vendor_name": "Scoped Vendor",
+        "amount": 200.0,
+    })
+
+    assert db.get_payment(payment["id"], organization_id="org-scope-a") is not None
+    assert db.get_payment(payment["id"], organization_id="org-scope-b") is None
+    assert db.get_payment_by_ap_item(
+        "AP-scope-1", organization_id="org-scope-b"
+    ) is None
+    assert db.update_payment(
+        payment["id"],
+        organization_id="org-scope-b",
+        status="completed",
+    ) is None
+
+    updated = db.update_payment(
+        payment["id"],
+        organization_id="org-scope-a",
+        status="scheduled",
+    )
+    assert updated["status"] == "scheduled"
+
+
+def test_payment_create_idempotency_and_ids_are_org_scoped(tmp_path):
+    db = _fresh_db(tmp_path)
+    first = db.create_payment({
+        "id": "PAY-collision-1",
+        "ap_item_id": "AP-collision-1",
+        "organization_id": "org-collision-a",
+        "vendor_name": "Org A",
+        "amount": 200.0,
+    })
+    same_org = db.create_payment({
+        "ap_item_id": "AP-collision-1",
+        "organization_id": "org-collision-a",
+        "vendor_name": "Org A duplicate",
+        "amount": 999.0,
+    })
+    other_org = db.create_payment({
+        "ap_item_id": "AP-collision-1",
+        "organization_id": "org-collision-b",
+        "vendor_name": "Org B",
+        "amount": 300.0,
+    })
+
+    assert same_org["id"] == first["id"]
+    assert other_org["id"] != first["id"]
+    assert other_org["organization_id"] == "org-collision-b"
+
+    with pytest.raises(ValueError, match="different organization"):
+        db.create_payment({
+            "id": "PAY-collision-1",
+            "ap_item_id": "AP-collision-2",
+            "organization_id": "org-collision-b",
+            "vendor_name": "Wrong org",
+            "amount": 1.0,
+        })
 
 
 def test_list_payments_by_org(tmp_path):

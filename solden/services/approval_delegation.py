@@ -241,7 +241,8 @@ class DelegationService:
                         self.db.db_reassign_pending_step_approvers(
                             chain_id,
                             [delegate_email],
-                            f"Auto-delegated from {delegator_email} (OOO)",
+                            comments=f"Auto-delegated from {delegator_email} (OOO)",
+                            organization_id=self.organization_id,
                         )
                         reassigned += 1
                         logger.info(

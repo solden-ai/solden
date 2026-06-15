@@ -175,7 +175,12 @@ def _dispatch_source_table(box_type: str) -> str:
     return bt.source_table if bt is not None else "boxes"
 
 
-def get_box(box_type: str, box_id: str, db: Any) -> Optional[Dict[str, Any]]:
+def get_box(
+    box_type: str,
+    box_id: str,
+    db: Any,
+    organization_id: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
     """Load one Box row by (type, id). Returns the underlying store row.
 
     Dispatches to the appropriate store method based on ``box_type``.
@@ -189,7 +194,7 @@ def get_box(box_type: str, box_id: str, db: Any) -> Optional[Dict[str, Any]]:
     if source_table == "bank_match_boxes":
         return db.get_bank_match(box_id)
     if source_table == "purchase_orders":
-        return db.get_purchase_order(box_id)
+        return db.get_purchase_order(box_id, organization_id=organization_id or "")
     if source_table == "boxes":
         return db.get_generic_box(box_type, box_id)
     raise NotImplementedError(
@@ -225,6 +230,7 @@ def update_box(
     state: Optional[str] = None,
     actor_id: Optional[str] = None,
     reason: Optional[str] = None,
+    organization_id: Optional[str] = None,
     **fields: Any,
 ) -> Any:
     """Update a Box of *box_type*. Dispatches to the per-type store writer.
@@ -269,7 +275,11 @@ def update_box(
                 f"got extra fields {sorted(fields)}"
             )
         return db.update_purchase_order_state(
-            box_id, state, actor_id=actor_id or "", reason=reason or ""
+            box_id,
+            state,
+            actor_id=actor_id or "",
+            reason=reason or "",
+            organization_id=organization_id or "",
         )
     if source_table == "boxes":
         if state is None:

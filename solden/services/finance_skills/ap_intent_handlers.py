@@ -979,7 +979,12 @@ class ReassignApprovalHandler(APIntentHandler):
         chain_id = str(metadata.get("approval_chain_id") or "").strip()
         if chain_id and hasattr(runtime.db, "db_reassign_pending_step_approvers"):
             try:
-                runtime.db.db_reassign_pending_step_approvers(chain_id, [assignee], comments=note)
+                runtime.db.db_reassign_pending_step_approvers(
+                    chain_id,
+                    [assignee],
+                    comments=note,
+                    organization_id=runtime.organization_id,
+                )
             except Exception as exc:
                 logger.error("Approval chain reassignment failed for chain %s: %s", chain_id, exc)
 
@@ -1937,7 +1942,10 @@ class ReverseInvoicePostHandler(APIntentHandler):
         window = None
         try:
             if context["ap_item_id"]:
-                window = runtime.db.get_override_window_by_ap_item_id(context["ap_item_id"])
+                window = runtime.db.get_override_window_by_ap_item_id(
+                    context["ap_item_id"],
+                    organization_id=runtime.organization_id,
+                )
         except Exception:
             window = None
         if not window:

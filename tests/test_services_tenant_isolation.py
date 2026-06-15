@@ -9,6 +9,7 @@ platform-mode sentinel) but rejects empty string explicitly passed
 from __future__ import annotations
 
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -26,6 +27,43 @@ def db():
     inst = db_module.get_db()
     inst.initialize()
     return inst
+
+
+def _approval_chain(
+    chain_id: str,
+    organization_id: str,
+    invoice_id: str,
+    *,
+    step_status: str = "pending",
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        chain_id=chain_id,
+        organization_id=organization_id,
+        invoice_id=invoice_id,
+        vendor_name="Approval Tenant Co",
+        amount=100.0,
+        gl_code=None,
+        department=None,
+        status="pending",
+        current_step=0,
+        requester_id="ap_agent",
+        requester_name="Solden AP Agent",
+        created_at=datetime.now(timezone.utc),
+        completed_at=None,
+        steps=[
+            SimpleNamespace(
+                step_id=f"step-{chain_id}",
+                level="L1",
+                approvers=["approver@example.com"],
+                approval_type="any",
+                status=step_status,
+                approved_by=None,
+                approved_at=None,
+                rejection_reason=None,
+                comments="",
+            )
+        ],
+    )
 
 
 # ─── 5b-1: agent_memory ─────────────────────────────────────────────
@@ -260,6 +298,401 @@ class TestPurchaseOrdersRowOrgGuard:
         })
         assert gr is not None
         assert gr.organization_id == "orgA"
+
+    def test_purchase_order_id_read_can_be_org_scoped(self, db):
+        db.create_purchase_order_box({
+            "po_id": "PO-org-scope-1",
+            "organization_id": "po-scope-org-a",
+            "po_number": "PO-org-scope-1",
+            "vendor_name": "Acme",
+            "total_amount": 25.0,
+            "requested_by": "buyer",
+        })
+
+        assert db.get_purchase_order(
+            "PO-org-scope-1", organization_id="po-scope-org-a"
+        )["vendor_name"] == "Acme"
+        assert db.get_purchase_order(
+            "PO-org-scope-1", organization_id="po-scope-org-b"
+        ) is None
+
+    def test_purchase_order_id_mutators_can_be_org_scoped(self, db):
+        db.create_purchase_order_box({
+            "po_id": "PO-org-scope-2",
+            "organization_id": "po-scope-org-a",
+            "po_number": "PO-org-scope-2",
+            "vendor_name": "Acme",
+            "total_amount": 25.0,
+            "requested_by": "buyer",
+        })
+
+        with pytest.raises(ValueError, match="not found"):
+            db.update_purchase_order_state(
+                "PO-org-scope-2",
+                "pending_approval",
+                actor_id="buyer",
+                organization_id="po-scope-org-b",
+            )
+        with pytest.raises(ValueError, match="not found"):
+            db.set_po_erp_id(
+                "PO-org-scope-2",
+                "ERP-PO-2",
+                actor_id="agent",
+                organization_id="po-scope-org-b",
+            )
+        with pytest.raises(ValueError, match="not found"):
+            db.amend_purchase_order_box(
+                "PO-org-scope-2",
+                {"vendor_name": "Wrong org"},
+                actor_id="buyer",
+                organization_id="po-scope-org-b",
+            )
+        with pytest.raises(ValueError, match="not found"):
+            db.record_po_receipt(
+                "PO-org-scope-2",
+                actor_id="receiver",
+                organization_id="po-scope-org-b",
+            )
+
+        db.update_purchase_order_state(
+            "PO-org-scope-2",
+            "pending_approval",
+            actor_id="buyer",
+            organization_id="po-scope-org-a",
+        )
+        assert db.get_purchase_order(
+            "PO-org-scope-2", organization_id="po-scope-org-a"
+        )["status"] == "pending_approval"
+
+    def test_receipts_and_matches_can_be_org_scoped(self, db):
+        db.save_goods_receipt({
+            "gr_id": "GR-org-scope-1",
+            "organization_id": "po-scope-org-a",
+            "gr_number": "GR-org-scope-1",
+            "po_id": "PO-org-scope-3",
+            "po_number": "PO-org-scope-3",
+            "vendor_name": "Acme",
+            "received_by": "receiver",
+            "line_items": [],
+        })
+        db.save_three_way_match({
+            "match_id": "MATCH-org-scope-1",
+            "organization_id": "po-scope-org-a",
+            "invoice_id": "INV-org-scope-1",
+            "po_id": "PO-org-scope-3",
+            "gr_id": "GR-org-scope-1",
+            "status": "matched",
+        })
+
+        assert db.get_goods_receipt(
+            "GR-org-scope-1", organization_id="po-scope-org-a"
+        ) is not None
+        assert db.get_goods_receipt(
+            "GR-org-scope-1", organization_id="po-scope-org-b"
+        ) is None
+        assert db.list_goods_receipts_for_po(
+            "PO-org-scope-3", organization_id="po-scope-org-b"
+        ) == []
+        assert db.get_three_way_match(
+            "MATCH-org-scope-1", organization_id="po-scope-org-a"
+        ) is not None
+        assert db.get_three_way_match(
+            "MATCH-org-scope-1", organization_id="po-scope-org-b"
+        ) is None
+        assert db.get_three_way_match_by_invoice(
+            "INV-org-scope-1", organization_id="po-scope-org-b"
+        ) is None
+
+    def test_purchase_order_family_upserts_refuse_cross_org_id_collision(self, db):
+        db.save_purchase_order({
+            "po_id": "PO-org-collision-1",
+            "organization_id": "po-collision-org-a",
+            "po_number": "PO-org-collision-1",
+            "vendor_name": "Acme",
+            "total_amount": 25.0,
+            "requested_by": "buyer",
+        })
+        db.save_goods_receipt({
+            "gr_id": "GR-org-collision-1",
+            "organization_id": "po-collision-org-a",
+            "gr_number": "GR-org-collision-1",
+            "po_id": "PO-org-collision-1",
+            "po_number": "PO-org-collision-1",
+            "vendor_name": "Acme",
+            "received_by": "receiver",
+            "line_items": [],
+        })
+        db.save_three_way_match({
+            "match_id": "MATCH-org-collision-1",
+            "organization_id": "po-collision-org-a",
+            "invoice_id": "INV-org-collision-1",
+            "po_id": "PO-org-collision-1",
+            "gr_id": "GR-org-collision-1",
+            "status": "matched",
+        })
+
+        with pytest.raises(ValueError, match="different organization"):
+            db.save_purchase_order({
+                "po_id": "PO-org-collision-1",
+                "organization_id": "po-collision-org-b",
+                "po_number": "PO-org-collision-1",
+                "vendor_name": "Wrong org",
+                "total_amount": 999.0,
+                "requested_by": "buyer",
+            })
+        with pytest.raises(ValueError, match="different organization"):
+            db.save_goods_receipt({
+                "gr_id": "GR-org-collision-1",
+                "organization_id": "po-collision-org-b",
+                "gr_number": "GR-org-collision-1",
+                "po_id": "PO-org-collision-1",
+                "po_number": "PO-org-collision-1",
+                "vendor_name": "Wrong org",
+                "received_by": "receiver",
+                "line_items": [],
+            })
+        with pytest.raises(ValueError, match="different organization"):
+            db.save_three_way_match({
+                "match_id": "MATCH-org-collision-1",
+                "organization_id": "po-collision-org-b",
+                "invoice_id": "INV-org-collision-1",
+                "po_id": "PO-org-collision-1",
+                "gr_id": "GR-org-collision-1",
+                "status": "matched",
+            })
+
+        assert db.get_purchase_order(
+            "PO-org-collision-1", organization_id="po-collision-org-a"
+        )["vendor_name"] == "Acme"
+        assert db.get_goods_receipt(
+            "GR-org-collision-1", organization_id="po-collision-org-a"
+        )["vendor_name"] == "Acme"
+        assert db.get_three_way_match(
+            "MATCH-org-collision-1", organization_id="po-collision-org-a"
+        )["status"] == "matched"
+
+
+class TestEntityStoreTenantIsolation:
+    def test_entity_id_reads_and_mutators_can_be_org_scoped(self, db):
+        entity = db.create_entity(
+            organization_id="entity-scope-org-a",
+            name="Europe Ltd",
+            code="EU",
+            currency="EUR",
+        )
+        entity_id = entity["id"]
+
+        assert db.get_entity(
+            entity_id, organization_id="entity-scope-org-a"
+        )["name"] == "Europe Ltd"
+        assert db.get_entity(
+            entity_id, organization_id="entity-scope-org-b"
+        ) is None
+
+        assert db.update_entity(
+            entity_id,
+            organization_id="entity-scope-org-b",
+            name="Wrong org",
+        ) is False
+        assert db.delete_entity(
+            entity_id, organization_id="entity-scope-org-b"
+        ) is False
+        assert db.get_entity(
+            entity_id, organization_id="entity-scope-org-a"
+        )["is_active"] is True
+
+        assert db.update_entity(
+            entity_id,
+            organization_id="entity-scope-org-a",
+            name="Europe Holdings",
+        ) is True
+        assert db.get_entity(
+            entity_id, organization_id="entity-scope-org-a"
+        )["name"] == "Europe Holdings"
+
+
+class TestUserEntityRolesTenantIsolation:
+    def test_user_entity_roles_can_be_org_scoped(self, db):
+        row = db.set_user_entity_role(
+            user_id="entity-role-user",
+            entity_id="ENT-role-scope-1",
+            organization_id="role-scope-org-a",
+            role="ap_manager",
+        )
+        assert row["organization_id"] == "role-scope-org-a"
+
+        assert db.get_user_entity_role(
+            "entity-role-user",
+            "ENT-role-scope-1",
+            organization_id="role-scope-org-a",
+        ) is not None
+        assert db.get_user_entity_role(
+            "entity-role-user",
+            "ENT-role-scope-1",
+            organization_id="role-scope-org-b",
+        ) is None
+        assert db.list_user_entity_roles(
+            "entity-role-user", organization_id="role-scope-org-b"
+        ) == []
+        assert db.delete_user_entity_role(
+            "entity-role-user",
+            "ENT-role-scope-1",
+            organization_id="role-scope-org-b",
+        ) is False
+
+    def test_user_entity_role_upserts_refuse_cross_org_collision(self, db):
+        db.set_user_entity_role(
+            user_id="entity-role-collision-user",
+            entity_id="ENT-role-collision-1",
+            organization_id="role-collision-org-a",
+            role="ap_manager",
+        )
+
+        with pytest.raises(ValueError, match="different organization"):
+            db.set_user_entity_role(
+                user_id="entity-role-collision-user",
+                entity_id="ENT-role-collision-1",
+                organization_id="role-collision-org-b",
+                role="viewer",
+            )
+        with pytest.raises(ValueError, match="different organization"):
+            db.replace_user_entity_roles(
+                user_id="entity-role-collision-user",
+                organization_id="role-collision-org-b",
+                assignments=[
+                    {"entity_id": "ENT-role-collision-1", "role": "viewer"},
+                ],
+            )
+
+        assert db.get_user_entity_role(
+            "entity-role-collision-user",
+            "ENT-role-collision-1",
+            organization_id="role-collision-org-a",
+        )["role"] == "ap_manager"
+
+
+class TestApprovalChainStoreTenantIsolation:
+    def test_approval_chain_reads_can_be_org_scoped(self, db):
+        chain = _approval_chain(
+            "chain-scope-1",
+            "approval-scope-org-a",
+            "invoice-scope-1",
+        )
+        db.db_create_approval_chain(chain)
+
+        assert db.db_get_approval_chain(
+            "chain-scope-1", organization_id="approval-scope-org-a"
+        )["invoice_id"] == "invoice-scope-1"
+        assert db.db_get_approval_chain(
+            "chain-scope-1", organization_id="approval-scope-org-b"
+        ) is None
+
+        assert db.db_get_chain_by_invoice(
+            "approval-scope-org-a", "invoice-scope-1"
+        )["id"] == "chain-scope-1"
+        assert db.db_get_chain_by_invoice(
+            "approval-scope-org-b", "invoice-scope-1"
+        ) is None
+
+    def test_approval_chain_mutators_can_be_org_scoped(self, db):
+        chain = _approval_chain(
+            "chain-scope-2",
+            "approval-scope-org-a",
+            "invoice-scope-2",
+        )
+        db.db_create_approval_chain(chain)
+
+        with pytest.raises(ValueError, match="not found"):
+            db.db_update_chain_step(
+                "chain-scope-2",
+                0,
+                "approved",
+                approved_by="wrong-org@example.com",
+                organization_id="approval-scope-org-b",
+            )
+        with pytest.raises(ValueError, match="not found"):
+            db.db_reassign_pending_step_approvers(
+                "chain-scope-2",
+                ["wrong-org@example.com"],
+                organization_id="approval-scope-org-b",
+            )
+        with pytest.raises(ValueError, match="not found"):
+            db.db_update_chain_status(
+                "chain-scope-2",
+                "approved",
+                1,
+                organization_id="approval-scope-org-b",
+            )
+
+        db.db_reassign_pending_step_approvers(
+            "chain-scope-2",
+            ["owner@example.com"],
+            comments="Scoped reassignment",
+            organization_id="approval-scope-org-a",
+        )
+        db.db_update_chain_step(
+            "chain-scope-2",
+            0,
+            "approved",
+            approved_by="owner@example.com",
+            organization_id="approval-scope-org-a",
+        )
+        db.db_update_chain_status(
+            "chain-scope-2",
+            "approved",
+            1,
+            organization_id="approval-scope-org-a",
+        )
+
+        scoped = db.db_get_approval_chain(
+            "chain-scope-2", organization_id="approval-scope-org-a"
+        )
+        assert scoped["status"] == "approved"
+        assert scoped["steps"][0]["status"] == "approved"
+        assert scoped["steps"][0]["approvers"] == '["owner@example.com"]'
+
+    def test_approval_chain_upsert_refuses_cross_org_id_collision(self, db):
+        db.db_create_approval_chain(
+            _approval_chain(
+                "chain-collision-1",
+                "approval-collision-org-a",
+                "invoice-collision-1",
+            )
+        )
+
+        with pytest.raises(ValueError, match="different organization"):
+            db.db_create_approval_chain(
+                _approval_chain(
+                    "chain-collision-1",
+                    "approval-collision-org-b",
+                    "invoice-collision-2",
+                )
+            )
+
+        assert db.db_get_approval_chain(
+            "chain-collision-1", organization_id="approval-collision-org-a"
+        )["invoice_id"] == "invoice-collision-1"
+
+    def test_pending_chain_listing_remains_org_scoped(self, db):
+        db.db_create_approval_chain(
+            _approval_chain(
+                "chain-list-org-a",
+                "approval-list-org-a",
+                "invoice-list-a",
+            )
+        )
+        db.db_create_approval_chain(
+            _approval_chain(
+                "chain-list-org-b",
+                "approval-list-org-b",
+                "invoice-list-b",
+            )
+        )
+
+        listed = db.db_list_pending_chains_for_user(
+            "approval-list-org-a", "approver@example.com"
+        )
+        assert [row["id"] for row in listed] == ["chain-list-org-a"]
 
 
 class TestSlackDeliveryRequiresOrg:

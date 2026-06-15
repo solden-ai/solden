@@ -1,19 +1,26 @@
-# Solden UI Surfaces (AP-first)
+# Solden UI Surfaces
 
-Solden is an embedded finance execution agent.
+Solden is operational memory for back-office work in progress, starting with AP.
 
-Current product priority is AP v1 with Gmail as the primary operator surface, Slack/Teams as approval surfaces, and ERP write-back via backend runtime contracts.
+Current product priority is AP v1 with embedded surfaces for intake, decisioning, ERP context, and workspace control. UI surfaces stay thin: they render the live work record, collect human decisions, and call backend runtime contracts.
 
-## Active AP v1 Surfaces
+## Active Surfaces
 
 | Surface | Type | Directory | Role |
 |---|---|---|---|
-| Gmail | Chrome Extension | `ui/gmail-extension/` | Primary AP operator workflow |
+| Workspace | Web app | `ui/web-app/` | Setup, records, exceptions, vendors, reports, audit, settings, and admin control |
+| Gmail | Chrome extension | `ui/gmail-extension/` | Most mature inbox current-record surface for AP |
+| Outlook | Office add-in | `ui/outlook-addin/` | Inbox current-record surface using the same AP memory contract |
 | Slack | App/Bot | `ui/slack/` | Approval and exception decisions |
+| Teams | Adaptive cards | backend-rendered | Approval and exception decisions |
+| NetSuite | SuiteApp | `integrations/netsuite-suiteapp/` | ERP-native AP context and actions |
+| SAP | Fiori extension | `integrations/sap-fiori-extension/` | ERP-native AP context and actions |
+| Sage Intacct | Platform Services panel | `integrations/sage-intacct-platform-app/` | ERP-native/context panel path, pending sandbox proof |
+| QuickBooks/Xero/Sage Accounting | Provider-neutral ERP memory API | backend-rendered | API-linked ERP context/actions when native embedding is unavailable |
 
 ## Legacy / Non-canonical Surfaces
 
-Legacy demo/operator surfaces have been removed from the AP-v1 repository scope.
+Legacy demo/operator surfaces have been removed from shipped scope or archived under `docs/legacy`.
 
 ## Gmail Extension (`ui/gmail-extension/`)
 
