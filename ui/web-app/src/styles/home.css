@@ -1725,6 +1725,30 @@
   margin: 0 0 8px;
   line-height: 1.45;
 }
+.cl-home-proposal-citation {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--cl-border);
+  border-radius: 6px;
+  background: var(--cl-bg);
+}
+.cl-home-proposal-citation span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--cl-ink-muted);
+}
+.cl-home-proposal-citation strong {
+  font-size: 13px;
+  color: var(--cl-navy);
+}
+.cl-home-proposal-citation small {
+  font-size: 12px;
+  color: var(--cl-ink-secondary);
+}
 .cl-home-proposal-actions {
   display: flex;
   gap: 8px;

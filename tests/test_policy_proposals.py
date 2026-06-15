@@ -14,6 +14,8 @@ from fastapi.testclient import TestClient
 from solden.core import database as db_module
 from solden.core.auth import get_current_user
 from solden.api import policy_proposals as proposal_routes
+from solden.services.agent_memory import AgentMemoryService
+from solden.services.ap_learning_loop import PRIVATE_OUTCOME_EVAL_TYPE
 from solden.services.policy_proposals import detect_policy_proposals
 
 
@@ -76,6 +78,42 @@ def _seed_history(db, vendor="Acme", org="orgPP", amount=900.0):
             (f"VIH-{vendor}-1", org, vendor, f"AP-pp-{vendor}-hist", amount, "EUR"),
         )
         conn.commit()
+
+
+def _seed_learning_citation(db, vendor="Acme", org="orgPP"):
+    memory = AgentMemoryService(org, db=db)
+    memory.record_eval_snapshot(
+        skill_id="ap_v1",
+        scope="organization",
+        snapshot_type=PRIVATE_OUTCOME_EVAL_TYPE,
+        payload={
+            "contract": "solden_ap_learning_loop.v1",
+            "scope": "ap_source_to_pay",
+            "summary": {
+                "total_items": 12,
+                "memory_event_coverage_rate": 1.0,
+                "agent_trace_rate": 0.92,
+                "evidence_link_rate": 0.83,
+                "outcome_traceability_rate": 0.75,
+            },
+            "release_gate": {"status": "needs_work"},
+        },
+    )
+    memory.record_pattern(
+        skill_id="ap_v1",
+        pattern_type="company_ap_blocker",
+        pattern_key="critical_field_low_confidence",
+        pattern={
+            "key": "critical_field_low_confidence",
+            "label": "Critical Field Low Confidence",
+            "count": 4,
+            "share": 0.33,
+            "affected_vendors": [{"vendor_name": vendor, "count": 2}],
+            "common_next_actions": [{"next_action": "Confirm the vendor and amount"}],
+            "example_item_ids": ["AP-EVAL-2", "AP-EVAL-1"],
+        },
+        confidence=0.86,
+    )
 
 
 # ─── Store ──────────────────────────────────────────────────────────
@@ -146,6 +184,36 @@ def test_detector_proposes_bounded_rule(db):
     assert rule["actions"] == [{"type": "auto_approve"}]
 
 
+def test_detector_attaches_learning_loop_citation(db):
+    _seed_behavior(db, vendor="LearningCo", approves=6)
+    _seed_history(db, vendor="LearningCo", amount=900.0)
+    _seed_learning_citation(db, vendor="LearningCo")
+
+    created = detect_policy_proposals(db, "orgPP")
+
+    proposal = next(p for p in created if p["vendor_name"] == "LearningCo")
+    citation = proposal["evidence"]["learning_citation"]
+    snapshot = citation["private_eval_snapshot"]
+    assert snapshot["snapshot_type"] == PRIVATE_OUTCOME_EVAL_TYPE
+    assert snapshot["total_items"] == 12
+    assert snapshot["release_gate_status"] == "needs_work"
+    pattern = citation["recurring_pattern"]
+    assert pattern["pattern_key"] == "critical_field_low_confidence"
+    assert pattern["vendor_count"] == 2
+    assert pattern["example_item_ids"] == ["AP-EVAL-2", "AP-EVAL-1"]
+
+    created_events = db.list_audit_events(
+        "orgPP", event_types=["policy_proposal_created"], limit=10
+    )
+    audit = next(
+        e for e in created_events
+        if e["payload_json"].get("proposal_id") == proposal["id"]
+    )
+    assert audit["payload_json"]["learning_citation"]["recurring_pattern"][
+        "vendor_count"
+    ] == 2
+
+
 def test_detector_cap_ignores_rejected_history(db):
     """A rejected high-amount invoice must not inflate the auto-approve bound."""
     _seed_behavior(db, vendor="TaintCo", approves=6)
@@ -206,6 +274,7 @@ def _pending_proposal(db, vendor="Acme"):
 
 
 def test_accept_lands_bounded_rule_visible_to_cascade(db, client_orgPP):
+    _seed_learning_citation(db, vendor="AcceptCo")
     proposal = _pending_proposal(db, vendor="AcceptCo")
     resp = client_orgPP.post(
         f"/api/workspace/policy-proposals/{proposal['id']}/accept",
@@ -219,10 +288,21 @@ def test_accept_lands_bounded_rule_visible_to_cascade(db, client_orgPP):
     rules = db.list_rules("orgPP", workflow="ap")
     mine = [r for r in rules if r["id"] == rule_id]
     assert mine and mine[0].get("created_by") == "op@example.com"
+    assert "Learning evidence" in mine[0].get("description")
     # Proposal marked accepted + linked.
     after = db.get_policy_proposal(organization_id="orgPP", proposal_id=proposal["id"])
     assert after["status"] == "accepted"
     assert after["applied_rule_id"] == rule_id
+    accepted_events = db.list_audit_events(
+        "orgPP", event_types=["policy_proposal_accepted"], limit=10
+    )
+    accepted_audit = next(
+        e for e in accepted_events
+        if e["payload_json"].get("proposal_id") == proposal["id"]
+    )
+    assert accepted_audit["payload_json"]["learning_citation"][
+        "private_eval_snapshot"
+    ]["total_items"] == 12
     # Re-accept -> 409, and claim-first means the 409 path created NOTHING.
     rules_before = len(db.list_rules("orgPP", workflow="ap"))
     assert client_orgPP.post(

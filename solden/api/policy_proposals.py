@@ -32,10 +32,51 @@ def _actor(user: Any) -> str:
     return str(getattr(user, "email", "") or getattr(user, "user_id", "") or "user")
 
 
+def _proposal_learning_citation(proposal: Dict[str, Any]) -> Dict[str, Any]:
+    evidence = proposal.get("evidence") if isinstance(proposal, dict) else {}
+    if not isinstance(evidence, dict):
+        return {}
+    citation = evidence.get("learning_citation")
+    return citation if isinstance(citation, dict) else {}
+
+
+def _learning_change_note(citation: Dict[str, Any]) -> str:
+    if not citation:
+        return ""
+    snapshot = (
+        citation.get("private_eval_snapshot")
+        if isinstance(citation.get("private_eval_snapshot"), dict) else {}
+    )
+    pattern = (
+        citation.get("recurring_pattern")
+        if isinstance(citation.get("recurring_pattern"), dict) else {}
+    )
+    parts = []
+    total_items = snapshot.get("total_items")
+    if total_items is not None:
+        parts.append(f"AP eval snapshot over {total_items} items")
+    gate = str(snapshot.get("release_gate_status") or "").replace("_", " ").strip()
+    if gate:
+        parts.append(f"release gate {gate}")
+    pattern_label = str(
+        pattern.get("label") or pattern.get("pattern_key") or ""
+    ).replace("_", " ").strip()
+    pattern_count = pattern.get("vendor_count") or pattern.get("count")
+    if pattern_label:
+        if pattern_count:
+            parts.append(f"{pattern_label} pattern across {pattern_count} cases")
+        else:
+            parts.append(f"{pattern_label} pattern")
+    if not parts:
+        return ""
+    return "Learning evidence: " + "; ".join(parts) + "."
+
+
 def _audit_resolution(
     db: Any, *, organization_id: str, event_type: str, actor: str,
     proposal: Dict[str, Any], reason: str, extra: Optional[Dict[str, Any]] = None,
 ) -> None:
+    learning_citation = _proposal_learning_citation(proposal)
     try:
         db.append_audit_event({
             "ap_item_id": "",
@@ -48,6 +89,10 @@ def _audit_resolution(
                 "proposal_id": proposal.get("id"),
                 "proposal_kind": proposal.get("proposal_kind"),
                 "vendor_name": proposal.get("vendor_name"),
+                **(
+                    {"learning_citation": learning_citation}
+                    if learning_citation else {}
+                ),
                 **(extra or {}),
             },
         })
@@ -119,6 +164,10 @@ def accept_policy_proposal(
 
     rule_payload["organization_id"] = organization_id
     rule_payload["created_by"] = actor
+    change_note = _learning_change_note(_proposal_learning_citation(proposal))
+    if change_note:
+        rule_payload["change_note"] = change_note
+        rule_payload["description"] = rule_payload.get("description") or change_note
     try:
         rule = db.create_rule(rule_payload)
     except Exception as exc:  # noqa: BLE001

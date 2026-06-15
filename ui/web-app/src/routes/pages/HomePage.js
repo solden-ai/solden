@@ -1100,6 +1100,51 @@ function safeMetric(value) {
 // the deliberate non-rule — its reason is required because "we handle
 // these case-by-case because..." is itself knowledge worth keeping.
 
+function policyLearningCitation(proposal) {
+  const evidence = proposal && typeof proposal.evidence === 'object' ? proposal.evidence : null;
+  const citation = evidence && typeof evidence.learning_citation === 'object'
+    ? evidence.learning_citation
+    : null;
+  return citation;
+}
+
+function policyLabel(value) {
+  return String(value || '')
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatPolicyLearningCitation(citation) {
+  if (!citation) return null;
+  const snapshot = citation.private_eval_snapshot &&
+    typeof citation.private_eval_snapshot === 'object'
+    ? citation.private_eval_snapshot
+    : {};
+  const pattern = citation.recurring_pattern &&
+    typeof citation.recurring_pattern === 'object'
+    ? citation.recurring_pattern
+    : {};
+
+  const snapshotParts = ['AP snapshot'];
+  const totalItems = safeMetric(snapshot.total_items);
+  if (totalItems !== null) snapshotParts.push(`${totalItems} items`);
+  const gate = String(snapshot.release_gate_status || '').replace(/_/g, ' ').trim();
+  if (gate) snapshotParts.push(`gate ${gate}`);
+
+  const patternLabel = policyLabel(pattern.label || pattern.pattern_key);
+  const patternCount = safeMetric(pattern.vendor_count ?? pattern.count);
+  const patternLine = patternLabel
+    ? `Pattern: ${patternLabel}${patternCount !== null ? ` · ${patternCount} cases` : ''}`
+    : '';
+
+  return {
+    snapshotLine: snapshotParts.length > 1 ? snapshotParts.join(' · ') : '',
+    patternLine,
+  };
+}
+
 function PolicyProposalsPanel() {
   const [proposals, setProposals] = useState(null);
   const [busyId, setBusyId] = useState(null);
@@ -1137,9 +1182,22 @@ function PolicyProposalsPanel() {
         <span class="cl-home-proposals-count">${proposals.length}</span>
       </header>
       <ul class="cl-home-proposals-list">
-        ${proposals.map((p) => html`
+        ${proposals.map((p) => {
+          const citation = formatPolicyLearningCitation(policyLearningCitation(p));
+          return html`
           <li key=${p.id} class="cl-home-proposal">
             <p class="cl-home-proposal-summary">${p.behavior_summary}</p>
+            ${citation ? html`
+              <div class="cl-home-proposal-citation">
+                <span>Learning evidence</span>
+                ${citation.snapshotLine ? html`
+                  <strong>${citation.snapshotLine}</strong>
+                ` : null}
+                ${citation.patternLine ? html`
+                  <small>${citation.patternLine}</small>
+                ` : null}
+              </div>
+            ` : null}
             ${declining?.id === p.id ? html`
               <div class="cl-home-proposal-decline">
                 <textarea
@@ -1169,7 +1227,8 @@ function PolicyProposalsPanel() {
                 </button>
               </div>
             `}
-          </li>`)}
+          </li>`;
+        })}
       </ul>
     </section>
   `;

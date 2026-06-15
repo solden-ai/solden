@@ -194,6 +194,18 @@ describe('HomePage', () => {
           proposals: posts.length === 0 ? [{
             id: 'PROP-1',
             behavior_summary: "You've approved Acme's invoices 6 times after the agent escalated them. Make it a standing rule?",
+            evidence: {
+              learning_citation: {
+                private_eval_snapshot: {
+                  total_items: 12,
+                  release_gate_status: 'needs_work',
+                },
+                recurring_pattern: {
+                  label: 'Critical Field Low Confidence',
+                  vendor_count: 2,
+                },
+              },
+            },
             status: 'pending',
           }] : [],
           count: posts.length === 0 ? 1 : 0,
@@ -210,6 +222,9 @@ describe('HomePage', () => {
 
     await screen.findByText('Solden noticed a pattern');
     expect(screen.getByText(/approved Acme's invoices 6 times/)).toBeTruthy();
+    expect(screen.getByText('Learning evidence')).toBeTruthy();
+    expect(screen.getByText('AP snapshot · 12 items · gate needs work')).toBeTruthy();
+    expect(screen.getByText('Pattern: Critical Field Low Confidence · 2 cases')).toBeTruthy();
     // Decline path requires a reason before the button enables.
     (await screen.findByText('Decline')).click();
     const recordBtn = await screen.findByText('Record non-rule');
