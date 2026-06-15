@@ -68,6 +68,14 @@ const agentPerformancePayload = {
     recurring_blockers: [
       { key: 'critical_field_low_confidence', label: 'critical_field_low_confidence', count: 2 },
     ],
+    agent_improvement_candidates: [
+      {
+        key: 'route_agent_decisions_through_memory',
+        title: 'Route AP agent decisions through agent memory',
+        evidence: { failed_case_count: 1, sample_size: 3 },
+        metric: { name: 'agent_trace_rate', value: 0.667, target: 0.8 },
+      },
+    ],
   },
 };
 
@@ -241,5 +249,8 @@ describe('ReportsPage', () => {
     expect(screen.getByText('Top recurring blocker')).toBeTruthy();
     expect(screen.getByText('Critical Field Low Confidence')).toBeTruthy();
     expect(screen.getByText('2 records')).toBeTruthy();
+    expect(screen.getByText('Top improvement')).toBeTruthy();
+    expect(screen.getByText('Route AP agent decisions through agent memory')).toBeTruthy();
+    expect(screen.getByText('1 of 3 records · agent trace rate 66.7%')).toBeTruthy();
   });
 });

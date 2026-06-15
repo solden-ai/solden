@@ -4083,6 +4083,11 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+.cl-reports-learning-insights {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
 .cl-reports-learning-blocker {
   display: flex;
   flex-direction: column;

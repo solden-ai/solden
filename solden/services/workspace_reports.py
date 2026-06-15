@@ -401,6 +401,10 @@ def _agent_performance_learning_loop(
     recurring_blockers = recurring_blockers if isinstance(recurring_blockers, list) else []
     recommended_actions = company_learning.get("recommended_actions")
     recommended_actions = recommended_actions if isinstance(recommended_actions, list) else []
+    improvement_candidates = company_learning.get("agent_improvement_candidates")
+    improvement_candidates = (
+        improvement_candidates if isinstance(improvement_candidates, list) else []
+    )
     surface_mix = company_learning.get("surface_mix")
     surface_mix = surface_mix if isinstance(surface_mix, list) else []
     summary = snapshot.get("summary")
@@ -415,6 +419,7 @@ def _agent_performance_learning_loop(
         "release_gate": snapshot.get("release_gate") or {},
         "recurring_blockers": recurring_blockers[:5],
         "recommended_actions": recommended_actions[:5],
+        "agent_improvement_candidates": improvement_candidates[:5],
         "surface_mix": surface_mix[:8],
     }
 

@@ -333,6 +333,10 @@ function LearningLoopPanel({ learningLoop }) {
     ? learningLoop.recurring_blockers
     : [];
   const topBlocker = blockers[0] || null;
+  const improvementCandidates = Array.isArray(learningLoop.agent_improvement_candidates)
+    ? learningLoop.agent_improvement_candidates
+    : [];
+  const topImprovement = improvementCandidates[0] || null;
 
   const metrics = [
     {
@@ -385,11 +389,22 @@ function LearningLoopPanel({ learningLoop }) {
         `)}
       </div>
 
-      ${topBlocker ? html`
-        <div class="cl-reports-learning-blocker">
-          <span>Top recurring blocker</span>
-          <strong>${formatExceptionText(topBlocker.label || topBlocker.key)}</strong>
-          <small>${formatInteger(topBlocker.count || 0)} record${Number(topBlocker.count || 0) === 1 ? '' : 's'}</small>
+      ${topBlocker || topImprovement ? html`
+        <div class="cl-reports-learning-insights">
+          ${topBlocker ? html`
+            <div class="cl-reports-learning-blocker">
+              <span>Top recurring blocker</span>
+              <strong>${formatExceptionText(topBlocker.label || topBlocker.key)}</strong>
+              <small>${formatInteger(topBlocker.count || 0)} record${Number(topBlocker.count || 0) === 1 ? '' : 's'}</small>
+            </div>
+          ` : null}
+          ${topImprovement ? html`
+            <div class="cl-reports-learning-blocker">
+              <span>Top improvement</span>
+              <strong>${topImprovement.title || formatExceptionText(topImprovement.key)}</strong>
+              <small>${formatImprovementEvidence(topImprovement)}</small>
+            </div>
+          ` : null}
         </div>
       ` : null}
     </section>
@@ -739,6 +754,21 @@ function formatExceptionText(value) {
   return label
     .replace(/\bPo\b/g, 'PO')
     .replace(/\bErp\b/g, 'ERP');
+}
+
+function formatImprovementEvidence(candidate) {
+  const evidence = candidate?.evidence || {};
+  const metric = candidate?.metric || {};
+  const failed = Number(evidence.failed_case_count || 0);
+  const sample = Number(evidence.sample_size || 0);
+  const metricName = humanizeSnakeText(metric.name || 'learning signal').toLowerCase();
+  const metricValue = metric.value === null || metric.value === undefined
+    ? '—'
+    : pct(metric.value);
+  if (sample > 0) {
+    return `${formatInteger(failed)} of ${formatInteger(sample)} records · ${metricName} ${metricValue}`;
+  }
+  return `${metricName} ${metricValue}`;
 }
 
 function isReportEmpty(reportId, summary, series, breakdown) {

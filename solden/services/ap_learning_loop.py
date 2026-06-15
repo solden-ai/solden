@@ -423,6 +423,8 @@ class APLearningLoopService:
                     "ap_item_id": item_id,
                     "vendor_name": vendor_name or None,
                     "state": item.get("state"),
+                    "is_terminal": is_terminal,
+                    "has_terminal_outcome": bool(outcome),
                     "outcome_type": outcome.get("outcome_type") if outcome else None,
                     "outcome_data": _outcome_data(outcome or {}),
                     "memory_completeness_score": memory_score,
@@ -441,6 +443,15 @@ class APLearningLoopService:
             item_count=item_count,
         )
         vendor_patterns = self._summarize_vendor_patterns(vendor_buckets)
+        agent_improvement_candidates = self._agent_improvement_candidates(
+            eval_cases=eval_cases,
+            recurring_blockers=recurring_blockers,
+            item_count=item_count,
+            memory_event_rate=_ratio(memory_event_items, item_count),
+            agent_trace_rate=_ratio(agent_trace_items, item_count),
+            evidence_link_rate=_ratio(evidence_linked_items, item_count),
+            outcome_traceability_rate=_ratio(terminal_with_outcome, terminal_items),
+        )
         company_learning = {
             "recurring_blockers": recurring_blockers,
             "vendor_patterns": vendor_patterns,
@@ -457,6 +468,7 @@ class APLearningLoopService:
                 agent_trace_rate=_ratio(agent_trace_items, item_count),
                 evidence_link_rate=_ratio(evidence_linked_items, item_count),
             ),
+            "agent_improvement_candidates": agent_improvement_candidates,
         }
         summary = {
             "total_items": item_count,
@@ -507,6 +519,18 @@ class APLearningLoopService:
                 pattern_key=_text(blocker.get("key")),
                 pattern=blocker,
                 confidence=float(blocker.get("confidence") or 0.5),
+            )
+        for candidate in snapshot.get("company_learning", {}).get(
+            "agent_improvement_candidates", []
+        ):
+            if not isinstance(candidate, dict):
+                continue
+            self.agent_memory.record_pattern(
+                skill_id="ap_v1",
+                pattern_type="agent_improvement_candidate",
+                pattern_key=_text(candidate.get("key")),
+                pattern=candidate,
+                confidence=float(candidate.get("confidence") or 0.5),
             )
 
     @staticmethod
@@ -603,6 +627,228 @@ class APLearningLoopService:
                 "AP learning loop is producing traceable memory, evidence, and outcomes; monitor drift weekly."
             )
         return actions
+
+    @staticmethod
+    def _candidate_priority(
+        *,
+        rate: Optional[float] = None,
+        share: Optional[float] = None,
+    ) -> str:
+        value = rate if rate is not None else share
+        if value is None:
+            return "medium"
+        if value < 0.8:
+            return "high"
+        if value < 0.95:
+            return "medium"
+        return "low"
+
+    @staticmethod
+    def _case_refs(cases: Iterable[Dict[str, Any]], *, limit: int = 5) -> List[str]:
+        refs: List[str] = []
+        for case in cases:
+            ref = _text(case.get("ap_item_id"))
+            if ref and ref not in refs:
+                refs.append(ref)
+            if len(refs) >= limit:
+                break
+        return refs
+
+    @classmethod
+    def _agent_improvement_candidates(
+        cls,
+        *,
+        eval_cases: List[Dict[str, Any]],
+        recurring_blockers: List[Dict[str, Any]],
+        item_count: int,
+        memory_event_rate: float,
+        agent_trace_rate: float,
+        evidence_link_rate: float,
+        outcome_traceability_rate: float,
+    ) -> List[Dict[str, Any]]:
+        candidates: List[Dict[str, Any]] = []
+
+        def add_candidate(
+            *,
+            key: str,
+            title: str,
+            target_runtime_path: str,
+            action_type: str,
+            metric_name: str,
+            metric_value: float,
+            target_value: float,
+            failed_cases: List[Dict[str, Any]],
+            rationale: str,
+            priority: Optional[str] = None,
+            extra_evidence: Optional[Dict[str, Any]] = None,
+        ) -> None:
+            failed_count = len(failed_cases)
+            if failed_count <= 0:
+                return
+            evidence = {
+                "failed_case_count": failed_count,
+                "sample_size": item_count,
+                "example_item_ids": cls._case_refs(failed_cases),
+                **dict(extra_evidence or {}),
+            }
+            confidence = min(0.95, round(0.45 + _ratio(failed_count, item_count), 4))
+            candidates.append(
+                {
+                    "key": key,
+                    "title": title,
+                    "priority": priority or cls._candidate_priority(rate=metric_value),
+                    "target_runtime_path": target_runtime_path,
+                    "action_type": action_type,
+                    "metric": {
+                        "name": metric_name,
+                        "value": metric_value,
+                        "target": target_value,
+                    },
+                    "rationale": rationale,
+                    "evidence": evidence,
+                    "confidence": confidence,
+                    "source": {
+                        "contract": LEARNING_LOOP_CONTRACT,
+                        "snapshot_type": PRIVATE_OUTCOME_EVAL_TYPE,
+                    },
+                }
+            )
+
+        missing_memory = [case for case in eval_cases if not case.get("has_memory_events")]
+        add_candidate(
+            key="instrument_missing_memory_events",
+            title="Instrument AP state changes with operational memory",
+            target_runtime_path="memory_events.commit_memory_event",
+            action_type="instrument_runtime_path",
+            metric_name="memory_event_coverage_rate",
+            metric_value=memory_event_rate,
+            target_value=0.95,
+            failed_cases=missing_memory,
+            rationale=(
+                "Some AP records changed state without a canonical memory event, "
+                "so later evals cannot replay the operational context."
+            ),
+        )
+
+        missing_agent_trace = [case for case in eval_cases if not case.get("has_agent_trace")]
+        add_candidate(
+            key="route_agent_decisions_through_memory",
+            title="Route AP agent decisions through agent memory",
+            target_runtime_path="AgentMemoryService.record_outcome",
+            action_type="instrument_agent_trace",
+            metric_name="agent_trace_rate",
+            metric_value=agent_trace_rate,
+            target_value=0.8,
+            failed_cases=missing_agent_trace,
+            rationale=(
+                "Some AP records have no replayable agent trace, so the agent "
+                "cannot improve from those decisions."
+            ),
+        )
+
+        missing_evidence = [case for case in eval_cases if not case.get("has_evidence")]
+        add_candidate(
+            key="require_evidence_for_state_changes",
+            title="Require evidence before AP state changes count as learning",
+            target_runtime_path="operational_memory.evidence",
+            action_type="enforce_evidence_contract",
+            metric_name="evidence_link_rate",
+            metric_value=evidence_link_rate,
+            target_value=0.9,
+            failed_cases=missing_evidence,
+            rationale=(
+                "Some AP records have no source evidence attached, so outcome "
+                "quality cannot be verified safely."
+            ),
+        )
+
+        terminal_without_outcome = [
+            case for case in eval_cases
+            if case.get("is_terminal") and not case.get("has_terminal_outcome")
+        ]
+        add_candidate(
+            key="record_terminal_outcomes",
+            title="Record terminal AP outcomes for closed work",
+            target_runtime_path="box_outcomes.record_box_outcome",
+            action_type="record_outcome_trace",
+            metric_name="outcome_traceability_rate",
+            metric_value=outcome_traceability_rate,
+            target_value=0.9,
+            failed_cases=terminal_without_outcome,
+            rationale=(
+                "Some terminal AP records have no outcome row, so private evals "
+                "cannot compare agent action against business result."
+            ),
+        )
+
+        missing_fields: Counter = Counter()
+        for case in eval_cases:
+            for field in case.get("missing_context") or []:
+                missing_fields[_text(field)] += 1
+        if missing_fields:
+            field, count = missing_fields.most_common(1)[0]
+            failed_cases = [
+                case for case in eval_cases
+                if field in set(case.get("missing_context") or [])
+            ]
+            add_candidate(
+                key=f"fill_memory_context_{_slug(field)}",
+                title=f"Fill missing memory context: {field.replace('_', ' ')}",
+                target_runtime_path="build_box_operational_memory_record",
+                action_type="complete_memory_projection",
+                metric_name="memory_context_field_coverage",
+                metric_value=round(1 - _ratio(count, item_count), 4),
+                target_value=0.95,
+                failed_cases=failed_cases,
+                rationale=(
+                    "A required operational-memory field is repeatedly missing "
+                    "from the AP memory record."
+                ),
+                extra_evidence={"missing_field": field},
+            )
+
+        if recurring_blockers:
+            top = recurring_blockers[0]
+            examples = [
+                {"ap_item_id": item_id}
+                for item_id in (top.get("example_item_ids") or [])
+                if item_id
+            ]
+            add_candidate(
+                key=f"reduce_recurring_blocker_{_slug(top.get('key'))}",
+                title=(
+                    "Tune AP intake around "
+                    f"{_text(top.get('label') or top.get('key')).replace('_', ' ')}"
+                ),
+                target_runtime_path="finance_runtime_invoice_processing",
+                action_type="tune_intake_policy",
+                metric_name="recurring_blocker_share",
+                metric_value=float(top.get("share") or 0),
+                target_value=0.05,
+                failed_cases=examples,
+                rationale=(
+                    "The same blocker is recurring across AP work, which is the "
+                    "strongest current signal for where the agent should improve."
+                ),
+                priority="high" if float(top.get("share") or 0) >= 0.2 else "medium",
+                extra_evidence={
+                    "blocker_key": top.get("key"),
+                    "blocker_label": top.get("label"),
+                    "blocker_count": top.get("count"),
+                    "affected_vendors": top.get("affected_vendors") or [],
+                    "common_next_actions": top.get("common_next_actions") or [],
+                },
+            )
+
+        priority_rank = {"high": 0, "medium": 1, "low": 2}
+        candidates.sort(
+            key=lambda item: (
+                priority_rank.get(_text(item.get("priority")), 9),
+                -int(item.get("evidence", {}).get("failed_case_count") or 0),
+                _text(item.get("key")),
+            )
+        )
+        return candidates[:10]
 
     @staticmethod
     def _release_gate(summary: Dict[str, Any]) -> Dict[str, Any]:

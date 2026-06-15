@@ -317,6 +317,13 @@ class TestAgentPerformance:
         assert out["learning_loop"]["recurring_blockers"][0]["key"] == (
             "critical_field_low_confidence"
         )
+        candidates = out["learning_loop"]["agent_improvement_candidates"]
+        assert candidates
+        assert candidates[0]["source"]["snapshot_type"] == PRIVATE_OUTCOME_EVAL_TYPE
+        assert any(
+            candidate["key"] == "reduce_recurring_blocker_critical_field_low_confidence"
+            for candidate in candidates
+        )
         assert AgentMemoryService("orgA", db=db).latest_eval_snapshot(
             skill_id="ap_v1",
             scope="organization",

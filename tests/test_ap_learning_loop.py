@@ -158,6 +158,23 @@ def test_ap_learning_loop_creates_private_eval_and_company_patterns(tmp_path, mo
     assert snapshot["company_learning"]["vendor_patterns"][0]["vendor_name"] == (
         "Google Cloud EMEA Limited"
     )
+    candidates = snapshot["company_learning"]["agent_improvement_candidates"]
+    trace_candidate = next(
+        candidate for candidate in candidates
+        if candidate["key"] == "route_agent_decisions_through_memory"
+    )
+    assert trace_candidate["metric"] == {
+        "name": "agent_trace_rate",
+        "value": 0.5,
+        "target": 0.8,
+    }
+    assert trace_candidate["evidence"]["example_item_ids"] == ["AP-LEARN-2"]
+    blocker_candidate = next(
+        candidate for candidate in candidates
+        if candidate["key"] == "reduce_recurring_blocker_critical_field_low_confidence"
+    )
+    assert blocker_candidate["action_type"] == "tune_intake_policy"
+    assert blocker_candidate["evidence"]["blocker_count"] == 2
 
     persisted = agent_memory.latest_eval_snapshot(
         skill_id="ap_v1",
@@ -172,6 +189,13 @@ def test_ap_learning_loop_creates_private_eval_and_company_patterns(tmp_path, mo
     )
     assert patterns
     assert patterns[0]["pattern"]["example_item_ids"] == ["AP-LEARN-2", "AP-LEARN-1"]
+    improvements = agent_memory.list_patterns(
+        skill_id="ap_v1",
+        pattern_type="agent_improvement_candidate",
+        pattern_key_prefix="route_agent_decisions_through_memory",
+    )
+    assert improvements
+    assert improvements[0]["pattern"]["evidence"]["failed_case_count"] == 1
 
 
 def test_ap_learning_loop_flags_missing_learning_signal(tmp_path, monkeypatch):
@@ -195,6 +219,13 @@ def test_ap_learning_loop_flags_missing_learning_signal(tmp_path, monkeypatch):
     assert "why_it_is_happening" in case["missing_context"]
     assert "evidence" in case["missing_context"]
     assert snapshot["release_gate"]["checks"]["memory_event_coverage"] is False
+    candidates = snapshot["company_learning"]["agent_improvement_candidates"]
+    memory_candidate = next(
+        candidate for candidate in candidates
+        if candidate["key"] == "instrument_missing_memory_events"
+    )
+    assert memory_candidate["priority"] == "high"
+    assert memory_candidate["evidence"]["example_item_ids"] == ["AP-LEARN-GAP"]
     assert (
         "Route every AP agent decision through AgentMemoryService"
         in snapshot["company_learning"]["recommended_actions"][0]

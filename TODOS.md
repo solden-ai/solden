@@ -133,18 +133,23 @@ Evidence:
 - `tests/test_ap_learning_loop.py`
 
 Gap:
-The AP wedge now has a backend private-eval snapshot over real AP items, memory events, agent traces, and Box outcomes. It also records org-level `company_ap_blocker` patterns. The next gap is to schedule this against pilot data, expose the result in workspace reporting, and use the recurring patterns to tune agent behavior.
+The AP wedge now has a backend private-eval snapshot over real AP items, memory events, agent traces, and Box outcomes. It also records org-level `company_ap_blocker` patterns. The remaining product requirement is to keep this loop running in release validation and customer pilots so trace-derived improvements continue to produce evidence.
+
+Status:
+Code-complete in the current branch; keep under release validation.
 
 Progress:
 - 2026-06-15: Added `APLearningLoopService.evaluate_private_outcomes()`, persisted `ap_private_outcome_eval` org snapshots through `AgentMemoryService`, and recorded recurring company-level AP blocker patterns.
 - 2026-06-15: Added tests proving traceable AP outcomes produce org-level learning snapshots and that missing memory/agent/evidence signals are flagged instead of scored as healthy.
 - 2026-06-15: Exposed read-only AP learning-loop metrics inside the workspace Agent outcomes report: memory coverage, evidence linkage, agent traces, outcome traceability, memory completeness, release gate, and recurring blocker.
 - 2026-06-15: Scheduled AP learning-loop evals through Celery Beat and the in-process background fallback; empty orgs are skipped and pilot orgs can be scoped with `SOLDEN_AP_LEARNING_LOOP_ORG_IDS`.
+- 2026-06-15: Policy proposals now cite the private-eval snapshot and recurring pattern that justified the proposed rule; accepted rules and proposal audit events carry the same citation.
+- 2026-06-15: AP private-eval snapshots now emit structured agent-improvement candidates from failed real-trace cases, persist them as `agent_improvement_candidate` memory patterns, and expose the top candidate in workspace Reports.
 
-Done when:
-- The AP learning-loop eval runs on a schedule for pilot workspaces.
-- Workspace reports show memory event coverage, evidence linkage, agent trace coverage, terminal outcome traceability, and recurring company-level blockers.
-- Agent policy changes can cite the private-eval snapshot or recurring pattern that justified the change.
+Acceptance covered:
+- Scheduled AP learning-loop evals for pilot workspaces.
+- Workspace Reports show memory event coverage, evidence linkage, agent trace coverage, terminal outcome traceability, recurring company-level blockers, and the top trace-derived improvement candidate.
+- Agent policy changes cite the private-eval snapshot or recurring pattern that justified the change.
 
 ### Semantic dimension and entity graph completion
 
