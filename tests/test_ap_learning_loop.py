@@ -340,6 +340,8 @@ def test_scheduled_ap_learning_loop_persists_non_empty_orgs_only(
     assert result["processed"] == 1
     assert result["skipped"] == 1
     assert result["errors"] == 0
+    assert result["policy_proposals_created"] == 0
+    assert result["policy_proposal_errors"] == 0
     assert result["per_org"] == [
         {
             "organization_id": ORG_ID,
@@ -347,6 +349,7 @@ def test_scheduled_ap_learning_loop_persists_non_empty_orgs_only(
             "total_items": 1,
             "release_gate": "needs_work",
             "snapshot_type": PRIVATE_OUTCOME_EVAL_TYPE,
+            "policy_proposals_created": 0,
         },
         {
             "organization_id": EMPTY_ORG_ID,
@@ -367,6 +370,49 @@ def test_scheduled_ap_learning_loop_persists_non_empty_orgs_only(
         snapshot_type=PRIVATE_OUTCOME_EVAL_TYPE,
     )
     assert empty_snapshot == {}
+
+
+def test_scheduled_ap_learning_loop_runs_policy_proposal_detection_after_persist(
+    tmp_path,
+    monkeypatch,
+):
+    db = _db(tmp_path, monkeypatch)
+    item = _seed_item(
+        db,
+        item_id="AP-SCHEDULED-PROPOSAL-1",
+        vendor="Google Cloud EMEA Limited",
+        state="needs_info",
+    )
+    _capture_field_review_memory(
+        db,
+        item_id=item["id"],
+        vendor=item["vendor_name"],
+        actor_type="agent",
+    )
+    calls = []
+
+    def _fake_detect_policy_proposals(runtime_db, organization_id):
+        calls.append((runtime_db, organization_id))
+        return [{"id": "proposal-1"}]
+
+    monkeypatch.setattr(
+        "solden.services.policy_proposals.detect_policy_proposals",
+        _fake_detect_policy_proposals,
+    )
+
+    result = run_scheduled_ap_learning_loop_evals(
+        organization_ids=[ORG_ID, EMPTY_ORG_ID],
+        db=db,
+        limit=100,
+        window_days=30,
+    )
+
+    assert result["status"] == "ok"
+    assert result["processed"] == 1
+    assert result["policy_proposals_created"] == 1
+    assert result["policy_proposal_errors"] == 0
+    assert result["per_org"][0]["policy_proposals_created"] == 1
+    assert calls == [(db, ORG_ID)]
 
 
 def test_scheduled_ap_learning_loop_env_orgs_override_passed_orgs(

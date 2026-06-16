@@ -1132,6 +1132,7 @@ def run_scheduled_ap_learning_loop_evals(
     limit: Optional[int] = None,
     window_days: Optional[int] = None,
     now: Optional[datetime] = None,
+    detect_policy_proposals_after_eval: bool = True,
 ) -> Dict[str, Any]:
     """Run and persist AP private-outcome evals for pilot workspaces.
 
@@ -1194,6 +1195,8 @@ def run_scheduled_ap_learning_loop_evals(
         "processed": 0,
         "skipped": 0,
         "errors": 0,
+        "policy_proposals_created": 0,
+        "policy_proposal_errors": 0,
         "window_days": resolved_window_days,
         "limit": resolved_limit,
         "from": from_ts,
@@ -1222,16 +1225,36 @@ def run_scheduled_ap_learning_loop_evals(
                 )
                 continue
             service.persist_snapshot(snapshot)
+            proposal_count = 0
+            proposal_error = None
+            if detect_policy_proposals_after_eval:
+                try:
+                    from solden.services.policy_proposals import detect_policy_proposals
+
+                    proposals = detect_policy_proposals(runtime_db, org_id)
+                    proposal_count = len(proposals or [])
+                    summary["policy_proposals_created"] += proposal_count
+                except Exception as proposal_exc:  # noqa: BLE001
+                    proposal_error = str(proposal_exc)
+                    summary["policy_proposal_errors"] += 1
+                    summary["status"] = "partial_error"
+                    logger.warning(
+                        "[ap_learning_loop] policy-proposal refresh failed org=%s: %s",
+                        org_id,
+                        proposal_exc,
+                    )
             summary["processed"] += 1
-            summary["per_org"].append(
-                {
-                    "organization_id": org_id,
-                    "status": "persisted",
-                    "total_items": total_items,
-                    "release_gate": snapshot.get("release_gate", {}).get("status"),
-                    "snapshot_type": PRIVATE_OUTCOME_EVAL_TYPE,
-                }
-            )
+            per_org_row = {
+                "organization_id": org_id,
+                "status": "persisted",
+                "total_items": total_items,
+                "release_gate": snapshot.get("release_gate", {}).get("status"),
+                "snapshot_type": PRIVATE_OUTCOME_EVAL_TYPE,
+                "policy_proposals_created": proposal_count,
+            }
+            if proposal_error:
+                per_org_row["policy_proposal_error"] = proposal_error
+            summary["per_org"].append(per_org_row)
         except Exception as exc:
             summary["errors"] += 1
             summary["status"] = "partial_error"
