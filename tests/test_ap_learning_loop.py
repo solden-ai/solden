@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from solden.core.database import SoldenDB
+from solden.services.agent_improvement_register import (
+    IMPROVEMENT_REGISTER_PATTERN_TYPE,
+    IMPROVEMENT_REGISTER_SNAPSHOT_TYPE,
+)
 from solden.services.agent_memory import AgentMemoryService
 from solden.services.ap_learning_loop import (
     COMPANY_LEARNING_SNAPSHOT_TYPE,
@@ -225,6 +229,18 @@ def test_ap_learning_loop_creates_private_eval_and_company_patterns(tmp_path, mo
     assert company_patterns[0]["pattern"]["next_learning_objective"]["key"] == (
         "reduce_recurring_blocker_critical_field_low_confidence"
     )
+    register_snapshot = agent_memory.latest_eval_snapshot(
+        skill_id="ap_v1",
+        scope="organization",
+        snapshot_type=IMPROVEMENT_REGISTER_SNAPSHOT_TYPE,
+    )
+    assert register_snapshot["payload"]["summary"]["open"] >= 1
+    register_patterns = agent_memory.list_patterns(
+        skill_id="ap_v1",
+        pattern_type=IMPROVEMENT_REGISTER_PATTERN_TYPE,
+    )
+    assert register_patterns
+    assert register_patterns[0]["pattern"]["status"] in {"open", "watching"}
 
 
 def test_ap_learning_loop_flags_missing_learning_signal(tmp_path, monkeypatch):

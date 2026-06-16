@@ -336,7 +336,12 @@ function LearningLoopPanel({ learningLoop }) {
   const improvementCandidates = Array.isArray(learningLoop.agent_improvement_candidates)
     ? learningLoop.agent_improvement_candidates
     : [];
-  const topImprovement = improvementCandidates[0] || null;
+  const improvementRegister = learningLoop.agent_improvement_register || {};
+  const registerItems = Array.isArray(improvementRegister.items)
+    ? improvementRegister.items
+    : [];
+  const topImprovement = registerItems[0] || improvementCandidates[0] || null;
+  const registerSummary = improvementRegister.summary || {};
   const companyProfile = learningLoop.company_memory_profile || {};
   const maturity = companyProfile.maturity || {};
   const nextObjective = companyProfile.next_learning_objective || {};
@@ -421,7 +426,10 @@ function LearningLoopPanel({ learningLoop }) {
             <div class="cl-reports-learning-blocker">
               <span>Top improvement</span>
               <strong>${topImprovement.title || formatExceptionText(topImprovement.key)}</strong>
-              <small>${formatImprovementEvidence(topImprovement)}</small>
+              <small>
+                ${formatImprovementEvidence(topImprovement)}
+                ${registerSummary.open != null ? ` · ${formatInteger(registerSummary.open)} open` : ''}
+              </small>
             </div>
           ` : null}
         </div>

@@ -8,6 +8,7 @@ can be scored against.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from collections import Counter, defaultdict
@@ -25,6 +26,8 @@ PRIVATE_OUTCOME_EVAL_TYPE = "ap_private_outcome_eval"
 COMPANY_LEARNING_SNAPSHOT_TYPE = "company_learning_snapshot"
 DEFAULT_SCHEDULED_EVAL_WINDOW_DAYS = 30
 DEFAULT_SCHEDULED_EVAL_LIMIT = 1000
+
+logger = logging.getLogger(__name__)
 
 _TERMINAL_STATES = {
     "closed",
@@ -554,6 +557,26 @@ class APLearningLoopService:
                 pattern_key=_text(candidate.get("key")),
                 pattern=candidate,
                 confidence=float(candidate.get("confidence") or 0.5),
+            )
+        try:
+            from solden.services.agent_improvement_register import (
+                build_agent_improvement_register,
+            )
+
+            build_agent_improvement_register(
+                self.organization_id,
+                db=self.db,
+                agent_memory=self.agent_memory,
+                snapshot=snapshot,
+                persist=True,
+            )
+        except Exception as exc:
+            # Improvement-register persistence must not block the private eval
+            # snapshot itself. The next scheduled eval can rebuild it.
+            logger.warning(
+                "[ap_learning_loop] improvement register persistence failed org=%s: %s",
+                self.organization_id,
+                exc,
             )
 
     @staticmethod

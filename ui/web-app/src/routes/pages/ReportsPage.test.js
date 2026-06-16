@@ -76,6 +76,25 @@ const agentPerformancePayload = {
         metric: { name: 'agent_trace_rate', value: 0.667, target: 0.8 },
       },
     ],
+    agent_improvement_register: {
+      summary: { total: 1, open: 1, resolved: 0, high_priority_open: 1 },
+      items: [
+        {
+          key: 'route_agent_decisions_through_memory',
+          title: 'Route AP agent decisions through agent memory',
+          status: 'open',
+          priority: 'high',
+          evidence: { failed_case_count: 1, sample_size: 3 },
+          metric: {
+            name: 'agent_trace_rate',
+            value: 0.667,
+            target: 0.8,
+            direction: 'higher_is_better',
+            target_met: false,
+          },
+        },
+      ],
+    },
     company_memory_profile: {
       headline: 'AP company learning is forming from real traces',
       maturity: { level: 'forming', score: 0.8 },
@@ -263,6 +282,6 @@ describe('ReportsPage', () => {
     expect(screen.getByText('Next objective')).toBeTruthy();
     expect(screen.getByText('Top improvement')).toBeTruthy();
     expect(screen.getAllByText('Route AP agent decisions through agent memory').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('1 of 3 records · agent trace rate 66.7%')).toBeTruthy();
+    expect(screen.getByText('1 of 3 records · agent trace rate 66.7% · 1 open')).toBeTruthy();
   });
 });

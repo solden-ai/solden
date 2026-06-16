@@ -405,6 +405,26 @@ def _agent_performance_learning_loop(
     improvement_candidates = (
         improvement_candidates if isinstance(improvement_candidates, list) else []
     )
+    try:
+        from solden.services.agent_improvement_register import build_agent_improvement_register
+
+        improvement_register = build_agent_improvement_register(
+            organization_id,
+            db=db,
+            snapshot=snapshot,
+            persist=False,
+            limit=10,
+        )
+    except Exception as exc:
+        logger.warning(
+            "[reports.agent_performance.improvement_register] unavailable for org=%s: %s",
+            organization_id,
+            exc,
+        )
+        improvement_register = {
+            "status": "unavailable",
+            "reason": "improvement_register_unavailable",
+        }
     company_profile = company_learning.get("company_memory_profile")
     company_profile = company_profile if isinstance(company_profile, dict) else {}
     surface_mix = company_learning.get("surface_mix")
@@ -422,6 +442,7 @@ def _agent_performance_learning_loop(
         "recurring_blockers": recurring_blockers[:5],
         "recommended_actions": recommended_actions[:5],
         "agent_improvement_candidates": improvement_candidates[:5],
+        "agent_improvement_register": improvement_register,
         "company_memory_profile": company_profile,
         "surface_mix": surface_mix[:8],
     }

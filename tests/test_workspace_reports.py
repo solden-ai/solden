@@ -336,6 +336,10 @@ class TestAgentPerformance:
             candidate["key"] == "reduce_recurring_blocker_critical_field_low_confidence"
             for candidate in candidates
         )
+        register = out["learning_loop"]["agent_improvement_register"]
+        assert register["contract"] == "solden_agent_improvement_register.v1"
+        assert register["summary"]["open"] >= 1
+        assert register["items"][0]["metric"]["target_met"] is False
         assert AgentMemoryService("orgA", db=db).latest_eval_snapshot(
             skill_id="ap_v1",
             scope="organization",
