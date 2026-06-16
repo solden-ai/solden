@@ -232,6 +232,7 @@ class APFinanceSkill(FinanceSkill):
                 "idempotency_integrity_min": 0.99,
                 "operator_acceptance_min": 0.8,
                 "enabled_connector_readiness_min": 1.0,
+                "erp_evidence_coverage_min": 1.0,
             },
         },
     )

@@ -39,6 +39,8 @@ def test_connector_readiness_passes_for_enabled_connector_with_completed_checkli
     assert summary["enabled_connectors_total"] == 1
     assert summary["enabled_connectors_ready"] == 1
     assert summary["enabled_readiness_rate"] == 1.0
+    assert summary["enabled_erp_evidence_backed"] == 0
+    assert summary["enabled_erp_evidence_coverage_rate"] == 0.0
     assert quickbooks["ready"] is True
     assert quickbooks["readiness_status"] == "ready"
     assert quickbooks["evidence_contract"]["customer_evidence_status"] == "missing"
@@ -120,6 +122,7 @@ def test_connector_readiness_requires_evidence_in_strict_ga_scope(tmp_path, monk
     assert summary["status"] == "blocked"
     assert summary["sandbox_evidence_observed"] == 1
     assert summary["customer_evidence_observed"] == 0
+    assert summary["enabled_erp_evidence_coverage_rate"] == 0.0
     assert "quickbooks:evidence_incomplete" in summary["blocked_reasons"]
     assert quickbooks["ready"] is False
     assert quickbooks["readiness_status"] == "pending_evidence"
@@ -165,5 +168,7 @@ def test_connector_readiness_passes_strict_ga_scope_when_evidence_is_complete(tm
     assert summary["status"] == "pass"
     assert summary["evidence_backed_connectors"] == 1
     assert summary["evidence_ready_for_ga_claims"] is True
+    assert summary["enabled_erp_evidence_backed"] == 1
+    assert summary["enabled_erp_evidence_coverage_rate"] == 1.0
     assert quickbooks["ready"] is True
     assert quickbooks["evidence_contract"]["evidence_status"] == "evidence_backed"

@@ -169,13 +169,34 @@ def evaluate_erp_connector_readiness(
         if enabled_total > 0
         else None
     )
+    configured_rows = [row for row in rows if row["connection_present"]]
+    configured_total = len(configured_connectors)
+    configured_evidence_backed = sum(
+        1
+        for row in configured_rows
+        if bool(_safe_dict(row.get("evidence_contract")).get("ready_for_claim"))
+    )
+    enabled_evidence_backed = sum(
+        1
+        for row in enabled_rows
+        if bool(_safe_dict(row.get("evidence_contract")).get("ready_for_claim"))
+    )
+    configured_erp_evidence_coverage_rate = (
+        round(configured_evidence_backed / max(1, configured_total), 4)
+        if configured_total > 0
+        else None
+    )
+    enabled_erp_evidence_coverage_rate = (
+        round(enabled_evidence_backed / max(1, enabled_total), 4)
+        if enabled_total > 0
+        else None
+    )
 
     ga_total = len(rows)
     ga_ready = sum(1 for row in rows if row["ready"])
     ga_readiness_rate = round(ga_ready / max(1, ga_total), 4) if ga_total > 0 else None
     evidence_summary = _safe_dict(evidence_contract.get("summary"))
 
-    configured_total = len(configured_connectors)
     if require_full_ga_scope:
         overall_status = "pass" if ga_total > 0 and ga_ready == ga_total else "blocked"
     elif configured_total == 0:
@@ -197,6 +218,10 @@ def evaluate_erp_connector_readiness(
             "enabled_connectors_total": enabled_total,
             "enabled_connectors_ready": enabled_ready,
             "enabled_readiness_rate": enabled_readiness_rate,
+            "configured_erp_evidence_backed": configured_evidence_backed,
+            "configured_erp_evidence_coverage_rate": configured_erp_evidence_coverage_rate,
+            "enabled_erp_evidence_backed": enabled_evidence_backed,
+            "enabled_erp_evidence_coverage_rate": enabled_erp_evidence_coverage_rate,
             "ga_scope_total": ga_total,
             "ga_scope_ready": ga_ready,
             "ga_scope_readiness_rate": ga_readiness_rate,

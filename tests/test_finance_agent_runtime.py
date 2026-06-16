@@ -345,7 +345,56 @@ def test_skill_readiness_reports_gate_statuses_for_ap_skill():
         "not_verifiable",
         "not_configured",
     }
+    assert gate_map["erp_evidence_coverage"]["status"] in {
+        "pass",
+        "fail",
+        "not_verifiable",
+        "not_configured",
+    }
     assert "metrics" in readiness
+
+
+def test_skill_readiness_blocks_when_enabled_erp_lacks_evidence_proof():
+    db = _FakeDB()
+    runtime = _runtime(db)
+
+    connector_report = {
+        "summary": {
+            "status": "pass",
+            "enabled_readiness_rate": 1.0,
+            "enabled_connectors_total": 1,
+            "enabled_connectors_ready": 1,
+            "enabled_erp_evidence_coverage_rate": 0.0,
+            "enabled_erp_evidence_backed": 0,
+            "configured_erp_evidence_coverage_rate": 0.0,
+            "configured_erp_evidence_backed": 0,
+            "configured_connectors": ["quickbooks"],
+            "blocked_reasons": [],
+        },
+        "connectors": [
+            {
+                "erp_type": "quickbooks",
+                "ready": True,
+                "evidence_contract": {"ready_for_claim": False},
+            }
+        ],
+    }
+
+    with (
+        patch("solden.services.erp_readiness.evaluate_erp_connector_readiness", return_value=connector_report),
+        patch.object(runtime, "_collect_transition_integrity", return_value={"legal_transition_correctness": 1.0}),
+        patch.object(runtime, "_collect_idempotency_integrity", return_value={"integrity_rate": 1.0}),
+        patch.object(runtime, "_collect_audit_coverage", return_value={"coverage_rate": 1.0}),
+    ):
+        readiness = runtime.skill_readiness("ap_v1")
+
+    gate_map = {gate["gate"]: gate for gate in readiness["gates"]}
+    assert gate_map["enabled_connector_readiness"]["status"] == "pass"
+    assert gate_map["erp_evidence_coverage"]["status"] == "fail"
+    assert readiness["status"] == "blocked"
+    assert "erp_evidence_coverage" in readiness["blocked_reasons"]
+    connector_metrics = readiness["metrics"]["connector_readiness"]
+    assert connector_metrics["enabled_erp_evidence_coverage_rate"] == 0.0
 
 
 def test_ap_autonomy_policy_manual_when_readiness_gates_fail():

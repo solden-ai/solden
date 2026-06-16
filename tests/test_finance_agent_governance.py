@@ -40,6 +40,7 @@ class _GovernanceRuntime:
                 {"gate": "audit_coverage", "status": "pass"},
                 {"gate": "operator_acceptance", "status": "pass"},
                 {"gate": "enabled_connector_readiness", "status": "pass"},
+                {"gate": "erp_evidence_coverage", "status": "pass"},
             ],
             "metrics": {},
             "window_hours": window_hours,

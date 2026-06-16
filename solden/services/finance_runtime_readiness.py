@@ -60,8 +60,12 @@ def collect_connector_readiness(runtime: Any) -> Dict[str, Any]:
     return {
         "status": str(summary.get("status") or "not_verifiable"),
         "enabled_readiness_rate": summary.get("enabled_readiness_rate"),
+        "enabled_erp_evidence_coverage_rate": summary.get("enabled_erp_evidence_coverage_rate"),
         "enabled_connectors_total": int(summary.get("enabled_connectors_total") or 0),
         "enabled_connectors_ready": int(summary.get("enabled_connectors_ready") or 0),
+        "enabled_erp_evidence_backed": int(summary.get("enabled_erp_evidence_backed") or 0),
+        "configured_erp_evidence_coverage_rate": summary.get("configured_erp_evidence_coverage_rate"),
+        "configured_erp_evidence_backed": int(summary.get("configured_erp_evidence_backed") or 0),
         "configured_connectors": list(summary.get("configured_connectors") or []),
         "blocked_reasons": list(summary.get("blocked_reasons") or []),
         "report": report,
@@ -169,6 +173,7 @@ def build_skill_readiness(runtime: Any, skill_id: str, *, window_hours: int = 16
     audit_target = gate_targets.get("audit_coverage_min")
     operator_target = gate_targets.get("operator_acceptance_min")
     connector_target = gate_targets.get("enabled_connector_readiness_min")
+    erp_evidence_target = gate_targets.get("erp_evidence_coverage_min")
 
     gates = [
         evaluate_gate(
@@ -200,6 +205,12 @@ def build_skill_readiness(runtime: Any, skill_id: str, *, window_hours: int = 16
             target=safe_float(connector_target) if connector_target is not None else None,
             measured=connector_readiness.get("enabled_readiness_rate"),
             metric_name="connector_readiness.enabled_readiness_rate",
+        ),
+        evaluate_gate(
+            gate_key="erp_evidence_coverage",
+            target=safe_float(erp_evidence_target) if erp_evidence_target is not None else None,
+            measured=connector_readiness.get("enabled_erp_evidence_coverage_rate"),
+            metric_name="connector_readiness.enabled_erp_evidence_coverage_rate",
         ),
     ]
 
