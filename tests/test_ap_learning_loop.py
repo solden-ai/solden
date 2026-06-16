@@ -12,6 +12,11 @@ from solden.services.ap_learning_loop import (
     APLearningLoopService,
     run_scheduled_ap_learning_loop_evals,
 )
+from solden.services.company_learning_contract import (
+    COMPANY_LEARNING_CONTRACT_SNAPSHOT_TYPE,
+    COMPANY_LEARNING_OBJECTIVE_PATTERN_TYPE,
+    COMPANY_LEARNING_SCOPE_PATTERN_TYPE,
+)
 from solden.services.memory_events import commit_memory_event
 
 
@@ -241,11 +246,33 @@ def test_ap_learning_loop_creates_private_eval_and_company_patterns(tmp_path, mo
     )
     assert register_patterns
     assert register_patterns[0]["pattern"]["status"] in {"open", "watching"}
+    company_contract = agent_memory.latest_eval_snapshot(
+        skill_id="ap_v1",
+        scope="organization",
+        snapshot_type=COMPANY_LEARNING_CONTRACT_SNAPSHOT_TYPE,
+    )
+    assert company_contract["payload"]["summary"]["organization_learning_status"] == (
+        "forming"
+    )
+    assert company_contract["payload"]["summary"]["workflow_coverage_status"] == (
+        "ap_wedge_only"
+    )
+    company_scope_patterns = agent_memory.list_patterns(
+        skill_id="ap_v1",
+        pattern_type=COMPANY_LEARNING_SCOPE_PATTERN_TYPE,
+    )
+    assert company_scope_patterns
+    assert company_scope_patterns[0]["pattern_key"] == "ap_source_to_pay"
+    company_objective_patterns = agent_memory.list_patterns(
+        skill_id="ap_v1",
+        pattern_type=COMPANY_LEARNING_OBJECTIVE_PATTERN_TYPE,
+    )
+    assert company_objective_patterns
 
 
 def test_ap_learning_loop_flags_missing_learning_signal(tmp_path, monkeypatch):
     db = _db(tmp_path, monkeypatch)
-    item = _seed_item(
+    _seed_item(
         db,
         item_id="AP-LEARN-GAP",
         vendor="Acme Supplies",

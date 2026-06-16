@@ -563,18 +563,30 @@ class APLearningLoopService:
                 build_agent_improvement_register,
             )
 
-            build_agent_improvement_register(
+            improvement_register = build_agent_improvement_register(
                 self.organization_id,
                 db=self.db,
                 agent_memory=self.agent_memory,
                 snapshot=snapshot,
                 persist=True,
             )
+            from solden.services.company_learning_contract import (
+                build_company_learning_contract,
+            )
+
+            build_company_learning_contract(
+                self.organization_id,
+                db=self.db,
+                agent_memory=self.agent_memory,
+                snapshot=snapshot,
+                improvement_register=improvement_register,
+                persist=True,
+            )
         except Exception as exc:
-            # Improvement-register persistence must not block the private eval
-            # snapshot itself. The next scheduled eval can rebuild it.
+            # Derived learning artifacts must not block the private eval
+            # snapshot itself. The next scheduled eval can rebuild them.
             logger.warning(
-                "[ap_learning_loop] improvement register persistence failed org=%s: %s",
+                "[ap_learning_loop] derived learning persistence failed org=%s: %s",
                 self.organization_id,
                 exc,
             )

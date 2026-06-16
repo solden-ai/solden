@@ -425,6 +425,28 @@ def _agent_performance_learning_loop(
             "status": "unavailable",
             "reason": "improvement_register_unavailable",
         }
+    try:
+        from solden.services.company_learning_contract import (
+            build_company_learning_contract,
+        )
+
+        company_learning_contract = build_company_learning_contract(
+            organization_id,
+            db=db,
+            snapshot=snapshot,
+            improvement_register=improvement_register,
+            persist=False,
+        )
+    except Exception as exc:
+        logger.warning(
+            "[reports.agent_performance.company_learning_contract] unavailable for org=%s: %s",
+            organization_id,
+            exc,
+        )
+        company_learning_contract = {
+            "status": "unavailable",
+            "reason": "company_learning_contract_unavailable",
+        }
     company_profile = company_learning.get("company_memory_profile")
     company_profile = company_profile if isinstance(company_profile, dict) else {}
     surface_mix = company_learning.get("surface_mix")
@@ -443,6 +465,7 @@ def _agent_performance_learning_loop(
         "recommended_actions": recommended_actions[:5],
         "agent_improvement_candidates": improvement_candidates[:5],
         "agent_improvement_register": improvement_register,
+        "company_learning_contract": company_learning_contract,
         "company_memory_profile": company_profile,
         "surface_mix": surface_mix[:8],
     }
@@ -481,6 +504,13 @@ def _with_learning_loop_summary(
     objective = company_profile.get("next_learning_objective")
     objective = objective if isinstance(objective, dict) else {}
     enriched["company_next_learning_objective"] = objective.get("title")
+    company_contract = learning_loop.get("company_learning_contract")
+    company_contract = company_contract if isinstance(company_contract, dict) else {}
+    contract_summary = company_contract.get("summary")
+    contract_summary = contract_summary if isinstance(contract_summary, dict) else {}
+    enriched["company_learning_status"] = contract_summary.get("organization_learning_status")
+    enriched["company_learning_ready_for_claim"] = contract_summary.get("ready_for_company_learning_claim")
+    enriched["company_learning_workflow_coverage"] = contract_summary.get("workflow_coverage_status")
     if blockers and isinstance(blockers[0], dict):
         top = blockers[0]
         enriched["top_learning_blocker"] = top.get("label") or top.get("key")

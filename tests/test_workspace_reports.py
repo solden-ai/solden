@@ -318,6 +318,9 @@ class TestAgentPerformance:
         assert out["summary"]["company_learning_level"] == "forming"
         assert out["summary"]["company_learning_score"] == 0.8
         assert out["summary"]["company_next_learning_objective"]
+        assert out["summary"]["company_learning_status"] == "forming"
+        assert out["summary"]["company_learning_ready_for_claim"] is True
+        assert out["summary"]["company_learning_workflow_coverage"] == "ap_wedge_only"
         assert out["summary"]["top_learning_blocker"] == "critical_field_low_confidence"
         assert out["summary"]["top_learning_blocker_count"] == 1
         assert out["learning_loop"]["recurring_blockers"][0]["key"] == (
@@ -340,6 +343,11 @@ class TestAgentPerformance:
         assert register["contract"] == "solden_agent_improvement_register.v1"
         assert register["summary"]["open"] >= 1
         assert register["items"][0]["metric"]["target_met"] is False
+        company_contract = out["learning_loop"]["company_learning_contract"]
+        assert company_contract["contract"] == "solden_company_learning_contract.v1"
+        assert company_contract["summary"]["organization_learning_status"] == "forming"
+        assert company_contract["workflow_coverage"]["status"] == "ap_wedge_only"
+        assert company_contract["scopes"][0]["signal_chain"]
         assert AgentMemoryService("orgA", db=db).latest_eval_snapshot(
             skill_id="ap_v1",
             scope="organization",
