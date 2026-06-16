@@ -26,13 +26,13 @@ from types import SimpleNamespace
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, EmailStr, Field
 
 from solden.core.auth import TokenData, get_current_user
 from solden.core.database import get_db
 from solden.core.http_client import get_http_client
-from solden.core.org_utils import require_org, assert_org_id
+from solden.core.org_utils import require_org
 
 logger = logging.getLogger(__name__)
 
@@ -188,6 +188,12 @@ def _evaluate_erp_connector_readiness(*args, **kwargs):
     from solden.services.erp_readiness import evaluate_erp_connector_readiness
 
     return evaluate_erp_connector_readiness(*args, **kwargs)
+
+
+def _build_learning_loop_health(*args, **kwargs):
+    from solden.services.learning_loop_health import build_learning_loop_health
+
+    return build_learning_loop_health(*args, **kwargs)
 
 
 def _get_learning_calibration_service(*args, **kwargs):
@@ -5263,6 +5269,7 @@ def get_admin_health(
     health["launch_controls"] = {
         "rollback_controls": rollback_controls,
         "ga_readiness_summary": _summarize_ga_readiness(evidence, rollback_controls=rollback_controls),
+        "learning_loop_health": _build_learning_loop_health(org_id, db=get_db()),
     }
     return health
 

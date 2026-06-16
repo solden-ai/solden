@@ -67,6 +67,9 @@ def test_admin_rollback_controls_put_get_and_health_projection(client, db):
     health_body = health.json()
     assert health_body["launch_controls"]["rollback_controls"]["erp_posting_disabled"] is True
     assert "ga_readiness_summary" in health_body["launch_controls"]
+    learning_loop_health = health_body["launch_controls"]["learning_loop_health"]
+    assert learning_loop_health["contract"] == "solden_learning_loop_health.v1"
+    assert "private_eval" in learning_loop_health["components"]
 
 
 def test_admin_ga_readiness_put_get_summary(client, db):
