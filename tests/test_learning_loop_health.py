@@ -115,3 +115,36 @@ def test_learning_loop_health_reports_stale_when_scheduler_has_not_refreshed_sna
     assert health["summary"]["observed_components"] == 3
     assert health["summary"]["fresh_components"] == 0
     assert health["components"]["company_learning_contract"]["fresh"] is False
+
+
+def test_learning_loop_health_surfaces_pending_policy_proposals(
+    tmp_path,
+    monkeypatch,
+):
+    db = _db(tmp_path, monkeypatch)
+    db.create_policy_proposal(
+        organization_id=ORG_ID,
+        proposal_kind="vendor_standing_approval",
+        vendor_name="Google Cloud EMEA Limited",
+        behavior_summary="Learning loop found a repeatable approval pattern.",
+        evidence={
+            "learning_citation": {
+                "source": "ap_learning_loop",
+                "private_eval_snapshot": {"release_gate_status": "needs_work"},
+            }
+        },
+        proposed_rule={
+            "rule_type": "vendor_amount",
+            "vendor_name": "Google Cloud EMEA Limited",
+            "amount_cap": 1200,
+            "currency": "USD",
+        },
+    )
+
+    health = build_learning_loop_health(ORG_ID, db=db)
+
+    assert health["summary"]["pending_policy_proposals"] == 1
+    assert health["summary"]["pending_policy_proposals_available"] is True
+    proposal = health["pending_policy_proposals"]["proposals"][0]
+    assert proposal["proposal_kind"] == "vendor_standing_approval"
+    assert proposal["has_learning_citation"] is True

@@ -50,6 +50,48 @@ def _snapshot_health(snapshot: Dict[str, Any], *, now: datetime, max_age_hours: 
     }
 
 
+def _pending_policy_proposals(
+    db: SoldenDB,
+    organization_id: str,
+    *,
+    limit: int = 25,
+) -> Dict[str, Any]:
+    if not hasattr(db, "list_policy_proposals"):
+        return {"available": False, "count": 0, "proposals": []}
+    try:
+        proposals = db.list_policy_proposals(
+            organization_id=organization_id,
+            status="pending",
+            limit=limit,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "available": False,
+            "count": 0,
+            "proposals": [],
+            "error": str(exc),
+        }
+    compact = []
+    for proposal in proposals[:limit]:
+        if not isinstance(proposal, dict):
+            continue
+        evidence = proposal.get("evidence") if isinstance(proposal.get("evidence"), dict) else {}
+        compact.append(
+            {
+                "id": proposal.get("id"),
+                "proposal_kind": proposal.get("proposal_kind"),
+                "vendor_name": proposal.get("vendor_name"),
+                "created_at": proposal.get("created_at"),
+                "has_learning_citation": bool(evidence.get("learning_citation")),
+            }
+        )
+    return {
+        "available": True,
+        "count": len(compact),
+        "proposals": compact,
+    }
+
+
 def build_learning_loop_health(
     organization_id: str,
     *,
@@ -110,6 +152,7 @@ def build_learning_loop_health(
     private_payload = private_payload if isinstance(private_payload, dict) else {}
     release_gate = private_payload.get("release_gate")
     release_gate = release_gate if isinstance(release_gate, dict) else {}
+    pending_policy_proposals = _pending_policy_proposals(runtime_db, org_id)
 
     if observed_count == 0:
         status = "no_signal"
@@ -135,5 +178,8 @@ def build_learning_loop_health(
             "ready_for_company_learning_claim": company_summary.get("ready_for_company_learning_claim"),
             "next_learning_objective": company_summary.get("next_learning_objective_title"),
             "workflow_coverage_status": company_summary.get("workflow_coverage_status"),
+            "pending_policy_proposals": pending_policy_proposals.get("count", 0),
+            "pending_policy_proposals_available": pending_policy_proposals.get("available", False),
         },
+        "pending_policy_proposals": pending_policy_proposals,
     }
