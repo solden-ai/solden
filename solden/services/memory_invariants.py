@@ -56,6 +56,24 @@ PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
         ),
     ),
     MemoryCoverageSurface(
+        name="runtime_outcome_learning_trace",
+        path="solden/services/finance_agent_runtime.py",
+        required_tokens=(
+            "_sync_learning_feedback",
+            "record_action_outcome",
+            "record_runtime_outcome",
+        ),
+    ),
+    MemoryCoverageSurface(
+        name="agent_loop_outcome_learning_trace",
+        path="solden/services/finance_agent_loop.py",
+        required_tokens=(
+            "_record_runtime_outcome_trace",
+            "record_action_outcome",
+            "record_runtime_outcome",
+        ),
+    ),
+    MemoryCoverageSurface(
         name="audit_event_funnel",
         path="solden/core/stores/ap_store.py",
         required_tokens=(
@@ -251,6 +269,46 @@ PRIMARY_MEMORY_EXECUTION_COVERAGE: Tuple[MemoryExecutionCoverage, ...] = (
         required_test_tokens=(
             "test_runtime_intent_memory_event_attaches_company_learning_context",
             "company_learning_context",
+        ),
+    ),
+    MemoryExecutionCoverage(
+        name="runtime_outcome_learning_trace",
+        source_path="solden/services/finance_agent_runtime.py",
+        test_path="tests/test_finance_agent_runtime.py",
+        required_source_tokens=(
+            "_sync_learning_feedback",
+            "record_runtime_outcome",
+        ),
+        required_test_tokens=(
+            "test_append_runtime_audit_syncs_runtime_outcome_learning_trace",
+            "record_runtime_outcome",
+        ),
+    ),
+    MemoryExecutionCoverage(
+        name="agent_loop_outcome_learning_trace",
+        source_path="solden/services/finance_agent_loop.py",
+        test_path="tests/test_finance_agent_governance.py",
+        required_source_tokens=(
+            "_record_runtime_outcome_trace",
+            "record_runtime_outcome",
+        ),
+        required_test_tokens=(
+            "list_runtime_outcome_traces",
+            "actual_action",
+        ),
+    ),
+    MemoryExecutionCoverage(
+        name="ap_learning_loop_runtime_outcome_trace_eval",
+        source_path="solden/services/ap_learning_loop.py",
+        test_path="tests/test_ap_learning_loop.py",
+        required_source_tokens=(
+            "list_runtime_outcome_traces",
+            "runtime_outcome_trace_rate",
+            "record_runtime_outcome_traces",
+        ),
+        required_test_tokens=(
+            "test_ap_learning_loop_counts_runtime_outcome_traces_as_agent_learning_signal",
+            "runtime_outcome_trace_rate",
         ),
     ),
     MemoryExecutionCoverage(

@@ -24,6 +24,30 @@ class FinanceAgentLoopService:
         self.memory = get_agent_memory_service(runtime.organization_id, db=getattr(runtime, "db", None))
         self.learning = get_finance_learning_service(runtime.organization_id, db=getattr(runtime, "db", None))
 
+    def _record_runtime_outcome_trace(
+        self,
+        *,
+        ap_item: Optional[Dict[str, Any]],
+        response: Dict[str, Any],
+        actor_id: Optional[str],
+    ) -> None:
+        if not hasattr(self.learning, "record_runtime_outcome"):
+            return
+        try:
+            shadow_decision = (
+                response.get("shadow_decision")
+                if isinstance(response.get("shadow_decision"), dict)
+                else {}
+            )
+            self.learning.record_runtime_outcome(
+                ap_item=ap_item,
+                response=response,
+                shadow_decision=shadow_decision,
+                actor_id=actor_id,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("runtime outcome trace failed: %s", exc)
+
     def _resolve_ap_item(self, request: SkillRequest) -> Dict[str, Any]:
         entity_id = str(request.entity_id or "").strip()
         if not entity_id:
@@ -241,6 +265,11 @@ class FinanceAgentLoopService:
                         "matched_shadow": False,
                     },
                 )
+                self._record_runtime_outcome_trace(
+                    ap_item=observed.get("ap_item"),
+                    response=blocked_response,
+                    actor_id=self.runtime.actor_email or self.runtime.actor_id,
+                )
             return blocked_response
         try:
             response = await executor()
@@ -272,6 +301,15 @@ class FinanceAgentLoopService:
                     },
                     actor_id=self.runtime.actor_email or self.runtime.actor_id,
                     metadata={"preview": observed.get("preview")},
+                )
+                self._record_runtime_outcome_trace(
+                    ap_item=observed.get("ap_item"),
+                    response={
+                        "status": "error",
+                        "reason": str(exc),
+                        "intent": request.task_type,
+                    },
+                    actor_id=self.runtime.actor_email or self.runtime.actor_id,
                 )
             raise
 
@@ -338,6 +376,11 @@ class FinanceAgentLoopService:
                         1.0 if bool(response.get("recovery_succeeded")) else 0.0
                     ),
                 },
+            )
+            self._record_runtime_outcome_trace(
+                ap_item=verified_item,
+                response=response,
+                actor_id=self.runtime.actor_email or self.runtime.actor_id,
             )
 
         response.setdefault(

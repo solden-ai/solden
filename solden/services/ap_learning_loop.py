@@ -310,6 +310,16 @@ class APLearningLoopService:
             return []
         return [dict(row) for row in rows or [] if isinstance(row, dict)]
 
+    def _list_runtime_outcome_traces(self, item_id: str) -> List[Dict[str, Any]]:
+        try:
+            from solden.services.finance_learning import get_finance_learning_service
+
+            learning = get_finance_learning_service(self.organization_id, db=self.db)
+            rows = learning.list_runtime_outcome_traces(ap_item_id=item_id, limit=100)
+        except Exception:
+            return []
+        return [dict(row) for row in rows or [] if isinstance(row, dict)]
+
     def _build_memory_record(
         self,
         *,
@@ -354,6 +364,7 @@ class APLearningLoopService:
         memory_event_items = 0
         evidence_linked_items = 0
         agent_trace_items = 0
+        runtime_outcome_trace_items = 0
         terminal_items = 0
         terminal_with_outcome = 0
 
@@ -365,6 +376,7 @@ class APLearningLoopService:
             record = self._build_memory_record(item=item, outcome=outcome)
             events = self._list_events(item_id)
             agent_memory_events = self._list_agent_memory_events(item_id)
+            runtime_outcome_traces = self._list_runtime_outcome_traces(item_id)
             memory_events = [event for event in events if _is_memory_event(event)]
             agent_events = [event for event in events if _agent_observed_event(event)]
             for event in events:
@@ -378,8 +390,10 @@ class APLearningLoopService:
             evidence = context.get("evidence") if isinstance(context, dict) else {}
             if _has_value(evidence):
                 evidence_linked_items += 1
-            if agent_events or agent_memory_events:
+            if agent_events or agent_memory_events or runtime_outcome_traces:
                 agent_trace_items += 1
+            if runtime_outcome_traces:
+                runtime_outcome_trace_items += 1
 
             state = _text(item.get("state")).lower()
             is_terminal = state in _TERMINAL_STATES or bool(outcome)
@@ -434,8 +448,16 @@ class APLearningLoopService:
                     "memory_completeness_score": memory_score,
                     "missing_context": missing_context,
                     "has_memory_events": bool(memory_events),
-                    "has_agent_trace": bool(agent_events or agent_memory_events),
-                    "agent_trace_count": len(agent_events) + len(agent_memory_events),
+                    "has_agent_trace": bool(
+                        agent_events or agent_memory_events or runtime_outcome_traces
+                    ),
+                    "agent_trace_count": (
+                        len(agent_events)
+                        + len(agent_memory_events)
+                        + len(runtime_outcome_traces)
+                    ),
+                    "has_runtime_outcome_trace": bool(runtime_outcome_traces),
+                    "runtime_outcome_trace_count": len(runtime_outcome_traces),
                     "has_evidence": _has_value(evidence),
                     "surface_count": len({_event_surface(event) for event in events}),
                 }
@@ -455,6 +477,7 @@ class APLearningLoopService:
             agent_trace_rate=_ratio(agent_trace_items, item_count),
             evidence_link_rate=_ratio(evidence_linked_items, item_count),
             outcome_traceability_rate=_ratio(terminal_with_outcome, terminal_items),
+            runtime_outcome_trace_rate=_ratio(runtime_outcome_trace_items, item_count),
         )
         company_learning = {
             "recurring_blockers": recurring_blockers,
@@ -471,6 +494,9 @@ class APLearningLoopService:
                 recurring_blockers=recurring_blockers,
                 agent_trace_rate=_ratio(agent_trace_items, item_count),
                 evidence_link_rate=_ratio(evidence_linked_items, item_count),
+                runtime_outcome_trace_rate=_ratio(
+                    runtime_outcome_trace_items, item_count
+                ),
             ),
             "agent_improvement_candidates": agent_improvement_candidates,
         }
@@ -481,6 +507,9 @@ class APLearningLoopService:
             "outcome_traceability_rate": _ratio(terminal_with_outcome, terminal_items),
             "memory_event_coverage_rate": _ratio(memory_event_items, item_count),
             "agent_trace_rate": _ratio(agent_trace_items, item_count),
+            "runtime_outcome_trace_rate": _ratio(
+                runtime_outcome_trace_items, item_count
+            ),
             "evidence_link_rate": _ratio(evidence_linked_items, item_count),
             "average_memory_completeness_score": round(
                 total_memory_score / max(1, item_count), 4
@@ -666,6 +695,7 @@ class APLearningLoopService:
         recurring_blockers: List[Dict[str, Any]],
         agent_trace_rate: float,
         evidence_link_rate: float,
+        runtime_outcome_trace_rate: float,
     ) -> List[str]:
         actions: List[str] = []
         if recurring_blockers:
@@ -675,6 +705,10 @@ class APLearningLoopService:
         if agent_trace_rate < 1.0:
             actions.append(
                 "Route every AP agent decision through AgentMemoryService so future evals can replay the trace."
+            )
+        if runtime_outcome_trace_rate < 1.0:
+            actions.append(
+                "Record every AP runtime outcome through FinanceLearningService so improvement objectives are based on real traces."
             )
         if evidence_link_rate < 1.0:
             actions.append(
@@ -723,6 +757,7 @@ class APLearningLoopService:
         agent_trace_rate: float,
         evidence_link_rate: float,
         outcome_traceability_rate: float,
+        runtime_outcome_trace_rate: float,
     ) -> List[Dict[str, Any]]:
         candidates: List[Dict[str, Any]] = []
 
@@ -801,6 +836,25 @@ class APLearningLoopService:
             rationale=(
                 "Some AP records have no replayable agent trace, so the agent "
                 "cannot improve from those decisions."
+            ),
+        )
+
+        missing_runtime_outcome_trace = [
+            case for case in eval_cases if not case.get("has_runtime_outcome_trace")
+        ]
+        add_candidate(
+            key="record_runtime_outcome_traces",
+            title="Record AP runtime outcomes as learning traces",
+            target_runtime_path="FinanceLearningService.record_runtime_outcome",
+            action_type="instrument_runtime_outcome_trace",
+            metric_name="runtime_outcome_trace_rate",
+            metric_value=runtime_outcome_trace_rate,
+            target_value=0.9,
+            failed_cases=missing_runtime_outcome_trace,
+            rationale=(
+                "Some AP records have no runtime outcome trace, so the "
+                "improvement register cannot compare agent action, shadow "
+                "decision, verification, and recovery results."
             ),
         )
 
@@ -902,10 +956,11 @@ class APLearningLoopService:
         action_rank = {
             "instrument_runtime_path": 0,
             "instrument_agent_trace": 1,
-            "record_outcome_trace": 2,
-            "enforce_evidence_contract": 3,
-            "complete_memory_projection": 4,
-            "tune_intake_policy": 5,
+            "instrument_runtime_outcome_trace": 2,
+            "record_outcome_trace": 3,
+            "enforce_evidence_contract": 4,
+            "complete_memory_projection": 5,
+            "tune_intake_policy": 6,
         }
         candidates.sort(
             key=lambda item: (
@@ -945,6 +1000,12 @@ class APLearningLoopService:
                 "label": "Agent trace coverage",
                 "value": float(summary.get("agent_trace_rate") or 0),
                 "target": 0.8,
+            },
+            {
+                "key": "runtime_outcome_trace_rate",
+                "label": "Runtime outcome trace coverage",
+                "value": float(summary.get("runtime_outcome_trace_rate") or 0),
+                "target": 0.9,
             },
             {
                 "key": "outcome_traceability_rate",
@@ -1116,6 +1177,9 @@ class APLearningLoopService:
         checks = {
             "memory_event_coverage": float(summary.get("memory_event_coverage_rate") or 0) >= 0.95,
             "agent_trace_coverage": float(summary.get("agent_trace_rate") or 0) >= 0.8,
+            "runtime_outcome_trace_coverage": float(
+                summary.get("runtime_outcome_trace_rate") or 0
+            ) >= 0.9,
             "evidence_linkage": float(summary.get("evidence_link_rate") or 0) >= 0.9,
             "outcome_traceability": float(summary.get("outcome_traceability_rate") or 0) >= 0.9,
         }

@@ -6,6 +6,7 @@ from solden.core.database import SoldenDB
 from solden.core.finance_contracts import ActionExecution, SkillRequest
 from solden.services.agent_memory import AgentMemoryService
 from solden.services.finance_agent_loop import FinanceAgentLoopService
+from solden.services.finance_learning import FinanceLearningService
 
 
 class _GovernanceRuntime:
@@ -110,6 +111,10 @@ def test_finance_agent_loop_blocks_doctrine_forbidden_action(tmp_path, monkeypat
     assert response["reason"] == "doctrine_enforced_block"
     assert "forbidden_action:post_to_erp" in response["deliberation"]["doctrine"]["reason_codes"]
     executor.assert_not_awaited()
+    traces = FinanceLearningService("test-org", db=db).list_runtime_outcome_traces(
+        ap_item_id="ap-block-1"
+    )
+    assert traces[0]["actual_action"] == "field_review"
 
 
 def test_finance_agent_loop_attempts_self_recovery_for_failed_post(tmp_path, monkeypatch):
@@ -163,6 +168,11 @@ def test_finance_agent_loop_attempts_self_recovery_for_failed_post(tmp_path, mon
     assert response["self_recovery"]["attempted"] is True
     assert response["self_recovery"]["recovered"] is True
     assert response["recovery_succeeded"] is True
+    traces = FinanceLearningService("test-org", db=db).list_runtime_outcome_traces(
+        ap_item_id="ap-recover-1"
+    )
+    assert traces[0]["actual_action"] == "auto_approve_post"
+    assert traces[0]["recovery_succeeded"] is True
 
 
 def test_finance_agent_loop_allows_manual_risky_action_to_reach_workflow(tmp_path, monkeypatch):

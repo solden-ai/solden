@@ -2115,6 +2115,48 @@ def test_append_runtime_audit_syncs_finance_learning_when_service_available():
     assert captured["learning_kwargs"]["ap_item"]["id"] == "ap-route-1"
 
 
+def test_append_runtime_audit_syncs_runtime_outcome_learning_trace():
+    db = _FakeDB()
+    runtime = _runtime(db)
+    captured = {}
+
+    class _FakeLearning:
+        def record_action_outcome(self, **kwargs):
+            captured["action_kwargs"] = dict(kwargs or {})
+            return {"event": {"id": "learning-action-1"}}
+
+        def record_runtime_outcome(self, **kwargs):
+            captured["runtime_kwargs"] = dict(kwargs or {})
+            return {"event": {"id": "learning-runtime-1"}}
+
+    with patch(
+        "solden.services.finance_learning.get_finance_learning_service",
+        return_value=_FakeLearning(),
+    ):
+        audit_row = runtime.append_runtime_audit(
+            ap_item_id="ap-route-1",
+            event_type="approval_request_routed",
+            reason="approval_request_sent",
+            metadata={
+                "response": {
+                    "status": "pending_approval",
+                    "email_id": "gmail-thread-route-1",
+                    "shadow_decision": {"proposed_action": "route_for_approval"},
+                }
+            },
+            correlation_id="corr-runtime-trace-1",
+            skill_id="ap_v1",
+        )
+
+    assert audit_row is not None
+    assert captured["action_kwargs"]["event_type"] == "approval_request_routed"
+    assert captured["runtime_kwargs"]["ap_item"]["id"] == "ap-route-1"
+    assert captured["runtime_kwargs"]["response"]["status"] == "pending_approval"
+    assert captured["runtime_kwargs"]["shadow_decision"] == {
+        "proposed_action": "route_for_approval"
+    }
+
+
 def test_execute_skill_request_routes_through_agent_loop_owner():
     db = _FakeDB()
     runtime = _runtime(db)

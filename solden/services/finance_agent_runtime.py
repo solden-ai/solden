@@ -13,7 +13,7 @@ import os
 import threading
 from collections import OrderedDict
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from solden.core.ap_item_resolution import resolve_ap_item_reference
@@ -1436,6 +1436,27 @@ class FinanceAgentRuntime:
                     "ap_item_id": ap_item_id,
                 },
             )
+            if (
+                not event_token.startswith("ap_invoice_processing_")
+                and hasattr(learning, "record_runtime_outcome")
+            ):
+                runtime_response = dict(response_payload or {})
+                runtime_response.setdefault("status", event_token)
+                runtime_response.setdefault("reason", reason)
+                runtime_response.setdefault("event_type", event_token)
+                shadow_decision = (
+                    runtime_response.get("shadow_decision")
+                    if isinstance(runtime_response.get("shadow_decision"), dict)
+                    else payload.get("shadow_decision")
+                    if isinstance(payload.get("shadow_decision"), dict)
+                    else {}
+                )
+                learning.record_runtime_outcome(
+                    ap_item=ap_item,
+                    response=runtime_response,
+                    shadow_decision=shadow_decision,
+                    actor_id=self.actor_email or self.actor_id,
+                )
         except Exception as exc:
             logger.warning("Finance learning sync failed for %s: %s", ap_item_id, exc)
 

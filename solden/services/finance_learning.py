@@ -260,6 +260,74 @@ class FinanceLearningService:
             )
         return events
 
+    def list_runtime_outcome_traces(
+        self,
+        *,
+        ap_item_id: Optional[str] = None,
+        limit: int = 100,
+    ) -> list[Dict[str, Any]]:
+        """Return compact runtime outcome traces from finance learning events.
+
+        These traces are the replayable learning signal from real agent/runtime
+        outcomes. They are intentionally smaller than the raw payload so private
+        evals and the improvement register can consume them without depending on
+        each skill response's full shape.
+        """
+        traces: list[Dict[str, Any]] = []
+        events = self.list_learning_events(
+            ap_item_id=ap_item_id,
+            limit=max(1, min(int(limit or 100), 1000)),
+        )
+        for event in events:
+            if str(event.get("event_type") or "").strip().lower() != "runtime_outcome":
+                continue
+            payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+            response = payload.get("response") if isinstance(payload.get("response"), dict) else {}
+            learning_result = (
+                payload.get("learning_result")
+                if isinstance(payload.get("learning_result"), dict)
+                else {}
+            )
+            shadow_feedback = (
+                learning_result.get("shadow_feedback")
+                if isinstance(learning_result.get("shadow_feedback"), dict)
+                else {}
+            )
+            shadow_decision = (
+                payload.get("shadow_decision")
+                if isinstance(payload.get("shadow_decision"), dict)
+                else {}
+            )
+            erp_result = response.get("erp_result") if isinstance(response.get("erp_result"), dict) else {}
+            actual_action = (
+                str(shadow_feedback.get("actual_action") or "").strip()
+                or self._resolved_actual_action(response)
+            )
+            traces.append(
+                {
+                    "ap_item_id": event.get("ap_item_id"),
+                    "actor_id": event.get("actor_id"),
+                    "vendor_name": event.get("vendor_name"),
+                    "status": event.get("action_status") or response.get("status"),
+                    "actual_action": actual_action,
+                    "proposed_action": (
+                        shadow_feedback.get("proposed_action")
+                        or shadow_decision.get("proposed_action")
+                    ),
+                    "matched_shadow": bool(shadow_feedback.get("matched")),
+                    "verification_succeeded": bool(
+                        response.get("post_verified")
+                        or response.get("verification_succeeded")
+                        or erp_result.get("verified")
+                    ),
+                    "recovery_attempted": bool(response.get("recovery_attempted")),
+                    "recovery_succeeded": bool(response.get("recovery_succeeded")),
+                    "recorded_learning": list(learning_result.get("recorded") or []),
+                    "created_at": event.get("created_at"),
+                }
+            )
+        return traces
+
     def record_outcome_calibration(
         self,
         *,

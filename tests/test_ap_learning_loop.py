@@ -17,6 +17,7 @@ from solden.services.company_learning_contract import (
     COMPANY_LEARNING_OBJECTIVE_PATTERN_TYPE,
     COMPANY_LEARNING_SCOPE_PATTERN_TYPE,
 )
+from solden.services.finance_learning import FinanceLearningService
 from solden.services.memory_events import commit_memory_event
 
 
@@ -138,6 +139,27 @@ def test_ap_learning_loop_creates_private_eval_and_company_patterns(tmp_path, mo
         actor_id="ap-agent@solden.local",
         source="finance_agent_loop",
     )
+    finance_learning = FinanceLearningService(ORG_ID, db=db)
+    finance_learning.record_runtime_outcome(
+        ap_item=item_a,
+        response={
+            "status": "needs_info",
+            "ap_item_id": item_a["id"],
+            "reason": "field_review_required",
+        },
+        shadow_decision={"proposed_action": "vendor_followup"},
+        actor_id="ap-agent@solden.local",
+    )
+    finance_learning.record_runtime_outcome(
+        ap_item=item_b,
+        response={
+            "status": "posted_to_erp",
+            "ap_item_id": item_b["id"],
+            "post_verified": True,
+        },
+        shadow_decision={"proposed_action": "auto_approve_post"},
+        actor_id="ap-agent@solden.local",
+    )
 
     snapshot = APLearningLoopService(
         ORG_ID, db=db, agent_memory=agent_memory
@@ -150,10 +172,12 @@ def test_ap_learning_loop_creates_private_eval_and_company_patterns(tmp_path, mo
     assert snapshot["summary"]["terminal_outcomes_recorded"] == 1
     assert snapshot["summary"]["outcome_traceability_rate"] == 1.0
     assert snapshot["summary"]["memory_event_coverage_rate"] == 1.0
-    assert snapshot["summary"]["agent_trace_rate"] == 0.5
+    assert snapshot["summary"]["agent_trace_rate"] == 1.0
+    assert snapshot["summary"]["runtime_outcome_trace_rate"] == 1.0
     assert snapshot["summary"]["evidence_link_rate"] == 1.0
     assert snapshot["summary"]["average_memory_completeness_score"] == 1.0
-    assert snapshot["release_gate"]["status"] == "needs_work"
+    assert snapshot["release_gate"]["status"] == "pass"
+    assert snapshot["release_gate"]["checks"]["runtime_outcome_trace_coverage"] is True
 
     blockers = snapshot["company_learning"]["recurring_blockers"]
     assert blockers[0]["key"] == "critical_field_low_confidence"
@@ -169,16 +193,9 @@ def test_ap_learning_loop_creates_private_eval_and_company_patterns(tmp_path, mo
         "Google Cloud EMEA Limited"
     )
     candidates = snapshot["company_learning"]["agent_improvement_candidates"]
-    trace_candidate = next(
-        candidate for candidate in candidates
-        if candidate["key"] == "route_agent_decisions_through_memory"
-    )
-    assert trace_candidate["metric"] == {
-        "name": "agent_trace_rate",
-        "value": 0.5,
-        "target": 0.8,
-    }
-    assert trace_candidate["evidence"]["example_item_ids"] == ["AP-LEARN-2"]
+    candidate_keys = {candidate["key"] for candidate in candidates}
+    assert "route_agent_decisions_through_memory" not in candidate_keys
+    assert "record_runtime_outcome_traces" not in candidate_keys
     blocker_candidate = next(
         candidate for candidate in candidates
         if candidate["key"] == "reduce_recurring_blocker_critical_field_low_confidence"
@@ -191,7 +208,7 @@ def test_ap_learning_loop_creates_private_eval_and_company_patterns(tmp_path, mo
         "AP company learning is forming from real traces"
     )
     assert company_profile["maturity"]["level"] == "forming"
-    assert company_profile["maturity"]["score"] == 0.9
+    assert company_profile["maturity"]["score"] == 1.0
     assert company_profile["operating_patterns"]["top_recurring_blocker"]["key"] == (
         "critical_field_low_confidence"
     )
@@ -221,10 +238,10 @@ def test_ap_learning_loop_creates_private_eval_and_company_patterns(tmp_path, mo
     improvements = agent_memory.list_patterns(
         skill_id="ap_v1",
         pattern_type="agent_improvement_candidate",
-        pattern_key_prefix="route_agent_decisions_through_memory",
+        pattern_key_prefix="reduce_recurring_blocker_critical_field_low_confidence",
     )
     assert improvements
-    assert improvements[0]["pattern"]["evidence"]["failed_case_count"] == 1
+    assert improvements[0]["pattern"]["evidence"]["failed_case_count"] == 2
     company_patterns = agent_memory.list_patterns(
         skill_id="ap_v1",
         pattern_type="company_learning_profile",
@@ -268,6 +285,56 @@ def test_ap_learning_loop_creates_private_eval_and_company_patterns(tmp_path, mo
         pattern_type=COMPANY_LEARNING_OBJECTIVE_PATTERN_TYPE,
     )
     assert company_objective_patterns
+
+
+def test_ap_learning_loop_counts_runtime_outcome_traces_as_agent_learning_signal(
+    tmp_path, monkeypatch
+):
+    db = _db(tmp_path, monkeypatch)
+    item = _seed_item(
+        db,
+        item_id="AP-RUNTIME-TRACE-1",
+        vendor="Runtime Trace Co",
+        state="posted_to_erp",
+        exception_code="",
+    )
+    _capture_field_review_memory(
+        db,
+        item_id=item["id"],
+        vendor=item["vendor_name"],
+        actor_type="user",
+    )
+    db.record_box_outcome(
+        box_id=item["id"],
+        box_type="ap_item",
+        organization_id=ORG_ID,
+        outcome_type="posted_to_erp",
+        recorded_by="ap-agent@solden.local",
+        recorded_actor_type="agent",
+        data={"erp_reference": "NS-BILL-RUNTIME-TRACE-1"},
+    )
+    FinanceLearningService(ORG_ID, db=db).record_runtime_outcome(
+        ap_item=item,
+        response={
+            "status": "posted_to_erp",
+            "ap_item_id": item["id"],
+            "post_verified": True,
+        },
+        shadow_decision={"proposed_action": "auto_approve_post"},
+        actor_id="ap-agent@solden.local",
+    )
+
+    snapshot = APLearningLoopService(ORG_ID, db=db).evaluate_private_outcomes(
+        persist=False
+    )
+    case = snapshot["private_eval_cases"][0]
+
+    assert case["has_runtime_outcome_trace"] is True
+    assert case["has_agent_trace"] is True
+    assert case["runtime_outcome_trace_count"] == 1
+    assert snapshot["summary"]["agent_trace_rate"] == 1.0
+    assert snapshot["summary"]["runtime_outcome_trace_rate"] == 1.0
+    assert snapshot["release_gate"]["checks"]["runtime_outcome_trace_coverage"] is True
 
 
 def test_ap_learning_loop_flags_missing_learning_signal(tmp_path, monkeypatch):
