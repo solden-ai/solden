@@ -92,6 +92,20 @@ def _pending_policy_proposals(
     }
 
 
+def _policy_proposal_citation_summary(proposals: Dict[str, Any]) -> Dict[str, Any]:
+    rows = proposals.get("proposals") if isinstance(proposals.get("proposals"), list) else []
+    total = int(proposals.get("count") or len(rows) or 0)
+    cited = sum(1 for row in rows if isinstance(row, dict) and bool(row.get("has_learning_citation")))
+    missing = max(0, total - cited)
+    return {
+        "total": total,
+        "with_learning_citation": cited,
+        "missing_learning_citation": missing,
+        "citation_rate": round(cited / max(1, total), 4) if total > 0 else None,
+        "all_cited": total == 0 or missing == 0,
+    }
+
+
 def build_learning_loop_health(
     organization_id: str,
     *,
@@ -153,15 +167,22 @@ def build_learning_loop_health(
     release_gate = private_payload.get("release_gate")
     release_gate = release_gate if isinstance(release_gate, dict) else {}
     pending_policy_proposals = _pending_policy_proposals(runtime_db, org_id)
+    policy_citations = _policy_proposal_citation_summary(pending_policy_proposals)
+    company_claim_ready = bool(company_summary.get("ready_for_company_learning_claim"))
+    blocking_reasons = []
 
     if observed_count == 0:
         status = "no_signal"
     elif fresh_count < len(components):
         status = "stale"
-    elif release_gate.get("status") == "pass":
-        status = "healthy"
     else:
-        status = "needs_work"
+        if release_gate.get("status") != "pass":
+            blocking_reasons.append("private_eval_release_gate_not_passing")
+        if not company_claim_ready:
+            blocking_reasons.append("company_learning_claim_not_ready")
+        if not policy_citations.get("all_cited"):
+            blocking_reasons.append("policy_proposals_missing_learning_citations")
+        status = "healthy" if not blocking_reasons else "needs_work"
 
     return {
         "contract": LEARNING_LOOP_HEALTH_CONTRACT,
@@ -175,11 +196,14 @@ def build_learning_loop_health(
             "fresh_components": fresh_count,
             "release_gate": release_gate.get("status"),
             "company_learning_status": company_summary.get("organization_learning_status"),
-            "ready_for_company_learning_claim": company_summary.get("ready_for_company_learning_claim"),
+            "ready_for_company_learning_claim": company_claim_ready,
             "next_learning_objective": company_summary.get("next_learning_objective_title"),
             "workflow_coverage_status": company_summary.get("workflow_coverage_status"),
             "pending_policy_proposals": pending_policy_proposals.get("count", 0),
             "pending_policy_proposals_available": pending_policy_proposals.get("available", False),
+            "policy_proposal_learning_citation_rate": policy_citations.get("citation_rate"),
+            "policy_proposals_missing_learning_citations": policy_citations.get("missing_learning_citation"),
+            "blocking_reasons": blocking_reasons,
         },
         "pending_policy_proposals": pending_policy_proposals,
     }
