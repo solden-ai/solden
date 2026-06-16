@@ -197,6 +197,52 @@ def test_memory_event_builder_records_provenance_when_evidence_is_not_explicit()
     assert memory_event["quality"]["verification_status"] == "system_observed"
 
 
+def test_ap_direct_operational_memory_helper_attaches_company_learning_context(monkeypatch):
+    from solden.api.ap_items_action_routes import _commit_ap_operational_memory
+
+    db = _MemoryDB()
+
+    def fake_learning_context(*args, **kwargs):
+        assert args[0] == "org-memory"
+        assert kwargs["vendor_name"] == "Learning Vendor"
+        return {
+            "contract": "solden_company_learning_memory_context.v1",
+            "status": "available",
+            "summary": {
+                "next_learning_objective": "Route AP direct actions through memory",
+            },
+        }
+
+    monkeypatch.setattr(
+        "solden.services.company_learning_runtime_context.build_company_learning_memory_context",
+        fake_learning_context,
+    )
+
+    _commit_ap_operational_memory(
+        db,
+        ap_item_id="AP-direct-learning-1",
+        organization_id="org-memory",
+        item={
+            "id": "AP-direct-learning-1",
+            "state": "needs_info",
+            "vendor_name": "Learning Vendor",
+            "confidence": 0.91,
+        },
+        event_type="source_linked",
+        source="gmail",
+        actor_id="controller@example.com",
+        summary="Gmail thread linked to the work item.",
+        evidence={"gmail_thread_id": "thread-1"},
+        source_refs={"gmail_thread_id": "thread-1"},
+    )
+
+    evidence = db.events[-1]["payload_json"]["memory_event"]["evidence"]
+    assert evidence["company_learning_context"]["status"] == "available"
+    assert evidence["company_learning_context"]["summary"]["next_learning_objective"] == (
+        "Route AP direct actions through memory"
+    )
+
+
 def test_thin_audit_rows_are_promoted_to_operational_memory():
     payload_json = ensure_memory_payload_for_audit_event(
         {

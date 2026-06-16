@@ -675,6 +675,68 @@ def test_runtime_intent_memory_event_captures_surface_action_context():
     assert record["decision_ledger"][0]["decision_type"] == "request_info"
 
 
+def test_runtime_intent_memory_event_attaches_company_learning_context(monkeypatch):
+    db = _MemoryDB(
+        [],
+        boxes={
+            ("ap_item", "AP-runtime-learning-1"): {
+                "id": "AP-runtime-learning-1",
+                "organization_id": "org-memory",
+                "state": "needs_info",
+                "invoice_number": "INV-LEARNING-1",
+                "vendor_name": "Learning Vendor",
+            }
+        },
+    )
+
+    def fake_learning_context(*args, **kwargs):
+        assert args[0] == "org-memory"
+        assert kwargs["vendor_name"] == "Learning Vendor"
+        return {
+            "contract": "solden_company_learning_memory_context.v1",
+            "status": "available",
+            "summary": {
+                "next_learning_objective": "Route AP agent decisions through memory",
+                "workflow_coverage_status": "ap_wedge_only",
+            },
+            "runtime_guidance": [
+                "Current learning objective: Route AP agent decisions through memory."
+            ],
+        }
+
+    monkeypatch.setattr(
+        "solden.services.company_learning_runtime_context.build_company_learning_memory_context",
+        fake_learning_context,
+    )
+
+    row = commit_runtime_memory_event(
+        db,
+        organization_id="org-memory",
+        intent="request_info",
+        input_payload={
+            "ap_item_id": "AP-runtime-learning-1",
+            "reason": "Vendor confirmation is required",
+            "source_channel": "workspace",
+            "actor_id": "controller@example.com",
+        },
+        response={
+            "status": "needs_info",
+            "ap_item_id": "AP-runtime-learning-1",
+            "audit_event_id": "audit-learning-1",
+            "result": {"status": "needs_info"},
+        },
+        actor_type="user",
+        actor_id="controller@example.com",
+    )
+
+    evidence = row["payload_json"]["memory_event"]["evidence"]
+    assert evidence["company_learning_context"]["status"] == "available"
+    assert evidence["company_learning_context"]["summary"]["next_learning_objective"] == (
+        "Route AP agent decisions through memory"
+    )
+    assert "pending_policy_proposals" not in str(evidence["company_learning_context"])
+
+
 def test_capture_loop_commits_confirmed_context_to_memory_event():
     db = _MemoryDB(
         [],

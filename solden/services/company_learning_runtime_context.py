@@ -21,6 +21,7 @@ from solden.services.learning_loop_health import build_learning_loop_health
 
 
 COMPANY_LEARNING_RUNTIME_CONTEXT = "solden_company_learning_runtime_context.v1"
+COMPANY_LEARNING_MEMORY_CONTEXT = "solden_company_learning_memory_context.v1"
 
 
 def _now_iso() -> str:
@@ -245,3 +246,63 @@ def build_company_learning_runtime_context(
             },
         ],
     }
+
+
+def compact_company_learning_context_for_memory(
+    context: Dict[str, Any],
+    *,
+    guidance_limit: int = 3,
+    objective_limit: int = 3,
+    citation_limit: int = 3,
+) -> Optional[Dict[str, Any]]:
+    """Compact runtime-learning context for embedding inside memory evidence."""
+    if not isinstance(context, dict) or not context.get("usable"):
+        return None
+    summary = _safe_dict(context.get("summary"))
+    guidance = context.get("runtime_guidance") if isinstance(context.get("runtime_guidance"), list) else []
+    objectives = (
+        context.get("improvement_objectives")
+        if isinstance(context.get("improvement_objectives"), list)
+        else []
+    )
+    citations = context.get("citations") if isinstance(context.get("citations"), list) else []
+    return {
+        "contract": COMPANY_LEARNING_MEMORY_CONTEXT,
+        "status": context.get("status"),
+        "source_contract": context.get("contract"),
+        "summary": {
+            "company_learning_status": summary.get("company_learning_status"),
+            "ready_for_company_learning_claim": summary.get("ready_for_company_learning_claim"),
+            "workflow_coverage_status": summary.get("workflow_coverage_status"),
+            "next_learning_objective": summary.get("next_learning_objective"),
+            "open_improvement_objectives": summary.get("open_improvement_objectives"),
+            "high_priority_open_objectives": summary.get("high_priority_open_objectives"),
+        },
+        "runtime_guidance": guidance[: max(0, int(guidance_limit or 0))],
+        "improvement_objectives": objectives[: max(0, int(objective_limit or 0))],
+        "citations": citations[: max(0, int(citation_limit or 0))],
+    }
+
+
+def build_company_learning_memory_context(
+    organization_id: str,
+    *,
+    db: Optional[SoldenDB] = None,
+    agent_memory: Optional[AgentMemoryService] = None,
+    vendor_name: Optional[str] = None,
+    max_age_hours: int = 36,
+) -> Optional[Dict[str, Any]]:
+    """Return a compact, non-authoritative learning context for memory events.
+
+    This intentionally excludes pending policy proposals. Memory rows may be
+    visible on many surfaces, while proposal review is role-gated elsewhere.
+    """
+    context = build_company_learning_runtime_context(
+        organization_id,
+        db=db,
+        agent_memory=agent_memory,
+        vendor_name=vendor_name,
+        include_policy_proposals=False,
+        max_age_hours=max_age_hours,
+    )
+    return compact_company_learning_context_for_memory(context)

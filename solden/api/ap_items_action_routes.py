@@ -92,6 +92,36 @@ def _commit_ap_operational_memory(
         from solden.services.memory_events import commit_memory_event
 
         state = str((item or {}).get("state") or (item or {}).get("status") or "").strip()
+        memory_evidence = evidence
+        try:
+            from solden.services.company_learning_runtime_context import (
+                build_company_learning_memory_context,
+            )
+
+            company_learning_context = build_company_learning_memory_context(
+                organization_id,
+                db=db,
+                vendor_name=(
+                    str((item or {}).get("vendor_name") or "").strip()
+                    or str((item or {}).get("vendor") or "").strip()
+                    or None
+                ),
+            )
+        except Exception:
+            company_learning_context = None
+        if company_learning_context:
+            if isinstance(memory_evidence, dict):
+                memory_evidence = {
+                    **memory_evidence,
+                    "company_learning_context": company_learning_context,
+                }
+            elif memory_evidence not in (None, "", [], {}):
+                memory_evidence = {
+                    "provided_evidence": memory_evidence,
+                    "company_learning_context": company_learning_context,
+                }
+            else:
+                memory_evidence = {"company_learning_context": company_learning_context}
         commit_memory_event(
             db,
             box_type="ap_item",
@@ -108,7 +138,7 @@ def _commit_ap_operational_memory(
             dependency=dependency,
             decision={"type": event_type},
             rationale=rationale or summary,
-            evidence=evidence,
+            evidence=memory_evidence,
             confidence=(item or {}).get("confidence"),
             human_confirmation_status="confirmed",
             next_action=next_action,
@@ -466,9 +496,9 @@ async def resolve_non_invoice_review(
     """
     db = get_db()
     organization_id = _session_org(user)
-    item = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
-    # _require_item already returned 404 unless item.organization_id == organization_id,
-    # so item.organization_id is now guaranteed to equal the session org.
+    shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
+    # _require_item already returned 404 unless the item belongs to the
+    # session org, so the runtime below is tenant-scoped to the right org.
     runtime = shared._finance_agent_runtime_cls()(
         organization_id=organization_id,
         actor_id=getattr(user, "user_id", None) or getattr(user, "email", None) or "system",
@@ -525,7 +555,7 @@ async def resolve_ap_item_entity_route(
     """
     db = get_db()
     organization_id = _session_org(user)
-    item = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
+    shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
     runtime = shared._finance_agent_runtime_cls()(
         organization_id=organization_id,
         actor_id=getattr(user, "user_id", None) or getattr(user, "email", None) or "system",
@@ -992,8 +1022,8 @@ async def update_ap_item_fields(
     """
     db = get_db()
     organization_id = _session_org(_user)
-    item = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
-    
+    shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
+
     runtime = shared._finance_agent_runtime_cls()(
         organization_id=organization_id,
         actor_id=getattr(_user, "user_id", None) or getattr(_user, "email", None) or "system",
@@ -1426,7 +1456,7 @@ async def resubmit_rejected_item(
     """
     db = get_db()
     organization_id = _session_org(_user)
-    source = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
+    shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
 
     runtime = shared._finance_agent_runtime_cls()(
         organization_id=organization_id,
@@ -1495,7 +1525,7 @@ async def merge_ap_items(ap_item_id: str, request: MergeItemsRequest, _user=Depe
     """
     db = get_db()
     organization_id = _session_org(_user)
-    target = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
+    shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
 
     runtime = shared._finance_agent_runtime_cls()(
         organization_id=organization_id,
@@ -1547,7 +1577,7 @@ async def split_ap_item(ap_item_id: str, request: SplitItemRequest, _user=Depend
     """
     db = get_db()
     organization_id = _session_org(_user)
-    parent = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
+    shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
 
     runtime = shared._finance_agent_runtime_cls()(
         organization_id=organization_id,
@@ -1854,7 +1884,7 @@ async def snooze_ap_item(
     """
     db = get_db()
     organization_id = _session_org(user)
-    item = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
+    shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
 
     if request.idempotency_key:
         replay = load_idempotent_response(db, request.idempotency_key)
@@ -1915,7 +1945,7 @@ async def unsnooze_ap_item(
     """Manually unsnooze an AP item via the ``unsnooze_invoice`` intent."""
     db = get_db()
     organization_id = _session_org(user)
-    item = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
+    shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
 
     runtime = shared._finance_agent_runtime_cls()(
         organization_id=organization_id,
@@ -1980,7 +2010,7 @@ async def classify_ap_item(
     """
     organization_id = _session_org(user)
     db = get_db()
-    item = shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
+    shared._require_item(db, ap_item_id, expected_organization_id=organization_id)
 
     runtime = shared._finance_agent_runtime_cls()(
         organization_id=organization_id,

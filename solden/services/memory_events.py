@@ -773,6 +773,7 @@ def _runtime_evidence(
     payload: Dict[str, Any],
     response: Dict[str, Any],
     source_refs: Dict[str, Any],
+    company_learning_context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     result = _clean_dict(response.get("result"))
     evidence = {
@@ -784,12 +785,40 @@ def _runtime_evidence(
         "result_status": result.get("status"),
         "result_reason": result.get("reason"),
         "source_refs": source_refs,
+        "company_learning_context": company_learning_context,
     }
     return {
         key: value
         for key, value in evidence.items()
         if value not in (None, "", [], {})
     }
+
+
+def _runtime_company_learning_context(
+    db: Any,
+    *,
+    organization_id: str,
+    item: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    org_id = _text(organization_id)
+    if not org_id:
+        return None
+    try:
+        from solden.services.company_learning_runtime_context import (
+            build_company_learning_memory_context,
+        )
+
+        return build_company_learning_memory_context(
+            org_id,
+            db=db,
+            vendor_name=(
+                _text((item or {}).get("vendor_name"))
+                or _text((item or {}).get("vendor"))
+                or None
+            ),
+        )
+    except Exception:
+        return None
 
 
 def commit_runtime_memory_event(
@@ -829,6 +858,11 @@ def commit_runtime_memory_event(
             item = {}
     owner = _runtime_owner_from_item(item) if isinstance(item, dict) else {}
     resulting_state = _text((item or {}).get("state")) or status
+    company_learning_context = _runtime_company_learning_context(
+        db,
+        organization_id=organization_id,
+        item=item if isinstance(item, dict) else {},
+    )
     runtime_actor_id = (
         _text(payload.get("actor_email"))
         or _text(payload.get("actor_id"))
@@ -868,6 +902,7 @@ def commit_runtime_memory_event(
             payload=payload,
             response=response,
             source_refs=source_refs,
+            company_learning_context=company_learning_context,
         ),
         confidence=response.get("confidence"),
         human_confirmation_status="confirmed" if runtime_actor_id else None,

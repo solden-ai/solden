@@ -47,6 +47,15 @@ PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
         required_tokens=("_commit_intent_memory_event", "commit_runtime_memory_event"),
     ),
     MemoryCoverageSurface(
+        name="runtime_memory_learning_context",
+        path="solden/services/memory_events.py",
+        required_tokens=(
+            "commit_runtime_memory_event",
+            "build_company_learning_memory_context",
+            "company_learning_context",
+        ),
+    ),
+    MemoryCoverageSurface(
         name="audit_event_funnel",
         path="solden/core/stores/ap_store.py",
         required_tokens=(
@@ -127,6 +136,8 @@ PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
         required_tokens=(
             "_commit_ap_operational_memory",
             "commit_memory_event",
+            "build_company_learning_memory_context",
+            "company_learning_context",
             "runtime.execute_intent",
             "append_audit_event",
         ),
@@ -227,6 +238,19 @@ PRIMARY_MEMORY_EXECUTION_COVERAGE: Tuple[MemoryExecutionCoverage, ...] = (
         required_test_tokens=(
             "test_runtime_intent_memory_event_captures_surface_action_context",
             "commit_runtime_memory_event",
+        ),
+    ),
+    MemoryExecutionCoverage(
+        name="runtime_intent_learning_context",
+        source_path="solden/services/memory_events.py",
+        test_path="tests/test_operational_memory.py",
+        required_source_tokens=(
+            "build_company_learning_memory_context",
+            "company_learning_context",
+        ),
+        required_test_tokens=(
+            "test_runtime_intent_memory_event_attaches_company_learning_context",
+            "company_learning_context",
         ),
     ),
     MemoryExecutionCoverage(
@@ -394,6 +418,20 @@ PRIMARY_MEMORY_EXECUTION_COVERAGE: Tuple[MemoryExecutionCoverage, ...] = (
             "field-review/resolve",
             "field_correction",
             "memory_event_invariant_violations",
+        ),
+    ),
+    MemoryExecutionCoverage(
+        name="ap_direct_action_learning_context",
+        source_path="solden/api/ap_items_action_routes.py",
+        test_path="tests/test_memory_layer_invariants.py",
+        required_source_tokens=(
+            "_commit_ap_operational_memory",
+            "build_company_learning_memory_context",
+            "company_learning_context",
+        ),
+        required_test_tokens=(
+            "test_ap_direct_operational_memory_helper_attaches_company_learning_context",
+            "company_learning_context",
         ),
     ),
     MemoryExecutionCoverage(

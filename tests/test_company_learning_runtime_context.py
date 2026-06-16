@@ -8,7 +8,9 @@ from solden.services.company_learning_contract import (
     COMPANY_LEARNING_CONTRACT_SNAPSHOT_TYPE,
 )
 from solden.services.company_learning_runtime_context import (
+    COMPANY_LEARNING_MEMORY_CONTEXT,
     COMPANY_LEARNING_RUNTIME_CONTEXT,
+    build_company_learning_memory_context,
     build_company_learning_runtime_context,
 )
 
@@ -138,3 +140,35 @@ def test_runtime_context_compacts_fresh_learning_and_vendor_policy_proposals(
     assert context["pending_policy_proposals"]["proposals"][0]["vendor_name"] == (
         "Google Cloud EMEA Limited"
     )
+
+
+def test_memory_context_compacts_learning_without_pending_policy_proposals(
+    tmp_path,
+    monkeypatch,
+):
+    db = _db(tmp_path, monkeypatch)
+    memory = AgentMemoryService(ORG_ID, db=db)
+    _record_snapshots(memory)
+    db.create_policy_proposal(
+        organization_id=ORG_ID,
+        proposal_kind="vendor_standing_approval",
+        vendor_name="Google Cloud EMEA Limited",
+        behavior_summary="This pending proposal must stay out of memory rows.",
+        evidence={"learning_citation": {"source": "ap_learning_loop"}},
+        proposed_rule={"rule_type": "vendor_amount"},
+    )
+
+    context = build_company_learning_memory_context(
+        ORG_ID,
+        db=db,
+        agent_memory=memory,
+        vendor_name="Google Cloud EMEA Limited",
+    )
+
+    assert context is not None
+    assert context["contract"] == COMPANY_LEARNING_MEMORY_CONTEXT
+    assert context["summary"]["next_learning_objective"] == (
+        "Route AP agent decisions through memory"
+    )
+    assert "pending_policy_proposals" not in context
+    assert "proposals" not in str(context)
