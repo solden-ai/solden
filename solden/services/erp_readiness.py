@@ -7,6 +7,7 @@ from typing import Any, Dict, Iterable, List, Optional
 from solden.core.database import SoldenDB, get_db
 from solden.core.launch_controls import get_ga_readiness, get_rollback_controls
 from solden.services.erp_connector_strategy import get_erp_connector_strategy
+from solden.services.erp_evidence_contract import build_erp_evidence_contract
 
 
 GA_CONNECTOR_SCOPE: tuple[str, ...] = (
@@ -71,6 +72,16 @@ def evaluate_erp_connector_readiness(
     ga_readiness = get_ga_readiness(org_id, db=resolved_db)
     rollback = get_rollback_controls(org_id, db=resolved_db)
     checklist_map = _safe_dict(ga_readiness.get("connector_checklists"))
+    evidence_contract = build_erp_evidence_contract(
+        org_id,
+        db=resolved_db,
+        connector_scope=scope,
+    )
+    evidence_by_connector = {
+        str(row.get("erp_type") or ""): row
+        for row in _safe_list(evidence_contract.get("connectors"))
+        if isinstance(row, dict)
+    }
 
     configured_connectors: set[str] = set()
     if hasattr(resolved_db, "get_erp_connections"):
@@ -98,6 +109,8 @@ def evaluate_erp_connector_readiness(
         checklist_completed = bool(checklist.get("completed") or checklist.get("signed_off"))
         checklist_signed_off = bool(checklist.get("signed_off"))
         checklist_blocked = bool(checklist.get("blocked"))
+        evidence_row = _safe_dict(evidence_by_connector.get(connector))
+        evidence_ready = bool(evidence_row.get("ready_for_claim"))
         checklist_status = (
             "completed"
             if checklist_completed
@@ -119,8 +132,13 @@ def evaluate_erp_connector_readiness(
             ready = False
             blocked_reasons.append(f"{connector}:api_unsupported")
         elif checklist_completed:
-            readiness_status = "ready"
-            ready = True
+            if require_full_ga_scope and not evidence_ready:
+                readiness_status = "pending_evidence"
+                ready = False
+                blocked_reasons.append(f"{connector}:evidence_incomplete")
+            else:
+                readiness_status = "ready"
+                ready = True
         else:
             readiness_status = "pending_readiness"
             ready = False
@@ -138,6 +156,7 @@ def evaluate_erp_connector_readiness(
                 "rollback_blocked": rollback_blocked,
                 "readiness_status": readiness_status,
                 "ready": ready,
+                "evidence_contract": evidence_row,
                 "notes": capability.notes,
             }
         )
@@ -154,6 +173,7 @@ def evaluate_erp_connector_readiness(
     ga_total = len(rows)
     ga_ready = sum(1 for row in rows if row["ready"])
     ga_readiness_rate = round(ga_ready / max(1, ga_total), 4) if ga_total > 0 else None
+    evidence_summary = _safe_dict(evidence_contract.get("summary"))
 
     configured_total = len(configured_connectors)
     if require_full_ga_scope:
@@ -180,6 +200,12 @@ def evaluate_erp_connector_readiness(
             "ga_scope_total": ga_total,
             "ga_scope_ready": ga_ready,
             "ga_scope_readiness_rate": ga_readiness_rate,
+            "evidence_backed_connectors": int(evidence_summary.get("evidence_backed") or 0),
+            "sandbox_evidence_observed": int(evidence_summary.get("sandbox_observed") or 0),
+            "customer_evidence_observed": int(evidence_summary.get("customer_observed") or 0),
+            "failure_mode_evidence_observed": int(evidence_summary.get("failure_mode_observed") or 0),
+            "missing_customer_evidence": int(evidence_summary.get("missing_customer_evidence") or 0),
+            "evidence_ready_for_ga_claims": bool(evidence_summary.get("ready_for_ga_claims")),
             "blocked_reasons": blocked_reasons,
         },
     }

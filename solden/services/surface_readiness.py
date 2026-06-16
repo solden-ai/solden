@@ -13,6 +13,7 @@ from dataclasses import asdict, dataclass
 from typing import Any, Dict, Iterable, List, Optional
 
 from solden.core.database import SoldenDB
+from solden.services.erp_evidence_contract import build_erp_evidence_contract
 from solden.services.erp_connector_strategy import get_erp_connector_strategy
 
 
@@ -224,6 +225,12 @@ def build_surface_readiness(
         for row in memory_contract.get("surfaces", [])
         if isinstance(row, dict)
     }
+    erp_evidence_contract = build_erp_evidence_contract(org_id, db=db)
+    erp_evidence_by_key = {
+        str(row.get("erp_type") or ""): row
+        for row in erp_evidence_contract.get("connectors", [])
+        if isinstance(row, dict)
+    }
     status_by_name = _safe_status_map(integration_statuses)
     erp_connections = _connection_by_erp(db, org_id) if db is not None and org_id else {}
     strategy = get_erp_connector_strategy()
@@ -247,6 +254,7 @@ def build_surface_readiness(
                 "rollout_stage": capability.rollout_stage,
                 "deep_link_id": conn.get("deep_link_id"),
                 "last_sync_at": conn.get("last_sync_at"),
+                "evidence_contract": erp_evidence_by_key.get(surface.key) or {},
             })
         elif surface.key == "workspace":
             connected = True
@@ -289,6 +297,10 @@ def build_surface_readiness(
         "memory_ready": int((memory_contract.get("summary") or {}).get("ready") or 0),
         "memory_needs_work": int((memory_contract.get("summary") or {}).get("needs_work") or 0),
         "memory_recent_events": int((memory_contract.get("summary") or {}).get("recent_memory_events") or 0),
+        "erp_evidence_backed": int((erp_evidence_contract.get("summary") or {}).get("evidence_backed") or 0),
+        "erp_sandbox_observed": int((erp_evidence_contract.get("summary") or {}).get("sandbox_observed") or 0),
+        "erp_customer_observed": int((erp_evidence_contract.get("summary") or {}).get("customer_observed") or 0),
+        "erp_missing_customer_evidence": int((erp_evidence_contract.get("summary") or {}).get("missing_customer_evidence") or 0),
     }
 
     return {
@@ -300,5 +312,10 @@ def build_surface_readiness(
             "contract": memory_contract.get("contract"),
             "computed_at": memory_contract.get("computed_at"),
             "summary": memory_contract.get("summary") or {},
+        },
+        "erp_evidence_contract": {
+            "contract": erp_evidence_contract.get("contract"),
+            "computed_at": erp_evidence_contract.get("computed_at"),
+            "summary": erp_evidence_contract.get("summary") or {},
         },
     }

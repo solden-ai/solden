@@ -21,6 +21,28 @@ class _FakeDB:
         ]
 
 
+class _FakeEvidenceDB(_FakeDB):
+    def ensure_organization(self, organization_id: str, organization_name: str | None = None):
+        assert organization_id == "org-1"
+        return {
+            "settings_json": {
+                "ga_readiness": {
+                    "connector_checklists": {
+                        "quickbooks": {"completed": True, "signed_off": True},
+                    },
+                    "parity_evidence": [
+                        {"erp_type": "quickbooks", "proof_type": "sandbox_validation"},
+                        {"erp_type": "quickbooks", "proof_type": "customer_pilot"},
+                        {"erp_type": "quickbooks", "proof_type": "failure_mode_matrix"},
+                    ],
+                    "signoffs": [
+                        {"erp_type": "quickbooks", "signed_by": "eng-lead"},
+                    ],
+                }
+            }
+        }
+
+
 def _surface(payload, key: str):
     return next(row for row in payload["surfaces"] if row["key"] == key)
 
@@ -55,6 +77,19 @@ def test_surface_readiness_overlays_erp_connection_state():
     sage_accounting = _surface(payload, "sage_accounting")
     assert sage_accounting["connected"] is False
     assert sage_accounting["connection_status"] == "not_connected"
+
+
+def test_surface_readiness_includes_erp_evidence_contract():
+    payload = build_surface_readiness("org-1", db=_FakeEvidenceDB())
+
+    assert payload["erp_evidence_contract"]["contract"] == "erp_evidence_contract.v1"
+    assert payload["summary"]["erp_evidence_backed"] == 1
+    assert payload["summary"]["erp_customer_observed"] == 1
+    assert payload["summary"]["erp_missing_customer_evidence"] == 5
+
+    quickbooks = _surface(payload, "quickbooks")
+    assert quickbooks["evidence_contract"]["evidence_status"] == "evidence_backed"
+    assert quickbooks["evidence_contract"]["ready_for_claim"] is True
 
 
 def test_surface_readiness_overlays_non_erp_statuses():
