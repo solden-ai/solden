@@ -216,6 +216,14 @@ def build_surface_readiness(
     """Return the canonical readiness catalog with org connection state."""
 
     org_id = str(organization_id or "").strip()
+    from solden.services.surface_memory_contract import build_surface_memory_contract
+
+    memory_contract = build_surface_memory_contract(org_id, db=db)
+    memory_by_key = {
+        str(row.get("key") or ""): row
+        for row in memory_contract.get("surfaces", [])
+        if isinstance(row, dict)
+    }
     status_by_name = _safe_status_map(integration_statuses)
     erp_connections = _connection_by_erp(db, org_id) if db is not None and org_id else {}
     strategy = get_erp_connector_strategy()
@@ -260,6 +268,7 @@ def build_surface_readiness(
         base.update({
             "connected": connected,
             "connection_status": connection_status,
+            "memory_contract": memory_by_key.get(surface.key) or {},
         })
         rows.append(base)
 
@@ -277,6 +286,9 @@ def build_surface_readiness(
             if row.get("family") == "erp" and row.get("memory_surface") == "Provider-neutral ERP memory API"
         ),
         "sandbox_pending": sum(1 for row in rows if row.get("maturity") == "sandbox_pending"),
+        "memory_ready": int((memory_contract.get("summary") or {}).get("ready") or 0),
+        "memory_needs_work": int((memory_contract.get("summary") or {}).get("needs_work") or 0),
+        "memory_recent_events": int((memory_contract.get("summary") or {}).get("recent_memory_events") or 0),
     }
 
     return {
@@ -284,4 +296,9 @@ def build_surface_readiness(
         "contract": "surface_readiness.v1",
         "surfaces": rows,
         "summary": summary,
+        "memory_contract": {
+            "contract": memory_contract.get("contract"),
+            "computed_at": memory_contract.get("computed_at"),
+            "summary": memory_contract.get("summary") or {},
+        },
     }
