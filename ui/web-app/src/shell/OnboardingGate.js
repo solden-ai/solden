@@ -10,7 +10,7 @@ import { ACCOUNTS_PAYABLE_ROUTE } from '../utils/record-route.js';
  *   - Configuration surfaces the wizard's "Set up" buttons deep-link
  *     into (/connections, /settings) — without these the deep-link
  *     bounces back to the wizard.
- *   - Admin/ops observation surfaces (/audit, /plan, /health). An
+ *   - Admin/ops observation surfaces (/audit, /plan, /status). An
  *     admin owns the workspace and should be able to read the audit
  *     log, check billing, and look at integration health while still
  *     working through ERP setup. Forcing them back to the wizard for
@@ -37,7 +37,7 @@ const ONBOARDING_PASSTHROUGH = new Set([
   // Admin / ops observation surfaces
   '/audit',
   '/plan',
-  '/health',
+  '/status',
   // Coordination surfaces — see header for rationale.
   '/home',
   ACCOUNTS_PAYABLE_ROUTE,
@@ -51,7 +51,6 @@ const ONBOARDING_PASSTHROUGH = new Set([
   '/api-keys',
   // Public + auth flows
   '/signup/accept',
-  '/status',
   '/privacy',
   '/terms',
 ]);

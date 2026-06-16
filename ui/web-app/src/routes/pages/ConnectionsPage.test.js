@@ -81,6 +81,7 @@ function renderConnectionsPage({ webhooks = makeWebhooks() } = {}) {
     return {};
   });
 
+  const navigate = vi.fn();
   const rendered = render(h(ConnectionsPage, {
     bootstrap: makeBootstrap(),
     api,
@@ -88,10 +89,10 @@ function renderConnectionsPage({ webhooks = makeWebhooks() } = {}) {
     orgId: 'org-test',
     onRefresh: vi.fn(),
     oauthBridge: { open: vi.fn() },
-    navigate: vi.fn(),
+    navigate,
   }));
 
-  return { ...rendered, api };
+  return { ...rendered, api, navigate };
 }
 
 describe('ConnectionsPage', () => {
@@ -144,5 +145,14 @@ describe('ConnectionsPage', () => {
       expect(screen.getByText('https://hooks.example.com/1')).toBeTruthy();
     });
     expect(screen.queryByText('https://hooks.example.com/6')).toBeNull();
+  });
+
+  it('opens the workspace status page instead of the raw health probe', async () => {
+    const { navigate } = renderConnectionsPage();
+
+    fireEvent.click(await screen.findByText('Open system status'));
+
+    expect(navigate).toHaveBeenCalledWith('/status');
+    expect(navigate).not.toHaveBeenCalledWith('/health');
   });
 });

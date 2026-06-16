@@ -28,7 +28,6 @@ import { ActivityRoute } from './routes/pages/ActivityRoute.js';
 import { AuditLogRoute } from './routes/pages/AuditLogRoute.js';
 import { ConnectionsRoute } from './routes/pages/ConnectionsRoute.js';
 import { SettingsRoute } from './routes/pages/SettingsRoute.js';
-import { HealthRoute } from './routes/pages/HealthRoute.js';
 import { PlanRoute } from './routes/pages/PlanRoute.js';
 import { ApiKeysRoute } from './routes/pages/ApiKeysRoute.js';
 import { hasCapability } from './utils/capabilities.js';
@@ -92,7 +91,6 @@ export function App() {
                       ${(params) => html`<${SettingsRoute} routeId=${params.section} />`}
                     <//>
                     <${Route} path="/api-keys"><${ApiKeysRoute} /><//>
-                    <${Route} path="/health"><${HealthRoute} /><//>
                     <${Route} path="/status"><${StatusPage} /><//>
                     <${Route} path=${ACCOUNTS_PAYABLE_DETAIL_ROUTE}>
                       ${(params) => html`<${RecordDetailRoute} recordId=${params.id} />`}

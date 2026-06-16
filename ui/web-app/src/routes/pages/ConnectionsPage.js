@@ -480,7 +480,7 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
           ${gmail.connected || gmailReconnectRequired
             ? html`<button class="btn-primary btn-sm" onClick=${connectGmail} disabled=${gmailPending || !canEditConnections}>${gmailPending ? 'Working…' : (gmailReconnectRequired ? 'Reconnect Gmail' : 'Refresh Gmail auth')}</button>`
             : html`<button class="btn-primary btn-sm" onClick=${connectGmail} disabled=${gmailPending || !canEditConnections}>${gmailPending ? 'Working…' : 'Connect Gmail'}</button>`}
-          <button class="btn-secondary btn-sm" onClick=${() => navigate?.('/health')}>Open system status</button>
+          <button class="btn-secondary btn-sm" onClick=${() => navigate?.('/status')}>Open system status</button>
         </div>
       </div>
 
