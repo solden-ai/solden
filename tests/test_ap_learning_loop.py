@@ -3,6 +3,7 @@ from __future__ import annotations
 from solden.core.database import SoldenDB
 from solden.services.agent_memory import AgentMemoryService
 from solden.services.ap_learning_loop import (
+    COMPANY_LEARNING_SNAPSHOT_TYPE,
     PRIVATE_OUTCOME_EVAL_TYPE,
     APLearningLoopService,
     run_scheduled_ap_learning_loop_evals,
@@ -175,6 +176,19 @@ def test_ap_learning_loop_creates_private_eval_and_company_patterns(tmp_path, mo
     )
     assert blocker_candidate["action_type"] == "tune_intake_policy"
     assert blocker_candidate["evidence"]["blocker_count"] == 2
+    company_profile = snapshot["company_learning"]["company_memory_profile"]
+    assert company_profile["snapshot_type"] == COMPANY_LEARNING_SNAPSHOT_TYPE
+    assert company_profile["headline"] == (
+        "AP company learning is forming from real traces"
+    )
+    assert company_profile["maturity"]["level"] == "forming"
+    assert company_profile["maturity"]["score"] == 0.9
+    assert company_profile["operating_patterns"]["top_recurring_blocker"]["key"] == (
+        "critical_field_low_confidence"
+    )
+    assert company_profile["next_learning_objective"]["key"] == (
+        "reduce_recurring_blocker_critical_field_low_confidence"
+    )
 
     persisted = agent_memory.latest_eval_snapshot(
         skill_id="ap_v1",
@@ -182,6 +196,12 @@ def test_ap_learning_loop_creates_private_eval_and_company_patterns(tmp_path, mo
         snapshot_type=PRIVATE_OUTCOME_EVAL_TYPE,
     )
     assert persisted["payload"]["summary"]["total_items"] == 2
+    company_persisted = agent_memory.latest_eval_snapshot(
+        skill_id="ap_v1",
+        scope="organization",
+        snapshot_type=COMPANY_LEARNING_SNAPSHOT_TYPE,
+    )
+    assert company_persisted["payload"]["maturity"]["level"] == "forming"
     patterns = agent_memory.list_patterns(
         skill_id="ap_v1",
         pattern_type="company_ap_blocker",
@@ -196,6 +216,15 @@ def test_ap_learning_loop_creates_private_eval_and_company_patterns(tmp_path, mo
     )
     assert improvements
     assert improvements[0]["pattern"]["evidence"]["failed_case_count"] == 1
+    company_patterns = agent_memory.list_patterns(
+        skill_id="ap_v1",
+        pattern_type="company_learning_profile",
+        pattern_key_prefix="ap_source_to_pay",
+    )
+    assert company_patterns
+    assert company_patterns[0]["pattern"]["next_learning_objective"]["key"] == (
+        "reduce_recurring_blocker_critical_field_low_confidence"
+    )
 
 
 def test_ap_learning_loop_flags_missing_learning_signal(tmp_path, monkeypatch):
@@ -226,6 +255,11 @@ def test_ap_learning_loop_flags_missing_learning_signal(tmp_path, monkeypatch):
     )
     assert memory_candidate["priority"] == "high"
     assert memory_candidate["evidence"]["example_item_ids"] == ["AP-LEARN-GAP"]
+    company_profile = snapshot["company_learning"]["company_memory_profile"]
+    assert company_profile["maturity"]["level"] == "instrumenting"
+    assert company_profile["next_learning_objective"]["key"] == (
+        "instrument_missing_memory_events"
+    )
     assert (
         "Route every AP agent decision through AgentMemoryService"
         in snapshot["company_learning"]["recommended_actions"][0]

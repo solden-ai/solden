@@ -76,6 +76,14 @@ const agentPerformancePayload = {
         metric: { name: 'agent_trace_rate', value: 0.667, target: 0.8 },
       },
     ],
+    company_memory_profile: {
+      headline: 'AP company learning is forming from real traces',
+      maturity: { level: 'forming', score: 0.8 },
+      sample: { total_items: 3 },
+      next_learning_objective: {
+        title: 'Route AP agent decisions through agent memory',
+      },
+    },
   },
 };
 
@@ -249,8 +257,12 @@ describe('ReportsPage', () => {
     expect(screen.getByText('Top recurring blocker')).toBeTruthy();
     expect(screen.getByText('Critical Field Low Confidence')).toBeTruthy();
     expect(screen.getByText('2 records')).toBeTruthy();
+    expect(screen.getByText('Company learning')).toBeTruthy();
+    expect(screen.getByText('AP company learning is forming from real traces')).toBeTruthy();
+    expect(screen.getByText('Forming maturity · 80.0% · 3 records')).toBeTruthy();
+    expect(screen.getByText('Next objective')).toBeTruthy();
     expect(screen.getByText('Top improvement')).toBeTruthy();
-    expect(screen.getByText('Route AP agent decisions through agent memory')).toBeTruthy();
+    expect(screen.getAllByText('Route AP agent decisions through agent memory').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('1 of 3 records · agent trace rate 66.7%')).toBeTruthy();
   });
 });

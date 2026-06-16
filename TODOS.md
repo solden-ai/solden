@@ -145,10 +145,11 @@ Progress:
 - 2026-06-15: Scheduled AP learning-loop evals through Celery Beat and the in-process background fallback; empty orgs are skipped and pilot orgs can be scoped with `SOLDEN_AP_LEARNING_LOOP_ORG_IDS`.
 - 2026-06-15: Policy proposals now cite the private-eval snapshot and recurring pattern that justified the proposed rule; accepted rules and proposal audit events carry the same citation.
 - 2026-06-15: AP private-eval snapshots now emit structured agent-improvement candidates from failed real-trace cases, persist them as `agent_improvement_candidate` memory patterns, and expose the top candidate in workspace Reports.
+- 2026-06-16: AP private-eval snapshots now emit a company-level memory profile with maturity, strengths, gaps, operating patterns, and the next learning objective; the profile persists as both a `company_learning_snapshot` and a `company_learning_profile` pattern.
 
 Acceptance covered:
 - Scheduled AP learning-loop evals for pilot workspaces.
-- Workspace Reports show memory event coverage, evidence linkage, agent trace coverage, terminal outcome traceability, recurring company-level blockers, and the top trace-derived improvement candidate.
+- Workspace Reports show memory event coverage, evidence linkage, agent trace coverage, terminal outcome traceability, recurring company-level blockers, company learning maturity, and the top trace-derived improvement candidate.
 - Agent policy changes cite the private-eval snapshot or recurring pattern that justified the change.
 
 ### Semantic dimension and entity graph completion

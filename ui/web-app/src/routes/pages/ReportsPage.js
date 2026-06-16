@@ -337,6 +337,9 @@ function LearningLoopPanel({ learningLoop }) {
     ? learningLoop.agent_improvement_candidates
     : [];
   const topImprovement = improvementCandidates[0] || null;
+  const companyProfile = learningLoop.company_memory_profile || {};
+  const maturity = companyProfile.maturity || {};
+  const nextObjective = companyProfile.next_learning_objective || {};
 
   const metrics = [
     {
@@ -389,8 +392,24 @@ function LearningLoopPanel({ learningLoop }) {
         `)}
       </div>
 
-      ${topBlocker || topImprovement ? html`
+      ${companyProfile.headline || topBlocker || topImprovement ? html`
         <div class="cl-reports-learning-insights">
+          ${companyProfile.headline ? html`
+            <div class="cl-reports-learning-company">
+              <div>
+                <span>Company learning</span>
+                <strong>${companyProfile.headline}</strong>
+                <small>${formatCompanyLearningMeta(companyProfile)}</small>
+              </div>
+              ${nextObjective.title ? html`
+                <div>
+                  <span>Next objective</span>
+                  <strong>${nextObjective.title}</strong>
+                  <small>${formatLearningMaturity(maturity)}</small>
+                </div>
+              ` : null}
+            </div>
+          ` : null}
           ${topBlocker ? html`
             <div class="cl-reports-learning-blocker">
               <span>Top recurring blocker</span>
@@ -769,6 +788,23 @@ function formatImprovementEvidence(candidate) {
     return `${formatInteger(failed)} of ${formatInteger(sample)} records · ${metricName} ${metricValue}`;
   }
   return `${metricName} ${metricValue}`;
+}
+
+function formatCompanyLearningMeta(profile) {
+  const maturity = profile?.maturity || {};
+  const sample = profile?.sample || {};
+  const level = formatLearningMaturity(maturity);
+  const total = Number(sample.total_items || profile?.evidence?.sample_size || 0);
+  const countLabel = `${formatInteger(total)} record${total === 1 ? '' : 's'}`;
+  return `${level} · ${countLabel}`;
+}
+
+function formatLearningMaturity(maturity) {
+  const level = humanizeSnakeText(maturity?.level || 'no_signal');
+  const score = maturity?.score === null || maturity?.score === undefined
+    ? null
+    : pct(maturity.score);
+  return score ? `${level} maturity · ${score}` : `${level} maturity`;
 }
 
 function isReportEmpty(reportId, summary, series, breakdown) {

@@ -22,6 +22,7 @@ from solden.services.operational_memory import build_box_operational_memory_reco
 
 LEARNING_LOOP_CONTRACT = "solden_ap_learning_loop.v1"
 PRIVATE_OUTCOME_EVAL_TYPE = "ap_private_outcome_eval"
+COMPANY_LEARNING_SNAPSHOT_TYPE = "company_learning_snapshot"
 DEFAULT_SCHEDULED_EVAL_WINDOW_DAYS = 30
 DEFAULT_SCHEDULED_EVAL_LIMIT = 1000
 
@@ -482,6 +483,11 @@ class APLearningLoopService:
                 total_memory_score / max(1, item_count), 4
             ),
         }
+        company_learning["company_memory_profile"] = self._company_memory_profile(
+            summary=summary,
+            company_learning=company_learning,
+            eval_cases=eval_cases,
+        )
         snapshot = {
             "contract": LEARNING_LOOP_CONTRACT,
             "snapshot_type": PRIVATE_OUTCOME_EVAL_TYPE,
@@ -510,6 +516,23 @@ class APLearningLoopService:
             snapshot_type=PRIVATE_OUTCOME_EVAL_TYPE,
             payload=snapshot,
         )
+        company_profile = snapshot.get("company_learning", {}).get(
+            "company_memory_profile"
+        )
+        if isinstance(company_profile, dict) and company_profile:
+            self.agent_memory.record_eval_snapshot(
+                skill_id="ap_v1",
+                scope="organization",
+                snapshot_type=COMPANY_LEARNING_SNAPSHOT_TYPE,
+                payload=company_profile,
+            )
+            self.agent_memory.record_pattern(
+                skill_id="ap_v1",
+                pattern_type="company_learning_profile",
+                pattern_key=_text(company_profile.get("scope") or "ap_source_to_pay"),
+                pattern=company_profile,
+                confidence=float(company_profile.get("confidence") or 0.5),
+            )
         for blocker in snapshot.get("company_learning", {}).get("recurring_blockers", []):
             if not isinstance(blocker, dict):
                 continue
@@ -841,14 +864,217 @@ class APLearningLoopService:
             )
 
         priority_rank = {"high": 0, "medium": 1, "low": 2}
+        action_rank = {
+            "instrument_runtime_path": 0,
+            "instrument_agent_trace": 1,
+            "record_outcome_trace": 2,
+            "enforce_evidence_contract": 3,
+            "complete_memory_projection": 4,
+            "tune_intake_policy": 5,
+        }
         candidates.sort(
             key=lambda item: (
                 priority_rank.get(_text(item.get("priority")), 9),
                 -int(item.get("evidence", {}).get("failed_case_count") or 0),
+                action_rank.get(_text(item.get("action_type")), 99),
                 _text(item.get("key")),
             )
         )
         return candidates[:10]
+
+    @classmethod
+    def _company_memory_profile(
+        cls,
+        *,
+        summary: Dict[str, Any],
+        company_learning: Dict[str, Any],
+        eval_cases: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        total_items = int(summary.get("total_items") or 0)
+        terminal_items = int(summary.get("terminal_items") or 0)
+        rates = [
+            {
+                "key": "memory_event_coverage_rate",
+                "label": "Memory event coverage",
+                "value": float(summary.get("memory_event_coverage_rate") or 0),
+                "target": 0.95,
+            },
+            {
+                "key": "evidence_link_rate",
+                "label": "Evidence linkage",
+                "value": float(summary.get("evidence_link_rate") or 0),
+                "target": 0.9,
+            },
+            {
+                "key": "agent_trace_rate",
+                "label": "Agent trace coverage",
+                "value": float(summary.get("agent_trace_rate") or 0),
+                "target": 0.8,
+            },
+            {
+                "key": "outcome_traceability_rate",
+                "label": "Outcome traceability",
+                "value": float(summary.get("outcome_traceability_rate") or 0),
+                "target": 0.9,
+                "sample_size": terminal_items,
+            },
+            {
+                "key": "average_memory_completeness_score",
+                "label": "Memory completeness",
+                "value": float(summary.get("average_memory_completeness_score") or 0),
+                "target": 0.95,
+            },
+        ]
+        maturity_score = round(
+            sum(float(signal.get("value") or 0) for signal in rates) / len(rates),
+            4,
+        )
+        candidates = company_learning.get("agent_improvement_candidates")
+        candidates = candidates if isinstance(candidates, list) else []
+        has_high_priority_gap = any(
+            _text(candidate.get("priority")).lower() == "high"
+            for candidate in candidates
+            if isinstance(candidate, dict)
+        )
+        if total_items <= 0:
+            maturity_level = "no_signal"
+            headline = "No AP learning signal yet"
+        elif maturity_score >= 0.9 and not has_high_priority_gap:
+            maturity_level = "compounding"
+            headline = "AP work is producing reusable company learning"
+        elif maturity_score >= 0.7:
+            maturity_level = "forming"
+            headline = "AP company learning is forming from real traces"
+        else:
+            maturity_level = "instrumenting"
+            headline = "AP company learning needs stronger instrumentation"
+
+        strengths: List[Dict[str, Any]] = []
+        for signal in rates:
+            if float(signal.get("value") or 0) >= float(signal.get("target") or 1):
+                strengths.append(
+                    {
+                        "key": signal["key"],
+                        "title": f"{signal['label']} is durable",
+                        "metric": {
+                            "name": signal["key"],
+                            "value": signal["value"],
+                            "target": signal["target"],
+                        },
+                    }
+                )
+
+        learning_gaps: List[Dict[str, Any]] = []
+        for candidate in candidates[:5]:
+            if not isinstance(candidate, dict):
+                continue
+            learning_gaps.append(
+                {
+                    "key": candidate.get("key"),
+                    "title": candidate.get("title"),
+                    "priority": candidate.get("priority"),
+                    "metric": candidate.get("metric") or {},
+                    "runtime_path": candidate.get("target_runtime_path"),
+                    "evidence": candidate.get("evidence") or {},
+                }
+            )
+
+        recurring_blockers = company_learning.get("recurring_blockers")
+        recurring_blockers = recurring_blockers if isinstance(recurring_blockers, list) else []
+        vendor_patterns = company_learning.get("vendor_patterns")
+        vendor_patterns = vendor_patterns if isinstance(vendor_patterns, list) else []
+        owner_wait_patterns = company_learning.get("owner_wait_patterns")
+        owner_wait_patterns = (
+            owner_wait_patterns if isinstance(owner_wait_patterns, list) else []
+        )
+        surface_mix = company_learning.get("surface_mix")
+        surface_mix = surface_mix if isinstance(surface_mix, list) else []
+
+        top_candidate = candidates[0] if candidates and isinstance(candidates[0], dict) else {}
+        if top_candidate:
+            metric = top_candidate.get("metric") if isinstance(top_candidate.get("metric"), dict) else {}
+            next_objective = {
+                "key": top_candidate.get("key"),
+                "title": top_candidate.get("title"),
+                "priority": top_candidate.get("priority"),
+                "target_runtime_path": top_candidate.get("target_runtime_path"),
+                "action_type": top_candidate.get("action_type"),
+                "target_metric": metric,
+                "success_condition": {
+                    "metric": metric.get("name"),
+                    "current": metric.get("value"),
+                    "target": metric.get("target"),
+                },
+                "evidence": top_candidate.get("evidence") or {},
+            }
+        else:
+            next_objective = {
+                "key": "monitor_learning_drift",
+                "title": "Monitor company learning drift weekly",
+                "priority": "low",
+                "target_runtime_path": "APLearningLoopService.evaluate_private_outcomes",
+                "action_type": "monitor",
+                "target_metric": {
+                    "name": "maturity_score",
+                    "value": maturity_score,
+                    "target": 0.9,
+                },
+                "success_condition": {
+                    "metric": "maturity_score",
+                    "current": maturity_score,
+                    "target": 0.9,
+                },
+                "evidence": {
+                    "sample_size": total_items,
+                    "example_item_ids": cls._case_refs(eval_cases),
+                },
+            }
+
+        state_counts = Counter(
+            _text(case.get("state")).lower() or "unknown"
+            for case in eval_cases
+            if isinstance(case, dict)
+        )
+        confidence = (
+            0.3
+            if total_items <= 0
+            else min(0.95, round(0.45 + (min(total_items, 20) / 20) * 0.35, 4))
+        )
+        return {
+            "contract": LEARNING_LOOP_CONTRACT,
+            "snapshot_type": COMPANY_LEARNING_SNAPSHOT_TYPE,
+            "scope": "ap_source_to_pay",
+            "headline": headline,
+            "maturity": {
+                "level": maturity_level,
+                "score": maturity_score,
+                "signals": rates,
+            },
+            "sample": {
+                "total_items": total_items,
+                "terminal_items": terminal_items,
+                "state_mix": [
+                    {"state": state, "count": count}
+                    for state, count in state_counts.most_common(10)
+                ],
+            },
+            "learned_strengths": strengths,
+            "learning_gaps": learning_gaps,
+            "operating_patterns": {
+                "top_recurring_blocker": recurring_blockers[0] if recurring_blockers else None,
+                "top_vendor_pattern": vendor_patterns[0] if vendor_patterns else None,
+                "owner_wait_patterns": owner_wait_patterns[:5],
+                "surface_mix": surface_mix[:8],
+            },
+            "next_learning_objective": next_objective,
+            "evidence": {
+                "source_snapshot_type": PRIVATE_OUTCOME_EVAL_TYPE,
+                "source_contract": LEARNING_LOOP_CONTRACT,
+                "sample_size": total_items,
+                "example_item_ids": cls._case_refs(eval_cases),
+            },
+            "confidence": confidence,
+        }
 
     @staticmethod
     def _release_gate(summary: Dict[str, Any]) -> Dict[str, Any]:

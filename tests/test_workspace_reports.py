@@ -33,7 +33,10 @@ from solden.api import workspace_reports as report_routes  # noqa: E402
 from solden.core import database as db_module  # noqa: E402
 from solden.core.auth import get_current_user  # noqa: E402
 from solden.services.agent_memory import AgentMemoryService  # noqa: E402
-from solden.services.ap_learning_loop import PRIVATE_OUTCOME_EVAL_TYPE  # noqa: E402
+from solden.services.ap_learning_loop import (  # noqa: E402
+    COMPANY_LEARNING_SNAPSHOT_TYPE,
+    PRIVATE_OUTCOME_EVAL_TYPE,
+)
 from solden.services.memory_events import commit_memory_event  # noqa: E402
 from solden.services import workspace_reports as report_svc  # noqa: E402
 
@@ -312,10 +315,19 @@ class TestAgentPerformance:
         assert out["summary"]["evidence_link_rate"] == 1.0
         assert out["summary"]["outcome_traceability_rate"] == 0.0
         assert out["summary"]["learning_loop_release_gate"] == "needs_work"
+        assert out["summary"]["company_learning_level"] == "forming"
+        assert out["summary"]["company_learning_score"] == 0.8
+        assert out["summary"]["company_next_learning_objective"]
         assert out["summary"]["top_learning_blocker"] == "critical_field_low_confidence"
         assert out["summary"]["top_learning_blocker_count"] == 1
         assert out["learning_loop"]["recurring_blockers"][0]["key"] == (
             "critical_field_low_confidence"
+        )
+        company_profile = out["learning_loop"]["company_memory_profile"]
+        assert company_profile["snapshot_type"] == COMPANY_LEARNING_SNAPSHOT_TYPE
+        assert company_profile["maturity"]["level"] == "forming"
+        assert company_profile["next_learning_objective"]["key"] == (
+            "reduce_recurring_blocker_critical_field_low_confidence"
         )
         candidates = out["learning_loop"]["agent_improvement_candidates"]
         assert candidates

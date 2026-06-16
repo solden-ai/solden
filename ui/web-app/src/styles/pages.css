@@ -4069,6 +4069,7 @@
   border-left: 0;
 }
 .cl-reports-learning-metric span,
+.cl-reports-learning-company span,
 .cl-reports-learning-blocker span {
   color: var(--cl-ink-muted);
   font-size: 11px;
@@ -4087,6 +4088,36 @@
   display: grid;
   gap: 10px;
   min-width: 0;
+}
+.cl-reports-learning-company {
+  display: grid;
+  min-width: 0;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius-sm);
+  background: var(--cl-bg);
+  overflow: hidden;
+}
+.cl-reports-learning-company > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px;
+}
+.cl-reports-learning-company > div + div {
+  border-top: 1px solid var(--cl-border);
+}
+.cl-reports-learning-company strong {
+  color: var(--cl-ink-primary);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.cl-reports-learning-company small {
+  color: var(--cl-ink-secondary);
+  font-family: var(--cl-font-mono);
+  font-size: 12px;
 }
 .cl-reports-learning-blocker {
   display: flex;

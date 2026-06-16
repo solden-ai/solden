@@ -405,6 +405,8 @@ def _agent_performance_learning_loop(
     improvement_candidates = (
         improvement_candidates if isinstance(improvement_candidates, list) else []
     )
+    company_profile = company_learning.get("company_memory_profile")
+    company_profile = company_profile if isinstance(company_profile, dict) else {}
     surface_mix = company_learning.get("surface_mix")
     surface_mix = surface_mix if isinstance(surface_mix, list) else []
     summary = snapshot.get("summary")
@@ -420,6 +422,7 @@ def _agent_performance_learning_loop(
         "recurring_blockers": recurring_blockers[:5],
         "recommended_actions": recommended_actions[:5],
         "agent_improvement_candidates": improvement_candidates[:5],
+        "company_memory_profile": company_profile,
         "surface_mix": surface_mix[:8],
     }
 
@@ -448,6 +451,15 @@ def _with_learning_loop_summary(
         "outcome_traceability_rate": loop_summary.get("outcome_traceability_rate"),
         "learning_loop_release_gate": release_gate.get("status"),
     })
+    company_profile = learning_loop.get("company_memory_profile")
+    company_profile = company_profile if isinstance(company_profile, dict) else {}
+    maturity = company_profile.get("maturity")
+    maturity = maturity if isinstance(maturity, dict) else {}
+    enriched["company_learning_level"] = maturity.get("level")
+    enriched["company_learning_score"] = maturity.get("score")
+    objective = company_profile.get("next_learning_objective")
+    objective = objective if isinstance(objective, dict) else {}
+    enriched["company_next_learning_objective"] = objective.get("title")
     if blockers and isinstance(blockers[0], dict):
         top = blockers[0]
         enriched["top_learning_blocker"] = top.get("label") or top.get("key")
