@@ -254,6 +254,84 @@ class TestAPDecisionService:
         assert decision.recommendation == "approve"
         assert decision.model == "rules"
 
+    def test_decision_attaches_fresh_company_learning_context(self, tmp_path, monkeypatch):
+        """Fresh company-learning artifacts annotate the decision but do not
+        override the deterministic recommendation."""
+        from solden.services.agent_improvement_register import (
+            IMPROVEMENT_REGISTER_SNAPSHOT_TYPE,
+        )
+        from solden.services.agent_memory import AgentMemoryService
+        from solden.services.ap_decision import APDecisionService
+        from solden.services.ap_learning_loop import PRIVATE_OUTCOME_EVAL_TYPE
+        from solden.services.company_learning_contract import (
+            COMPANY_LEARNING_CONTRACT_SNAPSHOT_TYPE,
+        )
+
+        monkeypatch.setenv("SOLDEN_SECRET_KEY", "test-secret-key")
+        db = _make_db(tmp_path)
+        org_id = "org_decision_learning"
+        db.ensure_organization(org_id, organization_name="Decision Learning Ltd")
+        memory = AgentMemoryService(org_id, db=db)
+        memory.record_eval_snapshot(
+            skill_id="ap_v1",
+            scope="organization",
+            snapshot_type=PRIVATE_OUTCOME_EVAL_TYPE,
+            payload={
+                "release_gate": {"status": "needs_work"},
+                "summary": {"total_items": 3},
+            },
+        )
+        memory.record_eval_snapshot(
+            skill_id="ap_v1",
+            scope="organization",
+            snapshot_type=IMPROVEMENT_REGISTER_SNAPSHOT_TYPE,
+            payload={
+                "summary": {"open": 1, "high_priority_open": 1},
+                "items": [
+                    {
+                        "key": "route_agent_decisions_through_memory",
+                        "title": "Route AP agent decisions through memory",
+                        "status": "open",
+                        "priority": "high",
+                        "target_runtime_path": "APDecisionService.decide",
+                    }
+                ],
+            },
+        )
+        memory.record_eval_snapshot(
+            skill_id="ap_v1",
+            scope="organization",
+            snapshot_type=COMPANY_LEARNING_CONTRACT_SNAPSHOT_TYPE,
+            payload={
+                "summary": {
+                    "organization_learning_status": "forming",
+                    "workflow_coverage_status": "ap_wedge_only",
+                    "next_learning_objective_title": (
+                        "Route AP agent decisions through memory"
+                    ),
+                }
+            },
+        )
+
+        invoice = _make_invoice(
+            organization_id=org_id,
+            vendor_name="Learning Vendor",
+            confidence=0.97,
+        )
+        svc = APDecisionService()
+        decision = asyncio.run(svc.decide(
+            invoice,
+            validation_gate={"passed": True, "reason_codes": []},
+            org_config={"organization_id": org_id},
+        ))
+
+        assert decision.recommendation == "approve"
+        assert decision.company_learning_context["usable"] is True
+        assert "Company learning context" in decision.reasoning
+        assert decision.vendor_context_used["company_learning"][
+            "next_learning_objective"
+        ] == "Route AP agent decisions through memory"
+
     def test_escalate_low_confidence(self, tmp_path):
         """Low confidence below threshold → escalate."""
         from solden.services.ap_decision import APDecisionService
@@ -574,7 +652,7 @@ class TestVendorRiskScoringIntegration:
         invoice must surface ``new_vendor`` and ``new_vendor_high_amount``
         risk flags via the AP decision pipeline."""
         from solden.services.invoice_workflow import InvoiceWorkflowService
-        db = _make_db(tmp_path)
+        _make_db(tmp_path)
         org_id = "org_risk_new_vendor"
 
         invoice = _make_invoice(

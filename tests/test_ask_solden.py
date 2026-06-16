@@ -56,6 +56,60 @@ def _seed(db):
     )
 
 
+def _seed_company_learning(db):
+    from solden.services.agent_improvement_register import (
+        IMPROVEMENT_REGISTER_SNAPSHOT_TYPE,
+    )
+    from solden.services.agent_memory import AgentMemoryService
+    from solden.services.ap_learning_loop import PRIVATE_OUTCOME_EVAL_TYPE
+    from solden.services.company_learning_contract import (
+        COMPANY_LEARNING_CONTRACT_SNAPSHOT_TYPE,
+    )
+
+    memory = AgentMemoryService("orgAskA", db=db)
+    memory.record_eval_snapshot(
+        skill_id="ap_v1",
+        scope="organization",
+        snapshot_type=PRIVATE_OUTCOME_EVAL_TYPE,
+        payload={
+            "release_gate": {"status": "needs_work"},
+            "summary": {"total_items": 3},
+        },
+    )
+    memory.record_eval_snapshot(
+        skill_id="ap_v1",
+        scope="organization",
+        snapshot_type=IMPROVEMENT_REGISTER_SNAPSHOT_TYPE,
+        payload={
+            "summary": {"open": 1, "high_priority_open": 1},
+            "items": [
+                {
+                    "key": "route_agent_decisions_through_memory",
+                    "title": "Route AP agent decisions through memory",
+                    "status": "open",
+                    "priority": "high",
+                    "target_runtime_path": "APDecisionService.decide",
+                }
+            ],
+        },
+    )
+    memory.record_eval_snapshot(
+        skill_id="ap_v1",
+        scope="organization",
+        snapshot_type=COMPANY_LEARNING_CONTRACT_SNAPSHOT_TYPE,
+        payload={
+            "summary": {
+                "organization_learning_status": "forming",
+                "ready_for_company_learning_claim": True,
+                "workflow_coverage_status": "ap_wedge_only",
+                "next_learning_objective_title": (
+                    "Route AP agent decisions through memory"
+                ),
+            }
+        },
+    )
+
+
 class _FakeResponse:
     def __init__(self, text, model="claude-sonnet-test"):
         self.content = text
@@ -137,7 +191,7 @@ def test_authority_member_gets_no_proposals(db):
         gw = SimpleNamespace()
         def call_sync(**kw):
             captured["prompt"] = kw["messages"][0]["content"]
-            return _FakeResponse(f"Policy allows it. [s1]")
+            return _FakeResponse("Policy allows it. [s1]")
         gw.call_sync = call_sync
         return gw
 
@@ -167,6 +221,50 @@ def test_suggestions_role_aware(db):
     # The always-on starter survives even a zero-state org.
     empty = ask_solden_suggestions(db, organization_id="orgAskB", workspace_role="member")
     assert empty == ["What's our policy on first-time vendors?"]
+
+
+def test_learning_questions_retrieve_company_learning_source_role_aware(db):
+    _seed(db)
+    _seed_company_learning(db)
+    db.create_policy_proposal(
+        organization_id="orgAskA",
+        proposal_kind="company_learning_review",
+        vendor_name=None,
+        behavior_summary="SECRET-LEARNING-PROPOSAL",
+        evidence={"learning_citation": {"source": "ap_learning_loop"}},
+        proposed_rule={"name": "x"},
+    )
+    captured = {}
+
+    def fake_gateway():
+        gw = SimpleNamespace()
+
+        def call_sync(**kw):
+            captured["prompt"] = kw["messages"][0]["content"]
+            return _FakeResponse("Solden has one company-learning objective. [s1]")
+
+        gw.call_sync = call_sync
+        return gw
+
+    with patch("solden.services.ask_solden.get_llm_gateway", fake_gateway):
+        member = ask_solden(
+            db,
+            organization_id="orgAskA",
+            workspace_role="member",
+            question="What has Solden learned from our AP work?",
+        )
+    assert any(s["type"] == "company_learning" for s in member["sources"])
+    assert "Route AP agent decisions through memory" in captured["prompt"]
+    assert "SECRET-LEARNING-PROPOSAL" not in captured["prompt"]
+
+    with patch("solden.services.ask_solden.get_llm_gateway", fake_gateway):
+        ask_solden(
+            db,
+            organization_id="orgAskA",
+            workspace_role="admin",
+            question="What has Solden learned from our AP work?",
+        )
+    assert "SECRET-LEARNING-PROPOSAL" in captured["prompt"]
 
 
 # ─── Guards, history, fallback, caps ─────────────────────────────────

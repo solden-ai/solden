@@ -17,7 +17,7 @@ failed gate.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -43,6 +43,7 @@ class APDecision:
     gate_override: bool = False    # True if enforce_gate_constraint overrode
     original_recommendation: Optional[str] = None  # original rec, if overridden
     policy_version: Optional[str] = None  # M5: the AP decision-policy version in effect
+    company_learning_context: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         # Boundary check: any rule path that produces a recommendation
@@ -373,6 +374,59 @@ def enforce_gate_constraint(
         model=decision.model,
         gate_override=True,
         original_recommendation=decision.recommendation,
+        policy_version=decision.policy_version,
+        company_learning_context=dict(decision.company_learning_context or {}),
+    )
+
+
+def _learning_context_note(context: Dict[str, Any]) -> str:
+    if not isinstance(context, dict) or not context.get("usable"):
+        return ""
+    guidance = context.get("runtime_guidance")
+    if isinstance(guidance, list) and guidance:
+        return " Company learning context: " + " ".join(str(row) for row in guidance[:2])
+    summary = context.get("summary") if isinstance(context.get("summary"), dict) else {}
+    objective = str(summary.get("next_learning_objective") or "").strip()
+    if objective:
+        return f" Company learning context: current learning objective is {objective}."
+    status = str(summary.get("company_learning_status") or "").strip()
+    if status:
+        return f" Company learning context: company learning status is {status}."
+    return ""
+
+
+def _attach_company_learning_context(
+    decision: APDecision,
+    context: Optional[Dict[str, Any]],
+) -> APDecision:
+    if not isinstance(context, dict) or not context.get("usable"):
+        return decision
+    note = _learning_context_note(context)
+    reasoning = decision.reasoning
+    if note and "Company learning context:" not in reasoning:
+        reasoning = f"{reasoning}{note}"
+    vendor_context = dict(decision.vendor_context_used or {})
+    summary = context.get("summary") if isinstance(context.get("summary"), dict) else {}
+    vendor_context["company_learning"] = {
+        "status": context.get("status"),
+        "company_learning_status": summary.get("company_learning_status"),
+        "workflow_coverage_status": summary.get("workflow_coverage_status"),
+        "next_learning_objective": summary.get("next_learning_objective"),
+        "open_improvement_objectives": summary.get("open_improvement_objectives"),
+        "pending_policy_proposals": summary.get("pending_policy_proposals"),
+    }
+    return APDecision(
+        recommendation=decision.recommendation,
+        reasoning=reasoning,
+        confidence=decision.confidence,
+        info_needed=decision.info_needed,
+        risk_flags=list(decision.risk_flags or []),
+        vendor_context_used=vendor_context,
+        model=decision.model,
+        gate_override=decision.gate_override,
+        original_recommendation=decision.original_recommendation,
+        policy_version=decision.policy_version,
+        company_learning_context=context,
     )
 
 
@@ -470,6 +524,8 @@ def _apply_single_pass_hints(
         model=decision.model,
         gate_override=decision.gate_override,
         original_recommendation=original_recommendation,
+        policy_version=decision.policy_version,
+        company_learning_context=dict(decision.company_learning_context or {}),
     )
 
 
@@ -672,6 +728,7 @@ class APDecisionService:
         vendor_risk_score: Optional[Dict[str, Any]] = None,
         box_summary: Optional[str] = None,
         single_pass_hints: Optional[Dict[str, Any]] = None,
+        company_learning_context: Optional[Dict[str, Any]] = None,
     ) -> APDecision:
         """Compute the routing recommendation deterministically. Never raises.
 
@@ -690,6 +747,31 @@ class APDecisionService:
         decision_feedback = decision_feedback or {}
         validation_gate = validation_gate or {"passed": True, "reason_codes": []}
         org_config = org_config or {}
+        organization_id = str(
+            org_config.get("organization_id")
+            or getattr(invoice, "organization_id", "")
+            or ""
+        ).strip()
+        runtime_learning_context = company_learning_context
+        if runtime_learning_context is None and organization_id:
+            try:
+                from solden.services.company_learning_runtime_context import (
+                    build_company_learning_runtime_context,
+                )
+
+                runtime_learning_context = build_company_learning_runtime_context(
+                    organization_id,
+                    vendor_name=getattr(invoice, "vendor_name", None),
+                    include_policy_proposals=True,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(
+                    "[ap_decision] company learning context unavailable org=%s vendor=%r: %s",
+                    organization_id,
+                    getattr(invoice, "vendor_name", None),
+                    exc,
+                )
+                runtime_learning_context = None
 
         vendor_context_used = {
             "invoice_count": vendor_profile.get("invoice_count", 0),
@@ -719,7 +801,7 @@ class APDecisionService:
         if validation_gate.get("passed", True):
             rule_decision = _evaluate_rules_for_invoice(
                 invoice, vendor_context_used,
-                organization_id=org_config.get("organization_id") or "",
+                organization_id=organization_id,
             )
 
         if rule_decision is not None:
@@ -737,7 +819,8 @@ class APDecisionService:
             )
         if single_pass_hints:
             decision = _apply_single_pass_hints(decision, single_pass_hints, invoice)
-        return enforce_gate_constraint(decision, validation_gate)
+        decision = enforce_gate_constraint(decision, validation_gate)
+        return _attach_company_learning_context(decision, runtime_learning_context)
 
     def _compute_routing_decision(
         self,

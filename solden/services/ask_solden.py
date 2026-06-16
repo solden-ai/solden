@@ -49,6 +49,7 @@ _SOURCE_BUDGETS = {
     "policy": 1500,
     "exception": 1000,
     "decision_reason": 1500,
+    "company_learning": 2600,
     "org_snapshot": 400,
 }
 
@@ -78,6 +79,10 @@ _INVOICE_KEYWORDS = ("invoice", "bill", " po ", "purchase order")
 _POLICY_KEYWORDS = ("policy", "policies", "rule", "rules", "threshold", "standing", "allowed", "first-time", "limit")
 _EXCEPTION_KEYWORDS = ("exception", "blocked", "stuck", "outstanding", "open", "unresolved", "bank change", "bank-change")
 _WHY_KEYWORDS = ("why", "reason", "rationale", "decided", "because", "cautious")
+_LEARNING_KEYWORDS = (
+    "learned", "learning", "improve", "improvement", "patterns",
+    "agent learned", "company learning", "memory loop",
+)
 
 _STOPWORDS = {
     "the", "a", "an", "and", "or", "for", "with", "about", "what", "whats",
@@ -231,6 +236,8 @@ def _extract_entities(
         topics.add("exceptions")
     if any(k in q_lower for k in _WHY_KEYWORDS):
         topics.add("whys")
+    if any(k in q_lower for k in _LEARNING_KEYWORDS):
+        topics.add("learning")
 
     matched_strings = (
         [str(r.get("invoice_number") or r.get("id") or "") for r in records]
@@ -437,6 +444,46 @@ def _build_bundle(
                 "data": {"whys": whys},
             })
 
+    if "learning" in (entities.get("topics") or set()):
+        try:
+            from solden.services.company_learning_runtime_context import (
+                build_company_learning_runtime_context,
+            )
+
+            learning_context = build_company_learning_runtime_context(
+                organization_id,
+                db=db,
+                vendor_name=(entities.get("vendors") or [None])[0],
+                include_policy_proposals=is_admin,
+            )
+        except Exception:  # noqa: BLE001
+            learning_context = {}
+        if learning_context:
+            summary = (
+                learning_context.get("summary")
+                if isinstance(learning_context.get("summary"), dict)
+                else {}
+            )
+            status = learning_context.get("status") or "unavailable"
+            objective = summary.get("next_learning_objective") or "no current objective"
+            learning_data = {
+                "contract": learning_context.get("contract"),
+                "status": learning_context.get("status"),
+                "usable": learning_context.get("usable"),
+                "summary": summary,
+                "runtime_guidance": learning_context.get("runtime_guidance"),
+                "improvement_objectives": learning_context.get("improvement_objectives"),
+                "pending_policy_proposals": learning_context.get("pending_policy_proposals"),
+            }
+            bundle.append({
+                "type": "company_learning",
+                "ref": "company_learning",
+                "summary": (
+                    f"Company learning: status={status}; next objective={objective}"
+                ),
+                "data": learning_data,
+            })
+
     # Always: a small org snapshot — drop rather than add cost if it fails.
     try:
         with db.connect() as conn:
@@ -499,6 +546,7 @@ def _link_for(source: Dict[str, Any]) -> Dict[str, Any]:
         "policy": "rules",
         "exception": "exceptions",
         "decision_reason": "record",
+        "company_learning": "none",
         "dimension": "none",   # no SPA surface yet (TODOS.md)
         "org_snapshot": "none",
     }
