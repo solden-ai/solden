@@ -110,6 +110,7 @@ class TestQueryParamOrgSpoofing:
         # Ops / admin surfaces — these were the places the earlier audit
         # flagged as "org filter present but no dedicated test".
         "/api/ops/ap-kpis",
+        "/api/ops/design-partner-validation",
         "/api/ops/retry-queue",
     ])
     def test_cross_tenant_query_param_rejected(self, client_as_org_a, path):

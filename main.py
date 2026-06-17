@@ -600,6 +600,7 @@ STRICT_PROFILE_ALLOWED_OPS_PATHS = {
     "/api/ops/tenant-health",
     "/api/ops/box-health",
     "/api/ops/ap-kpis",
+    "/api/ops/design-partner-validation",
     "/api/ops/ap-kpis/digest",
     "/api/ops/ap-aggregation",
     "/api/ops/browser-agent",

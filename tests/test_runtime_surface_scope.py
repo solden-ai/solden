@@ -309,7 +309,9 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         # first-owner activation split (/auth/activations/{preview,accept})
         # and the workspace surface-readiness API used by Connections. Cap
         # 487 -> 490.
-        assert len(paths) <= 490
+        # 2026-06-17: design-partner validation gate added a live AP wedge
+        # proof endpoint under ops. Cap 490 -> 491.
+        assert len(paths) <= 491
         assert not any(path.startswith("/config/") for path in paths)
         assert "/erp/status/{organization_id}" not in paths
         assert "/erp/quickbooks/connect" not in paths
@@ -335,6 +337,7 @@ def test_strict_profile_route_surface_is_minimized(monkeypatch):
         assert "/api/workspace/ask" in paths
         assert "/api/workspace/ask/suggestions" in paths
         assert "/api/workspace/surface-readiness" in paths
+        assert "/api/ops/design-partner-validation" in paths
         assert "/auth/activations/preview" in paths
         assert "/auth/activations/accept" in paths
         assert "/extension/ap-items/by-erp-reference/{erp_type}/{erp_reference}" in paths
@@ -436,6 +439,12 @@ def test_strict_profile_allows_saml_sso_subpaths(monkeypatch):
     for sub in ("sp-metadata", "login", "acs", "logout", "slo"):
         path = f"/saml/acme/{sub}"
         assert matcher(path) is True, f"{path} should be allowlisted but is dropped"
+
+
+def test_strict_profile_allows_design_partner_validation_route(monkeypatch):
+    matcher = _main_module()._is_strict_profile_allowed_path
+
+    assert matcher("/api/ops/design-partner-validation") is True
 
 
 def test_strict_profile_allows_mounted_ap_feature_routers(monkeypatch):

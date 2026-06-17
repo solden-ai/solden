@@ -44,6 +44,13 @@ def test_ap_aggregation_ops_endpoint_requires_auth(db):
     assert response.status_code == 401
 
 
+def test_design_partner_validation_endpoint_requires_auth(db):
+    app.dependency_overrides.pop(ops_module.get_current_user, None)
+    client = TestClient(app)
+    response = client.get("/api/ops/design-partner-validation?organization_id=org-test")
+    assert response.status_code == 401
+
+
 def _create_item(db, item_id: str, vendor: str, amount: float) -> dict:
     return db.create_ap_item(
         {
@@ -377,3 +384,15 @@ def test_ap_kpis_surface_operator_metrics_and_pilot_scorecard(client, db):
     assert proof_scorecard["posting_reliability"]["attempted_count"] == 2
     assert proof_scorecard["recovery"]["attempted_count"] == 1
     assert proof_scorecard["recovery"]["recovered_count"] == 1
+
+
+def test_design_partner_validation_endpoint_returns_live_claim_gate(client, db):
+    response = client.get("/api/ops/design-partner-validation?organization_id=org-test")
+    assert response.status_code == 200
+    validation = response.json()["validation"]
+
+    assert validation["contract"] == "solden_design_partner_validation.v1"
+    assert validation["wedge"] == "ap_v1"
+    assert validation["status"] == "no_live_signal"
+    assert validation["summary"]["gate_count"] >= 6
+    assert any(gate["id"] == "ap_triage_correctness" for gate in validation["gates"])

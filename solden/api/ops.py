@@ -11,6 +11,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from solden.core.auth import TokenData, get_current_user
 from solden.core.database import get_db
 from solden.core.org_utils import assert_org_id
+from solden.services.design_partner_validation import (
+    build_design_partner_validation_report,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -491,6 +494,31 @@ async def get_ap_kpis(
         approval_sla_minutes=_approval_sla_minutes(organization_id),
     )
     return {"kpis": kpis}
+
+
+@router.get("/design-partner-validation")
+async def get_design_partner_validation(
+    organization_id: Optional[str] = Query(default=None),
+    minimum_completed_items: int = Query(default=25, ge=1, le=10000),
+    minimum_truth_sample: int = Query(default=25, ge=1, le=10000),
+    minimum_post_attempts: int = Query(default=10, ge=1, le=10000),
+    user: TokenData = Depends(get_current_user),
+) -> Dict[str, Any]:
+    organization_id = _assert_org_access(user, organization_id)
+    db = get_db()
+    kpis = db.get_ap_kpis(
+        organization_id,
+        approval_sla_minutes=_approval_sla_minutes(organization_id),
+    )
+    validation = build_design_partner_validation_report(
+        kpis,
+        minimums={
+            "completed_items": minimum_completed_items,
+            "truth_sample": minimum_truth_sample,
+            "post_attempts": minimum_post_attempts,
+        },
+    )
+    return {"validation": validation}
 
 
 @router.get("/ap-kpis/digest")

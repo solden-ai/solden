@@ -15,8 +15,9 @@ Use these documents as source of truth:
 4. [docs/V1_BACKEND_CONTRACTS.md](docs/V1_BACKEND_CONTRACTS.md)
 5. [docs/API_REFERENCE.md](docs/API_REFERENCE.md)
 6. [docs/WEDGE_QUALITY_SCORECARD.md](docs/WEDGE_QUALITY_SCORECARD.md)
-7. [docs/OPERATIONAL_MEMORY_MAP_SOURCE_TO_PAY.md](docs/OPERATIONAL_MEMORY_MAP_SOURCE_TO_PAY.md)
-8. [docs/OPERATIONAL_MEMORY_OBJECT.md](docs/OPERATIONAL_MEMORY_OBJECT.md)
+7. [docs/DESIGN_PARTNER_VALIDATION_PLAYBOOK.md](docs/DESIGN_PARTNER_VALIDATION_PLAYBOOK.md)
+8. [docs/OPERATIONAL_MEMORY_MAP_SOURCE_TO_PAY.md](docs/OPERATIONAL_MEMORY_MAP_SOURCE_TO_PAY.md)
+9. [docs/OPERATIONAL_MEMORY_OBJECT.md](docs/OPERATIONAL_MEMORY_OBJECT.md)
 
 If any document conflicts with [PLAN.md](PLAN.md), `PLAN.md` wins.
 
@@ -36,7 +37,7 @@ The main remaining gap to launch is live-environment proof and operating discipl
 Use this README plus [docs/GA_LAUNCH_READINESS_TRACKER.md](docs/GA_LAUNCH_READINESS_TRACKER.md) for current product and launch posture. Treat [TODOS.md](TODOS.md) as deferred work only, not as an implementation-completeness ledger.
 For Railway deployment, use [docs/RAILWAY_DEPLOYMENT.md](docs/RAILWAY_DEPLOYMENT.md).
 
-For pilot hardening and wedge-truth evaluation, use [docs/WEDGE_QUALITY_SCORECARD.md](docs/WEDGE_QUALITY_SCORECARD.md) as the operating scorecard for reliability, context-switch reduction, and elimination of approval chasing / ERP re-entry.
+For pilot hardening and wedge-truth evaluation, use [docs/WEDGE_QUALITY_SCORECARD.md](docs/WEDGE_QUALITY_SCORECARD.md) as the operating scorecard for reliability, context-switch reduction, and elimination of approval chasing / ERP re-entry. Use [docs/DESIGN_PARTNER_VALIDATION_PLAYBOOK.md](docs/DESIGN_PARTNER_VALIDATION_PLAYBOOK.md) to run the live customer validation loop and interpret `/api/ops/design-partner-validation`.
 
 ## Product Direction (Locked)
 
