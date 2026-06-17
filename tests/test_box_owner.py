@@ -37,6 +37,7 @@ from solden.services.box_owner import (  # noqa: E402
     reassign_manually,
     resolve_owner,
 )
+from solden.services.memory_invariants import memory_event_invariant_violations  # noqa: E402
 
 
 # ─── Fixtures ───────────────────────────────────────────────────────
@@ -374,6 +375,12 @@ def test_reassign_endpoint_records_audit_event(db, client_own):
     events = db.list_ap_audit_events(item["id"])
     owner_events = [e for e in events if e.get("event_type") == "owner_changed"]
     assert owner_events
+    body = owner_events[-1].get("payload_json") or {}
+    assert memory_event_invariant_violations(body) == []
+    memory_event = body["memory_event"]
+    assert memory_event["event_type"] == "owner_changed"
+    assert memory_event["execution_state"]["owner"]["email"] == "controller@example.com"
+    assert memory_event["decision"]["type"] == "owner_changed"
 
 
 def test_reassign_endpoint_tenant_isolated(db, client_own, client_other):

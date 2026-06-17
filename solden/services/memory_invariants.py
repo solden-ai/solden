@@ -161,6 +161,27 @@ PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
         ),
     ),
     MemoryCoverageSurface(
+        name="box_owner_manual_reassignment",
+        path="solden/services/box_owner.py",
+        required_tokens=(
+            "reassign_manually",
+            "apply_resolved_owner",
+            "set_ap_item_owner_atomic",
+            "owner_changed",
+        ),
+    ),
+    MemoryCoverageSurface(
+        name="dual_approval_decisions",
+        path="solden/services/dual_approval.py",
+        required_tokens=(
+            "first_approve",
+            "second_approve",
+            "revoke_first_signature",
+            "append_audit_event",
+            "_decision_reason",
+        ),
+    ),
+    MemoryCoverageSurface(
         name="payment_request_lifecycle",
         path="solden/services/payment_request.py",
         required_tokens=(
@@ -188,6 +209,8 @@ PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
             "_append_task_memory_event",
             "email_task_created",
             "email_task_status_changed",
+            "email_task_assigned",
+            "email_task_comment_added",
             "append_audit_event",
         ),
     ),
@@ -521,16 +544,52 @@ PRIMARY_MEMORY_EXECUTION_COVERAGE: Tuple[MemoryExecutionCoverage, ...] = (
         ),
     ),
     MemoryExecutionCoverage(
+        name="box_owner_manual_reassignment",
+        source_path="solden/services/box_owner.py",
+        test_path="tests/test_box_owner.py",
+        required_source_tokens=(
+            "reassign_manually",
+            "set_ap_item_owner_atomic",
+            "owner_changed",
+        ),
+        required_test_tokens=(
+            "test_reassign_endpoint_records_audit_event",
+            "memory_event_invariant_violations",
+            "owner_changed",
+        ),
+    ),
+    MemoryExecutionCoverage(
+        name="dual_approval_decisions",
+        source_path="solden/services/dual_approval.py",
+        test_path="tests/test_dual_approval.py",
+        required_source_tokens=(
+            "dual_approval_first_signature",
+            "dual_approval_second_signature",
+            "dual_approval_revoked",
+            "append_audit_event",
+        ),
+        required_test_tokens=(
+            "test_first_signature_audit_event_emitted",
+            "test_second_approver_distinct_advances_to_approved",
+            "test_revoke_returns_to_needs_approval",
+            "memory_event_invariant_violations",
+        ),
+    ),
+    MemoryExecutionCoverage(
         name="email_task_lifecycle",
         source_path="solden/services/email_tasks.py",
         test_path="tests/test_email_tasks_memory.py",
         required_source_tokens=(
             "_append_task_memory_event",
             "email_task_status_changed",
+            "email_task_assigned",
+            "email_task_comment_added",
             "append_audit_event",
         ),
         required_test_tokens=(
             "test_email_task_status_change_commits_operational_memory",
+            "test_email_task_assignment_commits_operational_memory",
+            "test_email_task_comment_commits_operational_memory",
             "memory_event_invariant_violations",
         ),
     ),

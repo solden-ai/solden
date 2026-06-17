@@ -52,6 +52,7 @@ from solden.services.dual_approval import (  # noqa: E402
     second_approve,
     set_dual_approval_threshold,
 )
+from solden.services.memory_invariants import memory_event_invariant_violations  # noqa: E402
 
 
 # ─── Fixtures ───────────────────────────────────────────────────────
@@ -107,6 +108,11 @@ def _meta(item: dict) -> dict:
     if isinstance(raw, str):
         return json.loads(raw) if raw else {}
     return raw if isinstance(raw, dict) else {}
+
+
+def _audit_event(db, ap_item_id: str, event_type: str) -> dict:
+    events = db.list_ap_audit_events(ap_item_id)
+    return next(event for event in events if event.get("event_type") == event_type)
 
 
 # ─── State machine extension ──────────────────────────────────────
@@ -197,6 +203,10 @@ def test_first_signature_audit_event_emitted(db):
     fetched = db.get_ap_audit_event_by_key(expected_key)
     assert fetched is not None
     assert fetched["event_type"] == "dual_approval_first_signature"
+    assert memory_event_invariant_violations(fetched["payload_json"]) == []
+    memory_event = fetched["payload_json"]["memory_event"]
+    assert memory_event["work_item"]["box_id"] == item["id"]
+    assert memory_event["decision"]["type"] == "dual_approval_first_signature"
 
 
 def test_requester_cannot_first_approve(db):
@@ -238,6 +248,11 @@ def test_second_approver_distinct_advances_to_approved(db):
     assert meta["first_approver"] == "approver-1"
     assert meta["second_approver"] == "approver-2"
     assert meta["second_approver_email"] == "bob@orgA.com"
+    audit = _audit_event(db, item["id"], "dual_approval_second_signature")
+    assert memory_event_invariant_violations(audit["payload_json"]) == []
+    memory_event = audit["payload_json"]["memory_event"]
+    assert memory_event["work_item"]["box_id"] == item["id"]
+    assert memory_event["decision"]["type"] == "dual_approval_second_signature"
 
 
 def test_second_approver_same_as_first_blocked(db):
@@ -315,6 +330,11 @@ def test_revoke_returns_to_needs_approval(db):
     assert fresh["state"] == "needs_approval"
     meta = _meta(fresh)
     assert "first_approver" not in meta
+    audit = _audit_event(db, item["id"], "dual_approval_revoked")
+    assert memory_event_invariant_violations(audit["payload_json"]) == []
+    memory_event = audit["payload_json"]["memory_event"]
+    assert memory_event["work_item"]["box_id"] == item["id"]
+    assert memory_event["decision"]["type"] == "dual_approval_revoked"
 
 
 def test_revoke_when_not_pending_raises(db):
