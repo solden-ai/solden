@@ -65,6 +65,53 @@ def test_invoice_data_sap_synthesises_gmail_id():
     assert inv.erp_native is True
 
 
+@pytest.mark.parametrize(
+    ("source_type", "source_id", "expected_gmail_id"),
+    [
+        ("quickbooks", "123", "quickbooks-bill:123"),
+        ("xero", "inv-guid", "xero-bill:inv-guid"),
+        ("sage_intacct", "BILL-99", "sage_intacct-bill:BILL-99"),
+        ("sage_accounting", "SAGE-7", "sage_accounting-bill:SAGE-7"),
+    ],
+)
+def test_invoice_data_all_erp_native_sources_synthesise_bill_keys(
+    source_type,
+    source_id,
+    expected_gmail_id,
+):
+    from solden.services.invoice_models import InvoiceData
+
+    inv = InvoiceData(
+        source_type=source_type,
+        source_id=source_id,
+        subject="x",
+        sender="erp",
+        vendor_name="V",
+        amount=100,
+        erp_native=True,
+    )
+
+    assert inv.gmail_id == expected_gmail_id
+    assert inv.erp_native is True
+
+
+def test_invoice_data_peppol_source_gets_non_erp_intake_key():
+    from solden.services.invoice_models import InvoiceData
+
+    inv = InvoiceData(
+        source_type="peppol_ubl",
+        source_id="INV-PEPPOL-1",
+        subject="x",
+        sender="peppol",
+        vendor_name="V",
+        amount=100,
+        erp_native=False,
+    )
+
+    assert inv.gmail_id == "peppol_ubl:INV-PEPPOL-1"
+    assert inv.erp_native is False
+
+
 # ─── Observer guards ───────────────────────────────────────────────
 
 

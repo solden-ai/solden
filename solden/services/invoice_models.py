@@ -1,13 +1,14 @@
 """Invoice data model — the single intake-data shape used across every
-intake channel (Gmail, Outlook, NetSuite, SAP, vendor portals, manual
-upload). What started as the email-extraction record is now the
-canonical contract every coordination call site reads from.
+intake channel (Gmail, Outlook, PEPPOL, ERP-native intakes, portal/API,
+and manual upload). What started as the email-extraction record is now
+the canonical contract every coordination call site reads from.
 
 Channel-agnostic by design: the historic ``gmail_id`` is now treated
 as a generic per-source idempotency key. For non-Gmail channels we
 synthesize it from the source identifier (e.g.
-``netsuite-bill:5135``, ``sap-bill:1010/5105600123/2026``) so the ~80
-read sites that key off ``gmail_id`` continue to work without
+``netsuite-bill:5135``, ``sap_s4hana-bill:1010/5105600123/2026``,
+``peppol_ubl:INV-001``) so the ~80 read sites that key off
+``gmail_id`` continue to work without
 touching them.
 
 The handful of call sites that read ``gmail_id`` as an *actual Gmail
@@ -19,10 +20,35 @@ guard pattern.
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, FrozenSet, List, Literal, Optional
 
 
-SourceType = Literal["gmail", "outlook", "netsuite", "sap_s4hana", "portal", "manual"]
+SourceType = Literal[
+    "gmail",
+    "outlook",
+    "peppol_ubl",
+    "netsuite",
+    "sap_s4hana",
+    "quickbooks",
+    "xero",
+    "sage_intacct",
+    "sage_accounting",
+    "portal",
+    "api",
+    "workspace",
+    "manual",
+]
+
+ERP_NATIVE_SOURCE_TYPES: FrozenSet[str] = frozenset(
+    {
+        "netsuite",
+        "sap_s4hana",
+        "quickbooks",
+        "xero",
+        "sage_intacct",
+        "sage_accounting",
+    }
+)
 
 
 @dataclass
@@ -30,9 +56,9 @@ class InvoiceData:
     """Extracted invoice data — channel-agnostic.
 
     Constructed by every intake path: the Gmail processor builds it
-    from extracted email fields; the NetSuite + SAP webhook
-    dispatchers build it after fetching enrichment context from the
-    ERP. Either way, downstream coordination
+    from extracted email fields; PEPPOL builds it from the structured
+    UBL payload; ERP-native webhook dispatchers build it after fetching
+    enrichment context from the ERP. Either way, downstream coordination
     (``InvoiceWorkflowService.process_new_invoice``) treats them
     identically.
     """
@@ -83,8 +109,8 @@ class InvoiceData:
     # method. Built by the email path's ``_build_field_provenance`` (multi-
     # source merge across email body / attachment / vision) and by
     # ``extraction_provenance.build_passthrough_provenance`` for the
-    # structured-source intakes (PEPPOL UBL + the four ERP-native
-    # adapters). Persisted on ``ap_items.metadata.field_provenance`` so
+    # structured-source intakes (PEPPOL UBL + ERP-native adapters).
+    # Persisted on ``ap_items.metadata.field_provenance`` so
     # the audit trail can answer "which source authored this value" per
     # field, not just per item. ``FieldProvenance`` TypedDict in
     # ``solden.core.typed_dicts`` documents the entry shape.
@@ -114,7 +140,7 @@ class InvoiceData:
     line_items: Optional[List[Dict[str, Any]]] = None
 
     # ── Channel-aware extension (added 2026-04-25 to support
-    # ERP-native intake — bills landing in NetSuite/SAP without
+    # ERP-native intake — bills landing in ERP systems without
     # touching Gmail). See module docstring + DESIGN_THESIS §5 ──
 
     source_type: SourceType = "gmail"
@@ -127,12 +153,13 @@ class InvoiceData:
     """Canonical per-source identifier. For Gmail this is the message
     id (mirrored into ``gmail_id`` for back-compat). For NetSuite this
     is the bill internal id. For SAP this is the composite key
-    ``"<CC>/<DocNum>/<FY>"``. The dispatcher constructs the synthetic
+    ``"<CC>/<DocNum>/<FY>"``. For PEPPOL this is the invoice ID or a
+    content hash fallback. The dispatcher constructs the synthetic
     ``gmail_id`` value from this field via ``__post_init__``."""
 
     erp_native: bool = False
-    """True when the intake source is the ERP itself (NetSuite SuiteScript
-    afterSubmit, SAP Event Mesh / BAdI). Implies (a) the bill is
+    """True when the intake source is the ERP itself (e.g. NetSuite
+    SuiteScript, SAP Event Mesh/BAdI, QBO/Xero webhooks). Implies (a) the bill is
     already posted in the ERP — Solden must NOT call
     ``post_to_erp`` again, just track it, and (b) Gmail-specific
     side-effects (label sync, email parsing) are skipped."""
@@ -145,7 +172,9 @@ class InvoiceData:
         "item_receipt_ids", "ns_account_id"}``
     SAP: ``{"company_code", "supplier_invoice", "fiscal_year",
         "payment_blocking_reason", "po_numbers", "material_doc_ids",
-        "sap_status"}``"""
+        "sap_status"}``
+    PEPPOL/API sources reuse this metadata envelope for structured
+    channel context even when ``erp_native`` is false."""
 
     def __post_init__(self) -> None:
         """Synthesize ``gmail_id`` for non-Gmail sources so existing
@@ -157,11 +186,11 @@ class InvoiceData:
              unchanged behaviour).
           2. Else if ``source_id`` is set → derive
              ``gmail_id = f"{source_type}-bill:{source_id}"`` for ERP
-             channels, ``f"{source_type}:{source_id}"`` otherwise.
+             native channels, ``f"{source_type}:{source_id}"`` otherwise.
           3. Else leave ``gmail_id`` empty — caller must pass a key.
         """
         if not self.gmail_id and self.source_id:
-            if self.source_type in ("netsuite", "sap_s4hana"):
+            if self.source_type in ERP_NATIVE_SOURCE_TYPES:
                 self.gmail_id = f"{self.source_type}-bill:{self.source_id}"
             else:
                 self.gmail_id = f"{self.source_type}:{self.source_id}"

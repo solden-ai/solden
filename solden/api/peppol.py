@@ -14,6 +14,7 @@ Outbound (F2):
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
@@ -117,6 +118,90 @@ def _serialize_preview(parsed: ParsedPeppolInvoice) -> PeppolPreviewResponse:
     )
 
 
+def _decimal_to_float(value: Optional[Decimal]) -> Optional[float]:
+    return float(value) if value is not None else None
+
+
+def _peppol_source_id(parsed: ParsedPeppolInvoice, raw: bytes) -> str:
+    if parsed.invoice_id:
+        return parsed.invoice_id
+    return f"sha256:{hashlib.sha256(raw).hexdigest()[:32]}"
+
+
+def _serialize_tax_subtotals(parsed: ParsedPeppolInvoice) -> List[Dict[str, Any]]:
+    return [
+        {
+            "taxable_amount": _decimal_to_float(s.get("taxable_amount")),
+            "tax_amount": _decimal_to_float(s.get("tax_amount")),
+            "category_id": s.get("category_id"),
+            "percent": _decimal_to_float(s.get("percent")),
+        }
+        for s in parsed.tax_subtotals
+    ]
+
+
+def _peppol_vat_update_kwargs(parsed: ParsedPeppolInvoice) -> Dict[str, Any]:
+    update_kwargs: Dict[str, Any] = {}
+    if parsed.tax_exclusive_amount is not None:
+        update_kwargs["net_amount"] = parsed.tax_exclusive_amount
+    if parsed.tax_amount is not None:
+        update_kwargs["vat_amount"] = parsed.tax_amount
+    if parsed.derived_vat_rate is not None:
+        update_kwargs["vat_rate"] = parsed.derived_vat_rate
+    if parsed.derived_vat_code:
+        update_kwargs["vat_code"] = parsed.derived_vat_code
+    if parsed.derived_treatment:
+        update_kwargs["tax_treatment"] = parsed.derived_treatment
+    if parsed.supplier_country:
+        update_kwargs["bill_country"] = parsed.supplier_country
+    return update_kwargs
+
+
+def _build_peppol_invoice_data(
+    *,
+    parsed: ParsedPeppolInvoice,
+    raw: bytes,
+    user: TokenData,
+):
+    from solden.services.invoice_models import InvoiceData
+
+    source_id = _peppol_source_id(parsed, raw)
+    invoice_kwargs = parsed.to_invoice_data_kwargs()
+    return InvoiceData(
+        **invoice_kwargs,
+        source_type="peppol_ubl",
+        source_id=source_id,
+        erp_native=False,
+        subject=(
+            f"PEPPOL e-invoice {parsed.invoice_id or source_id} "
+            f"from {parsed.supplier_name}"
+        ),
+        sender=(
+            f"{parsed.supplier_name} <peppol:{parsed.supplier_vat_id}>"
+            if parsed.supplier_vat_id
+            else f"{parsed.supplier_name} via PEPPOL"
+        ),
+        confidence=1.0,
+        organization_id=user.organization_id,
+        user_id=user.user_id,
+        correlation_id=f"peppol:{user.organization_id}:{source_id}",
+        erp_metadata={
+            "intake_source": "peppol_ubl",
+            "peppol_invoice_id": parsed.invoice_id,
+            "peppol_source_id": source_id,
+            "peppol_customization_id": parsed.customization_id,
+            "peppol_profile_id": parsed.profile_id,
+            "invoice_type_code": parsed.invoice_type_code,
+            "supplier_vat_id": parsed.supplier_vat_id,
+            "supplier_country": parsed.supplier_country,
+            "customer_name": parsed.customer_name,
+            "customer_vat_id": parsed.customer_vat_id,
+            "tax_subtotals": _serialize_tax_subtotals(parsed),
+            "warnings": list(parsed.warnings),
+        },
+    )
+
+
 # ── Endpoints ───────────────────────────────────────────────────────
 
 
@@ -141,12 +226,12 @@ async def peppol_import(
     request: Request,
     user: TokenData = Depends(get_current_user),
 ):
-    """Parse + create AP item.
+    """Parse + enter the canonical invoice workflow.
 
-    The created AP item lands in ``received`` state with the VAT
-    split already populated from the UBL TaxTotal — the agent's
-    next step (validate / approve / post) treats it like any other
-    bill.
+    PEPPOL is a first-class intake channel: the route parses the UBL
+    payload into ``InvoiceData`` and lets ``InvoiceWorkflowService`` own
+    AP item creation, validation, routing, audit, and downstream memory.
+    The route then adds PEPPOL-specific VAT fields to the created item.
     """
     raw = await request.body()
     if not raw:
@@ -175,63 +260,35 @@ async def peppol_import(
         )
 
     db = get_db()
-    import uuid
-    ap_item_id = f"AP-{uuid.uuid4().hex}"
-    payload: Dict[str, Any] = {
-        "id": ap_item_id,
-        "organization_id": user.organization_id,
-        "vendor_name": parsed.supplier_name,
-        "amount": float(parsed.payable_amount),
-        "currency": parsed.currency or "EUR",
-        "invoice_number": parsed.invoice_id,
-        "due_date": parsed.due_date,
-        "invoice_date": parsed.issue_date,
-        "state": "received",
-        "sender": parsed.supplier_vat_id or parsed.supplier_name,
-        "user_id": user.user_id,
-        "metadata": {
-            "intake_source": "peppol_ubl",
-            "peppol_customization_id": parsed.customization_id,
-            "supplier_vat_id": parsed.supplier_vat_id,
-            "supplier_country": parsed.supplier_country,
-            "tax_subtotals": [
-                {
-                    "taxable_amount": (
-                        float(s["taxable_amount"])
-                        if s.get("taxable_amount") is not None else None
-                    ),
-                    "tax_amount": (
-                        float(s["tax_amount"])
-                        if s.get("tax_amount") is not None else None
-                    ),
-                    "category_id": s.get("category_id"),
-                    "percent": (
-                        float(s["percent"])
-                        if s.get("percent") is not None else None
-                    ),
-                }
-                for s in parsed.tax_subtotals
-            ],
-            "warnings": list(parsed.warnings),
-        },
-    }
-    db.create_ap_item(payload)
+    invoice = _build_peppol_invoice_data(parsed=parsed, raw=raw, user=user)
+    from solden.services.invoice_workflow import get_invoice_workflow
+
+    workflow = get_invoice_workflow(user.organization_id)
+    workflow_result = await workflow.process_new_invoice(invoice)
+    if not isinstance(workflow_result, dict):
+        raise HTTPException(status_code=500, detail="peppol_workflow_failed")
+
+    row = db.get_invoice_status(invoice.gmail_id)
+    ap_item_id = (
+        (row or {}).get("id")
+        or workflow_result.get("ap_item_id")
+        or workflow_result.get("invoice_id")
+    )
+    if workflow_result.get("status") == "error" and not ap_item_id:
+        raise HTTPException(status_code=422, detail=workflow_result)
+    if workflow_result.get("status") == "held" and not ap_item_id:
+        raise HTTPException(status_code=423, detail=workflow_result)
+    if not ap_item_id:
+        raise HTTPException(status_code=500, detail="peppol_ap_item_not_created")
+    response_warnings = list(parsed.warnings)
+    if workflow_result.get("status") == "error":
+        response_warnings.append(
+            f"workflow_warning:{workflow_result.get('error') or 'unknown'}"
+        )
 
     # Wire the VAT split now so the JE preview (E4) is correct
     # without an extra vat-recalculate call.
-    update_kwargs: Dict[str, Any] = {}
-    if parsed.tax_exclusive_amount is not None:
-        update_kwargs["net_amount"] = parsed.tax_exclusive_amount
-    if parsed.tax_amount is not None:
-        update_kwargs["vat_amount"] = parsed.tax_amount
-    if parsed.derived_vat_rate is not None:
-        update_kwargs["vat_rate"] = parsed.derived_vat_rate
-    if parsed.derived_vat_code:
-        update_kwargs["vat_code"] = parsed.derived_vat_code
-    if parsed.derived_treatment:
-        update_kwargs["tax_treatment"] = parsed.derived_treatment
-    if parsed.supplier_country:
-        update_kwargs["bill_country"] = parsed.supplier_country
+    update_kwargs = _peppol_vat_update_kwargs(parsed)
     if update_kwargs:
         db.update_ap_item(
             ap_item_id,
@@ -271,7 +328,7 @@ async def peppol_import(
                     "type": "peppol_ubl",
                     "invoice_id": parsed.invoice_id,
                     "supplier_name": parsed.supplier_name,
-                    "warnings": list(parsed.warnings),
+                    "warnings": response_warnings,
                 },
                 "confidence": 1.0,
                 "auto_commit": True,
@@ -302,7 +359,7 @@ async def peppol_import(
         currency=parsed.currency,
         derived_treatment=parsed.derived_treatment,
         derived_vat_code=parsed.derived_vat_code,
-        warnings=list(parsed.warnings),
+        warnings=response_warnings,
     )
 
 

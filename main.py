@@ -50,6 +50,8 @@ from starlette.requests import Request
 # `register_adapter(...)` at import time.
 import solden.integrations.erp_netsuite_intake_adapter  # noqa: F401
 import solden.integrations.erp_sap_s4hana_intake_adapter  # noqa: F401
+import solden.integrations.erp_quickbooks_intake_adapter  # noqa: F401
+import solden.integrations.erp_xero_intake_adapter  # noqa: F401
 
 # Eager-import the MatchEngine implementations (Gap 3) so the
 # registry is populated before any matching call.

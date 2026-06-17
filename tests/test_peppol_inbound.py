@@ -19,6 +19,7 @@ Covers:
 from __future__ import annotations
 
 import sys
+import json
 from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
@@ -469,13 +470,22 @@ def test_api_import_creates_ap_item_with_vat_split(db, client_orgA):
     assert float(fresh["amount"]) == 1190.0
     assert fresh["currency"] == "EUR"
     assert fresh["invoice_number"] == "INV-2026-001"
-    assert fresh["state"] == "received"
+    # PEPPOL now enters through InvoiceWorkflowService, so the row may
+    # advance past received immediately when deterministic controls fire.
+    assert fresh["state"] in {"received", "validated", "needs_approval"}
+    assert fresh["thread_id"] == "peppol_ubl:INV-2026-001"
     # VAT split pre-populated from the UBL TaxTotal.
     assert fresh["net_amount"] == Decimal("1000.00")
     assert fresh["vat_amount"] == Decimal("190.00")
     assert fresh["tax_treatment"] == "domestic"
     assert fresh["vat_code"] == "T1"
     assert fresh["bill_country"] == "DE"
+    metadata = fresh.get("metadata") or {}
+    if isinstance(metadata, str):
+        metadata = json.loads(metadata)
+    assert metadata["source_type"] == "peppol_ubl"
+    assert metadata["erp_metadata"]["intake_source"] == "peppol_ubl"
+    assert metadata["field_provenance"]["amount"]["source"] == "peppol_ubl"
 
     # H4: the import is an operational-memory boundary — a memory event linking
     # the inbound e-invoice to the new work item must be written, not just the row.
