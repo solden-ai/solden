@@ -1859,8 +1859,10 @@ async def route_low_risk_approval(
     from solden.services.finance_agent_runtime import IntentNotSupportedError
 
     org_id = _resolve_org_id_for_user(user, request.organization_id)
+    actor = _authenticated_actor(user)
     db = get_db()
     runtime = _build_finance_runtime(user, org_id, db=db)
+    gmail_ref = str(request.email_id or request.ap_item_id or "").strip()
     try:
         response = await runtime.execute_intent(
             "route_low_risk_for_approval",
@@ -1868,6 +1870,11 @@ async def route_low_risk_approval(
                 "ap_item_id": request.ap_item_id,
                 "email_id": request.email_id,
                 "reason": request.reason,
+                "source_channel": "gmail_extension",
+                "source_channel_id": "gmail_extension",
+                "source_message_ref": gmail_ref or None,
+                "actor_id": actor,
+                "actor_display": actor,
             },
             idempotency_key=request.idempotency_key,
         )
@@ -1893,7 +1900,9 @@ async def retry_recoverable_failure(
     from solden.services.finance_agent_runtime import IntentNotSupportedError
 
     org_id = _resolve_org_id_for_user(user, request.organization_id)
+    actor = _authenticated_actor(user)
     runtime = _build_finance_runtime(user, org_id)
+    gmail_ref = str(request.email_id or request.ap_item_id or "").strip()
     try:
         response = await runtime.execute_intent(
             "retry_recoverable_failures",
@@ -1901,6 +1910,11 @@ async def retry_recoverable_failure(
                 "ap_item_id": request.ap_item_id,
                 "email_id": request.email_id,
                 "reason": request.reason,
+                "source_channel": "gmail_extension",
+                "source_channel_id": "gmail_extension",
+                "source_message_ref": gmail_ref or None,
+                "actor_id": actor,
+                "actor_display": actor,
             },
             idempotency_key=request.idempotency_key,
         )

@@ -230,6 +230,24 @@ PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
         required_tokens=("/memory-events/capture", "capture_operational_memory_event"),
     ),
     MemoryCoverageSurface(
+        name="gmail_extension_action_routes",
+        path="solden/api/gmail_extension.py",
+        required_tokens=(
+            "post_to_erp",
+            "submit_for_approval",
+            "reject_invoice",
+            "budget_decision",
+            "approval_nudge",
+            "route_low_risk_approval",
+            "retry_recoverable_failure",
+            "record_field_correction",
+            "source_channel",
+            "gmail_extension",
+            "source_message_ref",
+            "runtime.execute_intent",
+        ),
+    ),
+    MemoryCoverageSurface(
         name="surface_memory_projection",
         path="solden/services/memory_surface.py",
         required_tokens=(
@@ -617,6 +635,24 @@ PRIMARY_MEMORY_EXECUTION_COVERAGE: Tuple[MemoryExecutionCoverage, ...] = (
         required_test_tokens=(
             "test_gmail_extension_memory_capture_endpoint_commits_confirmed_context",
             "memory_event_invariant_violations",
+        ),
+    ),
+    MemoryExecutionCoverage(
+        name="gmail_extension_action_routes",
+        source_path="solden/api/gmail_extension.py",
+        test_path="tests/test_api_endpoints.py",
+        required_source_tokens=(
+            "route_low_risk_approval",
+            "retry_recoverable_failure",
+            "source_message_ref",
+            "actor_display",
+            "runtime.execute_intent",
+        ),
+        required_test_tokens=(
+            "test_route_low_risk_approval_endpoint_passes_gmail_surface_context_to_runtime",
+            "test_retry_recoverable_failure_endpoint_uses_resume_workflow_and_replays_idempotent_request",
+            "source_channel",
+            "source_message_ref",
         ),
     ),
     MemoryExecutionCoverage(

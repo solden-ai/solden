@@ -3495,15 +3495,64 @@ class TestExtensionEndpoints:
         assert second_payload["idempotency_replayed"] is True
         assert any(row.get("event_type") == "route_low_risk_for_approval" for row in fake_db.audit_rows)
 
+    def test_route_low_risk_approval_endpoint_passes_gmail_surface_context_to_runtime(self):
+        app.dependency_overrides[gmail_extension_module.get_current_user] = self._fake_user
+        fake_audit = self._FakeAuditService()
+        app.dependency_overrides[gmail_extension_module.get_audit_service] = lambda: fake_audit
+        fake_db = self._FakeExtensionDB()
+        captured: dict = {}
+
+        async def _mock_execute(intent, payload, *, idempotency_key=None):
+            captured["intent"] = intent
+            captured["payload"] = dict(payload or {})
+            captured["idempotency_key"] = idempotency_key
+            return {"status": "pending_approval", "ap_item_id": payload.get("ap_item_id")}
+
+        mock_runtime = MagicMock()
+        mock_runtime.execute_intent = _mock_execute
+
+        body = {
+            "ap_item_id": "ap-item-route-context-1",
+            "email_id": "gmail-thread-route-context-1",
+            "reason": "low risk batch route",
+            "organization_id": "org-test",
+            "idempotency_key": "idem-route-context-1",
+        }
+
+        try:
+            with patch.object(gmail_extension_module, "get_db", return_value=fake_db):
+                with patch.object(gmail_extension_module, "_build_finance_runtime", return_value=mock_runtime):
+                    response = client.post("/extension/route-low-risk-approval", json=body)
+        finally:
+            app.dependency_overrides.pop(gmail_extension_module.get_current_user, None)
+            app.dependency_overrides.pop(gmail_extension_module.get_audit_service, None)
+
+        assert response.status_code == 200
+        assert captured["intent"] == "route_low_risk_for_approval"
+        assert captured["idempotency_key"] == "idem-route-context-1"
+        assert captured["payload"]["source_channel"] == "gmail_extension"
+        assert captured["payload"]["source_channel_id"] == "gmail_extension"
+        assert captured["payload"]["source_message_ref"] == "gmail-thread-route-context-1"
+        assert captured["payload"]["actor_id"] == "extension@example.com"
+        assert captured["payload"]["actor_display"] == "extension@example.com"
+
     def test_retry_recoverable_failure_endpoint_uses_resume_workflow_and_replays_idempotent_request(self):
         app.dependency_overrides[gmail_extension_module.get_current_user] = self._fake_user
         fake_audit = self._FakeAuditService()
         app.dependency_overrides[gmail_extension_module.get_audit_service] = lambda: fake_audit
 
         call_count = {"n": 0}
+        captured_payloads = []
 
         async def _mock_execute(intent, payload, *, idempotency_key=None):
             call_count["n"] += 1
+            captured_payloads.append(
+                {
+                    "intent": intent,
+                    "payload": dict(payload or {}),
+                    "idempotency_key": idempotency_key,
+                }
+            )
             base = {
                 "status": "posted",
                 "erp_reference": "ERP-REC-1",
@@ -3538,6 +3587,14 @@ class TestExtensionEndpoints:
         assert first_payload["erp_reference"] == "ERP-REC-1"
         assert second_payload["status"] == "posted"
         assert second_payload["idempotency_replayed"] is True
+        assert captured_payloads
+        assert captured_payloads[0]["intent"] == "retry_recoverable_failures"
+        assert captured_payloads[0]["idempotency_key"] == "idem-retry-1"
+        assert captured_payloads[0]["payload"]["source_channel"] == "gmail_extension"
+        assert captured_payloads[0]["payload"]["source_channel_id"] == "gmail_extension"
+        assert captured_payloads[0]["payload"]["source_message_ref"] == "gmail-thread-retry-1"
+        assert captured_payloads[0]["payload"]["actor_id"] == "extension@example.com"
+        assert captured_payloads[0]["payload"]["actor_display"] == "extension@example.com"
 
 
 class TestOrgConfigEndpoints:
