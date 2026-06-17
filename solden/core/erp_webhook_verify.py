@@ -178,6 +178,56 @@ def verify_sap_signature(
 
 
 # ---------------------------------------------------------------------------
+# Sage Intacct / Sage Business Cloud Accounting
+#
+# Sage deployments differ by product and implementation surface:
+# Intacct customers commonly emit Smart Event / Platform Services
+# outbound HTTP calls, while Sage Accounting can be fronted by app
+# webhooks or middleware. Solden requires the same signed envelope
+# for both: HMAC-SHA256(timestamp + "." + raw_body) with a per-tenant
+# secret, so inbound ERP-native work cannot bypass the trust boundary.
+# ---------------------------------------------------------------------------
+
+
+def verify_sage_intacct_signature(
+    raw_body: bytes,
+    signature_header: Optional[str],
+    timestamp_header: Optional[str],
+    shared_secret: Optional[str],
+    *,
+    now: _ClockFn = _default_clock,
+) -> bool:
+    """Return True iff the Sage Intacct webhook signature is authentic."""
+    return _verify_timestamped_hmac(
+        raw_body=raw_body,
+        signature_header=signature_header,
+        timestamp_header=timestamp_header,
+        shared_secret=shared_secret,
+        erp_label="Sage Intacct",
+        now=now,
+    )
+
+
+def verify_sage_accounting_signature(
+    raw_body: bytes,
+    signature_header: Optional[str],
+    timestamp_header: Optional[str],
+    shared_secret: Optional[str],
+    *,
+    now: _ClockFn = _default_clock,
+) -> bool:
+    """Return True iff the Sage Accounting webhook signature is authentic."""
+    return _verify_timestamped_hmac(
+        raw_body=raw_body,
+        signature_header=signature_header,
+        timestamp_header=timestamp_header,
+        shared_secret=shared_secret,
+        erp_label="Sage Accounting",
+        now=now,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Shared primitive for ERPs that use the timestamp+body HMAC pattern
 # (NetSuite + SAP). Stripe/Slack-style replay window.
 # ---------------------------------------------------------------------------

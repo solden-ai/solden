@@ -52,6 +52,8 @@ import solden.integrations.erp_netsuite_intake_adapter  # noqa: F401
 import solden.integrations.erp_sap_s4hana_intake_adapter  # noqa: F401
 import solden.integrations.erp_quickbooks_intake_adapter  # noqa: F401
 import solden.integrations.erp_xero_intake_adapter  # noqa: F401
+import solden.integrations.erp_sage_intacct_intake_adapter  # noqa: F401
+import solden.integrations.erp_sage_accounting_intake_adapter  # noqa: F401
 
 # Eager-import the MatchEngine implementations (Gap 3) so the
 # registry is populated before any matching call.
@@ -320,7 +322,7 @@ app = FastAPI(
     - Idempotency-aware execution and auditable outcomes
 
     ## AP Workflow (v1 — the wedge)
-    - Multi-source invoice intake: Gmail, PEPPOL UBL inbound, ERP-native (NetSuite + SAP S/4HANA)
+    - Multi-source invoice intake: Gmail, PEPPOL UBL inbound, ERP-native (NetSuite, SAP, QuickBooks, Xero, Sage)
     - Extraction, 3-way match, ERP vendor master check, budget/tolerance/sanctions guards
     - Approval routing through the customer's actual decision surface (Slack, Teams, NetSuite SuiteApp, SAP Fiori)
     - ERP posting with API-first + controlled fallback patterns: QuickBooks, Xero, NetSuite, SAP B1, SAP S/4HANA

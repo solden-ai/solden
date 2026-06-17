@@ -47,6 +47,8 @@ from solden.core.database import get_db
 from solden.core.erp_webhook_verify import (
     verify_netsuite_signature,
     verify_quickbooks_signature,
+    verify_sage_accounting_signature,
+    verify_sage_intacct_signature,
     verify_sap_signature,
     verify_xero_signature,
 )
@@ -352,6 +354,162 @@ async def _dispatch_xero_invoice_intake(
                 "xero intake dispatch raised: org=%s invoice=%s op=%s",
                 organization_id, resource_id, event_type,
             )
+
+
+# ---------------------------------------------------------------------------
+# Sage Intacct
+# ---------------------------------------------------------------------------
+
+
+@router.post("/sage-intacct/{organization_id}")
+async def sage_intacct_webhook(
+    organization_id: str,
+    request: Request,
+    x_sage_intacct_signature: Optional[str] = Header(
+        default=None, alias="X-Sage-Intacct-Signature",
+    ),
+    x_sage_intacct_timestamp: Optional[str] = Header(
+        default=None, alias="X-Sage-Intacct-Timestamp",
+    ),
+) -> Response:
+    """Sage Intacct Smart Event / Platform Services HTTP push.
+
+    Signature header: ``X-Sage-Intacct-Signature: v1=<hex>``
+    Timestamp header: ``X-Sage-Intacct-Timestamp: <unix seconds>``
+    Covered body: ``"<timestamp>." + raw_body``
+    """
+    try:
+        secret = _resolve_webhook_secret(organization_id, "sage_intacct")
+    except _WebhookSecretLookupFailed:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"error": "webhook_secret_lookup_failed"},
+        )
+    if not secret:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content=_NOT_CONFIGURED_BODY,
+        )
+
+    raw = await request.body()
+    if not verify_sage_intacct_signature(
+        raw, x_sage_intacct_signature, x_sage_intacct_timestamp, secret,
+    ):
+        logger.warning(
+            "Sage Intacct webhook signature failed for org=%s (bytes=%d)",
+            organization_id, len(raw),
+        )
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content=_UNAUTHORIZED_BODY,
+        )
+
+    _record_webhook_event(
+        organization_id=organization_id,
+        erp_type="sage_intacct",
+        event_type="erp_webhook_received",
+        payload_preview=_preview_json(raw),
+    )
+    try:
+        from solden.services.intake_adapter import handle_intake_event
+        import solden.integrations.erp_sage_intacct_intake_adapter  # noqa: F401
+
+        result = await handle_intake_event(
+            source_type="sage_intacct",
+            organization_id=organization_id,
+            raw=raw,
+            headers=dict(request.headers),
+            secret=secret,
+        )
+        logger.info(
+            "sage intacct webhook dispatch: org=%s result=%s",
+            organization_id, result,
+        )
+    except Exception as dispatch_exc:  # noqa: BLE001
+        logger.warning(
+            "sage intacct webhook dispatch raised for org=%s - %s",
+            organization_id, dispatch_exc,
+        )
+
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"ok": True})
+
+
+# ---------------------------------------------------------------------------
+# Sage Business Cloud Accounting
+# ---------------------------------------------------------------------------
+
+
+@router.post("/sage-accounting/{organization_id}")
+async def sage_accounting_webhook(
+    organization_id: str,
+    request: Request,
+    x_sage_accounting_signature: Optional[str] = Header(
+        default=None, alias="X-Sage-Accounting-Signature",
+    ),
+    x_sage_accounting_timestamp: Optional[str] = Header(
+        default=None, alias="X-Sage-Accounting-Timestamp",
+    ),
+) -> Response:
+    """Sage Business Cloud Accounting webhook / middleware push.
+
+    Signature header: ``X-Sage-Accounting-Signature: v1=<hex>``
+    Timestamp header: ``X-Sage-Accounting-Timestamp: <unix seconds>``
+    Covered body: ``"<timestamp>." + raw_body``
+    """
+    try:
+        secret = _resolve_webhook_secret(organization_id, "sage_accounting")
+    except _WebhookSecretLookupFailed:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"error": "webhook_secret_lookup_failed"},
+        )
+    if not secret:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content=_NOT_CONFIGURED_BODY,
+        )
+
+    raw = await request.body()
+    if not verify_sage_accounting_signature(
+        raw, x_sage_accounting_signature, x_sage_accounting_timestamp, secret,
+    ):
+        logger.warning(
+            "Sage Accounting webhook signature failed for org=%s (bytes=%d)",
+            organization_id, len(raw),
+        )
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content=_UNAUTHORIZED_BODY,
+        )
+
+    _record_webhook_event(
+        organization_id=organization_id,
+        erp_type="sage_accounting",
+        event_type="erp_webhook_received",
+        payload_preview=_preview_json(raw),
+    )
+    try:
+        from solden.services.intake_adapter import handle_intake_event
+        import solden.integrations.erp_sage_accounting_intake_adapter  # noqa: F401
+
+        result = await handle_intake_event(
+            source_type="sage_accounting",
+            organization_id=organization_id,
+            raw=raw,
+            headers=dict(request.headers),
+            secret=secret,
+        )
+        logger.info(
+            "sage accounting webhook dispatch: org=%s result=%s",
+            organization_id, result,
+        )
+    except Exception as dispatch_exc:  # noqa: BLE001
+        logger.warning(
+            "sage accounting webhook dispatch raised for org=%s - %s",
+            organization_id, dispatch_exc,
+        )
+
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"ok": True})
 
 
 # ---------------------------------------------------------------------------

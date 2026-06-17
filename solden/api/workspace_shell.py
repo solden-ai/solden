@@ -1273,6 +1273,7 @@ class SageIntacctConnectSubmitRequest(BaseModel):
     user_password: str = Field(..., min_length=1, max_length=256)
     base_url: Optional[str] = Field(default=None, max_length=512)
     location_id: Optional[str] = Field(default=None, max_length=128)
+    webhook_secret: Optional[str] = Field(default=None, max_length=256)
 
 
 class GmailConnectStartRequest(BaseModel):
@@ -2221,6 +2222,7 @@ def erp_connect_start(
                     "required": False,
                 },
                 {"name": "location_id", "label": "Location ID", "type": "text", "required": False},
+                {"name": "webhook_secret", "label": "Webhook Secret", "type": "password", "required": False},
             ],
             "submit_url": "/api/workspace/integrations/erp/connect/sage-intacct",
             "help_text": "Use a least-privilege Sage Intacct web-services user with vendor, AP bill, GL account, and payment-status read/write access.",
@@ -2382,6 +2384,7 @@ async def connect_sage_intacct(
         user_password=request.user_password,
         base_url=base_url,
         location_id=(request.location_id or None),
+        webhook_secret=(request.webhook_secret or None),
     )
 
     try:

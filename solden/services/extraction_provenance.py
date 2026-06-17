@@ -40,6 +40,8 @@ SOURCE_ERP_NATIVE_QUICKBOOKS = "erp_native_quickbooks"
 SOURCE_ERP_NATIVE_NETSUITE = "erp_native_netsuite"
 SOURCE_ERP_NATIVE_XERO = "erp_native_xero"
 SOURCE_ERP_NATIVE_SAP = "erp_native_sap"
+SOURCE_ERP_NATIVE_SAGE_INTACCT = "erp_native_sage_intacct"
+SOURCE_ERP_NATIVE_SAGE_ACCOUNTING = "erp_native_sage_accounting"
 
 # Canonical ``method`` tokens.
 METHOD_LLM_EXTRACT = "llm_extract"
@@ -139,6 +141,8 @@ __all__ = [
     "SOURCE_ERP_NATIVE_NETSUITE",
     "SOURCE_ERP_NATIVE_XERO",
     "SOURCE_ERP_NATIVE_SAP",
+    "SOURCE_ERP_NATIVE_SAGE_INTACCT",
+    "SOURCE_ERP_NATIVE_SAGE_ACCOUNTING",
     "METHOD_LLM_EXTRACT",
     "METHOD_UBL_PARSER",
     "METHOD_API_PASSTHROUGH",
