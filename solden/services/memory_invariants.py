@@ -269,6 +269,43 @@ PRIMARY_MEMORY_COVERAGE_SURFACES: Tuple[MemoryCoverageSurface, ...] = (
             "erp_native_sage_accounting",
         ),
     ),
+    MemoryCoverageSurface(
+        name="netsuite_native_panel_memory_surface",
+        path="solden/api/netsuite_panel.py",
+        required_tokens=(
+            "build_box_operational_memory_record",
+            "_dispatch_netsuite_panel_action",
+            "dispatch_runtime_intent",
+            "NETSUITE_PANEL_SOURCE_CHANNEL",
+            "erp_native_netsuite",
+            "source_channel",
+        ),
+    ),
+    MemoryCoverageSurface(
+        name="sap_native_panel_memory_surface",
+        path="solden/api/sap_extension.py",
+        required_tokens=(
+            "build_box_operational_memory_record",
+            "_dispatch_sap_panel_action",
+            "dispatch_runtime_intent",
+            "SAP_PANEL_SOURCE_CHANNEL",
+            "erp_native_sap",
+            "source_channel",
+        ),
+    ),
+    MemoryCoverageSurface(
+        name="sage_intacct_native_panel_memory_surface",
+        path="solden/api/sage_intacct_panel.py",
+        required_tokens=(
+            "build_box_operational_memory_record",
+            "build_surface_memory_snapshot",
+            "_dispatch_sage_intacct_panel_action",
+            "dispatch_runtime_intent",
+            "SAGE_INTACCT_PANEL_SOURCE_CHANNEL",
+            "erp_native_sage_intacct",
+            "source_channel",
+        ),
+    ),
 )
 
 
@@ -300,7 +337,7 @@ PRIMARY_MEMORY_EXECUTION_COVERAGE: Tuple[MemoryExecutionCoverage, ...] = (
         ),
     ),
     MemoryExecutionCoverage(
-        name="runtime_intent_learning_context",
+        name="runtime_memory_learning_context",
         source_path="solden/services/memory_events.py",
         test_path="tests/test_operational_memory.py",
         required_source_tokens=(
@@ -683,6 +720,62 @@ PRIMARY_MEMORY_EXECUTION_COVERAGE: Tuple[MemoryExecutionCoverage, ...] = (
         required_test_tokens=(
             "test_quickbooks_erp_reference_returns_live_operational_memory",
             "test_xero_erp_reference_action_uses_xero_memory_surface",
+        ),
+    ),
+    MemoryExecutionCoverage(
+        name="netsuite_native_panel_memory_surface",
+        source_path="solden/api/netsuite_panel.py",
+        test_path="tests/test_netsuite_panel_audit_integration.py",
+        required_source_tokens=(
+            "build_box_operational_memory_record",
+            "_dispatch_netsuite_panel_action",
+            "dispatch_runtime_intent",
+            "NETSUITE_PANEL_SOURCE_CHANNEL",
+            "source_channel",
+        ),
+        required_test_tokens=(
+            "test_netsuite_panel_approve_lands_ui_surface_erp_native_netsuite",
+            "test_netsuite_panel_reject_lands_ui_surface_erp_native_netsuite",
+            "test_netsuite_panel_request_info_lands_ui_surface_erp_native_netsuite",
+            "erp_native_netsuite",
+        ),
+    ),
+    MemoryExecutionCoverage(
+        name="sap_native_panel_memory_surface",
+        source_path="solden/api/sap_extension.py",
+        test_path="tests/test_sap_fiori_audit_integration.py",
+        required_source_tokens=(
+            "build_box_operational_memory_record",
+            "_dispatch_sap_panel_action",
+            "dispatch_runtime_intent",
+            "SAP_PANEL_SOURCE_CHANNEL",
+            "source_channel",
+        ),
+        required_test_tokens=(
+            "test_sap_panel_approve_lands_ui_surface_erp_native_sap",
+            "test_sap_panel_reject_lands_ui_surface_erp_native_sap",
+            "test_sap_panel_request_info_lands_ui_surface_erp_native_sap",
+            "erp_native_sap",
+        ),
+    ),
+    MemoryExecutionCoverage(
+        name="sage_intacct_native_panel_memory_surface",
+        source_path="solden/api/sage_intacct_panel.py",
+        test_path="tests/test_sage_intacct_panel_contract.py",
+        required_source_tokens=(
+            "build_box_operational_memory_record",
+            "build_surface_memory_snapshot",
+            "_dispatch_sage_intacct_panel_action",
+            "dispatch_runtime_intent",
+            "SAGE_INTACCT_PANEL_SOURCE_CHANNEL",
+            "source_channel",
+        ),
+        required_test_tokens=(
+            "test_sage_intacct_panel_returns_operational_memory",
+            "test_sage_intacct_panel_action_dispatches_with_native_surface",
+            "erp_native_sage_intacct",
+            "surface_memory",
+            "decision_ledger",
         ),
     ),
 )

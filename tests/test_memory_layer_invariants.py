@@ -318,6 +318,39 @@ def test_existing_memory_event_payloads_are_upgraded_before_validation():
     assert memory_event["quality"]["evidence_status"] == "linked"
 
 
+def test_release_memory_contract_keeps_primary_surfaces_enumerated():
+    required_names = {
+        "audit_memory_promoter",
+        "runtime_intents",
+        "runtime_memory_learning_context",
+        "runtime_outcome_learning_trace",
+        "agent_loop_outcome_learning_trace",
+        "audit_event_funnel",
+        "generic_workflow_atomic_funnel",
+        "erp_intake",
+        "outlook_processor",
+        "slack_reply_sync",
+        "slack_action_surface",
+        "teams_action_surface",
+        "peppol_import",
+        "ap_direct_action_routes",
+        "workspace_capture_api",
+        "gmail_extension_capture_api",
+        "gmail_extension_action_routes",
+        "surface_memory_projection",
+        "erp_memory_surface_api",
+        "netsuite_native_panel_memory_surface",
+        "sap_native_panel_memory_surface",
+        "sage_intacct_native_panel_memory_surface",
+    }
+
+    surface_names = {surface.name for surface in PRIMARY_MEMORY_COVERAGE_SURFACES}
+    execution_names = {coverage.name for coverage in PRIMARY_MEMORY_EXECUTION_COVERAGE}
+
+    assert sorted(required_names - surface_names) == []
+    assert sorted(required_names - execution_names) == []
+
+
 def test_primary_memory_sources_remain_wired():
     repo_root = Path(__file__).resolve().parents[1]
 
