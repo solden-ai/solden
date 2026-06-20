@@ -7580,6 +7580,29 @@
   text-transform: capitalize;
 }
 
+.cl-surface-constraints {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.cl-surface-constraints span {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 20px;
+  padding: 0 7px;
+  border: 1px solid var(--cl-border);
+  border-radius: 999px;
+  background: var(--cl-bg);
+  color: var(--cl-ink-secondary);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
 .cl-surface-chip {
   display: inline-flex;
   align-items: center;

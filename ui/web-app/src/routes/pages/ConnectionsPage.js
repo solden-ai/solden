@@ -145,11 +145,10 @@ function surfaceStatusLabel(status) {
   return token ? token.replace(/_/g, ' ') : 'Available';
 }
 
-function surfaceStatusTone(status, maturity) {
+function surfaceStatusTone(status) {
   const token = String(status || '').trim().toLowerCase();
-  const stage = String(maturity || '').trim().toLowerCase();
   if (token === 'connected' || token === 'ready') return 'success';
-  if (token === 'feature_gated' || stage === 'sandbox_pending' || stage === 'beta') return 'warning';
+  if (token === 'feature_gated') return 'warning';
   if (token === 'not_connected' || token === 'disconnected') return 'muted';
   return 'neutral';
 }
@@ -158,42 +157,52 @@ function groupSurfaces(surfaces, family) {
   return (surfaces || []).filter((row) => String(row.family || '') === family);
 }
 
+function surfaceModelLabel(row = {}) {
+  return row.surface_model_label || row.memory_surface || row.role || '';
+}
+
+function validationLabel(row = {}) {
+  if (row.family !== 'erp') return '';
+  const validation = row.validation_status || {};
+  return validation.label || 'Evidence pending';
+}
+
+function capabilityConstraints(row = {}) {
+  return Array.isArray(row.capability_constraints)
+    ? row.capability_constraints.filter((item) => item && item.label)
+    : [];
+}
+
 const CUSTOMER_SURFACE_COPY = {
   netsuite: {
     description: 'Connect NetSuite bills, vendors, and posting status.',
     where: 'Inside NetSuite bill records',
     actions: 'Review context, request info, approve, and post after checks pass.',
-    readiness: 'Embedded app available',
   },
   sap: {
     description: 'Connect SAP supplier invoices and vendor context.',
     where: 'Inside SAP supplier invoice screens',
     actions: 'Review context, request info, approve, and post after checks pass.',
-    readiness: 'Embedded app available',
   },
   sage_intacct: {
     description: 'Connect Sage Intacct bills and approval context.',
     where: 'Inside Sage Intacct bill records',
     actions: 'Review context, request info, approve, and prepare AP posting.',
-    readiness: 'Sandbox validation needed',
   },
   quickbooks: {
     description: 'Connect QuickBooks bills, vendors, and ERP references.',
     where: 'Linked to QuickBooks bills',
     actions: 'Sync bills, keep Solden context attached, and post approved work.',
-    readiness: 'API connection available',
   },
   xero: {
     description: 'Connect Xero bills, vendors, and payment status.',
     where: 'Linked to Xero bills',
     actions: 'Sync bills, keep Solden context attached, and post approved work.',
-    readiness: 'API connection available',
   },
   sage_accounting: {
     description: 'Connect Sage Accounting purchases and vendor records.',
     where: 'Linked to Sage Accounting purchases',
     actions: 'Sync bills, keep Solden context attached, and prepare posting.',
-    readiness: 'Sandbox validation needed',
   },
   gmail: {
     description: 'Capture work and evidence from Gmail threads.',
@@ -228,15 +237,21 @@ const CUSTOMER_SURFACE_COPY = {
 };
 
 function customerSurfaceCopy(row = {}) {
-  return CUSTOMER_SURFACE_COPY[row.key] || {
+  const copy = CUSTOMER_SURFACE_COPY[row.key] || {
     description: row.role,
     where: row.memory_surface,
     actions: row.decision_actions,
-    readiness: row.maturity_label,
+  };
+  const readiness = row.family === 'erp'
+    ? row.solden_standard_label || row.maturity_label || 'AP operational memory standard'
+    : copy.readiness || row.solden_standard_label || row.maturity_label || 'Ready to use';
+  return {
+    ...copy,
+    readiness,
   };
 }
 
-function SurfaceMaturityPanel({ api, orgId }) {
+function SurfaceCoveragePanel({ api, orgId }) {
   const [data, setData] = useState(null);
   const [err, setErr] = useState('');
 
@@ -265,8 +280,8 @@ function SurfaceMaturityPanel({ api, orgId }) {
     <div class="panel cl-surface-maturity-panel">
       <div class="panel-head compact">
         <div class="cl-connection-panel-copy">
-          <h3>Where Solden works</h3>
-          <p>Connect the inboxes, chat tools, ERPs, and workspace views where your team will see context and take action.</p>
+          <h3>Connector coverage</h3>
+          <p>Every supported ERP targets the same AP memory standard. Differences here are surface model, connector constraints, and validation proof.</p>
         </div>
         ${data ? html`
           <span class="secondary-chip">
@@ -275,14 +290,14 @@ function SurfaceMaturityPanel({ api, orgId }) {
         ` : null}
       </div>
       ${err ? html`<div class="form-error">${err}</div>` : null}
-      ${!err && !data ? html`<div class="secondary-empty cl-connection-empty">Loading surface maturity…</div>` : null}
+      ${!err && !data ? html`<div class="secondary-empty cl-connection-empty">Loading connector coverage…</div>` : null}
       ${data && html`
         <div class="cl-surface-maturity-sections">
-          <${SurfaceMaturityTable}
+          <${SurfaceCoverageTable}
             title="ERP systems"
             rows=${erpSurfaces}
           />
-          <${SurfaceMaturityTable}
+          <${SurfaceCoverageTable}
             title="Inbox, chat, and workspace"
             rows=${operatingSurfaces}
           />
@@ -292,7 +307,7 @@ function SurfaceMaturityPanel({ api, orgId }) {
   `;
 }
 
-function SurfaceMaturityTable({ title, rows = [] }) {
+function SurfaceCoverageTable({ title, rows = [] }) {
   return html`
     <section class="cl-surface-maturity-section">
       <div class="cl-surface-maturity-title">
@@ -302,7 +317,9 @@ function SurfaceMaturityTable({ title, rows = [] }) {
       <div class="cl-surface-maturity-table">
         ${rows.map((row) => {
           const copy = customerSurfaceCopy(row);
-          const tone = surfaceStatusTone(row.connection_status, row.maturity);
+          const tone = surfaceStatusTone(row.connection_status);
+          const constraints = capabilityConstraints(row);
+          const proofLabel = validationLabel(row);
           return html`
             <div class="cl-surface-maturity-row" key=${row.key}>
               <div class="cl-surface-maturity-name">
@@ -310,16 +327,25 @@ function SurfaceMaturityTable({ title, rows = [] }) {
                 <span>${copy.description}</span>
               </div>
               <div>
-                <span class="cl-surface-maturity-label">Where it appears</span>
+                <span class="cl-surface-maturity-label">Surface model</span>
                 <strong>${copy.where}</strong>
+                <span>${surfaceModelLabel(row)}</span>
               </div>
               <div>
                 <span class="cl-surface-maturity-label">What users can do</span>
                 <span>${copy.actions}</span>
+                ${constraints.length ? html`
+                  <div class="cl-surface-constraints" aria-label=${`${row.label} connector constraints`}>
+                    ${constraints.map((constraint) => html`
+                      <span key=${constraint.key}>${constraint.label}</span>
+                    `)}
+                  </div>
+                ` : null}
               </div>
               <div class="cl-surface-maturity-stage">
                 <span class=${`cl-surface-chip cl-surface-chip-${tone}`}>${copy.readiness}</span>
                 <small>${surfaceStatusLabel(row.connection_status)}</small>
+                ${proofLabel ? html`<small>Validation: ${proofLabel}</small>` : null}
               </div>
             </div>
           `;
@@ -586,7 +612,7 @@ export default function ConnectionsPage({ bootstrap, api, toast, orgId, onRefres
           canManageConnections=${canEditConnections}
         />
 
-        <${SurfaceMaturityPanel} api=${api} orgId=${orgId} />
+        <${SurfaceCoveragePanel} api=${api} orgId=${orgId} />
 
         <${FieldMappingPanel}
           api=${api}

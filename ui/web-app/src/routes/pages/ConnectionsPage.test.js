@@ -45,8 +45,14 @@ function renderConnectionsPage({ webhooks = makeWebhooks() } = {}) {
             family: 'erp',
             role: 'ERP native + API connector',
             memory_surface: 'SuiteApp panel',
-            maturity: 'native_panel_ready',
-            maturity_label: 'Native panel ready',
+            surface_model: 'native_panel',
+            surface_model_label: 'Native panel',
+            solden_standard_status: 'ap_operational_memory_standard',
+            solden_standard_label: 'AP operational memory standard',
+            capability_constraints: [],
+            validation_status: { status: 'evidence_backed', label: 'Evidence backed', ready_for_claim: true },
+            maturity: 'ap_operational_memory_standard',
+            maturity_label: 'AP operational memory standard',
             decision_actions: 'Approve, reject, request info from vendor bill context',
             connection_status: 'connected',
           },
@@ -56,8 +62,38 @@ function renderConnectionsPage({ webhooks = makeWebhooks() } = {}) {
             family: 'erp',
             role: 'API connector',
             memory_surface: 'Provider-neutral ERP memory API',
-            maturity: 'api_memory_ready',
-            maturity_label: 'API memory ready',
+            surface_model: 'provider_neutral_memory_api',
+            surface_model_label: 'Provider-neutral memory API',
+            solden_standard_status: 'ap_operational_memory_standard',
+            solden_standard_label: 'AP operational memory standard',
+            capability_constraints: [
+              { key: 'no_native_panel', label: 'No native ERP panel' },
+            ],
+            validation_status: { status: 'missing_evidence', label: 'Evidence pending', ready_for_claim: false },
+            maturity: 'ap_operational_memory_standard',
+            maturity_label: 'AP operational memory standard',
+            decision_actions: 'Resolve ERP reference to Solden memory',
+            connection_status: 'not_connected',
+          },
+          {
+            key: 'sage_accounting',
+            label: 'Sage Accounting',
+            family: 'erp',
+            role: 'API connector',
+            memory_surface: 'Provider-neutral ERP memory API',
+            surface_model: 'provider_neutral_memory_api',
+            surface_model_label: 'Provider-neutral memory API',
+            solden_standard_status: 'ap_operational_memory_standard',
+            solden_standard_label: 'AP operational memory standard',
+            capability_constraints: [
+              { key: 'no_native_panel', label: 'No native ERP panel' },
+              { key: 'manual_credits', label: 'Credits remain manual' },
+              { key: 'manual_settlement', label: 'Settlement remains manual' },
+              { key: 'sandbox_validation_pending', label: 'Sandbox validation pending' },
+            ],
+            validation_status: { status: 'sandbox_validation_pending', label: 'Sandbox validation pending', ready_for_claim: false },
+            maturity: 'ap_operational_memory_standard',
+            maturity_label: 'AP operational memory standard',
             decision_actions: 'Resolve ERP reference to Solden memory',
             connection_status: 'not_connected',
           },
@@ -67,8 +103,14 @@ function renderConnectionsPage({ webhooks = makeWebhooks() } = {}) {
             family: 'approval',
             role: 'Chat decision surface',
             memory_surface: 'Approval cards and reply sync',
-            maturity: 'production_ready',
-            maturity_label: 'Production-ready',
+            surface_model: 'slack_approval_cards',
+            surface_model_label: 'Slack approval cards',
+            solden_standard_status: 'ap_operational_memory_standard',
+            solden_standard_label: 'AP operational memory standard',
+            capability_constraints: [],
+            validation_status: { status: 'not_applicable', label: 'Not ERP validated' },
+            maturity: 'ap_operational_memory_standard',
+            maturity_label: 'AP operational memory standard',
             decision_actions: 'Approve, reject, request info',
             connection_status: 'connected',
           },
@@ -103,12 +145,17 @@ describe('ConnectionsPage', () => {
 
     await screen.findByText('Connections');
     expect(screen.getByText('Connected surfaces')).toBeTruthy();
-    expect(screen.getByText('Where Solden works')).toBeTruthy();
-    expect(screen.getByText('Embedded app available')).toBeTruthy();
-    expect(screen.getByText('API connection available')).toBeTruthy();
+    expect(screen.getByText('Connector coverage')).toBeTruthy();
+    expect(screen.getAllByText('AP operational memory standard').length).toBeGreaterThan(1);
     expect(screen.getByText('Linked to QuickBooks bills')).toBeTruthy();
+    expect(screen.getAllByText('No native ERP panel').length).toBeGreaterThan(0);
+    expect(screen.getByText('Credits remain manual')).toBeTruthy();
+    expect(screen.getByText('Settlement remains manual')).toBeTruthy();
+    expect(screen.getAllByText('Sandbox validation pending').length).toBeGreaterThan(0);
     expect(screen.getAllByText('What users can do').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Provider-neutral ERP memory API')).toBeNull();
+    expect(screen.queryByText('Native panel ready')).toBeNull();
+    expect(screen.queryByText('API connection available')).toBeNull();
+    expect(screen.queryByText('Sandbox validation needed')).toBeNull();
     expect(screen.getByText('Connection health')).toBeTruthy();
     expect(screen.getByText('Setup order')).toBeTruthy();
     expect(screen.getByText('Inbox')).toBeTruthy();

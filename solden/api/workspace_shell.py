@@ -2968,12 +2968,12 @@ def get_surface_readiness(
     organization_id: Optional[str] = Query(default=None),
     user: TokenData = Depends(get_current_user),
 ):
-    """Return the canonical maturity contract for connected work surfaces.
+    """Return the canonical coverage contract for connected work surfaces.
 
-    This is deliberately broader than connector health. It tells the
-    workspace whether a surface is native-embedded, API-memory-only,
-    sandbox-pending, or feature-gated so the product never implies all
-    ERP/chat/inbox surfaces are equally mature.
+    This is deliberately broader than connector health. It keeps every
+    supported ERP on the same Solden AP operational-memory standard while
+    representing ERP differences as surface models, capability constraints,
+    lifecycle parity, and validation evidence.
     """
     org_id = _resolve_org_id(user, organization_id)
     integrations = [
