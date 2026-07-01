@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -76,7 +76,7 @@ jobs:
       AP_V1_ALLOW_IN_MEMORY_RATE_LIMIT_IN_PRODUCTION: "true"
       CLEARLEDGR_SKIP_DEFERRED_STARTUP: "true"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -139,7 +139,7 @@ jobs:
       run:
         working-directory: ui/gmail-extension
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node
         uses: actions/setup-node@v4
